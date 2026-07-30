@@ -10,8 +10,8 @@ class Client extends Model
     use HasFactory;
 
     protected $table = 'clients';
-    public $incrementing = false;   // l'id vient de users
-    public $timestamps = false;     // T08 : pas de timestamps
+    public $incrementing = false;   
+    public $timestamps = false;     
 
     protected $fillable = [
         'id', 'company_name', 'vat_number', 'enterprise_number', 'peppol_id',
