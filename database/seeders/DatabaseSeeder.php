@@ -2,21 +2,30 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
-    public function run(): void
-    {
-        // User::factory(10)->create();
+   public function run(): void
+{
+    DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders CASCADE');
 
-      
+    $this->call([
+        UserSeeder::class,
+        VehicleSeeder::class,
+        TariffGridSeeder::class,
+        ClientSeeder::class,
+        ClientContactSeeder::class,
+        DriverSeeder::class,
+        TransportOrderSeeder::class,
+    ]);
+
+    foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders'] as $t) {
+        DB::statement("SELECT setval('{$t}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM {$t}))");
     }
+}
 }
