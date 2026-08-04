@@ -7,7 +7,8 @@ import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
         password: '',
         password_confirmation: '',
@@ -26,22 +27,34 @@ export default function Register() {
             <Head title="Register" />
 
             <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
+ <div>
+    <InputLabel htmlFor="first_name" value="Prénom" />
+    <TextInput
+        id="first_name"
+        name="first_name"
+        value={data.first_name}
+        className="mt-1 block w-full"
+        autoComplete="given-name"
+        isFocused={true}
+        onChange={(e) => setData('first_name', e.target.value)}
+        required
+    />
+    <InputError message={errors.first_name} className="mt-2" />
+</div>
 
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
-                </div>
+        <div className="mt-4">
+            <InputLabel htmlFor="last_name" value="Nom" />
+            <TextInput
+                id="last_name"
+                name="last_name"
+                value={data.last_name}
+                className="mt-1 block w-full"
+                autoComplete="family-name"
+                onChange={(e) => setData('last_name', e.target.value)}
+                required
+            />
+            <InputError message={errors.last_name} className="mt-2" />
+        </div>
 
                 <div className="mt-4">
                     <InputLabel htmlFor="email" value="Email" />
