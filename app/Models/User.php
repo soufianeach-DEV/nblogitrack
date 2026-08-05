@@ -45,4 +45,14 @@ class User extends Authenticatable
             'is_active' => 'boolean',
         ];
     }
+
+    public function isClient(): bool
+{
+    return $this->role === 'CLIENT';
+}
+
+public function isStaff(): bool
+{
+    return in_array($this->role, ['PLANNER', 'ADMIN']);
+}
 }
