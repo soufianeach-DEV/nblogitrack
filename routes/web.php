@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -26,5 +27,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/transport-orders', [TransportOrderController::class, 'index'])
     ->name('transport-orders.index');
     });
+
+    Route::get('/suivi', [TrackingController::class, 'show'])
+    ->middleware('throttle:10,1')
+    ->name('tracking.show');
 
 require __DIR__.'/auth.php';
