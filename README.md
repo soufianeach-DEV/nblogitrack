@@ -36,16 +36,17 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 
 ## Fonctionnalités
 
-| Domaine | Description |
-|---|---|
-| **Comptes & rôles** | Inscription, connexion et autorisations par rôle (Laravel Sanctum) |
-| **Clients** | Fiches entreprises et validation par l'administrateur |
-| **Commandes** | Ordre de transport, estimation du prix, numéro de suivi |
-| **Suivi public** | Consultation d'une expédition sans compte |
-| **Flotte** | Véhicules et chauffeurs (disponibilité, permis) |
-| **Tournées & missions** | Affectation des ressources, statuts, preuve de livraison |
-| **Facturation** | Factures, export PDF et format électronique Peppol (EN 16931) |
-| **Paiement** | Règlement d'une facture en ligne (Stripe) |
+| Domaine | Description | État |
+|---|---|---|
+| **Comptes & rôles** | Inscription, connexion, autorisations par rôle (Breeze + Gate) | ✅ alpha |
+| **Catalogue des ordres** | Liste des ordres de transport, recherche par colonne, filtrage selon le rôle | ✅ alpha |
+| **Suivi public** | Consultation sécurisée d'un envoi (numéro + code), timeline d'état | ✅ alpha |
+| **Tableau de bord** | Indicateurs clés (KPI) + derniers ordres | ✅ alpha |
+| **Clients & flotte** | Données clients, véhicules, chauffeurs (interface de gestion à venir) | 🔜 beta |
+| **Création de commande** | Passer un ordre de transport + estimation du prix | 🔜 beta |
+| **Tournées & missions** | Affectation véhicule/chauffeur, statuts, preuve de livraison | 🔜 beta |
+| **Facturation** | Factures + format électronique Peppol (EN 16931) | 🔜 beta |
+| **Paiement** | Règlement d'une facture en ligne (Stripe) | 🔜 beta |
 
 ---
 
@@ -56,7 +57,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | Back-end | Laravel (PHP 8.2+) |
 | Front-end | React + Vite |
 | Base de données | PostgreSQL |
-| Authentification | Laravel Sanctum |
+| Authentification | Laravel Breeze (session) |
 | Paiement | Stripe |
 | Facturation électronique | Peppol — norme EN 16931 |
 
