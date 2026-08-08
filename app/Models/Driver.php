@@ -10,8 +10,10 @@ class Driver extends Model
     use HasFactory;
 
     protected $table = 'drivers';
-    public $incrementing = false;   
-    public $timestamps = false;     
+
+    public $incrementing = false;
+
+    public $timestamps = false;
 
     protected $fillable = [
         'id', 'license_number', 'license_type', 'license_expiry',

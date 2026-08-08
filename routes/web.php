@@ -1,11 +1,11 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -25,10 +25,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/transport-orders', [TransportOrderController::class, 'index'])
-    ->name('transport-orders.index');
-    });
+        ->name('transport-orders.index');
+});
 
-    Route::get('/suivi', [TrackingController::class, 'show'])
+Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:10,1')
     ->name('tracking.show');
 
