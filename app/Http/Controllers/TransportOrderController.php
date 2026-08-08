@@ -60,6 +60,7 @@ class TransportOrderController extends Controller
             'requested_delivery_date' => 'nullable|date|after_or_equal:today',
             'tariff_grid_id' => 'required|exists:tariff_grids,id',
             'special_instructions' => 'nullable|string',
+            'pickup_date' => 'nullable|date|after_or_equal:today',
         ]);
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
