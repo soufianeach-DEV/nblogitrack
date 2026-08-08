@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 
 const STATUS = {
     PENDING: { label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
@@ -17,13 +18,37 @@ function StatusBadge({ status }) {
     );
 }
 
-export default function Index({ orders }) {
+export default function Index({ orders, filters }) {
+    const [search, setSearch] = useState({
+        tracking: filters.tracking ?? '',
+        client: filters.client ?? '',
+        destination: filters.destination ?? '',
+        status: filters.status ?? '',
+    });
+    const timeout = useRef();
+
+    const update = (key, value) => {
+        const next = { ...search, [key]: value };
+        setSearch(next);
+        clearTimeout(timeout.current);
+        timeout.current = setTimeout(() => {
+            router.get(route('transport-orders.index'), next, {
+                only: ['orders', 'filters'],
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        }, 300);
+    };
+
+    const inputCls = 'w-full rounded-md border-slate-200 text-sm shadow-sm focus:border-marine focus:ring-marine';
+
     return (
         <AuthenticatedLayout
             header={
                 <div>
                     <h1 className="text-2xl font-bold text-marine">Ordres de transport</h1>
-                    <p className="text-sm text-slate-500">{orders.total} ordres au total</p>
+                    <p className="text-sm text-slate-500">{orders.total} résultat(s)</p>
                 </div>
             }
         >
@@ -39,6 +64,21 @@ export default function Index({ orders }) {
                                 <th className="px-6 py-4 font-semibold">Destination</th>
                                 <th className="px-6 py-4 font-semibold">Statut</th>
                                 <th className="px-6 py-4 text-right font-semibold">Coût est.</th>
+                            </tr>
+                            <tr className="border-b border-slate-100">
+                                <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} placeholder="TRK-…" className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} placeholder="Entreprise…" className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} placeholder="Ville, adresse…" className={inputCls} /></th>
+                                <th className="px-6 py-2">
+                                    <select value={search.status} onChange={(e) => update('status', e.target.value)} className={inputCls}>
+                                        <option value="">Tous</option>
+                                        <option value="PENDING">En attente</option>
+                                        <option value="IN_PROGRESS">En cours</option>
+                                        <option value="DELIVERED">Livré</option>
+                                        <option value="CANCELLED">Annulé</option>
+                                    </select>
+                                </th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -56,6 +96,9 @@ export default function Index({ orders }) {
                                     </td>
                                 </tr>
                             ))}
+                            {orders.data.length === 0 && (
+                                <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-400">Aucun ordre ne correspond à ta recherche.</td></tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

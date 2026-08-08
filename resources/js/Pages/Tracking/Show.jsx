@@ -1,11 +1,53 @@
 import { Head, useForm } from '@inertiajs/react';
 
-export default function Show({ order, searched }) {
-    const { data, setData, get, processing } = useForm({
-        tracking_number: '',
-        code: '',
-    });
+const STEPS = [
+    { key: 'PENDING', label: 'En attente', desc: 'Commande enregistrée.' },
+    { key: 'IN_PROGRESS', label: 'En cours', desc: 'Colis en transit.' },
+    { key: 'DELIVERED', label: 'Livré', desc: 'Livraison effectuée.' },
+];
 
+function Timeline({ status }) {
+    if (status === 'CANCELLED') {
+        return (
+            <div className="rounded-lg bg-status-incident/10 p-4 text-status-incident">
+                <p className="font-semibold">Envoi annulé</p>
+                <p className="text-sm">Cet envoi a été annulé.</p>
+            </div>
+        );
+    }
+    const currentIdx = STEPS.findIndex((s) => s.key === status);
+    return (
+        <ol className="space-y-1">
+            {STEPS.map((step, i) => {
+                const done = i < currentIdx || status === 'DELIVERED';
+                const active = i === currentIdx && status !== 'DELIVERED';
+                return (
+                    <li key={step.key} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                                done ? 'bg-status-delivered text-white'
+                                : active ? 'bg-brand-blue text-white'
+                                : 'bg-slate-200 text-slate-400'
+                            }`}>
+                                {done ? '✓' : i + 1}
+                            </span>
+                            {i < STEPS.length - 1 && (
+                                <span className={`my-1 h-10 w-0.5 ${done ? 'bg-status-delivered' : 'bg-slate-200'}`} />
+                            )}
+                        </div>
+                        <div className={`pt-1 ${active ? 'text-marine' : 'text-slate-500'}`}>
+                            <div className="font-semibold">{step.label}</div>
+                            <div className="text-sm text-slate-400">{step.desc}</div>
+                        </div>
+                    </li>
+                );
+            })}
+        </ol>
+    );
+}
+
+export default function Show({ order, searched }) {
+    const { data, setData, get, processing } = useForm({ tracking_number: '', code: '' });
     const submit = (e) => {
         e.preventDefault();
         get(route('tracking.show'), { preserveScroll: true });
@@ -14,70 +56,67 @@ export default function Show({ order, searched }) {
     return (
         <>
             <Head title="Suivi d'envoi" />
-            <div className="min-h-screen bg-gray-100 py-12">
-                <div className="mx-auto max-w-xl px-4">
-                    <h1 className="mb-2 text-2xl font-bold text-gray-800">Suivi d'envoi</h1>
-                    <p className="mb-6 text-gray-500">
-                        Entrez votre numéro de suivi et le code reçu par email.
-                    </p>
+            <div className="min-h-screen bg-surface">
+                <header className="bg-marine">
+                    <div className="mx-auto flex max-w-3xl items-center px-4 py-4">
+                        <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="h-8 w-auto" />
+                    </div>
+                </header>
 
-                    <form onSubmit={submit} className="space-y-3">
+                <div className="mx-auto max-w-3xl px-4 py-10">
+                    <h1 className="text-2xl font-bold text-marine">Suivi d'envoi</h1>
+                    <p className="mt-1 text-slate-500">Entrez votre numéro de suivi et le code reçu par email.</p>
+
+                    <form onSubmit={submit} className="mt-6 flex flex-col gap-3 sm:flex-row">
                         <input
                             type="text"
                             value={data.tracking_number}
                             onChange={(e) => setData('tracking_number', e.target.value)}
                             placeholder="Numéro de suivi (TRK-...)"
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500"
+                            className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine"
                             required
                         />
                         <input
                             type="text"
                             value={data.code}
                             onChange={(e) => setData('code', e.target.value)}
-                            placeholder="Code de suivi"
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500"
+                            placeholder="Code"
+                            className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine sm:w-48"
                             required
                         />
                         <button
                             type="submit"
                             disabled={processing}
-                            className="w-full rounded-md bg-gray-800 px-5 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                            className="rounded-lg bg-action px-6 py-2 font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
                         >
-                            Suivre mon envoi
+                            Suivre
                         </button>
                     </form>
 
                     {order && (
-                        <div className="mt-8 rounded-lg bg-white p-6 shadow-sm">
-                            <div className="mb-4 flex items-center justify-between">
-                                <span className="font-mono text-gray-700">{order.tracking_number}</span>
-                                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-                                    {order.status}
-                                </span>
+                        <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+                            <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <div className="font-mono text-sm text-slate-400">{order.tracking_number}</div>
+                                    <div className="text-lg font-bold text-marine">{order.client?.company_name ?? 'Envoi'}</div>
+                                </div>
                             </div>
-                            <dl className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <dt className="text-gray-500">Client</dt>
-                                    <dd className="text-gray-900">{order.client?.company_name ?? '—'}</dd>
+                            <div className="grid gap-8 md:grid-cols-2">
+                                <div>
+                                    <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">État de livraison</h3>
+                                    <Timeline status={order.status} />
                                 </div>
-                                <div className="flex justify-between">
-                                    <dt className="text-gray-500">Départ</dt>
-                                    <dd className="text-gray-900">{order.pickup_address}</dd>
-                                </div>
-                                <div className="flex justify-between">
-                                    <dt className="text-gray-500">Destination</dt>
-                                    <dd className="text-gray-900">{order.delivery_address}</dd>
-                                </div>
-                                <div className="flex justify-between">
-                                    <dt className="text-gray-500">Livraison prévue</dt>
-                                    <dd className="text-gray-900">{order.requested_delivery_date ?? '—'}</dd>
-                                </div>
-                            </dl>
+                                <dl className="space-y-3 text-sm">
+                                    <div><dt className="text-slate-400">Départ</dt><dd className="font-medium text-marine">{order.pickup_address}</dd></div>
+                                    <div><dt className="text-slate-400">Destination</dt><dd className="font-medium text-marine">{order.delivery_address}</dd></div>
+                                    <div><dt className="text-slate-400">Livraison prévue</dt><dd className="font-medium text-marine">{order.requested_delivery_date?.slice(0, 10) ?? '—'}</dd></div>
+                                </dl>
+                            </div>
                         </div>
                     )}
 
                     {searched && !order && (
-                        <div className="mt-8 rounded-lg bg-red-50 p-4 text-red-700">
+                        <div className="mt-8 rounded-lg bg-status-incident/10 p-4 text-status-incident">
                             Aucun envoi trouvé. Vérifiez le numéro de suivi et le code.
                         </div>
                     )}
