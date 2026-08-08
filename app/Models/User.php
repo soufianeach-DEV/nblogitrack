@@ -47,12 +47,12 @@ class User extends Authenticatable
     }
 
     public function isClient(): bool
-{
-    return $this->role === 'CLIENT';
-}
+    {
+        return $this->role === 'CLIENT';
+    }
 
-public function isStaff(): bool
-{
-    return in_array($this->role, ['PLANNER', 'ADMIN']);
-}
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['PLANNER', 'ADMIN']);
+    }
 }

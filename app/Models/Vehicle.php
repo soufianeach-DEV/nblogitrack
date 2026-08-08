@@ -10,8 +10,11 @@ class Vehicle extends Model
     use HasFactory;
 
     protected $table = 'vehicles';
+
     protected $primaryKey = 'registration';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

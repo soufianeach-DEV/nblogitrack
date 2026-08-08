@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-            Schema::create('drivers', function (Blueprint $table) {
+        Schema::create('drivers', function (Blueprint $table) {
             $table->unsignedBigInteger('id')->primary();
             $table->foreign('id')->references('id')->on('users')->onDelete('cascade');
             $table->string('license_number', 50)->unique();

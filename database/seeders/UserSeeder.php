@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class UserSeeder extends Seeder
 {
@@ -12,7 +11,7 @@ class UserSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
-{
-    DB::unprepared(file_get_contents(database_path('seeders/sql/users.sql')));
-}
+    {
+        DB::unprepared(file_get_contents(database_path('seeders/sql/users.sql')));
+    }
 }

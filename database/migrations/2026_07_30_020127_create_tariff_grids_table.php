@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-                Schema::create('tariff_grids', function (Blueprint $table) {
+        Schema::create('tariff_grids', function (Blueprint $table) {
             $table->id();
             $table->string('label', 100);
             $table->string('zone', 60);
