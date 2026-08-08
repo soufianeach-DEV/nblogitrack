@@ -13,7 +13,20 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                marine: { DEFAULT: '#14324F', deep: '#001D36' },
+                'brand-blue': '#0B61A1',
+                action: { DEFAULT: '#F59E0B', dark: '#D97706' },
+                ink: '#1A202C',
+                surface: '#F5F7FA',
+                status: {
+                    pending: '#43474D',
+                    progress: '#0B61A1',
+                    delivered: '#1A8A4A',
+                    incident: '#BA1A1A',
+                },
             },
         },
     },
