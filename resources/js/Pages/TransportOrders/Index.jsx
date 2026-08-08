@@ -45,10 +45,15 @@ export default function Index({ orders, filters }) {
 
     return (
         <AuthenticatedLayout
-            header={
-                <div>
-                    <h1 className="text-2xl font-bold text-marine">Ordres de transport</h1>
-                    <p className="text-sm text-slate-500">{orders.total} résultat(s)</p>
+             header={
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-marine">Ordres de transport</h1>
+                        <p className="text-sm text-slate-500">{orders.total} résultat(s)</p>
+                    </div>
+                    <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
+                        + Nouvelle expédition
+                    </Link>
                 </div>
             }
         >

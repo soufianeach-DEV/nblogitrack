@@ -24,6 +24,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
+        ->name('transport-orders.create');
+    Route::post('/transport-orders', [TransportOrderController::class, 'store'])
+        ->name('transport-orders.store');
     Route::get('/transport-orders', [TransportOrderController::class, 'index'])
         ->name('transport-orders.index');
 });
