@@ -75,10 +75,6 @@ class TransportOrderController extends Controller
             'delivery_country.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
         ]);
 
-        if (! empty($data['requested_delivery_date']) && Carbon::parse($data['requested_delivery_date'])->lt(now()->addHours(48))) {
-            $data['priority'] = 'URGENT';
-        }
-
         $grid = TariffGrid::find($data['tariff_grid_id']);
 
         if ($grid->zone !== $data['delivery_country']) {
@@ -88,6 +84,10 @@ class TransportOrderController extends Controller
         if (! empty($data['requested_delivery_date'])) {
             $depart = ! empty($data['pickup_date']) ? Carbon::parse($data['pickup_date'])->startOfDay() : now()->startOfDay();
             $delai = $depart->diffInDays(Carbon::parse($data['requested_delivery_date'])->startOfDay(), false);
+
+            if ($delai <= 2) {
+                $data['priority'] = 'URGENT';
+            }
 
             if ($grid->delivery_days > $delai) {
                 return back()->withErrors(['tariff_grid_id' => 'La formule choisie ne permet pas de livrer à la date demandée.']);

@@ -86,8 +86,7 @@ export default function Create({ tariffGrids, pricing }) {
         }
     }, [data.delivery_country, delaiJours, grillesVisibles.length]);
 
-    const urgence48h = Boolean(data.requested_delivery_date)
-        && new Date(data.requested_delivery_date) - maintenant < 48 * 3600 * 1000;
+    const urgence48h = delaiJours !== null && delaiJours <= 2;
 
     useEffect(() => {
         if (urgence48h && data.priority !== 'URGENT') setData('priority', 'URGENT');
