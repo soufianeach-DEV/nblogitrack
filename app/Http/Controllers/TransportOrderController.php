@@ -43,7 +43,8 @@ class TransportOrderController extends Controller
     public function create(): Response
     {
         return Inertia::render('TransportOrders/Create', [
-            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'delivery_days']),
+            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'adr_coefficient', 'delivery_days']),
+            'pricing' => config('pricing'),
         ]);
     }
 
@@ -52,12 +53,14 @@ class TransportOrderController extends Controller
         $data = $request->validate([
             'pickup_address' => 'required|string|max:255',
             'delivery_address' => 'required|string|max:255',
+            'delivery_country' => 'required|in:Belgique,France,Pays-Bas,Allemagne,Luxembourg',
             'pickup_lat' => 'required|numeric|between:-90,90',
             'pickup_lng' => 'required|numeric|between:-180,180',
             'delivery_lat' => 'required|numeric|between:-90,90',
             'delivery_lng' => 'required|numeric|between:-180,180',
             'weight' => 'required|numeric|min:0',
-            'goods_type' => 'nullable|string|max:255',
+            'goods_type' => 'required|in:Alimentaire,Frigorifique,Textile,Électronique,Matériaux de construction,Chimie,Automobile,Autre',
+            'is_hazardous' => 'boolean',
             'priority' => 'required|in:LOW,NORMAL,HIGH,URGENT',
             'pickup_date' => 'nullable|date|after_or_equal:today',
             'requested_delivery_date' => 'nullable|date|after_or_equal:today',
@@ -66,7 +69,14 @@ class TransportOrderController extends Controller
         ]);
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
+
+        if ($grid->zone !== $data['delivery_country']) {
+            return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
+        }
+
         $distanceKm = $this->roadDistanceKm($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
+        $hazardous = $request->boolean('is_hazardous');
+
         $nextId = TransportOrder::max('id') + 1;
 
         $order = TransportOrder::create([
@@ -74,7 +84,8 @@ class TransportOrderController extends Controller
             'pickup_address' => $data['pickup_address'],
             'delivery_address' => $data['delivery_address'],
             'weight' => $data['weight'],
-            'goods_type' => $data['goods_type'] ?? null,
+            'goods_type' => $data['goods_type'],
+            'is_hazardous' => $hazardous,
             'priority' => $data['priority'],
             'pickup_date' => $data['pickup_date'] ?? null,
             'requested_delivery_date' => $data['requested_delivery_date'] ?? null,
@@ -83,13 +94,36 @@ class TransportOrderController extends Controller
             'status' => 'PENDING',
             'created_date' => now(),
             'distance_km' => (int) round($distanceKm),
-            'estimated_cost' => round($grid->base_rate + $grid->price_per_kg * $data['weight'] + $grid->price_per_km * $distanceKm, 2),
+            'estimated_cost' => $this->computeCost($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
             'tracking_code' => strtoupper(Str::random(12)),
             'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
         ]);
 
         return redirect()->route('transport-orders.index')
             ->with('success', 'Ordre créé : '.$order->tracking_number);
+    }
+
+    private function computeCost(TariffGrid $grid, float $distanceKm, float $weight, string $country, bool $hazardous): float
+    {
+        if ((int) $grid->delivery_days === 1) {
+            $p = config('pricing');
+
+            $cost = $grid->base_rate
+                + $distanceKm * $p['consumption_l_per_100km'] / 100 * $p['diesel_price']
+                + $distanceKm * ($p['toll_per_km'][$country] ?? 0)
+                + $distanceKm * $p['driver_cost_per_km']
+                + $distanceKm * $p['vehicle_cost_per_km'];
+
+            $cost *= 1 + $p['margin'];
+        } else {
+            $cost = $grid->base_rate + $grid->price_per_kg * $weight + $grid->price_per_km * $distanceKm;
+        }
+
+        if ($hazardous) {
+            $cost *= $grid->adr_coefficient;
+        }
+
+        return round($cost, 2);
     }
 
     private function roadDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
@@ -102,7 +136,6 @@ class TransportOrderController extends Controller
                 return $res->json()['routes'][0]['distance'] / 1000;
             }
         } catch (\Throwable $e) {
-          
         }
 
         $dLat = deg2rad($lat2 - $lat1);

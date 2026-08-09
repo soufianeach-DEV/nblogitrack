@@ -33,6 +33,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                 address: `${s.rue}${s.numero ? ' ' + s.numero : ''}, ${s.cp ? s.cp + ' ' : ''}${s.ville}, ${nomPays}`,
                 lat: s.coords.lat,
                 lng: s.coords.lng,
+                pays: nomPays,
             });
         } else {
             onChange('');
