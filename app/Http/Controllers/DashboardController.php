@@ -13,7 +13,6 @@ class DashboardController extends Controller
     {
         $query = TransportOrder::query();
 
-        // Un client ne voit que ses ordres ; le staff voit tout.
         if ($request->user()->cannot('view-all-orders')) {
             $query->where('client_id', $request->user()->id);
         }
