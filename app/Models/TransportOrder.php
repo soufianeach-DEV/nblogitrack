@@ -14,9 +14,9 @@ class TransportOrder extends Model
 
         protected $fillable = [
         'client_id', 'created_date', 'pickup_date', 'pickup_address', 'delivery_address',
-        'weight', 'volume', 'goods_type', 'is_hazardous', 'status', 'priority',
+        'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
-        'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
+        'actual_delivery_date', 'estimated_cost', 'tariff_grid_id', 
     ];
 
     protected function casts(): array
@@ -27,6 +27,7 @@ class TransportOrder extends Model
             'requested_delivery_date' => 'date',
             'actual_delivery_date' => 'date',
             'pickup_date' => 'date',
+            'distance_km' => 'integer',
         ];
     }
 
