@@ -42,14 +42,17 @@ export default function Create({ tariffGrids, pricing }) {
 
     useEffect(() => {
         if (!data.pickup_lat || !data.delivery_lat) { setDistance(null); return; }
-        const fallback = () => Math.round(haversineKm(Number(data.pickup_lat), Number(data.pickup_lng), Number(data.delivery_lat), Number(data.delivery_lng)));
+        const fallback = () => haversineKm(Number(data.pickup_lat), Number(data.pickup_lng), Number(data.delivery_lat), Number(data.delivery_lng));
         setLoadingDist(true);
         fetch(`https://router.project-osrm.org/route/v1/driving/${data.pickup_lng},${data.pickup_lat};${data.delivery_lng},${data.delivery_lat}?overview=false`)
             .then((r) => r.json())
-            .then((j) => setDistance(j.routes?.[0]?.distance ? Math.round(j.routes[0].distance / 1000) : fallback()))
+            .then((j) => setDistance(j.routes?.[0]?.distance ? j.routes[0].distance / 1000 : fallback()))
             .catch(() => setDistance(fallback()))
             .finally(() => setLoadingDist(false));
     }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng]);
+
+    const fr = (n, dec = 2) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    const kmTxt = distance != null ? distance.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : '';
 
     const grillesVisibles = data.delivery_country
         ? tariffGrids.filter((g) => g.zone === data.delivery_country)
@@ -228,7 +231,7 @@ export default function Create({ tariffGrids, pricing }) {
                                     >
                                         <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ?? g.label}</p>
                                         <p className="text-xs text-gray-500">livré en {g.delivery_days} j</p>
-                                        <p className="mt-2 text-lg font-bold text-action-dark">{p ? `${p.total.toFixed(2)} €` : '—'}</p>
+                                        <p className="mt-2 text-lg font-bold text-action-dark">{p ? `${fr(p.total)} €` : '—'}</p>
                                         {tropLent && <p className="mt-1 text-xs text-gray-400">trop lent pour la date demandée</p>}
                                     </button>
                                 );
@@ -254,23 +257,23 @@ export default function Create({ tariffGrids, pricing }) {
                             <div className="flex items-center justify-between gap-4">
                                 <div>
                                     <p className="text-sm font-medium text-marine">
-                                        {detail ? 'Estimation du prix' : `Distance : ${distance} km`}
+                                        {detail ? 'Estimation du prix' : `Distance : ${kmTxt} km`}
                                     </p>
                                     {detail ? (
                                         detail.carburant != null ? (
                                             <p className="text-xs text-gray-500">
-                                                Véhicule dédié · {distance} km — Carburant {detail.carburant.toFixed(0)} € + Péages {detail.peages.toFixed(0)} € + Chauffeur {detail.chauffeur.toFixed(0)} € + Véhicule {detail.vehicule.toFixed(0)} € + Frais fixes {Number(selectedGrid.base_rate).toFixed(0)} € + Marge {Math.round(pricing.margin * 100)} %{data.is_hazardous ? ` × ADR ${Number(selectedGrid.adr_coefficient).toFixed(2)}` : ''} · livré en {selectedGrid.delivery_days} j
+                                                Véhicule dédié · {kmTxt} km — Carburant {fr(detail.carburant, 0)} € + Péages {fr(detail.peages, 0)} € + Chauffeur {fr(detail.chauffeur, 0)} € + Véhicule {fr(detail.vehicule, 0)} € + Frais fixes {fr(selectedGrid.base_rate, 0)} € + Marge {Math.round(pricing.margin * 100)} %{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · livré en {selectedGrid.delivery_days} j
                                             </p>
                                         ) : (
                                             <p className="text-xs text-gray-500">
-                                                Base {Number(selectedGrid.base_rate).toFixed(2)} € + {Number(selectedGrid.price_per_kg).toFixed(3)} €/kg × {data.weight} kg + {Number(selectedGrid.price_per_km).toFixed(2)} €/km × {distance} km{data.is_hazardous ? ` × ADR ${Number(selectedGrid.adr_coefficient).toFixed(2)}` : ''} · livré en {selectedGrid.delivery_days} j
+                                                Base {fr(selectedGrid.base_rate)} € + {fr(selectedGrid.price_per_kg, 3)} €/kg × {data.weight} kg + {fr(selectedGrid.price_per_km)} €/km × {kmTxt} km{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · livré en {selectedGrid.delivery_days} j
                                             </p>
                                         )
                                     ) : (
                                         <p className="text-xs text-gray-500">Indique le poids pour voir les prix groupage.</p>
                                     )}
                                 </div>
-                                {detail && <p className="text-3xl font-bold text-action-dark">{detail.total.toFixed(2)} €</p>}
+                                {detail && <p className="text-3xl font-bold text-action-dark">{fr(detail.total)} €</p>}
                             </div>
                         )}
                     </div>
