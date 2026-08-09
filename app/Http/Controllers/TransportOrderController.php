@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -43,7 +44,7 @@ class TransportOrderController extends Controller
     public function create(): Response
     {
         return Inertia::render('TransportOrders/Create', [
-            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'adr_coefficient', 'delivery_days']),
+            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'adr_coefficient', 'delivery_days', 'service_level']),
             'pricing' => config('pricing'),
         ]);
     }
@@ -53,7 +54,7 @@ class TransportOrderController extends Controller
         $data = $request->validate([
             'pickup_address' => 'required|string|max:255',
             'delivery_address' => 'required|string|max:255',
-            'delivery_country' => 'required|in:Belgique,France,Pays-Bas,Allemagne,Luxembourg',
+            'delivery_country' => 'required|string|size:2|exists:tariff_grids,zone',
             'pickup_lat' => 'required|numeric|between:-90,90',
             'pickup_lng' => 'required|numeric|between:-180,180',
             'delivery_lat' => 'required|numeric|between:-90,90',
@@ -62,16 +63,35 @@ class TransportOrderController extends Controller
             'goods_type' => 'required|in:Alimentaire,Frigorifique,Textile,Électronique,Matériaux de construction,Chimie,Automobile,Autre',
             'is_hazardous' => 'boolean',
             'priority' => 'required|in:LOW,NORMAL,HIGH,URGENT',
-            'pickup_date' => 'nullable|date|after_or_equal:today',
+            'pickup_date' => 'nullable|date|after_or_equal:now',
             'requested_delivery_date' => 'nullable|date|after_or_equal:today',
             'tariff_grid_id' => 'required|exists:tariff_grids,id',
             'special_instructions' => 'nullable|string',
+        ], [
+            'pickup_lat.required' => 'Sélectionne une adresse de départ dans la liste de suggestions.',
+            'pickup_lng.required' => 'Sélectionne une adresse de départ dans la liste de suggestions.',
+            'delivery_lat.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
+            'delivery_lng.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
+            'delivery_country.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
         ]);
+
+        if (! empty($data['requested_delivery_date']) && Carbon::parse($data['requested_delivery_date'])->lt(now()->addHours(48))) {
+            $data['priority'] = 'URGENT';
+        }
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
 
         if ($grid->zone !== $data['delivery_country']) {
             return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
+        }
+
+        if (! empty($data['requested_delivery_date'])) {
+            $depart = ! empty($data['pickup_date']) ? Carbon::parse($data['pickup_date'])->startOfDay() : now()->startOfDay();
+            $delai = $depart->diffInDays(Carbon::parse($data['requested_delivery_date'])->startOfDay(), false);
+
+            if ($grid->delivery_days > $delai) {
+                return back()->withErrors(['tariff_grid_id' => 'La formule choisie ne permet pas de livrer à la date demandée.']);
+            }
         }
 
         $distanceKm = $this->roadDistanceKm($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
@@ -105,7 +125,7 @@ class TransportOrderController extends Controller
 
     private function computeCost(TariffGrid $grid, float $distanceKm, float $weight, string $country, bool $hazardous): float
     {
-        if ((int) $grid->delivery_days === 1) {
+        if ($grid->service_level === 'EXPRESS') {
             $p = config('pricing');
 
             $cost = $grid->base_rate

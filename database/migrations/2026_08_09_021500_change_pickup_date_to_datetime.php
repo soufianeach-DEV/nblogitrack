@@ -9,14 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transport_orders', function (Blueprint $table) {
-            $table->date('pickup_date')->nullable()->after('created_date');
+            $table->dateTime('pickup_date')->nullable()->change();
         });
     }
 
     public function down(): void
     {
         Schema::table('transport_orders', function (Blueprint $table) {
-            $table->dropColumn('pickup_date');
+            $table->date('pickup_date')->nullable()->change();
         });
     }
 };

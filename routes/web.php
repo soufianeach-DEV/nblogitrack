@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GeoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
@@ -35,5 +36,11 @@ Route::middleware('auth')->group(function () {
 Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:10,1')
     ->name('tracking.show');
+
+Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
+    Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
+    Route::get('/geo/numeros', [GeoController::class, 'numeros'])->name('geo.numeros');
+});
 
 require __DIR__.'/auth.php';
