@@ -24,5 +24,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
         Gate::define('view-all-orders', fn (User $user) => $user->isStaff());
+        Gate::define('plan-orders', fn (User $user) => $user->isStaff());
     }
 }
