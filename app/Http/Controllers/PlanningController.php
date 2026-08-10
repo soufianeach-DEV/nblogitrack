@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
@@ -103,6 +104,17 @@ class PlanningController extends Controller
             'status' => 'IN_PROGRESS',
         ]);
 
+        ActivityLog::record(
+            'order.assigned',
+            'Affectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration,
+            $transportOrder,
+            [
+                'vehicule' => $vehicle->registration.' '.$vehicle->brand.' '.$vehicle->model,
+                'chauffeur_id' => $driver->id,
+                'statut' => 'PENDING → IN_PROGRESS',
+            ],
+        );
+
         return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' affecté au véhicule '.$vehicle->registration.'.');
     }
 
@@ -118,6 +130,7 @@ class PlanningController extends Controller
             return back()->withErrors(['status' => 'Transition impossible depuis le statut '.$transportOrder->status.'.']);
         }
 
+        $ancien = $transportOrder->status;
         $champs = ['status' => $data['status']];
 
         if ($data['status'] === 'DELIVERED') {
@@ -125,6 +138,13 @@ class PlanningController extends Controller
         }
 
         $transportOrder->update($champs);
+
+        ActivityLog::record(
+            'order.status_changed',
+            'Ordre '.$transportOrder->tracking_number.' : statut '.$ancien.' → '.$data['status'],
+            $transportOrder,
+            ['avant' => $ancien, 'apres' => $data['status']],
+        );
 
         return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' : statut mis à jour.');
     }

@@ -34,6 +34,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'canPlan' => (bool) $request->user()?->isStaff(),
+                'canViewLogs' => (bool) $request->user()?->isAdmin(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
