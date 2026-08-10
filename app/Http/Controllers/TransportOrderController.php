@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrdreCree;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -119,8 +121,16 @@ class TransportOrderController extends Controller
             'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
         ]);
 
+        try {
+            Mail::to($request->user()->email)->send(new OrdreCree($order, $request->user(), $grid));
+            $confirmation = 'Ordre créé : '.$order->tracking_number.' — le code de suivi vous a été envoyé par e-mail.';
+        } catch (\Throwable $e) {
+            report($e);
+            $confirmation = 'Ordre créé : '.$order->tracking_number.' — l\'e-mail de confirmation n\'a pas pu être envoyé.';
+        }
+
         return redirect()->route('transport-orders.index')
-            ->with('success', 'Ordre créé : '.$order->tracking_number);
+            ->with('success', $confirmation);
     }
 
     private function computeCost(TariffGrid $grid, float $distanceKm, float $weight, string $country, bool $hazardous): float

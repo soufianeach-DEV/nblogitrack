@@ -19,7 +19,7 @@ function SidebarLink({ href, active, icon, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+    const { user, canPlan } = usePage().props.auth;
 
     return (
         <div className="min-h-screen bg-surface">
@@ -37,6 +37,11 @@ export default function AuthenticatedLayout({ header, children }) {
                     <SidebarLink href={route('transport-orders.index')} active={route().current('transport-orders.index')} icon="inventory_2">
                         Ordres de transport
                     </SidebarLink>
+                    {canPlan && (
+                        <SidebarLink href={route('planning.index')} active={route().current('planning.index')} icon="event_available">
+                            Planification
+                        </SidebarLink>
+                    )}
                     <SidebarLink href={route('tracking.show')} active={route().current('tracking.show')} icon="local_shipping">
                         Suivi
                     </SidebarLink>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
+use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
@@ -31,6 +32,12 @@ Route::middleware('auth')->group(function () {
         ->name('transport-orders.store');
     Route::get('/transport-orders', [TransportOrderController::class, 'index'])
         ->name('transport-orders.index');
+
+    Route::middleware('can:plan-orders')->group(function () {
+        Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
+        Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
+        Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
+    });
 });
 
 Route::get('/suivi', [TrackingController::class, 'show'])

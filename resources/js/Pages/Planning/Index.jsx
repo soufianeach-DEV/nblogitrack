@@ -1,0 +1,240 @@
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+
+const LIBELLE_STATUT = {
+    PENDING: 'En attente',
+    IN_PROGRESS: 'En cours',
+    DELIVERED: 'Livré',
+    CANCELLED: 'Annulé',
+};
+
+const COULEUR_STATUT = {
+    PENDING: 'bg-status-pending/10 text-status-pending',
+    IN_PROGRESS: 'bg-status-progress/10 text-status-progress',
+    DELIVERED: 'bg-status-delivered/10 text-status-delivered',
+    CANCELLED: 'bg-status-incident/10 text-status-incident',
+};
+
+const LIBELLE_PRIORITE = { LOW: 'Basse', NORMAL: 'Normale', HIGH: 'Haute', URGENT: 'Urgente' };
+
+const COULEUR_PRIORITE = {
+    LOW: 'text-slate-400',
+    NORMAL: 'text-slate-500',
+    HIGH: 'text-action-dark font-semibold',
+    URGENT: 'text-status-incident font-semibold',
+};
+
+function LigneAffectation({ ordre, vehicles, drivers }) {
+    const { data, setData, post, processing, errors } = useForm({
+        vehicle_registration: '',
+        driver_id: '',
+    });
+
+    const affecter = (e) => {
+        e.preventDefault();
+        post(route('planning.assign', ordre.id), { preserveScroll: true });
+    };
+
+    const capaciteSuffisante = (v) => Number(v.capacity_tonnes) * 1000 >= Number(ordre.weight);
+    const chauffeurCompatible = (d) => ! ordre.is_hazardous || d.adr_certified;
+    const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
+
+    return (
+        <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+            <div className="flex-1">
+                <select
+                    value={data.vehicle_registration}
+                    onChange={(e) => setData('vehicle_registration', e.target.value)}
+                    className={selectCls}
+                    required
+                >
+                    <option value="">— Véhicule —</option>
+                    {vehicles.map((v) => (
+                        <option key={v.registration} value={v.registration} disabled={! capaciteSuffisante(v)}>
+                            {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString('fr-FR')} t
+                            {capaciteSuffisante(v) ? '' : ' (capacité insuffisante)'}
+                        </option>
+                    ))}
+                </select>
+                {errors.vehicle_registration && <p className="mt-1 text-xs text-status-incident">{errors.vehicle_registration}</p>}
+            </div>
+            <div className="flex-1">
+                <select
+                    value={data.driver_id}
+                    onChange={(e) => setData('driver_id', e.target.value)}
+                    className={selectCls}
+                    required
+                >
+                    <option value="">— Chauffeur —</option>
+                    {drivers.map((d) => (
+                        <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
+                            {d.nom} · permis {d.license_type}{d.adr_certified ? ' · ADR' : ''}
+                            {chauffeurCompatible(d) ? '' : ' (ADR requis)'}
+                        </option>
+                    ))}
+                </select>
+                {errors.driver_id && <p className="mt-1 text-xs text-status-incident">{errors.driver_id}</p>}
+            </div>
+            <button
+                type="submit"
+                disabled={processing}
+                className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
+            >
+                Affecter
+            </button>
+        </form>
+    );
+}
+
+function BoutonsStatut({ ordre }) {
+    const changer = (statut, confirmation) => {
+        if (confirmation && ! window.confirm(confirmation)) return;
+        router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true });
+    };
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            {ordre.status === 'IN_PROGRESS' && (
+                <button
+                    type="button"
+                    onClick={() => changer('DELIVERED')}
+                    className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                    Marquer livré
+                </button>
+            )}
+            {['PENDING', 'IN_PROGRESS'].includes(ordre.status) && (
+                <button
+                    type="button"
+                    onClick={() => changer('CANCELLED', 'Annuler définitivement cet ordre ?')}
+                    className="rounded-lg border border-status-incident px-3 py-1.5 text-xs font-semibold text-status-incident transition hover:bg-status-incident/5"
+                >
+                    Annuler
+                </button>
+            )}
+        </div>
+    );
+}
+
+export default function Index({ orders, vehicles, drivers, statut, compteurs }) {
+    const flash = usePage().props.flash ?? {};
+
+    const dateCourte = (valeur) => valeur
+        ? new Date(valeur).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '—';
+
+    return (
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Planification</h1>}>
+            <Head title="Planification" />
+
+            {flash.success && (
+                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
+                    {flash.success}
+                </div>
+            )}
+
+            <div className="mb-5 flex flex-wrap gap-2">
+                {Object.keys(LIBELLE_STATUT).map((cle) => (
+                    <Link
+                        key={cle}
+                        href={route('planning.index', { status: cle })}
+                        preserveScroll
+                        className={
+                            'rounded-lg px-4 py-2 text-sm font-medium transition ' +
+                            (statut === cle ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
+                        }
+                    >
+                        {LIBELLE_STATUT[cle]}
+                        <span className="ml-2 text-xs opacity-70">{compteurs[cle] ?? 0}</span>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="space-y-3">
+                {orders.data.length === 0 && (
+                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
+                        Aucun ordre {LIBELLE_STATUT[statut].toLowerCase()}.
+                    </p>
+                )}
+
+                {orders.data.map((ordre) => (
+                    <div key={ordre.id} className="rounded-2xl bg-white p-5 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-semibold text-marine">{ordre.tracking_number}</span>
+                                    <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + COULEUR_STATUT[ordre.status]}>
+                                        {LIBELLE_STATUT[ordre.status]}
+                                    </span>
+                                    <span className={'text-xs ' + COULEUR_PRIORITE[ordre.priority]}>
+                                        {LIBELLE_PRIORITE[ordre.priority]}
+                                    </span>
+                                    {ordre.is_hazardous && (
+                                        <span className="rounded-full bg-status-incident/10 px-2.5 py-0.5 text-xs font-medium text-status-incident">
+                                            ADR
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-1 text-sm text-slate-600">{ordre.client?.company_name}</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {ordre.pickup_address} → {ordre.delivery_address}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {Number(ordre.weight).toLocaleString('fr-FR')} kg
+                                    {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString('fr-FR')} km` : ''}
+                                    {' · chargement '}{dateCourte(ordre.pickup_date)}
+                                    {ordre.goods_type ? ` · ${ordre.goods_type}` : ''}
+                                </p>
+                            </div>
+                            <BoutonsStatut ordre={ordre} />
+                        </div>
+
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                            {ordre.status === 'PENDING' ? (
+                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} />
+                            ) : (
+                                <div className="flex flex-wrap gap-6 text-xs text-slate-500">
+                                    <span>
+                                        <span className="text-slate-400">Véhicule : </span>
+                                        {ordre.vehicle
+                                            ? `${ordre.vehicle.registration} · ${ordre.vehicle.brand} ${ordre.vehicle.model}`
+                                            : 'non affecté'}
+                                    </span>
+                                    <span>
+                                        <span className="text-slate-400">Chauffeur : </span>
+                                        {ordre.driver?.user
+                                            ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
+                                            : 'non affecté'}
+                                    </span>
+                                    {ordre.actual_delivery_date && (
+                                        <span>
+                                            <span className="text-slate-400">Livré le : </span>
+                                            {dateCourte(ordre.actual_delivery_date)}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {orders.last_page > 1 && (
+                <div className="mt-6 flex flex-wrap gap-1">
+                    {orders.links.map((lien, i) => (
+                        <Link
+                            key={i}
+                            href={lien.url ?? '#'}
+                            preserveScroll
+                            className={
+                                'rounded-lg px-3 py-2 text-sm ' +
+                                (lien.active ? 'bg-marine text-white' : lien.url ? 'bg-white text-marine hover:bg-slate-50' : 'bg-white text-slate-300')
+                            }
+                            dangerouslySetInnerHTML={{ __html: lien.label }}
+                        />
+                    ))}
+                </div>
+            )}
+        </AuthenticatedLayout>
+    );
+}

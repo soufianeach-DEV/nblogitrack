@@ -17,6 +17,7 @@ class TransportOrder extends Model
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
+        'vehicle_registration', 'driver_id', 'assigned_at',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class TransportOrder extends Model
             'requested_delivery_date' => 'date',
             'actual_delivery_date' => 'date',
             'pickup_date' => 'datetime',
+            'assigned_at' => 'datetime',
             'distance_km' => 'integer',
         ];
     }
@@ -34,5 +36,20 @@ class TransportOrder extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class, 'vehicle_registration', 'registration');
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class);
+    }
+
+    public function tariffGrid(): BelongsTo
+    {
+        return $this->belongsTo(TariffGrid::class);
     }
 }
