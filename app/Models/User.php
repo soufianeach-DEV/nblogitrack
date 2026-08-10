@@ -55,4 +55,19 @@ class User extends Authenticatable
     {
         return in_array($this->role, ['PLANNER', 'ADMIN']);
     }
+
+    public function isPlanner(): bool
+    {
+        return $this->role === 'PLANNER';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'ADMIN';
+    }
+
+    public function isDriver(): bool
+    {
+        return $this->role === 'DRIVER';
+    }
 }

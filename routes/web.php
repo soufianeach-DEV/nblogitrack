@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\PlanningController;
@@ -38,6 +39,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
         Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
     });
+
+    Route::get('/journal', [ActivityLogController::class, 'index'])
+        ->middleware('can:view-logs')
+        ->name('activity-logs.index');
 });
 
 Route::get('/suivi', [TrackingController::class, 'show'])

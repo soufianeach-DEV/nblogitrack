@@ -19,7 +19,7 @@ function SidebarLink({ href, active, icon, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan } = usePage().props.auth;
+    const { user, canPlan, canViewLogs } = usePage().props.auth;
 
     return (
         <div className="min-h-screen bg-surface">
@@ -45,6 +45,11 @@ export default function AuthenticatedLayout({ header, children }) {
                     <SidebarLink href={route('tracking.show')} active={route().current('tracking.show')} icon="local_shipping">
                         Suivi
                     </SidebarLink>
+                    {canViewLogs && (
+                        <SidebarLink href={route('activity-logs.index')} active={route().current('activity-logs.index')} icon="history">
+                            Journal d'activité
+                        </SidebarLink>
+                    )}
                 </nav>
 
                 <Link

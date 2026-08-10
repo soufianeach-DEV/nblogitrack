@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OrdreCree;
+use App\Models\ActivityLog;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use Carbon\Carbon;
@@ -120,6 +121,19 @@ class TransportOrderController extends Controller
             'tracking_code' => strtoupper(Str::random(12)),
             'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
         ]);
+
+        ActivityLog::record(
+            'order.created',
+            'Création de l\'ordre '.$order->tracking_number,
+            $order,
+            [
+                'trajet' => $order->pickup_address.' → '.$order->delivery_address,
+                'poids_kg' => (float) $order->weight,
+                'distance_km' => $order->distance_km,
+                'formule' => $grid->label,
+                'prix' => (float) $order->estimated_cost,
+            ],
+        );
 
         try {
             Mail::to($request->user()->email)->send(new OrdreCree($order, $request->user(), $grid));
