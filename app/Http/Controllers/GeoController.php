@@ -104,14 +104,14 @@ class GeoController extends Controller
     private function interrogerOverpass(string $rue, float $lat, float $lng): array
     {
         $motif = preg_replace('/["\\\\]/', ' ', $rue);
-        $requete = '[out:json][timeout:15];('
-            .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:2500,'.$lat.','.$lng.');'
-            .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:2500,'.$lat.','.$lng.');'
-            .');out tags center 500;';
+        $requete = '[out:json][timeout:10];('
+            .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
+            .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
+            .');out tags center 400;';
 
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'] as $hote) {
             try {
-                $reponse = Http::timeout(20)
+                $reponse = Http::timeout(12)
                     ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
                     ->asForm()
                     ->post($hote, ['data' => $requete]);

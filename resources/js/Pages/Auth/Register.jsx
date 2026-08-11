@@ -1,128 +1,274 @@
+import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
-export default function Register() {
+const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
+
+const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU' };
+
+export default function Register({ secteurs, fonctions }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        first_name: '',
-        last_name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
+        company_name: '', vat_number: '', billing_address: '', postal_code: '',
+        city: '', country: '', business_sector: '',
+        first_name: '', last_name: '', position: '', phone: '',
+        email: '', password: '', password_confirmation: '', marque_declaree: false,
     });
+
+    const [vies, setVies] = useState(null);
+    const [verification, setVerification] = useState(false);
+    const [adresseManuelle, setAdresseManuelle] = useState(false);
+
+    const situationBloquante = vies?.entreprise?.situation?.acceptable === false;
 
     const submit = (e) => {
         e.preventDefault();
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
+        if (situationBloquante) return;
+        post(route('register'), { onFinish: () => reset('password', 'password_confirmation') });
     };
 
+    const verifierTva = async () => {
+        const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
+        if (tva.length < 6) {
+            setVies({ statut: 'format', message: 'Saisis le numéro complet, code pays inclus (ex. BE0123456789).' });
+            return;
+        }
+
+        setVerification(true);
+        try {
+            const reponse = await fetch(`/verification-tva?tva=${encodeURIComponent(tva)}`);
+            const resultat = await reponse.json();
+            setVies(resultat);
+
+            if (resultat.statut === 'valide') {
+                setAdresseManuelle(false);
+                const d = resultat.entreprise?.dirigeant;
+
+                setData({
+                    ...data,
+                    vat_number: resultat.tva ?? data.vat_number,
+                    company_name: resultat.nom || data.company_name,
+                    billing_address: resultat.adresse.rue,
+                    postal_code: resultat.adresse.code_postal,
+                    city: resultat.adresse.ville,
+                    country: nomRegion.of((resultat.tva ?? tva).slice(0, 2)) ?? '',
+                    business_sector: resultat.entreprise?.secteur || data.business_sector,
+                    first_name: d?.prenom || data.first_name,
+                    last_name: d?.nom || data.last_name,
+                    position: d?.fonction || data.position,
+                });
+            }
+        } catch {
+            setVies({ statut: 'indisponible', message: 'Le service européen VIES est momentanément injoignable.' });
+        } finally {
+            setVerification(false);
+        }
+    };
+
+    const adresseVerifiee = vies?.statut === 'valide' && ! adresseManuelle && data.billing_address;
+
+    const peppol = vies?.statut === 'valide' ? vies.peppol : null;
+
+    const inputCls = 'mt-0.5 block w-full py-1 text-sm';
+    const selectCls = 'mt-0.5 block w-full rounded-md border-gray-300 py-1 text-sm shadow-sm focus:border-marine focus:ring-marine';
+    const titre = 'mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400';
+
+    const etiquette = (nom, libelle, facultatif = false) => (
+        <InputLabel htmlFor={nom} className="text-xs">
+            {libelle}{facultatif ? '' : <span className="text-status-incident"> *</span>}
+        </InputLabel>
+    );
+
+    const champ = (nom, libelle, options = {}) => {
+        const Composant = options.type === 'password' ? ChampMotDePasse : TextInput;
+
+        return (
+            <div className={options.large ? 'sm:col-span-2' : ''}>
+                {etiquette(nom, libelle, options.facultatif)}
+                <Composant
+                    id={nom}
+                    type={options.type ?? 'text'}
+                    value={data[nom]}
+                    placeholder={options.exemple}
+                    autoComplete={options.autoComplete}
+                    className={inputCls}
+                    onChange={(e) => setData(nom, e.target.value)}
+                />
+                <InputError message={errors[nom]} className="mt-1" />
+            </div>
+        );
+    };
+
+    const liste = (nom, libelle, valeurs, exemple, options = {}) => (
+        <div className={options.large ? 'sm:col-span-2' : ''}>
+            {etiquette(nom, libelle, true)}
+            <input
+                id={nom}
+                list={nom + '-liste'}
+                value={data[nom]}
+                placeholder={exemple}
+                onChange={(e) => setData(nom, e.target.value)}
+                className={selectCls}
+            />
+            <datalist id={nom + '-liste'}>
+                {valeurs.map((v) => <option key={v} value={v} />)}
+            </datalist>
+            <InputError message={errors[nom]} className="mt-1" />
+        </div>
+    );
+
     return (
-        <GuestLayout>
+        <GuestLayout large>
             <Head title="Inscription" />
 
-            <div className="mb-8 flex gap-8 border-b border-slate-200 text-sm font-semibold">
-                <Link href={route('login')} className="pb-3 text-slate-400 hover:text-marine">
-                    CONNEXION
-                </Link>
-                <span className="border-b-2 border-action pb-3 text-marine">INSCRIPTION</span>
+            <div className="mb-2 flex gap-8 border-b border-slate-200 text-sm font-semibold">
+                <Link href={route('login')} className="pb-2 text-slate-400 hover:text-marine">CONNEXION</Link>
+                <span className="border-b-2 border-action pb-2 text-marine">INSCRIPTION</span>
             </div>
 
-            <h1 className="text-2xl font-bold text-marine">Créer votre compte</h1>
-            <p className="mt-1 text-sm text-slate-500">
-                Rejoignez NBLogiTrack et suivez vos expéditions en temps réel.
+            <h1 className="text-lg font-bold text-marine">Inscrire votre entreprise</h1>
+            <p className="text-xs text-slate-500">
+                Votre compte sera activé après vérification de votre entreprise par nos services.
             </p>
 
-            <form onSubmit={submit} className="mt-6">
-                <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={submit} className="mt-3">
+                <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
                     <div>
-                        <InputLabel htmlFor="first_name" value="Prénom" />
-                        <TextInput
-                            id="first_name"
-                            name="first_name"
-                            value={data.first_name}
-                            className="mt-1 block w-full"
-                            autoComplete="given-name"
-                            isFocused={true}
-                            onChange={(e) => setData('first_name', e.target.value)}
-                            required
-                        />
-                        <InputError message={errors.first_name} className="mt-2" />
+                        <p className={titre}>Entreprise</p>
+
+                        <div>
+                            {etiquette('vat_number', 'Numéro de TVA')}
+                            <div className="mt-0.5 flex gap-2">
+                                <TextInput
+                                    id="vat_number"
+                                    value={data.vat_number}
+                                    placeholder="ex. BE0123456789 ou SIRET 34119222700013"
+                                    className="block w-full py-1 text-sm"
+                                    onChange={(e) => { setData('vat_number', e.target.value.toUpperCase()); setVies(null); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={verifierTva}
+                                    disabled={verification}
+                                    className="shrink-0 rounded-md bg-marine px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-marine-deep disabled:opacity-50"
+                                >
+                                    {verification ? 'Vérification…' : 'Vérifier'}
+                                </button>
+                            </div>
+                            <InputError message={errors.vat_number} className="mt-1" />
+                            {vies?.statut === 'valide' && vies.entreprise?.situation?.acceptable === false && (
+                                <p className="mt-1 text-xs font-medium text-status-incident">
+                                    Situation juridique : {vies.entreprise.situation.libelle}. L'inscription ne peut pas être acceptée.
+                                </p>
+                            )}
+                            {vies?.statut === 'valide' && vies.entreprise?.situation?.acceptable !== false && (
+                                <p className="mt-1 text-xs text-status-delivered">
+                                    Numéro actif{vies.entreprise?.situation ? ', '.concat(vies.entreprise.situation.libelle.toLowerCase()) : ''}, entreprise identifiée dans le registre européen VIES.
+                                    {vies.entreprise?.dirigeant && ' Dirigeant repris du registre national : vérifiez ou remplacez-le.'}
+                                </p>
+                            )}
+                            {vies && vies.statut !== 'valide' && (
+                                <p className="mt-1 text-xs text-status-incident">{vies.message}</p>
+                            )}
+                        </div>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {champ('company_name', 'Raison sociale', { large: true, exemple: 'ex. Transports Dupont SA' })}
+                            {liste('business_sector', "Secteur d'activité", secteurs, 'ex. Construction', { large: true })}
+                        </div>
+
+                        <div className="mt-3">
+                            {adresseVerifiee ? (
+                                <>
+                                    {etiquette('adresse_officielle', 'Adresse du siège')}
+                                    <div className="mt-1 rounded-md border border-status-delivered/40 bg-status-delivered/5 px-3 py-2 text-sm text-marine">
+                                        {data.billing_address}<br />
+                                        {data.postal_code} {data.city} · {data.country}
+                                        <span className="mt-1 block text-xs text-status-delivered">Adresse officielle du registre VIES</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setAdresseManuelle(true); setData({ ...data, billing_address: '', postal_code: '', city: '', country: '' }); }}
+                                        className="mt-1 text-xs text-brand-blue hover:underline"
+                                    >
+                                        Saisir une autre adresse
+                                    </button>
+                                </>
+                            ) : (
+                                <AdresseAutocompletion
+                                    label="Adresse du siège"
+                                    required
+                                    compact
+                                    onChange={() => setData({ ...data, billing_address: '', postal_code: '', city: '', country: '' })}
+                                    onSelect={({ rue, cp, ville, paysNom }) => {
+                                        const prefixe = PREFIXE_TVA[paysNom] ?? '';
+                                        const tvaActuelle = data.vat_number.replace(/^[A-Z]{2}/, '');
+
+                                        setData({
+                                            ...data,
+                                            billing_address: rue,
+                                            postal_code: cp,
+                                            city: ville,
+                                            country: paysNom,
+                                            vat_number: data.vat_number ? prefixe + tvaActuelle : prefixe,
+                                        });
+                                    }}
+                                    error={errors.billing_address || errors.postal_code || errors.city || errors.country}
+                                />
+                            )}
+                        </div>
+
+                        <p className="mt-2 text-xs text-slate-400">
+                            Identifiant Peppol :{' '}
+                            {peppol
+                                ? <span className="font-mono text-brand-blue">{peppol}</span>
+                                : <span>déduit après vérification du numéro</span>}
+                        </p>
                     </div>
+
                     <div>
-                        <InputLabel htmlFor="last_name" value="Nom" />
-                        <TextInput
-                            id="last_name"
-                            name="last_name"
-                            value={data.last_name}
-                            className="mt-1 block w-full"
-                            autoComplete="family-name"
-                            onChange={(e) => setData('last_name', e.target.value)}
-                            required
-                        />
-                        <InputError message={errors.last_name} className="mt-2" />
+                        <p className={titre}>Personne de contact</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {champ('first_name', 'Prénom', { autoComplete: 'given-name' })}
+                            {champ('last_name', 'Nom', { autoComplete: 'family-name' })}
+                            {liste('position', 'Fonction', fonctions, 'ex. Directeur logistique', { large: true })}
+                            {champ('phone', 'Téléphone', { large: true, exemple: 'ex. +32 2 123 45 67' })}
+                        </div>
+
+                        <p className={titre + ' mt-5'}>Identifiants</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            {champ('email', 'E-mail professionnel', { large: true, type: 'email', autoComplete: 'username', exemple: 'nom@entreprise.be' })}
+                            {champ('password', 'Mot de passe', { large: true, type: 'password', autoComplete: 'new-password' })}
+                            {champ('password_confirmation', 'Confirmer le mot de passe', { large: true, type: 'password', autoComplete: 'new-password' })}
+                        </div>
                     </div>
                 </div>
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="email" value="E-mail professionnel" />
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        placeholder="nom@entreprise.be"
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
+                <label className="mt-4 flex items-start gap-2">
+                    <input
+                        type="checkbox"
+                        checked={data.marque_declaree}
+                        onChange={(e) => setData('marque_declaree', e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-marine focus:ring-marine"
                     />
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
+                    <span className="text-xs text-slate-500">
+                        Je certifie que cette dénomination sociale ne porte pas atteinte à une marque déposée.
+                        <span className="text-status-incident"> *</span>
+                    </span>
+                </label>
+                <InputError message={errors.marque_declaree} className="mt-1" />
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Mot de passe" />
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                        required
-                    />
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password_confirmation" value="Confirmer le mot de passe" />
-                    <TextInput
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
-                        required
-                    />
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <PrimaryButton className="mt-6 w-full" disabled={processing}>
-                    S'inscrire
+                <PrimaryButton className="mt-3 w-full" disabled={processing || situationBloquante}>
+                    Envoyer la demande
                 </PrimaryButton>
             </form>
 
-            <div className="mt-8 flex justify-between text-xs text-slate-400">
-                <span>© 2024 NBLogiTrack Belgium</span>
-                <span>Aide · Confidentialité</span>
-            </div>
         </GuestLayout>
     );
 }

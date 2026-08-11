@@ -53,7 +53,7 @@ const kmEntre = (lat1, lng1, lat2, lng2) => {
     return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false }) {
+export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false }) {
     const [pays, setPays] = useState('BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
@@ -87,11 +87,15 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const publier = (etat = {}) => {
         const s = { pays, ville, cp, rue, numero, coords, ...etat };
         if (s.coords && s.rue && s.ville && s.cp && s.numero) {
-            onSelect({
+                        onSelect({
                 address: `${s.rue} ${s.numero}, ${s.cp} ${s.ville}, ${nomRegion.of(s.pays)}`,
                 lat: s.coords.lat,
                 lng: s.coords.lng,
                 pays: s.pays,
+                rue: `${s.rue} ${s.numero}`,
+                cp: s.cp,
+                ville: s.ville,
+                paysNom: nomRegion.of(s.pays),
             });
         } else {
             onChange('');
@@ -207,7 +211,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             } catch {
                 setSuggVilles([]);
             }
-        }, 300);
+        }, 150);
     };
 
     const choisirVille = (f) => {
@@ -337,7 +341,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             } catch {
                 setSuggRues([]);
             }
-        }, 300);
+        }, 150);
     };
 
     const choisirRue = (f) => {
@@ -357,7 +361,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             setCpChoisi(true);
         }
         publier({ rue: p.name, cp: cpRue, coords: { lat, lng }, numero: '' });
-        chargerNumeros(p.name, lat, lng, cpRue);
+        if (! numeroLibre) chargerNumeros(p.name, lat, lng, cpRue);
     };
 
     const chercherNums = (brut) => {
@@ -366,6 +370,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         numeroRef.current = v;
         setNumChoisi(false);
         setAucunNum(false);
+        if (numeroLibre) { publier({ numero: v }); return; }
         publier({ numero: '' });
         if (numsDispo.length > 0) {
             const liste = numsDispo.filter((n) => n.hn.toLowerCase().startsWith(v.toLowerCase()));
@@ -395,7 +400,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             } catch {
                 setSuggNums([]);
             }
-        }, 300);
+        }, 150);
     };
 
     const chargerNumeros = async (nomRue, lat, lng, cpActuel) => {
@@ -459,8 +464,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     return (
         <div>
             <InputLabel>{label}{required && <span className="text-status-incident"> *</span>}</InputLabel>
-            <div className="mt-2 space-y-3">
-                <div>
+            <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
+                <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>Pays <span className="text-status-incident">*</span></span>
                     <select value={pays} onChange={(e) => changerPays(e.target.value)} className={selectCls}>
                         {PAYS.map((p) => (
@@ -567,7 +572,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-slate-400">Codes postaux non référencés pour cette ville — saisie libre.</p>
                     )}
                 </div>
-                <div>
+                <div className={compact ? 'col-span-2' : ''}>
                     <div className="flex gap-2">
                         <div className="relative flex-1">
                             <span className={sousLabel}>Rue <span className="text-status-incident">*</span></span>
@@ -593,7 +598,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                 </ul>
                             )}
                         </div>
-                        <div className="w-24">
+                        <div className="w-28 shrink-0">
                             <span className={sousLabel}>N° <span className="text-status-incident">*</span></span>
                             <div className="relative">
                             <TextInput
@@ -650,7 +655,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     {aucunNum && (
                         <p className="mt-1 text-xs text-status-incident">Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.</p>
                     )}
-                    {rueChoisie && numero && !numChoisi && !aucunNum && !numsChargement && suggNums.length === 0 && (
+                    {! numeroLibre && rueChoisie && numero && !numChoisi && !aucunNum && !numsChargement && suggNums.length === 0 && (
                         <p className="mt-1 text-xs text-slate-400">Choisis le numéro dans la liste.</p>
                     )}
                 </div>

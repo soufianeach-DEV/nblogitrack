@@ -7,6 +7,7 @@ use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
+use App\Http\Controllers\VatController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,5 +55,9 @@ Route::middleware('throttle:120,1')->group(function () {
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
     Route::get('/geo/numeros', [GeoController::class, 'numeros'])->name('geo.numeros');
 });
+
+Route::get('/verification-tva', [VatController::class, 'verifier'])
+    ->middleware('throttle:20,1')
+    ->name('vat.verify');
 
 require __DIR__.'/auth.php';
