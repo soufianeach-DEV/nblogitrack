@@ -48,13 +48,9 @@ class GeoController extends Controller
         $codes = DB::table('postal_codes')
             ->selectRaw('code, MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
             ->where('country_code', strtoupper($data['pays']))
-            ->where(function ($query) use ($data) {
-                $query->where('city', 'ilike', $data['ville'])
-                    ->orWhere(function ($zone) use ($data) {
-                        $zone->whereBetween('lat', [(float) $data['lat'] - 0.10, (float) $data['lat'] + 0.10])
-                            ->whereBetween('lng', [(float) $data['lng'] - 0.16, (float) $data['lng'] + 0.16]);
-                    });
-            })
+            // Chaque localite porte ses propres codes : Gilly a le 6060, Courcelles
+            // le 6180. Elargir a la zone geographique ferait remonter les communes voisines.
+            ->where('city', 'ilike', $data['ville'])
             ->groupBy('code')
             ->orderBy('code')
             ->limit(60)
