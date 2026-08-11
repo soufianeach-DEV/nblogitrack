@@ -19,9 +19,7 @@ function SidebarLink({ href, active, icon, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs } = usePage().props.auth;
-
-    return (
+    const { user, canPlan, canViewLogs, canValidateClients } = usePage().props.auth;    return (
         <div className="min-h-screen bg-surface">
             <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-marine px-4 py-6 md:flex">
                 <div className="mb-8 px-2">
@@ -45,9 +43,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     <SidebarLink href={route('tracking.show')} active={route().current('tracking.show')} icon="local_shipping">
                         Suivi
                     </SidebarLink>
-                    {canViewLogs && (
-                        <SidebarLink href={route('activity-logs.index')} active={route().current('activity-logs.index')} icon="history">
-                            Journal d'activité
+                   {canValidateClients && (
+                        <SidebarLink href={route('clients.index')} active={route().current('clients.index')} icon="verified">
+                            Entreprises
                         </SidebarLink>
                     )}
                 </nav>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\PlanningController;
@@ -42,8 +43,12 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
-        ->middleware('can:view-logs')
-        ->name('activity-logs.index');
+        ->middleware('can:view-logs');
+    Route::middleware('can:validate-clients')->group(function () {
+        Route::get('/entreprises', [ClientValidationController::class, 'index'])->name('clients.index');
+        Route::post('/entreprises/{client}/validation', [ClientValidationController::class, 'approve'])->name('clients.approve');
+        Route::post('/entreprises/{client}/refus', [ClientValidationController::class, 'reject'])->name('clients.reject');
+    });
 });
 
 Route::get('/suivi', [TrackingController::class, 'show'])

@@ -17,6 +17,9 @@ class ActivityLogController extends Controller
         'auth.logout' => 'Déconnexion',
         'auth.failed' => 'Échec de connexion',
         'auth.lockout' => 'Blocage temporaire',
+        'client.registered' => 'Inscription entreprise',
+        'client.validated' => 'Validation entreprise',
+        'client.rejected' => 'Refus entreprise',
     ];
 
     public function index(Request $request): Response
