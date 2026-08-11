@@ -1,3 +1,4 @@
+import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
@@ -95,9 +96,9 @@ export default function Show({ order, chauffeur }) {
             header={
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <Link href={route('transport-orders.index')} className="text-sm text-brand-blue hover:underline">
-                            ← Ordres de transport
-                        </Link>
+                        <BoutonRetour href={route('transport-orders.index')}>
+                            Ordres de transport
+                        </BoutonRetour>
                         <h1 className="mt-1 text-2xl font-bold text-marine">{order.tracking_number}</h1>
                         <p className="text-sm text-slate-600">{order.client?.company_name}</p>
                     </div>

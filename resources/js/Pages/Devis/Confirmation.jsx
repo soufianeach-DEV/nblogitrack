@@ -42,9 +42,10 @@ export default function Confirmation({ devis }) {
                     <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                         <Link
                             href={route('accueil')}
-                            className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-bold text-marine transition hover:bg-surface"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 px-6 py-3 text-sm font-bold text-marine transition hover:bg-surface"
                         >
-                            ← Retour à l'accueil
+                            <Icone nom="retour" className="h-4 w-4" />
+                            Retour à l'accueil
                         </Link>
                         <Link
                             href={route('register')}
