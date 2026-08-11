@@ -91,4 +91,28 @@
         outline: 2px solid theme('colors.brand-blue');
         outline-offset: 2px;
     }
+
+    /* Les ancres de la page vitrine glissent au lieu de sauter. */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Respecte le reglage systeme de qui souffre du mouvement a l'ecran. */
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+/* Rapprochement lent de la photo du heros. */
+@keyframes zoom {
+    from { transform: scale(1); }
+    to { transform: scale(1.12); }
 }
