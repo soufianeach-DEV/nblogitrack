@@ -44,7 +44,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
-        ->middleware('can:view-logs');
+        ->middleware('can:view-logs')
+        ->name('activity-logs.index');
+
     Route::middleware('can:validate-clients')->group(function () {
         Route::get('/entreprises', [ClientValidationController::class, 'index'])->name('clients.index');
         Route::post('/entreprises/{client}/validation', [ClientValidationController::class, 'approve'])->name('clients.approve');
