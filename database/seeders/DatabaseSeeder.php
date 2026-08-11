@@ -12,6 +12,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Les donnees de demonstration vident les tables avant de les remplir et
+        // creent des comptes dont le mot de passe est public. Hors developpement,
+        // les executer detruirait les donnees reelles et ouvrirait l'application.
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->error('Jeu de démonstration refusé : réservé aux environnements local et testing.');
+
+            return;
+        }
+
         DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders CASCADE');
 
         $this->call([

@@ -144,9 +144,16 @@ class RegisteredUserController extends Controller
         );
 
         $resultat = $verification->getData(true);
+        $statut = $resultat['statut'] ?? '';
 
-        if (($resultat['statut'] ?? '') === 'invalide') {
+        if ($statut === 'invalide') {
             return 'Ce numéro n\'est pas actif dans le registre européen.';
+        }
+
+        // Sans réponse du registre, pas d'inscription : le contrôle serait sinon
+        // contournable en attendant, ou en provoquant, une saturation du service.
+        if ($statut !== 'valide') {
+            return 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.';
         }
 
         $situation = $resultat['entreprise']['situation'] ?? null;
