@@ -47,6 +47,135 @@ function Jalon({ libelle, detail, horodatage, fait, actif, dernier }) {
 }
 
 /**
+ * Le champ de recherche deroule tout ce que l'utilisateur peut consulter,
+ * expeditions livrees comprises. Chercher a l'aveugle supposerait de
+ * connaitre un numero par coeur.
+ */
+function ChoixExpedition({ catalogue, onChoisir }) {
+    const [ouvert, setOuvert] = useState(false);
+    const [saisie, setSaisie] = useState('');
+
+    const resultats = useMemo(() => {
+        const terme = saisie.trim().toLowerCase();
+
+        if (terme === '') {
+            return catalogue;
+        }
+
+        return catalogue.filter((e) => [e.numero, e.depart, e.arrivee, e.date]
+            .some((champ) => champ && champ.toLowerCase().includes(terme)));
+    }, [catalogue, saisie]);
+
+    const choisir = (expedition) => {
+        setSaisie('');
+        setOuvert(false);
+        onChoisir(expedition.numero);
+    };
+
+    return (
+        <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-600">
+                <Icone nom="recherche" className="h-5 w-5" />
+            </span>
+            <input
+                value={saisie}
+                onChange={(e) => {
+                    setSaisie(e.target.value);
+                    setOuvert(true);
+                }}
+                onFocus={() => setOuvert(true)}
+                // Un clic sur une ligne passe par le survol : fermer aussitot
+                // annulerait la selection avant qu'elle ne se produise.
+                onBlur={() => setTimeout(() => setOuvert(false), 150)}
+                onKeyDown={(e) => e.key === 'Escape' && setOuvert(false)}
+                placeholder="Rechercher une expédition…"
+                aria-label="Rechercher une expédition"
+                aria-expanded={ouvert}
+                role="combobox"
+                aria-controls="liste-expeditions"
+                className="w-full rounded-lg border-slate-300 py-2.5 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
+            />
+
+            {ouvert && (
+                <div
+                    id="liste-expeditions"
+                    role="listbox"
+                    className="absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                >
+                    <p className="px-3 py-1.5 text-xs text-slate-600">
+                        {resultats.length} expédition{resultats.length > 1 ? 's' : ''}
+                        {saisie.trim() !== '' && ' sur ' + catalogue.length}
+                    </p>
+
+                    {resultats.length === 0 ? (
+                        <p className="px-3 py-3 text-sm text-slate-600">Aucune expédition ne correspond.</p>
+                    ) : resultats.map((expedition) => {
+                        const statut = STATUTS[expedition.statut] ?? STATUTS.PENDING;
+
+                        return (
+                            <button
+                                key={expedition.id}
+                                type="button"
+                                role="option"
+                                aria-selected="false"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => choisir(expedition)}
+                                className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-surface"
+                            >
+                                <span className="w-32 shrink-0 font-mono text-xs text-brand-blue">{expedition.numero}</span>
+                                <span className="min-w-0 flex-1 truncate text-sm text-marine">
+                                    {expedition.depart} <span className="text-slate-600">→</span> {expedition.arrivee}
+                                </span>
+                                <span className="shrink-0 text-xs text-slate-600">{expedition.date}</span>
+                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statut.classe}`}>
+                                    {statut.libelle}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * Les jalons cote a cote plutot qu'empiles : la fiche tient alors dans la
+ * hauteur de la page, sans defilement.
+ */
+function Frise({ etapes }) {
+    return (
+        <ol className="flex items-start">
+            {etapes.map((etape, i) => (
+                <li key={etape.libelle} className="flex-1">
+                    <div className="flex items-center">
+                        <span className={`h-0.5 flex-1 ${i === 0 ? 'bg-transparent' : etape.fait ? 'bg-status-delivered' : 'bg-slate-200'}`} />
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                            etape.fait ? 'bg-status-delivered text-white' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                            {etape.fait ? '✓' : i + 1}
+                        </span>
+                        <span className={`h-0.5 flex-1 ${
+                            i === etapes.length - 1 ? 'bg-transparent' : etapes[i + 1].fait ? 'bg-status-delivered' : 'bg-slate-200'
+                        }`} />
+                    </div>
+
+                    <div className="mt-2 px-2 text-center">
+                        <p className={`text-sm font-semibold ${etape.fait ? 'text-marine' : 'text-slate-600'}`}>
+                            {etape.libelle}
+                        </p>
+                        {etape.horodatage && (
+                            <p className="text-xs font-medium text-brand-blue">{etape.horodatage}</p>
+                        )}
+                        <p className="mt-0.5 text-xs text-slate-600">{etape.detail}</p>
+                    </div>
+                </li>
+            ))}
+        </ol>
+    );
+}
+
+/**
  * Une expedition dans la liste de gauche. La carte et la liste partagent la
  * meme selection : cliquer ici ou sur le trait revient au meme.
  */
@@ -90,10 +219,8 @@ function LigneExpedition({ expedition, active, onClick }) {
     );
 }
 
-function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [] }) {
+function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [], catalogue = [] }) {
     const { canPlan } = usePage().props.auth;
-    const { data, setData, get, processing } = useForm({ tracking_number: '' });
-    const [filtre, setFiltre] = useState('');
     const [agrandie, setAgrandie] = useState(false);
     const [itineraire, setItineraire] = useState(null);
     const [peages, setPeages] = useState([]);
@@ -128,13 +255,6 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
         };
     }, [order?.id]);
 
-    // Le champ filtre la liste au fil de la frappe ; le valider interroge le
-    // serveur, ce qui permet d'ouvrir une expedition deja livree.
-    const chercher = (e) => {
-        e.preventDefault();
-        get(route('tracking.show'), { preserveScroll: true });
-    };
-
     const ouvrir = (numero) => router.get(
         route('tracking.show'),
         numero ? { tracking_number: numero } : {},
@@ -144,17 +264,6 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
             only: ['order', 'chauffeur', 'etapes', 'historique', 'searched', 'expeditions'],
         },
     );
-
-    const liste = useMemo(() => {
-        const terme = filtre.trim().toLowerCase();
-
-        if (terme === '') {
-            return expeditions;
-        }
-
-        return expeditions.filter((e) => [e.numero, e.depart, e.arrivee, e.client, e.marchandise]
-            .some((champ) => champ && champ.toLowerCase().includes(terme)));
-    }, [expeditions, filtre]);
 
     const nombre = (valeur, unite) => valeur === null || valeur === undefined
         ? '—'
@@ -170,30 +279,13 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
         return heures > 0 ? `${heures} h ${String(minutes % 60).padStart(2, '0')}` : `${minutes} min`;
     };
 
-    const encours = etapes ? etapes.filter((e) => e.fait).length : 0;
-
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Suivi d'expédition</h1>}>
             <Head title="Suivi d'expédition" />
 
             <div className="flex flex-col gap-4 lg:h-[calc(100vh-11.5rem)] lg:flex-row">
                 <div className={`flex w-full flex-col gap-3 lg:w-2/3 ${agrandie ? 'lg:hidden' : ''}`}>
-                    <form onSubmit={chercher} className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-600">
-                            <Icone nom="recherche" className="h-5 w-5" />
-                        </span>
-                        <input
-                            value={data.tracking_number}
-                            onChange={(e) => {
-                                setData('tracking_number', e.target.value.toUpperCase());
-                                setFiltre(e.target.value);
-                            }}
-                            placeholder="Rechercher un numéro de suivi…"
-                            aria-label="Rechercher une expédition"
-                            disabled={processing}
-                            className="w-full rounded-lg border-slate-300 py-2.5 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        />
-                    </form>
+                    <ChoixExpedition catalogue={catalogue} onChoisir={ouvrir} />
 
                     {order ? (
                         <section className="flex-1 overflow-y-auto rounded-2xl bg-white p-5 shadow-sm">
@@ -261,16 +353,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                     <p className="font-semibold">Expédition annulée</p>
                                 </div>
                             ) : (
-                                <ol>
-                                    {etapes.map((etape, i) => (
-                                        <Jalon
-                                            key={etape.libelle}
-                                            {...etape}
-                                            actif={i === encours}
-                                            dernier={i === etapes.length - 1}
-                                        />
-                                    ))}
-                                </ol>
+                                <Frise etapes={etapes} />
                             )}
 
                             <div className="mt-6 border-t border-slate-100 pt-4">
@@ -333,7 +416,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                                     {canPlan ? 'Expéditions en cours' : 'Mes expéditions en cours'}
                                 </h2>
-                                <span className="text-xs text-slate-600">{liste.length}</span>
+                                <span className="text-xs text-slate-600">{expeditions.length}</span>
                             </div>
 
                             {searched && ! order && (
@@ -342,7 +425,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                 </p>
                             )}
 
-                            {liste.length === 0 ? (
+                            {expeditions.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-slate-600">
                                     {expeditions.length === 0
                                         ? 'Aucune expédition en circulation pour le moment.'
@@ -350,7 +433,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                 </p>
                             ) : (
                                 <ul className="-mr-1 space-y-2 overflow-y-auto pr-1 lg:min-h-0 lg:flex-1">
-                                    {liste.map((expedition) => (
+                                    {expeditions.map((expedition) => (
                                         <LigneExpedition
                                             key={expedition.id}
                                             expedition={expedition}
@@ -366,10 +449,10 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
 
                 <div className={`relative h-[420px] overflow-hidden rounded-2xl shadow-sm lg:h-auto ${agrandie ? 'lg:w-full' : 'lg:w-1/3'}`}>
                     <CarteTrajets
-                        trajets={liste}
+                        trajets={expeditions}
                         selection={order?.id ?? null}
                         onSelection={(id) => {
-                            const cible = liste.find((e) => e.id === id);
+                            const cible = expeditions.find((e) => e.id === id);
 
                             if (cible) {
                                 ouvrir(cible.numero);
