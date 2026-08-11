@@ -49,7 +49,7 @@ export default function Index({ orders, filters }) {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-marine">Ordres de transport</h1>
-                        <p className="text-sm text-slate-500">{orders.total} résultat(s)</p>
+                        <p className="text-sm text-slate-600">{orders.total} résultat(s)</p>
                     </div>
                     <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
                         + Nouvelle expédition
@@ -63,7 +63,7 @@ export default function Index({ orders, filters }) {
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
-                            <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wider text-slate-400">
+                            <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wider text-slate-600">
                                 <th className="px-6 py-4 font-semibold">Référence</th>
                                 <th className="px-6 py-4 font-semibold">Client</th>
                                 <th className="px-6 py-4 font-semibold">Destination</th>
@@ -101,10 +101,10 @@ export default function Index({ orders, filters }) {
                                         >
                                             {order.tracking_number}
                                         </Link>
-                                        <div className="text-xs text-slate-500">{order.goods_type ?? '—'}</div>
+                                        <div className="text-xs text-slate-600">{order.goods_type ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
-                                    <td className="px-6 py-4 text-slate-500">{order.delivery_address}</td>
+                                    <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
                                     <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
                                     <td className="px-6 py-4 text-right font-medium text-marine">
                                         {order.estimated_cost ? `${order.estimated_cost} €` : '—'}
@@ -112,7 +112,7 @@ export default function Index({ orders, filters }) {
                                 </tr>
                             ))}
                             {orders.data.length === 0 && (
-                                <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-400">Aucun ordre ne correspond à ta recherche.</td></tr>
+                                <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-600">Aucun ordre ne correspond à ta recherche.</td></tr>
                             )}
                         </tbody>
                     </table>

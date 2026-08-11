@@ -10,7 +10,7 @@ const COULEUR_ACTION = {
     'client.validated': 'bg-status-delivered/10 text-status-delivered',
     'client.rejected': 'bg-status-incident/10 text-status-incident',
     'auth.login': 'bg-status-delivered/10 text-status-delivered',
-    'auth.logout': 'bg-slate-100 text-slate-500',
+    'auth.logout': 'bg-slate-100 text-slate-600',
     'auth.failed': 'bg-status-incident/10 text-status-incident',
     'auth.lockout': 'bg-status-incident/20 text-status-incident',
 };
@@ -56,15 +56,15 @@ export default function Index({ logs, actions, filtres, stats }) {
 
             <div className="mb-5 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">Entrées enregistrées</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Entrées enregistrées</p>
                     <p className="mt-1 text-2xl font-bold text-marine">{stats.total.toLocaleString('fr-FR')}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">Aujourd'hui</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Aujourd'hui</p>
                     <p className="mt-1 text-2xl font-bold text-marine">{stats.aujourdhui.toLocaleString('fr-FR')}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">Échecs de connexion</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Échecs de connexion</p>
                     <p className="mt-1 text-2xl font-bold text-status-incident">{stats.echecs.toLocaleString('fr-FR')}</p>
                 </div>
             </div>
@@ -100,7 +100,7 @@ export default function Index({ logs, actions, filtres, stats }) {
             <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-surface">
-                        <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                        <tr className="text-left text-xs uppercase tracking-wide text-slate-600">
                             <th className="px-5 py-3">Date</th>
                             <th className="px-5 py-3">Utilisateur</th>
                             <th className="px-5 py-3">Action</th>
@@ -111,38 +111,38 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <tbody className="divide-y divide-slate-100">
                         {logs.data.length === 0 && (
                             <tr>
-                                <td colSpan="5" className="px-5 py-10 text-center text-slate-500">
+                                <td colSpan="5" className="px-5 py-10 text-center text-slate-600">
                                     Aucune entrée ne correspond aux filtres.
                                 </td>
                             </tr>
                         )}
                         {logs.data.map((log) => (
                             <tr key={log.id} className="align-top hover:bg-surface/60">
-                                <td className="whitespace-nowrap px-5 py-3 text-xs text-slate-500">{horodatage(log.created_at)}</td>
+                                <td className="whitespace-nowrap px-5 py-3 text-xs text-slate-600">{horodatage(log.created_at)}</td>
                                 <td className="px-5 py-3">
                                     {log.user ? (
                                         <>
                                             <span className="font-medium text-marine">{log.user.first_name} {log.user.last_name}</span>
-                                            <span className="block text-xs text-slate-400">{log.user.role}</span>
+                                            <span className="block text-xs text-slate-600">{log.user.role}</span>
                                         </>
                                     ) : (
-                                        <span className="text-xs text-slate-400">—</span>
+                                        <span className="text-xs text-slate-600">—</span>
                                     )}
                                 </td>
                                 <td className="whitespace-nowrap px-5 py-3">
-                                    <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + (COULEUR_ACTION[log.action] ?? 'bg-slate-100 text-slate-500')}>
+                                    <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + (COULEUR_ACTION[log.action] ?? 'bg-slate-100 text-slate-600')}>
                                         {actions[log.action] ?? log.action}
                                     </span>
                                 </td>
                                 <td className="px-5 py-3 text-slate-600">
                                     {log.description}
                                     {log.properties && (
-                                        <span className="mt-1 block text-xs text-slate-400">
+                                        <span className="mt-1 block text-xs text-slate-600">
                                             {Object.entries(log.properties).map(([cle, valeur]) => `${cle} : ${valeur}`).join(' · ')}
                                         </span>
                                     )}
                                 </td>
-                                <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-500">{log.ip_address ?? '—'}</td>
+                                <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-600">{log.ip_address ?? '—'}</td>
                             </tr>
                         ))}
                     </tbody>

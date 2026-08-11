@@ -181,7 +181,7 @@ export default function Create({ tariffGrids, pricing }) {
                             <option value="URGENT">Urgente</option>
                         </select>
                         {urgence48h && (
-                            <p className="mt-1 text-xs text-slate-500">Livraison souhaitée sous 48 h : priorité Urgente appliquée automatiquement.</p>
+                            <p className="mt-1 text-xs text-slate-600">Livraison souhaitée sous 48 h : priorité Urgente appliquée automatiquement.</p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-5 sm:col-span-2">
@@ -238,10 +238,10 @@ export default function Create({ tariffGrids, pricing }) {
                             })}
                         </div>
                     ) : (
-                        <p className="mt-1 text-sm text-slate-500">Choisis d'abord l'adresse de destination : la zone tarifaire est déduite automatiquement.</p>
+                        <p className="mt-1 text-sm text-slate-600">Choisis d'abord l'adresse de destination : la zone tarifaire est déduite automatiquement.</p>
                     )}
                     {data.delivery_country && delaiJours !== null && !delaiTropCourt && (
-                        <p className="mt-2 text-xs text-slate-500">Livraison demandée en {delaiJours} j : la formule la moins chère qui tient ce délai est appliquée.</p>
+                        <p className="mt-2 text-xs text-slate-600">Livraison demandée en {delaiJours} j : la formule la moins chère qui tient ce délai est appliquée.</p>
                     )}
                     {delaiTropCourt && (
                         <p className="mt-2 text-xs text-status-incident">Délai demandé ({delaiJours} j) trop court pour cette destination : notre meilleur délai est de {grilleAuto.delivery_days} j.</p>
@@ -252,7 +252,7 @@ export default function Create({ tariffGrids, pricing }) {
                 {(data.pickup_lat && data.delivery_lat) && (
                     <div className="rounded-xl bg-surface p-4">
                         {loadingDist ? (
-                            <p className="text-sm text-slate-500">Calcul de la distance…</p>
+                            <p className="text-sm text-slate-600">Calcul de la distance…</p>
                         ) : (
                             <div className="flex items-center justify-between gap-4">
                                 <div>

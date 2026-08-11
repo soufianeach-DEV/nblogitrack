@@ -24,11 +24,11 @@ export default function GuestLayout({ children, large = false }) {
                     <div className="flex gap-10">
                         <div>
                             <div className="text-2xl font-bold text-action">1.2M+</div>
-                            <div className="text-sm text-slate-400">Expéditions / an</div>
+                            <div className="text-sm text-slate-300">Expéditions / an</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-action">99.9%</div>
-                            <div className="text-sm text-slate-400">Fiabilité</div>
+                            <div className="text-sm text-slate-300">Fiabilité</div>
                         </div>
                     </div>
                 </div>

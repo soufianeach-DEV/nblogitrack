@@ -81,7 +81,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const timer = useRef(null);
 
     const selectCls = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-marine focus:ring-marine';
-    const sousLabel = 'mb-1 block text-xs font-medium text-slate-500';
+    const sousLabel = 'mb-1 block text-xs font-medium text-slate-600';
     const nomPays = nomRegion.of(pays);
 
     const publier = (etat = {}) => {
@@ -494,7 +494,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                 if (suggVilles.length > 0) { setSuggVilles([]); return; }
                                 setSuggVilles(villesProposees(''));
                             }}
-                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-marine"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-600 hover:text-marine"
                         >
                             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.23 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
@@ -516,7 +516,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-status-incident">Aucune ville trouvée en {nomPays} — vérifie l'orthographe ou le pays.</p>
                     )}
                     {!aucuneVille && ville.length >= 2 && !villeCoords && suggVilles.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-400">Choisis la ville dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">Choisis la ville dans la liste de suggestions.</p>
                     )}
                 </div>
                 <div>
@@ -543,7 +543,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                     if (suggCps.length > 0) { setSuggCps([]); return; }
                                     setSuggCps(cpsDispo);
                                 }}
-                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-marine"
+                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-600 hover:text-marine"
                             >
                                 <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                     <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.23 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
@@ -566,10 +566,10 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-status-incident">Code postal introuvable pour cette ville — choisis-en un dans la liste.</p>
                     )}
                     {villeCoords && !cpsLibres && cp && !cpChoisi && !aucunCp && suggCps.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-400">Choisis un code postal dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">Choisis un code postal dans la liste de suggestions.</p>
                     )}
                     {villeCoords && cpsLibres && (
-                        <p className="mt-1 text-xs text-slate-400">Codes postaux non référencés pour cette ville — saisie libre.</p>
+                        <p className="mt-1 text-xs text-slate-600">Codes postaux non référencés pour cette ville — saisie libre.</p>
                     )}
                 </div>
                 <div className={compact ? 'col-span-2' : ''}>
@@ -622,7 +622,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                         if (suggNums.length > 0) { setSuggNums([]); return; }
                                         setSuggNums(numsDispo.slice(0, 30));
                                     }}
-                                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400 hover:text-marine"
+                                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-600 hover:text-marine"
                                 >
                                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                         <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.23 8.27a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
@@ -647,16 +647,16 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-status-incident">Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-400">Choisis la rue dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">Choisis la rue dans la liste de suggestions.</p>
                     )}
                     {numsChargement && (
-                        <p className="mt-1 text-xs text-slate-400">Chargement des numéros de la rue…</p>
+                        <p className="mt-1 text-xs text-slate-600">Chargement des numéros de la rue…</p>
                     )}
                     {aucunNum && (
                         <p className="mt-1 text-xs text-status-incident">Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.</p>
                     )}
                     {! numeroLibre && rueChoisie && numero && !numChoisi && !aucunNum && !numsChargement && suggNums.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-400">Choisis le numéro dans la liste.</p>
+                        <p className="mt-1 text-xs text-slate-600">Choisis le numéro dans la liste.</p>
                     )}
                 </div>
             </div>

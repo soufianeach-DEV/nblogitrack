@@ -61,7 +61,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
 
     const ligne = (libelle, valeur) => (
         <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">{libelle}</dt>
+            <dt className="text-xs uppercase tracking-wide text-slate-600">{libelle}</dt>
             <dd className="text-sm text-marine">{valeur || '—'}</dd>
         </div>
     );
@@ -155,7 +155,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
 
             <div className="space-y-3">
                 {clients.data.length === 0 && (
-                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
+                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">
                         Aucune entreprise ne correspond.
                     </p>
                 )}
@@ -183,7 +183,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-slate-600">
                                         {client.billing_address} · {client.postal_code} {client.city} · {client.country}
                                     </p>
                                 </div>
@@ -248,7 +248,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
             <Modal show={refus !== null} onClose={() => setRefus(null)} maxWidth="lg">
                 <form onSubmit={envoyerRefus} className="p-6">
                     <h2 className="text-lg font-bold text-marine">Refuser {refus?.company_name}</h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-600">
                         Le motif est envoyé par e-mail au contact et conservé dans le journal.
                     </p>
 
@@ -262,7 +262,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                     {errors.motif && <p className="mt-1 text-sm text-status-incident">{errors.motif}</p>}
 
                     <div className="mt-4 flex justify-end gap-2">
-                        <button type="button" onClick={() => setRefus(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 hover:text-marine">
+                        <button type="button" onClick={() => setRefus(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:text-marine">
                             Annuler
                         </button>
                         <button disabled={processing} className="rounded-lg bg-status-incident px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">

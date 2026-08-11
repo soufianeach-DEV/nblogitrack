@@ -21,10 +21,12 @@ export default {
                 action: { DEFAULT: '#F59E0B', dark: '#D97706' },
                 ink: '#1A202C',
                 surface: '#F5F7FA',
+                // Teintes calibrees pour rester lisibles sur fond clair :
+                // au moins 4,5 pour 1 de contraste, seuil WCAG AA du texte courant.
                 status: {
                     pending: '#43474D',
                     progress: '#0B61A1',
-                    delivered: '#1A8A4A',
+                    delivered: '#15803D',
                     incident: '#BA1A1A',
                 },
             },
