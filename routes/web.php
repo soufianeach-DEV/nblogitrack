@@ -69,6 +69,15 @@ Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:10,1')
     ->name('tracking.show');
 
+// L'itineraire interroge deux services exterieurs : il reste derriere le
+// compte, et le controleur verifie en plus que l'expedition est consultable.
+Route::middleware(['auth', 'throttle:60,1'])->group(function () {
+    Route::get('/suivi/{transportOrder}/itineraire', [TrackingController::class, 'itineraire'])
+        ->name('tracking.itineraire');
+    Route::get('/suivi/{transportOrder}/peages', [TrackingController::class, 'peages'])
+        ->name('tracking.peages');
+});
+
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
