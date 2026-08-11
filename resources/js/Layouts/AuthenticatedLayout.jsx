@@ -31,12 +31,10 @@ function LienMenu({ href, active, icone, onClick, children }) {
 
 function Groupe({ titre, children }) {
     return (
-        <div className="mt-6 first:mt-0">
-            {titre && (
-                <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                    {titre}
-                </p>
-            )}
+        <div className="mt-6">
+            <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                {titre}
+            </p>
             <div className="space-y-0.5">{children}</div>
         </div>
     );
@@ -47,6 +45,8 @@ export default function AuthenticatedLayout({ header, children }) {
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
+    const estAdmin = canValidateClients;
+
     useEffect(() => {
         const echap = (e) => e.key === 'Escape' && setMenuOuvert(false);
         window.addEventListener('keydown', echap);
@@ -56,21 +56,43 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const fermer = () => setMenuOuvert(false);
 
-    // La recherche globale renvoie vers la liste des ordres, filtree.
+    // L'administrateur cherche une entreprise, les autres une expedition.
     const rechercher = (e) => {
         e.preventDefault();
-        router.get(route('transport-orders.index'), { tracking: recherche });
+
+        estAdmin
+            ? router.get(route('clients.index'), { etat: 'tout', q: recherche })
+            : router.get(route('transport-orders.index'), { tracking: recherche });
     };
+
+    const marque = (
+        <div className="px-4">
+            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[180px]" />
+            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                {estAdmin ? 'Administration centrale' : 'Logistique B2B'}
+            </p>
+        </div>
+    );
+
+    const nouvelleExpedition = (
+        <div className="mt-5 px-4">
+            <Link
+                href={route('transport-orders.create')}
+                onClick={fermer}
+                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-3 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
+            >
+                <Icone nom="plus" className="h-5 w-5" />
+                Nouvelle expédition
+            </Link>
+        </div>
+    );
 
     const navigation = (
         <>
-            <Groupe>
+            <Groupe titre="Opérations">
                 <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
                     Tableau de bord
                 </LienMenu>
-            </Groupe>
-
-            <Groupe titre="Opérations">
                 <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
                     Ordres de transport
                 </LienMenu>
@@ -86,71 +108,59 @@ export default function AuthenticatedLayout({ header, children }) {
                 )}
             </Groupe>
 
-            {(canValidateClients || canViewLogs) && (
+            {canValidateClients && (
                 <Groupe titre="Administration">
-                    {canValidateClients && (
-                        <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
-                            Entreprises
-                        </LienMenu>
-                    )}
-                    {canViewLogs && (
-                        <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
-                            Journal d'activité
-                        </LienMenu>
-                    )}
+                    <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
+                        Entreprises
+                    </LienMenu>
+                </Groupe>
+            )}
+
+            {canViewLogs && (
+                <Groupe titre="Système">
+                    <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
+                        Journal d'activité
+                    </LienMenu>
                 </Groupe>
             )}
         </>
     );
 
     const pied = (
-        <div className="mt-6 space-y-1">
+        <div className="mt-6 border-t border-white/10 px-1 pt-3">
             <Link
-                href={route('transport-orders.create')}
+                href={route('profile.edit')}
                 onClick={fermer}
-                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-3 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
+                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
             >
-                <Icone nom="plus" className="h-5 w-5" />
-                Nouvelle expédition
+                <Icone nom="aide" className="h-5 w-5 shrink-0" />
+                Mon profil
             </Link>
-
-            <div className="border-t border-white/10 pt-3">
-                <Link
-                    href={route('profile.edit')}
-                    onClick={fermer}
-                    className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
-                >
-                    <Icone nom="aide" className="h-5 w-5 shrink-0" />
-                    Mon profil
-                </Link>
-                <Link
-                    href={route('logout')}
-                    method="post"
-                    as="button"
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
-                >
-                    <Icone nom="sortie" className="h-5 w-5 shrink-0" />
-                    Déconnexion
-                </Link>
-            </div>
+            <Link
+                href={route('logout')}
+                method="post"
+                as="button"
+                className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
+            >
+                <Icone nom="sortie" className="h-5 w-5 shrink-0" />
+                Déconnexion
+            </Link>
         </div>
     );
 
-    const marque = (
-        <div className="mb-6 px-2">
-            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="w-full max-w-[190px]" />
-            <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-                Logistique B2B
-            </p>
-        </div>
+    const panneau = (
+        <>
+            {marque}
+            {nouvelleExpedition}
+            <nav className="mt-2 flex-1">{navigation}</nav>
+            {pied}
+        </>
     );
 
     return (
         <div className="min-h-screen bg-surface">
             <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-6 md:flex">
-                <div className="px-2">{marque}</div>
-                <nav className="flex-1">{navigation}</nav>
-                <div className="px-3">{pied}</div>
+                {panneau}
             </aside>
 
             {menuOuvert && (
@@ -165,9 +175,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         >
                             <Icone nom="fermer" className="h-6 w-6" />
                         </button>
-                        <div className="px-2">{marque}</div>
-                        <nav className="flex-1">{navigation}</nav>
-                        <div className="px-3">{pied}</div>
+                        {panneau}
                     </aside>
                 </div>
             )}
@@ -185,14 +193,14 @@ export default function AuthenticatedLayout({ header, children }) {
                     </button>
 
                     <form onSubmit={rechercher} className="relative hidden w-full max-w-md sm:block">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-600">
                             <Icone nom="recherche" className="h-5 w-5" />
                         </span>
                         <input
                             value={recherche}
                             onChange={(e) => setRecherche(e.target.value)}
-                            placeholder="Rechercher une expédition…"
-                            aria-label="Rechercher une expédition"
+                            placeholder={estAdmin ? 'Rechercher une entreprise…' : 'Rechercher une expédition…'}
+                            aria-label={estAdmin ? 'Rechercher une entreprise' : 'Rechercher une expédition'}
                             className="w-full rounded-lg border-slate-200 bg-surface py-2 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
                         />
                     </form>
@@ -201,7 +209,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         <Dropdown>
                             <Dropdown.Trigger>
                                 <button className="flex items-center gap-3 text-left">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marine text-xs font-bold text-white">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-xs font-bold text-brand-blue">
                                         {user.first_name?.[0]}{user.last_name?.[0]}
                                     </span>
                                     <span className="hidden leading-tight sm:block">
