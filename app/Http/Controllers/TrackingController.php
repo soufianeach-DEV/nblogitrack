@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\Adresse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -378,8 +379,8 @@ class TrackingController extends Controller
             'statut' => $ordre->status,
             'priorite' => $ordre->priority,
             'client' => $ordre->client?->company_name,
-            'depart' => $this->ville($ordre->pickup_address),
-            'arrivee' => $this->ville($ordre->delivery_address),
+            'depart' => Adresse::localite($ordre->pickup_address),
+            'arrivee' => Adresse::localite($ordre->delivery_address),
             'marchandise' => $ordre->goods_type,
             'adr' => (bool) $ordre->is_hazardous,
             'livraison' => $ordre->requested_delivery_date?->format('d/m/Y'),
@@ -388,19 +389,6 @@ class TrackingController extends Controller
                 [(float) $ordre->delivery_lat, (float) $ordre->delivery_lng],
             ],
         ])->values()->all();
-    }
-
-    /**
-     * Les adresses se terminent par le code postal et la localite : c'est
-     * cette localite qui identifie le trajet dans la liste et sur la carte.
-     */
-    private function ville(string $adresse): string
-    {
-        $segments = explode(',', $adresse);
-        $dernier = trim((string) end($segments));
-        $localite = trim(preg_replace('/^\d{4,6}\s*/', '', $dernier));
-
-        return $localite !== '' ? $localite : $dernier;
     }
 
     /**
