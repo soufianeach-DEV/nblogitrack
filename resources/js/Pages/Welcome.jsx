@@ -1,20 +1,16 @@
 import Icone from '@/Components/Icone';
 import { Head, Link } from '@inertiajs/react';
 
-function Service({ icone, titre, texte, mise }) {
+// Trame de points, posee en fond des sections claires.
+const TRAME = {
+    backgroundImage: 'radial-gradient(circle, rgb(20 50 79 / 0.07) 1px, transparent 1px)',
+    backgroundSize: '22px 22px',
+};
+
+function Service({ icone, titre, texte }) {
     return (
-        <article
-            className={
-                'rounded-2xl bg-white p-7 transition ' +
-                (mise ? 'border-2 border-action shadow-md' : 'border border-slate-200 shadow-sm')
-            }
-        >
-            <span
-                className={
-                    'flex h-12 w-12 items-center justify-center rounded-xl ' +
-                    (mise ? 'bg-action text-marine-deep' : 'bg-brand-blue/10 text-brand-blue')
-                }
-            >
+        <article className="group rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-blue/40 hover:shadow-xl hover:shadow-marine/10">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue transition-all duration-300 group-hover:scale-110 group-hover:bg-brand-blue group-hover:text-white">
                 <Icone nom={icone} className="h-6 w-6" />
             </span>
             <h3 className="mt-5 text-lg font-bold text-marine">{titre}</h3>
@@ -25,8 +21,8 @@ function Service({ icone, titre, texte, mise }) {
 
 function Tarif({ icone, titre, texte }) {
     return (
-        <li className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue">
+        <li className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:translate-x-1.5 hover:border-action hover:shadow-md">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue transition-colors duration-300 group-hover:bg-action group-hover:text-marine-deep">
                 <Icone nom={icone} className="h-5 w-5" />
             </span>
             <div>
@@ -39,8 +35,8 @@ function Tarif({ icone, titre, texte }) {
 
 function Certification({ icone, texte }) {
     return (
-        <li className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
-            <Icone nom={icone} className="h-5 w-5 text-action" />
+        <li className="group flex cursor-default items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-200 transition-colors duration-300 hover:text-white">
+            <Icone nom={icone} className="h-5 w-5 text-action transition-transform duration-300 group-hover:scale-125" />
             {texte}
         </li>
     );
@@ -51,14 +47,21 @@ function ColonnePied({ titre, liens }) {
         <div>
             <h3 className="text-sm font-bold text-white">{titre}</h3>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                {liens.map((l) => <li key={l}>{l}</li>)}
+                {liens.map((l) => (
+                    <li key={l} className="w-fit cursor-default transition-colors duration-200 hover:text-action">
+                        {l}
+                    </li>
+                ))}
             </ul>
         </div>
     );
 }
 
 export default function Welcome({ auth, canLogin, canRegister }) {
-    const lienNav = 'text-[15px] font-bold text-marine transition hover:text-brand-blue';
+    // Le trait orange se deploie sous le lien au survol.
+    const lienNav = 'group relative text-[15px] font-bold text-marine transition-colors duration-200 hover:text-brand-blue';
+    const soulignement = 'absolute -bottom-1.5 left-0 h-0.5 w-0 bg-action transition-all duration-300 group-hover:w-full';
+    const boutonAction = 'rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep shadow-sm transition-all duration-300 hover:bg-action-dark hover:shadow-lg hover:shadow-action/40 active:scale-95';
 
     return (
         <>
@@ -69,35 +72,29 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 <div className="flex min-h-screen flex-col">
                 <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
                     <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-3 sm:px-6">
-                        <Link href={route('accueil')} className="shrink-0">
+                        <Link href={route('accueil')} className="shrink-0 transition-transform duration-300 hover:scale-105">
                             <img src="/images/logo-marine.png" alt="NBLogiTrack" className="h-14 w-auto sm:h-20" />
                         </Link>
 
                         <nav className="hidden items-center gap-6 md:flex">
-                            <a href="#services" className={lienNav}>Services</a>
-                            <a href="#tarifs" className={lienNav}>Tarifs</a>
-                            <a href="#apropos" className={lienNav}>À propos</a>
+                            <a href="#services" className={lienNav}>Services<span className={soulignement} /></a>
+                            <a href="#tarifs" className={lienNav}>Tarifs<span className={soulignement} /></a>
+                            <a href="#apropos" className={lienNav}>À propos<span className={soulignement} /></a>
                         </nav>
 
                         <div className="ml-auto flex items-center gap-3">
                             {auth?.user ? (
-                                <Link
-                                    href={route('dashboard')}
-                                    className="rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
-                                >
+                                <Link href={route('dashboard')} className={boutonAction}>
                                     Mon espace
                                 </Link>
                             ) : (
                                 <>
                                     {canLogin && (
-                                        <Link href={route('login')} className="hidden text-[15px] font-bold text-marine transition hover:text-brand-blue sm:block">
-                                            Se connecter
+                                        <Link href={route('login')} className={'hidden sm:block ' + lienNav}>
+                                            Se connecter<span className={soulignement} />
                                         </Link>
                                     )}
-                                    <Link
-                                        href={route('devis.create')}
-                                        className="rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
-                                    >
+                                    <Link href={route('devis.create')} className={boutonAction}>
                                         Demander un devis
                                     </Link>
                                 </>
@@ -107,13 +104,15 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 </header>
 
                 <section className="relative isolate flex flex-1 flex-col overflow-hidden">
+                    {/* Lent rapprochement de l'image : le heros n'est jamais tout a fait fige. */}
                     <img
                         src="/images/login-bg.jpg"
                         alt=""
                         aria-hidden="true"
-                        className="absolute inset-0 h-full w-full object-cover"
+                        className="absolute inset-0 h-full w-full origin-center scale-100 animate-[zoom_28s_ease-in-out_infinite_alternate] object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-marine-deep via-marine-deep/85 to-marine-deep/30" />
+                    <div className="absolute -left-24 top-1/4 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
 
                     <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-12 sm:px-6">
                         {/* self-start : sans lui, l'element flex s'etire sur toute la largeur. */}
@@ -134,13 +133,14 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         <div className="mt-8 flex flex-wrap gap-4">
                             <Link
                                 href={canRegister ? route('register') : route('login')}
-                                className="rounded-lg bg-marine px-7 py-3.5 text-sm font-bold text-white transition hover:bg-marine-deep"
+                                className="group rounded-lg bg-marine px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-blue hover:shadow-xl hover:shadow-brand-blue/40 active:translate-y-0"
                             >
-                                Démarrer l'aventure →
+                                Démarrer l'aventure
+                                <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                             </Link>
                             <Link
                                 href={route('tracking.show')}
-                                className="rounded-lg bg-white px-7 py-3.5 text-sm font-bold text-marine transition hover:bg-slate-100"
+                                className="rounded-lg bg-white px-7 py-3.5 text-sm font-bold text-marine shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0"
                             >
                                 Suivre un envoi
                             </Link>
@@ -158,7 +158,11 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 </section>
                 </div>
 
-                <section id="services" className="py-20">
+                <section id="services" className="relative isolate overflow-hidden py-20" style={TRAME}>
+                    {/* Halos colores, tres dilues : ils donnent du relief sans distraire. */}
+                    <div className="absolute -right-32 top-0 -z-10 h-[28rem] w-[28rem] rounded-full bg-brand-blue/10 blur-3xl" />
+                    <div className="absolute -left-40 bottom-0 -z-10 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
+
                     <div className="mx-auto max-w-7xl px-4 sm:px-6">
                         <div className="mx-auto max-w-2xl text-center">
                             <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
@@ -177,7 +181,6 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                 texte="Interface guidée pour commander vos trajets en quelques clics. Adresses vérifiées, formule adaptée au délai et prix connu avant validation."
                             />
                             <Service
-                                mise
                                 icone="camion"
                                 titre="Suivi en temps réel"
                                 texte="Chaque expédition reçoit un numéro de suivi et un code d'accès. Le destinataire consulte l'état de la livraison sans avoir de compte."
@@ -221,10 +224,15 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                             </ul>
                         </div>
 
-                        <div className="relative isolate overflow-hidden rounded-2xl">
-                            <img src="/images/login-bg.jpg" alt="" aria-hidden="true" className="h-80 w-full object-cover" />
+                        <div className="group relative isolate overflow-hidden rounded-2xl shadow-lg transition-shadow duration-500 hover:shadow-2xl">
+                            <img
+                                src="/images/login-bg.jpg"
+                                alt=""
+                                aria-hidden="true"
+                                className="h-80 w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-marine-deep via-marine-deep/40 to-transparent" />
-                            <div className="absolute inset-x-0 bottom-0 p-8">
+                            <div className="absolute inset-x-0 bottom-0 p-8 transition-transform duration-500 group-hover:-translate-y-1">
                                 <p className="text-xl font-bold text-white">Prêt à optimiser vos flux ?</p>
                                 <p className="mt-1 text-sm text-slate-200">
                                     L'inscription se fait avec votre numéro de TVA. Vos informations sont
@@ -235,7 +243,9 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     </div>
                 </section>
 
-                <section id="apropos" className="py-20">
+                <section id="apropos" className="relative isolate overflow-hidden py-20" style={TRAME}>
+                    <div className="absolute left-1/2 top-1/2 -z-10 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-blue/5 blur-3xl" />
+
                     <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
                         <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
                             L'excellence logistique au service de l'industrie belge
@@ -250,7 +260,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         {canRegister && (
                             <Link
                                 href={route('register')}
-                                className="mt-8 inline-block rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
+                                className="mt-8 inline-block rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-action-dark hover:shadow-xl hover:shadow-action/40 active:translate-y-0"
                             >
                                 Inscrire mon entreprise
                             </Link>
@@ -262,7 +272,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
                         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
                             <div>
-                                <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="h-9 w-auto" />
+                                <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="h-16 w-auto transition-transform duration-300 hover:scale-105 sm:h-20" />
                                 <p className="mt-4 text-sm leading-relaxed text-slate-300">
                                     L'excellence logistique au service de l'industrie belge.
                                     Précision, fiabilité, innovation.
