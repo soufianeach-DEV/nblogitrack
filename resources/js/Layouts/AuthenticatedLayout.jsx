@@ -40,9 +40,11 @@ export default function AuthenticatedLayout({ header, children }) {
                             Planification
                         </SidebarLink>
                     )}
-                    <SidebarLink href={route('tracking.show')} active={route().current('tracking.show')} icon="local_shipping">
-                        Suivi
-                    </SidebarLink>
+                    {! canPlan && (
+                        <SidebarLink href={route('tracking.show')} active={route().current('tracking.show')} icon="local_shipping">
+                            Suivi
+                        </SidebarLink>
+                    )}
                    {canValidateClients && (
                         <SidebarLink href={route('clients.index')} active={route().current('clients.index')} icon="verified">
                             Entreprises

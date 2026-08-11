@@ -88,10 +88,20 @@ export default function Index({ orders, filters }) {
                         </thead>
                         <tbody>
                             {orders.data.map((order) => (
-                                <tr key={order.id} className="border-b border-slate-50 transition hover:bg-surface">
+                                <tr
+                                    key={order.id}
+                                    onClick={() => router.visit(route('transport-orders.show', order.id))}
+                                    className="cursor-pointer border-b border-slate-50 transition hover:bg-surface"
+                                >
                                     <td className="px-6 py-4">
-                                        <div className="font-semibold text-marine">{order.tracking_number}</div>
-                                        <div className="text-xs text-slate-400">{order.goods_type ?? '—'}</div>
+                                        <Link
+                                            href={route('transport-orders.show', order.id)}
+                                            className="font-semibold text-marine hover:underline"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {order.tracking_number}
+                                        </Link>
+                                        <div className="text-xs text-slate-500">{order.goods_type ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
                                     <td className="px-6 py-4 text-slate-500">{order.delivery_address}</td>
