@@ -1,3 +1,4 @@
+import BoutonRetour from '@/Components/BoutonRetour';
 import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -292,13 +293,9 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
 
                     {order ? (
                         <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white p-4 shadow-sm">
-                            <button
-                                type="button"
-                                onClick={() => ouvrir(null)}
-                                className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-blue transition hover:text-marine"
-                            >
-                                ← Toutes les expéditions
-                            </button>
+                            <BoutonRetour onClick={() => ouvrir(null)} className="mb-2">
+                                Toutes les expéditions
+                            </BoutonRetour>
 
                             <p className="font-mono text-xs text-brand-blue">{order.tracking_number}</p>
                             <h2 className="mt-0.5 text-sm font-bold leading-snug text-marine">
