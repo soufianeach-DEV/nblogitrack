@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\QuoteRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -135,5 +137,63 @@ class QuoteController extends Controller
                 'options' => $devis->options(),
             ],
         ]);
+    }
+
+    /**
+     * Back-office : les demandes recues, filtrees par statut et par recherche.
+     */
+    public function index(Request $request): Response
+    {
+        $statut = $request->query('statut', 'PENDING');
+        $recherche = trim((string) $request->query('q', ''));
+
+        $requete = QuoteRequest::with('handler:id,first_name,last_name')
+            ->latest('created_at');
+
+        if (array_key_exists($statut, QuoteRequest::STATUTS)) {
+            $requete->where('status', $statut);
+        }
+
+        if ($recherche !== '') {
+            $requete->where(function ($q) use ($recherche) {
+                foreach (['reference', 'company_name', 'contact_name', 'email', 'vat_number'] as $colonne) {
+                    $q->orWhere($colonne, 'ilike', '%'.$recherche.'%');
+                }
+            });
+        }
+
+        return Inertia::render('Devis/Index', [
+            'demandes' => $requete->paginate(10)->withQueryString(),
+            'statut' => $statut,
+            'recherche' => $recherche,
+            'statuts' => QuoteRequest::STATUTS,
+            'compteurs' => QuoteRequest::selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
+        ]);
+    }
+
+    public function updateStatus(Request $request, QuoteRequest $quoteRequest): RedirectResponse
+    {
+        $data = $request->validate([
+            'status' => 'required|in:'.implode(',', array_keys(QuoteRequest::STATUTS)),
+            'internal_note' => 'nullable|string|max:2000',
+        ]);
+
+        $quoteRequest->update([
+            'status' => $data['status'],
+            'internal_note' => $data['internal_note'] ?? $quoteRequest->internal_note,
+            'handled_by' => Auth::id(),
+            'handled_at' => now(),
+        ]);
+
+        ActivityLog::record(
+            'quote.handled',
+            'Demande '.$quoteRequest->reference.' : '.QuoteRequest::STATUTS[$data['status']],
+            $quoteRequest,
+            ['entreprise' => $quoteRequest->company_name, 'statut' => $data['status']],
+        );
+
+        return back()->with('success', 'Demande '.$quoteRequest->reference.' mise à jour.');
     }
 }

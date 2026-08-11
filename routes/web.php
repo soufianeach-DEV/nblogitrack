@@ -43,6 +43,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
     });
 
+    Route::middleware('can:handle-quotes')->group(function () {
+        Route::get('/demandes-de-devis', [QuoteController::class, 'index'])->name('quotes.index');
+        Route::patch('/demandes-de-devis/{quoteRequest}/statut', [QuoteController::class, 'updateStatus'])->name('quotes.status');
+    });
+
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')
         ->name('activity-logs.index');

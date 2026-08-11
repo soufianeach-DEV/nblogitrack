@@ -9,6 +9,7 @@ const COULEUR_ACTION = {
     'client.registered': 'bg-slate-100 text-slate-600',
     'client.validated': 'bg-status-delivered/10 text-status-delivered',
     'client.rejected': 'bg-status-incident/10 text-status-incident',
+    'quote.handled': 'bg-action/10 text-action-dark',
     'auth.login': 'bg-status-delivered/10 text-status-delivered',
     'auth.logout': 'bg-slate-100 text-slate-600',
     'auth.failed': 'bg-status-incident/10 text-status-incident',
