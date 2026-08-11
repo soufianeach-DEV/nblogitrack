@@ -237,6 +237,6 @@ INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_a
   (233, 'Hendrickx', 'David', 'david.hendrickx233@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 499 64 57 37', 'PLANNER', FALSE, '2025-11-26 09:05:17', '2025-11-26 09:05:17'),
   (234, 'Gérard', 'Anne', 'anne.gerard234@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 470 08 69 74', 'PLANNER', TRUE, '2024-05-25 05:15:07', '2024-05-25 05:15:07'),
   (331, 'Piret', 'Lotte', 'lotte.piret331@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 488 86 28 84', 'ADMIN', TRUE, '2025-06-02 19:04:52', '2025-06-02 19:04:52'),
-  (332, 'Dubois', 'Aurélie', 'aurlie.dubois332@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 472 34 40 92', 'ADMIN', TRUE, '2025-11-30 01:46:40', '2025-11-30 01:46:40'),
+  (332, 'Dubois', 'Aurélie', 'aurelie.dubois332@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 472 34 40 92', 'ADMIN', TRUE, '2025-11-30 01:46:40', '2025-11-30 01:46:40'),
   (333, 'Vermeulen', 'Wim', 'wim.vermeulen333@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 490 75 61 19', 'ADMIN', TRUE, '2024-10-05 18:37:42', '2024-10-05 18:37:42'),
   (334, 'Aerts', 'Dries', 'dries.aerts334@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 487 50 53 57', 'ADMIN', TRUE, '2025-10-03 22:09:22', '2025-10-03 22:09:22');
