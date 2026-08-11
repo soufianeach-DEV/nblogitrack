@@ -37,7 +37,7 @@ function Progression({ statut }) {
                             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                                 fait ? 'bg-status-delivered text-white'
                                     : actif ? 'bg-brand-blue text-white'
-                                        : 'bg-slate-200 text-slate-500'
+                                        : 'bg-slate-200 text-slate-600'
                             }`}>
                                 {fait ? '✓' : i + 1}
                             </span>
@@ -47,7 +47,7 @@ function Progression({ statut }) {
                         </div>
                         <div className={`pt-1 ${actif ? 'text-marine' : 'text-slate-600'}`}>
                             <div className="font-semibold">{etape.libelle}</div>
-                            <div className="text-sm text-slate-500">{etape.detail}</div>
+                            <div className="text-sm text-slate-600">{etape.detail}</div>
                         </div>
                     </li>
                 );
@@ -78,14 +78,14 @@ export default function Show({ order, chauffeur }) {
 
     const ligne = (libelle, valeur) => (
         <div className="flex justify-between gap-4 border-b border-slate-100 py-2 last:border-0">
-            <dt className="text-sm text-slate-500">{libelle}</dt>
+            <dt className="text-sm text-slate-600">{libelle}</dt>
             <dd className="text-right text-sm font-medium text-marine">{valeur || '—'}</dd>
         </div>
     );
 
     const carte = (titre, contenu) => (
         <section className="rounded-2xl bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{titre}</h2>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">{titre}</h2>
             {contenu}
         </section>
     );
@@ -99,7 +99,7 @@ export default function Show({ order, chauffeur }) {
                             ← Ordres de transport
                         </Link>
                         <h1 className="mt-1 text-2xl font-bold text-marine">{order.tracking_number}</h1>
-                        <p className="text-sm text-slate-500">{order.client?.company_name}</p>
+                        <p className="text-sm text-slate-600">{order.client?.company_name}</p>
                     </div>
                     <span className="rounded-full bg-marine px-4 py-1.5 text-sm font-semibold text-white">
                         {PRIORITE[order.priority] ?? order.priority}

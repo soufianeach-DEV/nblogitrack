@@ -13,7 +13,7 @@ export default function ChampMotDePasse({ className = '', ...props }) {
                 onClick={() => setVisible(! visible)}
                 aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                 title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 transition hover:text-marine"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-600 transition hover:text-marine"
             >
                 {visible ? (
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

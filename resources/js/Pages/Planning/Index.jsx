@@ -18,8 +18,8 @@ const COULEUR_STATUT = {
 const LIBELLE_PRIORITE = { LOW: 'Basse', NORMAL: 'Normale', HIGH: 'Haute', URGENT: 'Urgente' };
 
 const COULEUR_PRIORITE = {
-    LOW: 'text-slate-400',
-    NORMAL: 'text-slate-500',
+    LOW: 'text-slate-600',
+    NORMAL: 'text-slate-600',
     HIGH: 'text-action-dark font-semibold',
     URGENT: 'text-status-incident font-semibold',
 };
@@ -152,7 +152,7 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs }) 
 
             <div className="space-y-3">
                 {orders.data.length === 0 && (
-                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
+                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">
                         Aucun ordre {LIBELLE_STATUT[statut].toLowerCase()}.
                     </p>
                 )}
@@ -176,10 +176,10 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs }) 
                                     )}
                                 </div>
                                 <p className="mt-1 text-sm text-slate-600">{ordre.client?.company_name}</p>
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-slate-600">
                                     {ordre.pickup_address} → {ordre.delivery_address}
                                 </p>
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-slate-600">
                                     {Number(ordre.weight).toLocaleString('fr-FR')} kg
                                     {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString('fr-FR')} km` : ''}
                                     {' · chargement '}{dateCourte(ordre.pickup_date)}
@@ -193,22 +193,22 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs }) 
                             {ordre.status === 'PENDING' ? (
                                 <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} />
                             ) : (
-                                <div className="flex flex-wrap gap-6 text-xs text-slate-500">
+                                <div className="flex flex-wrap gap-6 text-xs text-slate-600">
                                     <span>
-                                        <span className="text-slate-400">Véhicule : </span>
+                                        <span className="text-slate-600">Véhicule : </span>
                                         {ordre.vehicle
                                             ? `${ordre.vehicle.registration} · ${ordre.vehicle.brand} ${ordre.vehicle.model}`
                                             : 'non affecté'}
                                     </span>
                                     <span>
-                                        <span className="text-slate-400">Chauffeur : </span>
+                                        <span className="text-slate-600">Chauffeur : </span>
                                         {ordre.driver?.user
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
                                             : 'non affecté'}
                                     </span>
                                     {ordre.actual_delivery_date && (
                                         <span>
-                                            <span className="text-slate-400">Livré le : </span>
+                                            <span className="text-slate-600">Livré le : </span>
                                             {dateCourte(ordre.actual_delivery_date)}
                                         </span>
                                     )}

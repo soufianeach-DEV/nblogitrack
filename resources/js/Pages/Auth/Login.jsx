@@ -25,13 +25,13 @@ export default function Login({ status, canResetPassword }) {
 
             <div className="mb-8 flex gap-8 border-b border-slate-200 text-sm font-semibold">
                 <span className="border-b-2 border-action pb-3 text-marine">CONNEXION</span>
-                <Link href={route('register')} className="pb-3 text-slate-400 hover:text-marine">
+                <Link href={route('register')} className="pb-3 text-slate-600 hover:text-marine">
                     INSCRIPTION
                 </Link>
             </div>
 
             <h1 className="text-2xl font-bold text-marine">Bon retour parmi nous</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-600">
                 Veuillez entrer vos identifiants pour accéder à votre tableau de bord.
             </p>
 
@@ -90,7 +90,7 @@ export default function Login({ status, canResetPassword }) {
                 </PrimaryButton>
             </form>
 
-            <div className="mt-8 flex justify-between text-xs text-slate-400">
+            <div className="mt-8 flex justify-between text-xs text-slate-600">
                 <span>© 2024 NBLogiTrack Belgium</span>
                 <span>Aide · Confidentialité</span>
             </div>

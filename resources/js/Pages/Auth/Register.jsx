@@ -76,7 +76,7 @@ export default function Register({ secteurs, fonctions }) {
 
     const inputCls = 'mt-0.5 block w-full py-1 text-sm';
     const selectCls = 'mt-0.5 block w-full rounded-md border-gray-300 py-1 text-sm shadow-sm focus:border-marine focus:ring-marine';
-    const titre = 'mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400';
+    const titre = 'mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600';
 
     const etiquette = (nom, libelle, facultatif = false) => (
         <InputLabel htmlFor={nom} className="text-xs">
@@ -127,12 +127,12 @@ export default function Register({ secteurs, fonctions }) {
             <Head title="Inscription" />
 
             <div className="mb-2 flex gap-8 border-b border-slate-200 text-sm font-semibold">
-                <Link href={route('login')} className="pb-2 text-slate-400 hover:text-marine">CONNEXION</Link>
+                <Link href={route('login')} className="pb-2 text-slate-600 hover:text-marine">CONNEXION</Link>
                 <span className="border-b-2 border-action pb-2 text-marine">INSCRIPTION</span>
             </div>
 
             <h1 className="text-lg font-bold text-marine">Inscrire votre entreprise</h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600">
                 Votre compte sera activé après vérification de votre entreprise par nos services.
             </p>
 
@@ -224,7 +224,7 @@ export default function Register({ secteurs, fonctions }) {
                             )}
                         </div>
 
-                        <p className="mt-2 text-xs text-slate-400">
+                        <p className="mt-2 text-xs text-slate-600">
                             Identifiant Peppol :{' '}
                             {peppol
                                 ? <span className="font-mono text-brand-blue">{peppol}</span>
@@ -257,7 +257,7 @@ export default function Register({ secteurs, fonctions }) {
                         onChange={(e) => setData('marque_declaree', e.target.checked)}
                         className="mt-0.5 rounded border-gray-300 text-marine focus:ring-marine"
                     />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-600">
                         Je certifie que cette dénomination sociale ne porte pas atteinte à une marque déposée.
                         <span className="text-status-incident"> *</span>
                     </span>
