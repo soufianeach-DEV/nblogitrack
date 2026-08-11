@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
         ->name('transport-orders.store');
     Route::get('/transport-orders', [TransportOrderController::class, 'index'])
         ->name('transport-orders.index');
+    Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
+        ->whereNumber('transportOrder')
+        ->name('transport-orders.show');
 
     Route::middleware('can:plan-orders')->group(function () {
         Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');

@@ -44,6 +44,28 @@ class TransportOrderController extends Controller
         ]);
     }
 
+    public function show(Request $request, TransportOrder $transportOrder): Response
+    {
+        // Un client n'accede qu'a ses propres expeditions.
+        if ($request->user()->cannot('view-all-orders') && $transportOrder->client_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $transportOrder->load([
+            'client:id,company_name,city,country',
+            'vehicle:registration,brand,model,vehicle_type,capacity_tonnes',
+            'driver.user:id,first_name,last_name',
+            'tariffGrid:id,label,service_level,delivery_days',
+        ]);
+
+        return Inertia::render('TransportOrders/Show', [
+            'order' => $transportOrder,
+            'chauffeur' => $transportOrder->driver?->user
+                ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
+                : null,
+        ]);
+    }
+
     public function create(): Response
     {
         return Inertia::render('TransportOrders/Create', [
