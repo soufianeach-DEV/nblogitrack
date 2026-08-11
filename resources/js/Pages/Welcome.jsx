@@ -94,14 +94,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                             Se connecter
                                         </Link>
                                     )}
-                                    {canRegister && (
-                                        <Link
-                                            href={route('register')}
-                                            className="rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
-                                        >
-                                            Demander un devis
-                                        </Link>
-                                    )}
+                                    <Link
+                                        href={route('devis.create')}
+                                        className="rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark"
+                                    >
+                                        Demander un devis
+                                    </Link>
                                 </>
                             )}
                         </div>
