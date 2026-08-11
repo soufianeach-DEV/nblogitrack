@@ -1,3 +1,4 @@
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -64,9 +65,8 @@ export default function Login({ status, canResetPassword }) {
                             </Link>
                         )}
                     </div>
-                    <TextInput
+                    <ChampMotDePasse
                         id="password"
-                        type="password"
                         name="password"
                         value={data.password}
                         className="mt-1 block w-full"

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Client;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,7 +51,37 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $this->ensureAccountIsUsable();
+
         RateLimiter::clear($this->throttleKey());
+    }
+
+    /**
+     * Un compte désactivé ou une entreprise en attente de validation ne peut pas accéder à l'application.
+     *
+     * @throws ValidationException
+     */
+    protected function ensureAccountIsUsable(): void
+    {
+        $user = Auth::user();
+
+        if (! $user->is_active) {
+            Auth::logout();
+            $this->session()->invalidate();
+
+            throw ValidationException::withMessages([
+                'email' => 'Ce compte est désactivé. Contactez votre administrateur.',
+            ]);
+        }
+
+        if ($user->isClient() && Client::where('id', $user->id)->where('is_validated', false)->exists()) {
+            Auth::logout();
+            $this->session()->invalidate();
+
+            throw ValidationException::withMessages([
+                'email' => 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.',
+            ]);
+        }
     }
 
     /**
