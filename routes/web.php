@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
+use App\Http\Controllers\MissionController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuoteController;
@@ -46,6 +47,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:handle-quotes')->group(function () {
         Route::get('/demandes-de-devis', [QuoteController::class, 'index'])->name('quotes.index');
         Route::patch('/demandes-de-devis/{quoteRequest}/statut', [QuoteController::class, 'updateStatus'])->name('quotes.status');
+    });
+
+    Route::middleware('can:drive')->group(function () {
+        Route::get('/missions', [MissionController::class, 'index'])->name('missions.index');
+        Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])

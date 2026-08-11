@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\TransportOrder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
+        // Un chauffeur n'est le client de personne : ce tableau de bord ne lui
+        // montrerait que des compteurs a zero. Sa page, ce sont ses missions.
+        if ($request->user()->isDriver()) {
+            return redirect()->route('missions.index');
+        }
+
         $query = TransportOrder::query();
 
         if ($request->user()->cannot('view-all-orders')) {
