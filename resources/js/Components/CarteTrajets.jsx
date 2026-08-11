@@ -5,39 +5,38 @@ import { useEffect, useRef } from 'react';
 
 const COULEUR = {
     IN_PROGRESS: '#0B61A1',
-    PENDING: '#43474D',
+    PENDING: '#8A9099',
     DELIVERED: '#15803D',
     CANCELLED: '#BA1A1A',
 };
 
-// Le trace de l'expedition consultee, dessine comme sur un GPS : un liseré
-// sombre sous un ruban clair, bouts arrondis.
-const LISERE = '#0A2E52';
-const RUBAN = '#2D9CFF';
+// Le trace de l'expedition consultee : un trait noir sur un fond gris
+// desature, comme les applications de course. Le fond ne raconte rien, la
+// route est le seul element qui ressort.
+const TRACE = '#111827';
+const HALO = '#FFFFFF';
 
-function marqueurDepart(couleur) {
-    return L.divIcon({
-        className: '',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-        html: `<span style="display:block;width:18px;height:18px;border-radius:9999px;background:#fff;border:4px solid ${couleur};box-shadow:0 1px 4px rgba(0,0,0,.4)"></span>`,
-    });
-}
+// Point de depart plein, arrivee carree : deux formes distinctes se lisent
+// plus vite que deux couleurs.
+const MARQUEUR_DEPART = L.divIcon({
+    className: '',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    html: `<span style="display:block;width:16px;height:16px;border-radius:9999px;background:${TRACE};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span>`,
+});
 
-function marqueurArrivee(couleur) {
-    return L.divIcon({
-        className: '',
-        iconSize: [26, 34],
-        iconAnchor: [13, 34],
-        html: `<span style="display:block;width:26px;height:26px;border-radius:9999px 9999px 9999px 2px;transform:rotate(45deg);background:${couleur};border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.45)"></span>`,
-    });
-}
+const MARQUEUR_ARRIVEE = L.divIcon({
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    html: `<span style="display:block;width:18px;height:18px;border-radius:4px;background:${TRACE};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></span>`,
+});
 
 const ICONE_PEAGE = L.divIcon({
     className: '',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    html: '<span style="display:flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:9999px;background:#F59E0B;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);font:700 13px/1 system-ui,sans-serif;color:#3B2600">€</span>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    html: '<span style="display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:9999px;background:#F59E0B;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);font:700 12px/1 system-ui,sans-serif;color:#3B2600">€</span>',
 });
 
 /**
@@ -69,9 +68,9 @@ export default function CarteTrajets({
             zoomControl: true,
         }).setView([50.5, 4.5], 7);
 
-        // Fond epure : le rendu OpenStreetMap standard charge trop de details
-        // pour qu'un trace ressorte.
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // Fond desature : le rendu OpenStreetMap standard charge trop de
+        // couleurs pour qu'un trace ressorte.
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 19,
@@ -116,9 +115,11 @@ export default function CarteTrajets({
             const trace = actif && itineraire?.geometrie ? itineraire.geometrie : [depart, arrivee];
 
             if (actif) {
+                // Halo blanc sous le trait : il detache la route des voies
+                // grises du fond, qui ont parfois la meme epaisseur.
                 L.polyline(trace, {
-                    color: LISERE,
-                    weight: 10,
+                    color: HALO,
+                    weight: 9,
                     opacity: 1,
                     lineCap: 'round',
                     lineJoin: 'round',
@@ -126,9 +127,9 @@ export default function CarteTrajets({
             }
 
             const ligne = L.polyline(trace, {
-                color: actif ? RUBAN : couleur,
-                weight: actif ? 6 : 2,
-                opacity: vise ? (actif ? 1 : 0.75) : 0.15,
+                color: actif ? TRACE : couleur,
+                weight: actif ? 5 : 2,
+                opacity: vise ? (actif ? 1 : 0.7) : 0.15,
                 lineCap: 'round',
                 lineJoin: 'round',
                 interactive: vise,
@@ -137,10 +138,10 @@ export default function CarteTrajets({
             ligne.on('click', () => clic.current?.(trajet.id));
 
             if (actif) {
-                L.marker(trace[0], { icon: marqueurDepart(RUBAN) })
+                L.marker(trace[0], { icon: MARQUEUR_DEPART })
                     .bindTooltip(`Enlèvement · ${trajet.depart}`)
                     .addTo(couche.current);
-                L.marker(trace[trace.length - 1], { icon: marqueurArrivee(LISERE) })
+                L.marker(trace[trace.length - 1], { icon: MARQUEUR_ARRIVEE })
                     .bindTooltip(`Livraison · ${trajet.arrivee}`)
                     .addTo(couche.current);
                 trace.forEach((point) => cadre.push(point));

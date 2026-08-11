@@ -47,11 +47,10 @@ function Jalon({ libelle, detail, horodatage, fait, actif, dernier }) {
 }
 
 /**
- * Le champ de recherche deroule tout ce que l'utilisateur peut consulter,
- * expeditions livrees comprises. Chercher a l'aveugle supposerait de
- * connaitre un numero par coeur.
+ * Le champ de recherche deroule les expeditions en circulation. Chercher a
+ * l'aveugle supposerait de connaitre un numero par coeur.
  */
-function ChoixExpedition({ catalogue, onChoisir }) {
+function ChoixExpedition({ expeditions, onChoisir }) {
     const [ouvert, setOuvert] = useState(false);
     const [saisie, setSaisie] = useState('');
 
@@ -59,12 +58,12 @@ function ChoixExpedition({ catalogue, onChoisir }) {
         const terme = saisie.trim().toLowerCase();
 
         if (terme === '') {
-            return catalogue;
+            return expeditions;
         }
 
-        return catalogue.filter((e) => [e.numero, e.depart, e.arrivee, e.date]
+        return expeditions.filter((e) => [e.numero, e.depart, e.arrivee, e.client, e.marchandise]
             .some((champ) => champ && champ.toLowerCase().includes(terme)));
-    }, [catalogue, saisie]);
+    }, [expeditions, saisie]);
 
     const choisir = (expedition) => {
         setSaisie('');
@@ -88,8 +87,8 @@ function ChoixExpedition({ catalogue, onChoisir }) {
                 // annulerait la selection avant qu'elle ne se produise.
                 onBlur={() => setTimeout(() => setOuvert(false), 150)}
                 onKeyDown={(e) => e.key === 'Escape' && setOuvert(false)}
-                placeholder="Rechercher une expédition…"
-                aria-label="Rechercher une expédition"
+                placeholder="Choisir une expédition en cours…"
+                aria-label="Choisir une expédition en cours"
                 aria-expanded={ouvert}
                 role="combobox"
                 aria-controls="liste-expeditions"
@@ -103,8 +102,8 @@ function ChoixExpedition({ catalogue, onChoisir }) {
                     className="absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
                 >
                     <p className="px-3 py-1.5 text-xs text-slate-600">
-                        {resultats.length} expédition{resultats.length > 1 ? 's' : ''}
-                        {saisie.trim() !== '' && ' sur ' + catalogue.length}
+                        {resultats.length} expédition{resultats.length > 1 ? 's' : ''} en cours
+                        {saisie.trim() !== '' && ' sur ' + expeditions.length}
                     </p>
 
                     {resultats.length === 0 ? (
@@ -126,7 +125,7 @@ function ChoixExpedition({ catalogue, onChoisir }) {
                                 <span className="min-w-0 flex-1 truncate text-sm text-marine">
                                     {expedition.depart} <span className="text-slate-600">→</span> {expedition.arrivee}
                                 </span>
-                                <span className="shrink-0 text-xs text-slate-600">{expedition.date}</span>
+                                <span className="shrink-0 text-xs text-slate-600">{expedition.livraison}</span>
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statut.classe}`}>
                                     {statut.libelle}
                                 </span>
@@ -150,7 +149,7 @@ function Frise({ etapes }) {
                 <li key={etape.libelle} className="flex-1">
                     <div className="flex items-center">
                         <span className={`h-0.5 flex-1 ${i === 0 ? 'bg-transparent' : etape.fait ? 'bg-status-delivered' : 'bg-slate-200'}`} />
-                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                             etape.fait ? 'bg-status-delivered text-white' : 'bg-slate-200 text-slate-600'
                         }`}>
                             {etape.fait ? '✓' : i + 1}
@@ -160,14 +159,14 @@ function Frise({ etapes }) {
                         }`} />
                     </div>
 
-                    <div className="mt-2 px-2 text-center">
-                        <p className={`text-sm font-semibold ${etape.fait ? 'text-marine' : 'text-slate-600'}`}>
+                    <div className="mt-1.5 px-1 text-center">
+                        <p className={`text-xs font-semibold ${etape.fait ? 'text-marine' : 'text-slate-600'}`}>
                             {etape.libelle}
                         </p>
                         {etape.horodatage && (
-                            <p className="text-xs font-medium text-brand-blue">{etape.horodatage}</p>
+                            <p className="text-[11px] font-medium text-brand-blue">{etape.horodatage}</p>
                         )}
-                        <p className="mt-0.5 text-xs text-slate-600">{etape.detail}</p>
+                        <p className="text-[11px] leading-tight text-slate-600">{etape.detail}</p>
                     </div>
                 </li>
             ))}
@@ -219,7 +218,7 @@ function LigneExpedition({ expedition, active, onClick }) {
     );
 }
 
-function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [], catalogue = [] }) {
+function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [] }) {
     const { canPlan } = usePage().props.auth;
     const [agrandie, setAgrandie] = useState(false);
     const [itineraire, setItineraire] = useState(null);
@@ -280,130 +279,183 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
     };
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Suivi d'expédition</h1>}>
+        <AuthenticatedLayout>
             <Head title="Suivi d'expédition" />
 
-            <div className="flex flex-col gap-4 lg:h-[calc(100vh-11.5rem)] lg:flex-row">
+            {/* Le menu lateral marque deja Suivi : un grand titre repeterait
+                l'information et couterait la hauteur qui manque a la fiche. */}
+            <h1 className="sr-only">Suivi d'expédition</h1>
+
+            <div className="flex flex-col gap-3 lg:h-[calc(100vh-8rem)] lg:flex-row">
                 <div className={`flex w-full flex-col gap-3 lg:w-2/3 ${agrandie ? 'lg:hidden' : ''}`}>
-                    <ChoixExpedition catalogue={catalogue} onChoisir={ouvrir} />
+                    <ChoixExpedition expeditions={expeditions} onChoisir={ouvrir} />
 
                     {order ? (
-                        <section className="flex-1 overflow-y-auto rounded-2xl bg-white p-5 shadow-sm">
+                        <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white p-4 shadow-sm">
                             <button
                                 type="button"
                                 onClick={() => ouvrir(null)}
-                                className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-blue transition hover:text-marine"
+                                className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-blue transition hover:text-marine"
                             >
                                 ← Toutes les expéditions
                             </button>
 
-                            <p className="font-mono text-sm text-brand-blue">{order.tracking_number}</p>
-                            <h2 className="mt-1 text-lg font-bold leading-snug text-marine">
+                            <p className="font-mono text-xs text-brand-blue">{order.tracking_number}</p>
+                            <h2 className="mt-0.5 text-sm font-bold leading-snug text-marine">
                                 {order.pickup_address} → {order.delivery_address}
                             </h2>
-                            <p className="mt-1 text-sm text-slate-600">{order.client?.company_name}</p>
+                            <p className="text-xs text-slate-600">{order.client?.company_name}</p>
 
-                            <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
-                                <div className="rounded-lg bg-surface p-3">
-                                    <p className="text-xs uppercase tracking-wide text-slate-600">Poids total</p>
-                                    <p className="text-base font-bold text-marine">{nombre(order.weight, 'kg')}</p>
+                            <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-3">
+                                <div className="rounded-lg bg-surface px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-slate-600">Poids total</p>
+                                    <p className="text-sm font-bold text-marine">{nombre(order.weight, 'kg')}</p>
                                 </div>
-                                <div className="rounded-lg bg-surface p-3">
-                                    <p className="text-xs uppercase tracking-wide text-slate-600">Distance routière</p>
-                                    <p className="text-base font-bold text-marine">{nombre(order.distance_km, 'km')}</p>
+                                <div className="rounded-lg bg-surface px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-slate-600">Distance routière</p>
+                                    <p className="text-sm font-bold text-marine">{nombre(order.distance_km, 'km')}</p>
                                 </div>
-                                <div className="rounded-lg bg-surface p-3">
-                                    <p className="text-xs uppercase tracking-wide text-slate-600">Marchandise</p>
-                                    <p className="text-base font-bold text-marine">
+                                <div className="rounded-lg bg-surface px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-slate-600">Marchandise</p>
+                                    <p className="truncate text-sm font-bold text-marine">
                                         {order.goods_type}{order.is_hazardous && ' · ADR'}
                                     </p>
                                 </div>
                             </div>
 
-                            {peages.length > 0 && (
-                                <div className="mt-6 border-t border-slate-100 pt-4">
-                                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                                        Péages sur l'itinéraire
-                                    </h3>
-                                    <ol className="space-y-2">
-                                        {peages.map((peage, i) => (
-                                            <li key={i} className="flex items-center gap-3 rounded-lg bg-surface px-3 py-2">
-                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-action/20 text-action-dark">
-                                                    <Icone nom="peage" className="h-4 w-4" />
-                                                </span>
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block truncate text-sm font-semibold text-marine">{peage.nom}</span>
-                                                    <span className="block text-xs text-slate-600">
-                                                        {peage.portique ? 'Portique de péage' : 'Barrière de péage'}
-                                                        {peage.route && ' · ' + peage.route}
-                                                    </span>
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ol>
-                                </div>
-                            )}
-
-                            <h3 className="mb-4 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                            <h3 className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                                 État de livraison
                             </h3>
 
                             {order.status === 'CANCELLED' ? (
-                                <div className="rounded-lg bg-status-incident/10 p-4 text-status-incident">
+                                <div className="rounded-lg bg-status-incident/10 px-3 py-2 text-sm text-status-incident">
                                     <p className="font-semibold">Expédition annulée</p>
                                 </div>
                             ) : (
                                 <Frise etapes={etapes} />
                             )}
 
-                            <div className="mt-6 border-t border-slate-100 pt-4">
-                                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                            <div className="mt-4 border-t border-slate-100 pt-3">
+                                <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                                     Prise en charge
                                 </h3>
-                                {chauffeur ? (
-                                    <>
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-sm font-bold text-brand-blue">
-                                                {chauffeur.nom.split(' ').map((m) => m[0]).slice(0, 2).join('')}
-                                            </span>
-                                            <div>
-                                                <p className="font-semibold text-marine">{chauffeur.nom}</p>
-                                                <p className="text-xs text-slate-600">
-                                                    Chauffeur{chauffeur.adr && ' · certifié ADR'}
-                                                </p>
-                                            </div>
+
+                                {! chauffeur && ! order.vehicle ? (
+                                    <p className="text-xs text-slate-600">Aucun chauffeur affecté pour l'instant.</p>
+                                ) : (
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                        <div className="flex items-start gap-2.5 rounded-lg bg-surface px-3 py-2">
+                                            {chauffeur ? (
+                                                <>
+                                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-xs font-bold text-brand-blue">
+                                                        {chauffeur.nom.split(' ').map((m) => m[0]).slice(0, 2).join('')}
+                                                    </span>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-semibold leading-tight text-marine">
+                                                            {chauffeur.nom}
+                                                        </p>
+                                                        <p className="text-[11px] leading-tight text-slate-600">
+                                                            {[chauffeur.permis && 'Permis ' + chauffeur.permis, chauffeur.adr && 'ADR']
+                                                                .filter(Boolean).join(' · ') || 'Chauffeur'}
+                                                        </p>
+                                                        {chauffeur.numero_permis && (
+                                                            <p className="truncate font-mono text-[11px] leading-tight text-slate-600">
+                                                                {chauffeur.numero_permis}
+                                                            </p>
+                                                        )}
+                                                        {chauffeur.trajets > 0 && (
+                                                            <p className="text-[11px] leading-tight text-slate-600">
+                                                                {chauffeur.trajets} trajet{chauffeur.trajets > 1 ? 's' : ''} confié{chauffeur.trajets > 1 ? 's' : ''}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <p className="text-xs text-slate-600">Chauffeur non affecté.</p>
+                                            )}
                                         </div>
-                                        {chauffeur.telephone && (
+
+                                        <div className="flex flex-col items-center justify-center rounded-lg bg-surface px-3 py-2 text-center">
+                                            {order.vehicle ? (
+                                                <>
+                                                    <p className="truncate text-sm font-semibold leading-tight text-marine">
+                                                        {[order.vehicle.brand, order.vehicle.model].filter(Boolean).join(' ')}
+                                                    </p>
+                                                    <p className="font-mono text-[11px] leading-tight text-marine">
+                                                        {order.vehicle.registration}
+                                                    </p>
+                                                    {/* Un vehicule peut avoir des champs vides : on assemble ce qui
+                                                        existe, pour ne pas afficher de separateur orphelin. */}
+                                                    {[
+                                                        [order.vehicle.vehicle_type, order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
+                                                        [order.vehicle.euro_standard, order.vehicle.fuel_type],
+                                                    ].map((ligne, i) => {
+                                                        const texte = ligne.filter(Boolean).join(' · ');
+
+                                                        return texte === '' ? null : (
+                                                            <p key={i} className="truncate text-[11px] leading-tight text-slate-600">
+                                                                {texte}
+                                                            </p>
+                                                        );
+                                                    })}
+                                                </>
+                                            ) : (
+                                                <p className="text-xs text-slate-600">Véhicule non affecté.</p>
+                                            )}
+                                        </div>
+
+                                        {chauffeur?.telephone ? (
                                             <a
                                                 href={'tel:' + chauffeur.telephone.replace(/\s/g, '')}
-                                                className="mt-3 block rounded-lg border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-marine transition hover:bg-surface"
+                                                className="flex flex-col items-center justify-center rounded-lg bg-surface px-3 py-2 transition hover:bg-slate-200"
                                             >
-                                                {chauffeur.telephone}
+                                                <span className="text-[11px] uppercase tracking-wide text-slate-600">
+                                                    Joindre le chauffeur
+                                                </span>
+                                                <span className="text-sm font-bold text-marine">{chauffeur.telephone}</span>
                                             </a>
+                                        ) : (
+                                            <div className="flex items-center justify-center rounded-lg bg-surface px-3 py-2">
+                                                <span className="text-xs text-slate-600">Pas de numéro</span>
+                                            </div>
                                         )}
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-slate-600">Aucun chauffeur affecté pour l'instant.</p>
-                                )}
-
-                                {order.vehicle && (
-                                    <p className="mt-3 text-sm text-slate-600">
-                                        <span className="font-mono font-semibold text-marine">{order.vehicle.registration}</span>
-                                        {' — '}{order.vehicle.brand} {order.vehicle.model}
-                                    </p>
+                                    </div>
                                 )}
                             </div>
 
+                            {peages.length > 0 && (
+                                <div className="mt-4 border-t border-slate-100 pt-3">
+                                    <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                                        Péages sur l'itinéraire
+                                    </h3>
+                                    <ol className="flex flex-wrap gap-1.5">
+                                        {peages.map((peage, i) => (
+                                            <li
+                                                key={i}
+                                                title={(peage.portique ? 'Portique de péage' : 'Barrière de péage') + (peage.route ? ' · ' + peage.route : '')}
+                                                className="inline-flex items-center gap-1.5 rounded-full bg-surface py-1 pl-1 pr-2.5"
+                                            >
+                                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-action/20 text-action-dark">
+                                                    <Icone nom="peage" className="h-3.5 w-3.5" />
+                                                </span>
+                                                <span className="text-xs font-semibold text-marine">{peage.nom}</span>
+                                                {peage.route && <span className="text-[11px] text-slate-600">{peage.route}</span>}
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </div>
+                            )}
+
                             {historique && historique.length > 0 && (
-                                <div className="mt-6 border-t border-slate-100 pt-4">
-                                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                                <div className="mt-4 border-t border-slate-100 pt-3">
+                                    <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                                         Historique horodaté
                                     </h3>
-                                    <ol className="space-y-3">
+                                    <ol className="space-y-1.5">
                                         {historique.map((ligne, i) => (
-                                            <li key={i} className="border-l-2 border-slate-200 pl-3">
-                                                <p className="text-xs text-slate-600">{ligne.horodatage}</p>
-                                                <p className="text-sm text-marine">{ligne.description}</p>
+                                            <li key={i} className="border-l-2 border-slate-200 pl-2.5">
+                                                <p className="text-[11px] text-slate-600">{ligne.horodatage}</p>
+                                                <p className="text-xs text-marine">{ligne.description}</p>
                                             </li>
                                         ))}
                                     </ol>

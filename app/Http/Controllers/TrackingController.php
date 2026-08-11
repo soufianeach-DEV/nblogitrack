@@ -57,7 +57,7 @@ class TrackingController extends Controller
         if ($numero !== '') {
             $requete = TransportOrder::with([
                 'client:id,company_name',
-                'vehicle:registration,brand,model',
+                'vehicle:registration,brand,model,vehicle_type,euro_standard,fuel_type,capacity_tonnes',
                 'driver.user:id,first_name,last_name,phone',
                 'tariffGrid:id,label,delivery_days',
             ])->where('tracking_number', $numero);
@@ -73,11 +73,17 @@ class TrackingController extends Controller
             'searched' => $numero !== '',
             'order' => $ordre,
             'expeditions' => $this->expeditionsEnCours($utilisateur, $ordre),
-            'catalogue' => $this->catalogue($utilisateur),
             'chauffeur' => $ordre?->driver?->user ? [
                 'nom' => $ordre->driver->user->first_name.' '.$ordre->driver->user->last_name,
                 'telephone' => $ordre->driver->user->phone,
                 'adr' => (bool) $ordre->driver->adr_certified,
+                'permis' => $ordre->driver->license_type,
+                // Le numero de permis est une donnee personnelle sans utilite
+                // pour un client : le personnel seul y a acces.
+                'numero_permis' => $utilisateur->can('view-all-orders')
+                    ? $ordre->driver->license_number
+                    : null,
+                'trajets' => TransportOrder::where('driver_id', $ordre->driver_id)->count(),
             ] : null,
             'etapes' => $ordre ? $this->etapes($ordre) : null,
             'historique' => $ordre && $utilisateur->can('view-all-orders')
@@ -333,39 +339,6 @@ class TrackingController extends Controller
         }
 
         return [];
-    }
-
-    /**
-     * Toutes les expeditions consultables, quel que soit leur etat : c'est ce
-     * que deroule le champ de recherche.
-     *
-     * Chercher a l'aveugle suppose de connaitre un numero par coeur. Trois
-     * cent six lignes pour le personnel, huit au plus pour un client : le
-     * catalogue tient dans la page et evite un aller-retour par frappe.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function catalogue(User $utilisateur): array
-    {
-        $requete = TransportOrder::query();
-
-        if ($utilisateur->cannot('view-all-orders')) {
-            $requete->where('client_id', $utilisateur->id);
-        }
-
-        return $requete
-            ->orderByDesc('created_date')
-            ->orderByDesc('id')
-            ->get(['id', 'tracking_number', 'status', 'pickup_address', 'delivery_address', 'created_date'])
-            ->map(fn (TransportOrder $ordre) => [
-                'id' => $ordre->id,
-                'numero' => $ordre->tracking_number,
-                'statut' => $ordre->status,
-                'depart' => $this->ville($ordre->pickup_address),
-                'arrivee' => $this->ville($ordre->delivery_address),
-                'date' => $ordre->created_date?->format('d/m/Y'),
-            ])
-            ->all();
     }
 
     /**
