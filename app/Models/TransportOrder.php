@@ -10,6 +10,38 @@ class TransportOrder extends Model
 {
     use HasFactory;
 
+    /**
+     * Le vocabulaire des marchandises, commun au formulaire de commande et au
+     * jeu de donnees : un client doit pouvoir commander ce que l'historique montre.
+     */
+    public const MARCHANDISES = [
+        'Boissons',
+        'Colis express',
+        'Machines',
+        'Matériaux de construction',
+        'Matériel électronique',
+        'Mobilier',
+        'Palettes',
+        'Pièces automobiles',
+        'Produits alimentaires',
+        'Produits chimiques',
+        'Produits pharmaceutiques',
+        'Textile',
+        'Autre',
+    ];
+
+    /**
+     * Seules ces marchandises peuvent relever de l'ADR : produits chimiques,
+     * certains medicaments, et les batteries au lithium que contiennent
+     * l'electronique et les pieces automobiles (classe 9).
+     */
+    public const MARCHANDISES_ADR = [
+        'Produits chimiques',
+        'Produits pharmaceutiques',
+        'Matériel électronique',
+        'Pièces automobiles',
+    ];
+
     protected $table = 'transport_orders';
 
     protected $fillable = [
@@ -18,6 +50,7 @@ class TransportOrder extends Model
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
         'vehicle_registration', 'driver_id', 'assigned_at',
+        'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
     ];
 
     protected function casts(): array

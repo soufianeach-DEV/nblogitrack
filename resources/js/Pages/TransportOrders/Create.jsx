@@ -15,7 +15,23 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
     return 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.3;
 };
 
-const MARCHANDISES = ['Alimentaire', 'Frigorifique', 'Textile', 'Électronique', 'Matériaux de construction', 'Chimie', 'Automobile', 'Autre'];
+// Meme vocabulaire que l'historique des expeditions, defini une seule fois
+// dans le modele TransportOrder.
+const MARCHANDISES = [
+    'Boissons',
+    'Colis express',
+    'Machines',
+    'Matériaux de construction',
+    'Matériel électronique',
+    'Mobilier',
+    'Palettes',
+    'Pièces automobiles',
+    'Produits alimentaires',
+    'Produits chimiques',
+    'Produits pharmaceutiques',
+    'Textile',
+    'Autre',
+];
 
 const NOMS_OFFRE = { ECO: 'Éco', STANDARD: 'Standard', EXPRESS: 'Express' };
 
