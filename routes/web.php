@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
 use App\Http\Controllers\VatController;
@@ -50,6 +51,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/entreprises/{client}/refus', [ClientValidationController::class, 'reject'])->name('clients.reject');
     });
 });
+
+Route::get('/devis', [QuoteController::class, 'create'])->name('devis.create');
+Route::post('/devis', [QuoteController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('devis.store');
+Route::get('/devis/confirmation', [QuoteController::class, 'confirmation'])->name('devis.confirmation');
 
 Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:10,1')
