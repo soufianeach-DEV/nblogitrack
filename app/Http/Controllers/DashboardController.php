@@ -41,10 +41,12 @@ class DashboardController extends Controller
             'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
         ];
 
+        // Dix lignes plutot que cinq : le cadre s'aligne sur la carte et les
+        // alertes, et cinq lignes y laissaient une moitie vide.
         $recent = (clone $query)
             ->with('client:id,company_name')
             ->latest('id')
-            ->take(5)
+            ->take(10)
             ->get(['id', 'tracking_number', 'client_id', 'delivery_address', 'status', 'created_date']);
 
         return Inertia::render('Dashboard', [
@@ -363,7 +365,7 @@ class DashboardController extends Controller
      */
     private function journal(): array
     {
-        $lignes = ActivityLog::orderByDesc('id')->take(6)->get();
+        $lignes = ActivityLog::orderByDesc('id')->take(8)->get();
         $auteurs = User::whereIn('id', $lignes->pluck('user_id')->filter()->unique())
             ->get(['id', 'first_name', 'last_name'])
             ->keyBy('id');
