@@ -139,7 +139,7 @@ function VolumeMensuel({ volume }) {
 
 function ValidationsEnAttente({ validations }) {
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">Validations en attente</h2>
                 <Link href={route('clients.index')} className="text-sm font-medium text-action hover:underline">
@@ -351,8 +351,8 @@ function Facturation({ facturation }) {
 
 function DernieresTraces({ journal }) {
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-2">
+        <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
                 <h2 className="font-semibold text-marine">Dernières traces</h2>
                 <Link href={route('activity-logs.index')} className="text-sm font-medium text-action hover:underline">
                     Voir tout
@@ -360,18 +360,36 @@ function DernieresTraces({ journal }) {
             </div>
 
             {journal.length === 0 ? (
-                <p className="text-sm text-slate-600">Le journal est vide.</p>
+                <p className="px-6 py-8 text-sm text-slate-600">Le journal est vide.</p>
             ) : (
-                <ol className="space-y-3">
-                    {journal.map((ligne, i) => (
-                        <li key={i} className="border-l-2 border-slate-200 pl-3">
-                            <p className="text-xs text-slate-600">
-                                {ligne.horodatage} — {ligne.auteur}
-                            </p>
-                            <p className="text-sm text-marine">{ligne.description}</p>
-                        </li>
-                    ))}
-                </ol>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Horodatage</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Auteur</th>
+                                <th scope="col" className="px-4 py-3 font-semibold">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {journal.map((ligne, i) => (
+                                <tr key={i} className="border-b border-slate-50 last:border-0">
+                                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">{ligne.horodatage}</td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                        <span className="block max-w-[10rem] truncate" title={ligne.auteur}>
+                                            {ligne.auteur}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-marine">
+                                        <span className="block max-w-[26rem] truncate" title={ligne.description}>
+                                            {ligne.description}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </section>
     );
@@ -565,10 +583,15 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {(validations || journal) && (
-                    <div className="flex flex-col gap-4 lg:col-start-3 lg:row-start-3">
-                        {validations && <ValidationsEnAttente validations={validations} />}
-                        {journal && <DernieresTraces journal={journal} />}
+                {journal && (
+                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
+                        <DernieresTraces journal={journal} />
+                    </div>
+                )}
+
+                {validations && (
+                    <div className="flex flex-col lg:col-start-3 lg:row-start-3">
+                        <ValidationsEnAttente validations={validations} />
                     </div>
                 )}
             </div>
