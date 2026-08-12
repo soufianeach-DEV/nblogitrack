@@ -16,6 +16,9 @@ const TRACES = {
     aide: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
     plus: 'M12 5v14M5 12h14',
     fermer: 'M6 6l12 12M18 6L6 18',
+    agrandir: 'M9 4H4v5M4 4l6 6M15 20h5v-5M20 20l-6-6',
+    reduire: 'M4 9h5V4M4 4l5 5M20 15h-5v5M20 20l-5-5',
+    peage: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM14.5 9.5a3 3 0 1 0 0 5M8.5 11h5M8.5 13.5h5',
 };
 
 export default function Icone({ nom, className = 'h-5 w-5' }) {
