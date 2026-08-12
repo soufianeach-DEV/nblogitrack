@@ -41,12 +41,12 @@ class DashboardController extends Controller
             'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
         ];
 
-        // Dix lignes plutot que cinq : le cadre s'aligne sur la carte et les
-        // alertes, et cinq lignes y laissaient une moitie vide.
+        // Le cadre s'aligne sur la carte et les alertes : il faut treize
+        // lignes pour le remplir.
         $recent = (clone $query)
             ->with('client:id,company_name')
             ->latest('id')
-            ->take(10)
+            ->take(13)
             ->get(['id', 'tracking_number', 'client_id', 'delivery_address', 'status', 'created_date']);
 
         return Inertia::render('Dashboard', [
@@ -68,6 +68,7 @@ class DashboardController extends Controller
                 'vehicules_total' => Vehicle::count(),
             ] : null,
             'validations' => $personnel ? $this->validations() : null,
+            'conformite' => $personnel ? $this->conformite() : null,
             'journal' => $utilisateur->can('view-logs') ? $this->journal() : null,
         ]);
     }
@@ -264,7 +265,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $permis.' permis arrive'.($permis > 1 ? 'nt' : '').' à échéance',
                 'detail' => 'Validité inférieure à soixante jours.',
-                'lien' => null,
+                'lien' => route('drivers.index', ['etat' => 'permis']),
             ];
         }
 
@@ -277,7 +278,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $visite.' visite'.($visite > 1 ? 's' : '').' médicale'.($visite > 1 ? 's' : '').' à renouveler',
                 'detail' => 'Dernier examen il y a plus d\'un an.',
-                'lien' => null,
+                'lien' => route('drivers.index', ['etat' => 'visite']),
             ];
         }
 
@@ -290,7 +291,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $controle.' contrôle'.($controle > 1 ? 's' : '').' technique'.($controle > 1 ? 's' : '').' dépassé'.($controle > 1 ? 's' : ''),
                 'detail' => 'Dernier passage il y a plus d\'un an.',
-                'lien' => null,
+                'lien' => route('vehicles.index', ['etat' => 'controle']),
             ];
         }
 
@@ -343,19 +344,93 @@ class DashboardController extends Controller
      */
     private function validations(): array
     {
-        return Client::where('is_validated', false)
+        return Client::with('user:id,first_name,last_name,email,phone')
+            ->where('is_validated', false)
             ->whereNull('rejection_reason')
             ->orderByDesc('id')
             ->take(4)
-            ->get(['id', 'company_name', 'country', 'business_sector', 'vat_number'])
+            ->get()
             ->map(fn (Client $client) => [
                 'id' => $client->id,
                 'entreprise' => $client->company_name,
                 'pays' => $client->country,
                 'secteur' => $client->business_sector,
                 'tva' => $client->vat_number,
+                'entreprise_numero' => $client->enterprise_number,
+                'peppol' => $client->peppol_id,
+                'adresse' => $client->billing_address,
+                'localite' => trim($client->postal_code.' '.$client->city),
+                'delai' => $client->payment_terms,
+                'plafond' => $client->credit_limit === null ? null : (float) $client->credit_limit,
+                'contact' => trim(($client->user?->first_name ?? '').' '.($client->user?->last_name ?? '')),
+                'courriel' => $client->user?->email,
+                'telephone' => $client->user?->phone,
             ])
             ->all();
+    }
+
+    /**
+     * Ce qui n'est plus en regle dans la flotte.
+     *
+     * Un chauffeur dont la visite medicale a plus d'un an ou dont le permis
+     * arrive a echeance ne devrait plus prendre la route, et un vehicule dont
+     * le controle technique est depasse non plus. Le tableau de bord les
+     * nomme au lieu de se contenter de les compter.
+     *
+     * @return array<string, mixed>
+     */
+    private function conformite(): array
+    {
+        $visite = now()->subYear()->toDateString();
+        $echeance = now()->addDays(60)->toDateString();
+
+        $chauffeurs = Driver::with('user:id,first_name,last_name')
+            ->where(fn ($q) => $q
+                ->where('medical_exam_date', '<', $visite)
+                ->orWhere('license_expiry', '<=', $echeance))
+            ->orderBy('medical_exam_date')
+            ->take(5)
+            ->get()
+            ->map(function (Driver $chauffeur) use ($visite, $echeance) {
+                $motifs = [];
+
+                if ($chauffeur->medical_exam_date !== null && $chauffeur->medical_exam_date->lt($visite)) {
+                    $motifs[] = 'Visite médicale du '.$chauffeur->medical_exam_date->format('d/m/Y');
+                }
+
+                if ($chauffeur->license_expiry !== null && $chauffeur->license_expiry->lte($echeance)) {
+                    $motifs[] = 'Permis expirant le '.$chauffeur->license_expiry->format('d/m/Y');
+                }
+
+                return [
+                    'id' => $chauffeur->id,
+                    'nom' => trim(($chauffeur->user?->first_name ?? '').' '.($chauffeur->user?->last_name ?? '')),
+                    'motif' => implode(' · ', $motifs),
+                    'disponible' => (bool) $chauffeur->is_available,
+                ];
+            })
+            ->all();
+
+        $vehicules = Vehicle::where('inspection_date', '<', $visite)
+            ->orderBy('inspection_date')
+            ->take(5)
+            ->get()
+            ->map(fn (Vehicle $vehicule) => [
+                'immatriculation' => $vehicule->registration,
+                'modele' => trim($vehicule->brand.' '.$vehicule->model),
+                'motif' => 'Contrôle technique du '.$vehicule->inspection_date->format('d/m/Y'),
+                'disponible' => (bool) $vehicule->is_available,
+            ])
+            ->all();
+
+        return [
+            'chauffeurs' => $chauffeurs,
+            'vehicules' => $vehicules,
+            'total_chauffeurs' => Driver::where(fn ($q) => $q
+                ->where('medical_exam_date', '<', $visite)
+                ->orWhere('license_expiry', '<=', $echeance))->count(),
+            'total_vehicules' => Vehicle::where('inspection_date', '<', $visite)->count(),
+        ];
     }
 
     /**

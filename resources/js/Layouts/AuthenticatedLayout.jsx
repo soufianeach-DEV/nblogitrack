@@ -41,7 +41,7 @@ function Groupe({ titre, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients, canHandleQuotes } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canHandleQuotes, canViewFleet } = usePage().props.auth;
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
@@ -115,6 +115,17 @@ export default function AuthenticatedLayout({ header, children }) {
                     </LienMenu>
                 )}
             </Groupe>
+
+            {canViewFleet && (
+                <Groupe titre="Flotte">
+                    <LienMenu href={route('drivers.index')} active={route().current('drivers.index')} icone="profil" onClick={fermer}>
+                        Chauffeurs
+                    </LienMenu>
+                    <LienMenu href={route('vehicles.index')} active={route().current('vehicles.index')} icone="camion" onClick={fermer}>
+                        Véhicules
+                    </LienMenu>
+                </Groupe>
+            )}
 
             {canValidateClients && (
                 <Groupe titre="Administration">
