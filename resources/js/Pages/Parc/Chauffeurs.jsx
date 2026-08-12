@@ -177,9 +177,12 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], compteurs, fi
                                         <span className="block max-w-[14rem] truncate font-semibold text-marine">{c.nom}</span>
                                         <span className="block max-w-[14rem] truncate text-xs text-slate-600">{c.email}</span>
                                     </td>
-                                    <td className={`whitespace-nowrap px-4 py-3 ${c.permis_bientot ? 'font-semibold text-status-incident' : 'text-slate-600'}`}>
-                                        {c.permis}
-                                        <span className="ml-2 text-xs">{c.permis_echeance}</span>
+                                    <td className="whitespace-nowrap px-4 py-3">
+                                        <span className="font-semibold text-marine">{c.permis}</span>
+                                        <span className="ml-2 font-mono text-xs text-slate-600">{c.numero_permis}</span>
+                                        <span className={`block text-xs ${c.permis_bientot ? 'font-semibold text-status-incident' : 'text-slate-600'}`}>
+                                            {c.permis_echeance ? `expire le ${c.permis_echeance}` : 'échéance inconnue'}
+                                        </span>
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3">
                                         {c.adr ? (
