@@ -75,6 +75,7 @@ class InvoiceController extends Controller
                 'ttc' => (float) $invoice->amount_incl_tax,
                 'autoliquidation' => (bool) $invoice->reverse_charge,
                 'communication' => $invoice->payment_reference,
+                'iban' => config('entreprise.iban'),
                 'client' => [
                     'nom' => $invoice->client->company_name,
                     'tva' => $invoice->client->vat_number,

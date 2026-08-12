@@ -123,7 +123,9 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                         {facture.etat === 'PAID' ? 'Paiement reçu' : 'À payer'}
                     </h2>
                     <p className="text-3xl font-bold">{euros(facture.ttc)}</p>
-                    <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">Communication structurée</p>
+                    <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">Compte</p>
+                    <p className="font-mono text-sm">{facture.iban}</p>
+                    <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Communication structurée</p>
                     <p className="font-mono text-sm">{facture.communication}</p>
                 </section>
             </div>
@@ -153,7 +155,14 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                                             <span className="text-marine">{ligne.numero ?? '—'}</span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-3 text-slate-600">{ligne.description}</td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                        {ligne.description.startsWith('Transport ') ? (
+                                            <>
+                                                <strong className="font-semibold text-marine">Transport</strong>
+                                                {ligne.description.slice(9)}
+                                            </>
+                                        ) : ligne.description}
+                                    </td>
                                     <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-marine">
                                         {euros(ligne.ht)}
                                     </td>
