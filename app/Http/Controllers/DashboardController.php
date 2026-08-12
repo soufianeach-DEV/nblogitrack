@@ -111,10 +111,11 @@ class DashboardController extends Controller
     {
         $debut = now()->startOfMonth()->subMonths(6);
 
-        // Nombre et tonnage dans la meme requete : deux requetes separees
-        // risquaient de perdre le cloisonnement au client en chemin.
+        // Une seule requete couvre les sept mois et les memes sept mois un an
+        // plus tot : deux requetes separees risquaient de perdre le
+        // cloisonnement au client en chemin.
         $releve = $query
-            ->where('created_date', '>=', $debut->toDateString())
+            ->where('created_date', '>=', $debut->copy()->subYear()->toDateString())
             ->where('created_date', '<=', now()->endOfMonth()->toDateString())
             ->selectRaw("to_char(date_trunc('month', created_date), 'YYYY-MM') AS mois")
             ->selectRaw('count(*) AS nombre, coalesce(sum(weight), 0) AS poids')
@@ -128,15 +129,17 @@ class DashboardController extends Controller
         // rapproche deux mois qui ne se suivent pas.
         for ($i = 0; $i < 7; $i++) {
             $curseur = $debut->copy()->addMonths($i);
-            $cle = $curseur->format('Y-m');
-
-            $ligne = $releve[$cle] ?? null;
+            $ligne = $releve[$curseur->format('Y-m')] ?? null;
+            $precedent = $releve[$curseur->copy()->subYear()->format('Y-m')] ?? null;
 
             $mois[] = [
-                'cle' => $cle,
+                'cle' => $curseur->format('Y-m'),
                 'libelle' => $curseur->locale('fr')->isoFormat('MMM'),
+                'annee' => $curseur->format('Y'),
                 'nombre' => (int) ($ligne->nombre ?? 0),
                 'tonnes' => round(((float) ($ligne->poids ?? 0)) / 1000, 1),
+                'nombre_n1' => (int) ($precedent->nombre ?? 0),
+                'tonnes_n1' => round(((float) ($precedent->poids ?? 0)) / 1000, 1),
             ];
         }
 

@@ -43,29 +43,61 @@ function StatCard({ label, value, unite, detail, icone, accent, lien }) {
  * pour ce que deux div font tres bien.
  */
 function VolumeMensuel({ volume }) {
-    const maximum = Math.max(...volume.map((m) => m.nombre), 1);
+    // L'echelle tient compte des deux annees, sinon la barre de reference
+    // deborderait des qu'un mois de l'an dernier a fait mieux.
+    const maximum = Math.max(...volume.flatMap((m) => [m.nombre, m.nombre_n1]), 1);
     const total = volume.reduce((somme, m) => somme + m.nombre, 0);
+    const totalN1 = volume.reduce((somme, m) => somme + m.nombre_n1, 0);
     const pic = volume.reduce((a, b) => (b.nombre > a.nombre ? b : a), volume[0]);
+
+    const annee = volume[volume.length - 1]?.annee;
+    const anneeN1 = String(Number(annee) - 1);
+
+    // Une variation ne se calcule pas sur une base nulle : l'an dernier sans
+    // activite ne fait pas une croissance infinie, il fait une absence de
+    // comparaison.
+    const variation = totalN1 > 0 ? Math.round(((total - totalN1) / totalN1) * 100) : null;
 
     return (
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-marine">Volume mensuel</h2>
-            <p className="text-sm text-slate-600">Expéditions enregistrées sur les sept derniers mois</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 className="font-semibold text-marine">Volume mensuel</h2>
+                    <p className="text-sm text-slate-600">Sept derniers mois, comparés à la même période l'an dernier</p>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-sm bg-brand-blue/30" />
+                        {anneeN1}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-sm bg-marine" />
+                        {annee}
+                    </span>
+                </div>
+            </div>
 
             <div className="mt-5 flex h-36 items-end gap-2">
                 {volume.map((mois) => (
                     <div
                         key={mois.cle}
                         className="flex h-full flex-1 flex-col justify-end"
-                        title={`${mois.nombre} expédition${mois.nombre > 1 ? 's' : ''} · ${mois.tonnes} t`}
+                        title={`${mois.libelle} : ${mois.nombre} expédition${mois.nombre > 1 ? 's' : ''} (${mois.tonnes} t)`
+                            + ` — ${mois.nombre_n1} l'an dernier (${mois.tonnes_n1} t)`}
                     >
                         <span className="mb-1 text-center text-xs font-semibold text-marine">{mois.nombre}</span>
-                        <div
-                            className={`w-full rounded-t transition-all ${
-                                mois.cle === pic.cle ? 'bg-action' : 'bg-brand-blue/20'
-                            }`}
-                            style={{ height: `${Math.max((mois.nombre / maximum) * 85, 2)}%` }}
-                        />
+                        <div className="flex h-full items-end justify-center gap-0.5">
+                            <div
+                                className="w-1/2 rounded-t bg-brand-blue/30"
+                                style={{ height: `${Math.max((mois.nombre_n1 / maximum) * 100, 1)}%` }}
+                            />
+                            <div
+                                className={`w-1/2 rounded-t transition-all ${
+                                    mois.cle === pic.cle ? 'bg-action' : 'bg-marine'
+                                }`}
+                                style={{ height: `${Math.max((mois.nombre / maximum) * 100, 1)}%` }}
+                            />
+                        </div>
                     </div>
                 ))}
             </div>
@@ -80,7 +112,19 @@ function VolumeMensuel({ volume }) {
             <div className="mt-auto flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
                 <div>
                     <p className="text-xs uppercase tracking-wide text-slate-600">Sur la période</p>
-                    <p className="font-bold text-marine">{total} expéditions</p>
+                    <p className="font-bold text-marine">
+                        {total} expéditions
+                        {variation !== null && (
+                            <span className={`ml-2 text-sm font-bold ${
+                                variation > 0 ? 'text-status-delivered' : variation < 0 ? 'text-status-incident' : 'text-slate-600'
+                            }`}>
+                                {variation > 0 ? '+' : ''}{variation} %
+                            </span>
+                        )}
+                    </p>
+                    <p className="text-xs text-slate-600">
+                        {totalN1} sur la même période {anneeN1}
+                    </p>
                 </div>
                 <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-600">Mois le plus chargé</p>
