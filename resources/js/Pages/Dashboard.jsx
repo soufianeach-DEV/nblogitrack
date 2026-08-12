@@ -52,19 +52,28 @@ function VolumeMensuel({ volume }) {
             <h2 className="font-semibold text-marine">Volume mensuel</h2>
             <p className="text-sm text-slate-600">Expéditions enregistrées sur les sept derniers mois</p>
 
-            <div className="mt-6 flex h-44 items-end gap-2">
+            <div className="mt-5 flex h-36 items-end gap-2">
                 {volume.map((mois) => (
-                    <div key={mois.cle} className="flex flex-1 flex-col items-center gap-1">
-                        <span className="text-xs font-semibold text-marine">{mois.nombre}</span>
+                    <div
+                        key={mois.cle}
+                        className="flex h-full flex-1 flex-col justify-end"
+                        title={`${mois.nombre} expédition${mois.nombre > 1 ? 's' : ''} · ${mois.tonnes} t`}
+                    >
+                        <span className="mb-1 text-center text-xs font-semibold text-marine">{mois.nombre}</span>
                         <div
                             className={`w-full rounded-t transition-all ${
-                                mois.cle === pic.cle ? 'bg-action' : 'bg-brand-blue/15'
+                                mois.cle === pic.cle ? 'bg-action' : 'bg-brand-blue/20'
                             }`}
-                            style={{ height: `${Math.max((mois.nombre / maximum) * 100, 2)}%` }}
-                            title={`${mois.nombre} expédition${mois.nombre > 1 ? 's' : ''} · ${mois.tonnes} t`}
+                            style={{ height: `${Math.max((mois.nombre / maximum) * 85, 2)}%` }}
                         />
-                        <span className="text-xs capitalize text-slate-600">{mois.libelle}</span>
                     </div>
+                ))}
+            </div>
+            <div className="mt-1 flex gap-2">
+                {volume.map((mois) => (
+                    <span key={mois.cle} className="flex-1 text-center text-xs capitalize text-slate-600">
+                        {mois.libelle}
+                    </span>
                 ))}
             </div>
 
@@ -230,6 +239,62 @@ function CarteEnCirculation({ carte, total }) {
     );
 }
 
+function Facturation({ facturation }) {
+    const euros = (montant) => Number(montant).toLocaleString('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0,
+    });
+
+    return (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="mb-4 font-semibold text-marine">Facturation</h2>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-status-delivered/5 px-3 py-2.5">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-600">Réglé</p>
+                    <p className="text-lg font-bold text-status-delivered">{euros(facturation.paye)}</p>
+                </div>
+                <div className={`rounded-xl px-3 py-2.5 ${facturation.en_retard > 0 ? 'bg-status-incident/5' : 'bg-surface'}`}>
+                    <p className="text-[11px] uppercase tracking-wide text-slate-600">Reste dû</p>
+                    <p className={`text-lg font-bold ${facturation.en_retard > 0 ? 'text-status-incident' : 'text-marine'}`}>
+                        {euros(facturation.du)}
+                    </p>
+                </div>
+            </div>
+
+            {facturation.en_retard > 0 && (
+                <p className="mt-2 text-xs font-semibold text-status-incident">
+                    dont {facturation.en_retard} facture{facturation.en_retard > 1 ? 's' : ''} échue{facturation.en_retard > 1 ? 's' : ''}
+                </p>
+            )}
+
+            {facturation.dernieres.length > 0 && (
+                <>
+                    <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                        Dernières factures
+                    </h3>
+                    <ul className="space-y-1.5">
+                        {facturation.dernieres.map((facture) => (
+                            <li key={facture.reference} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
+                                <span className="font-mono text-xs text-brand-blue">{facture.reference}</span>
+                                <span className="ml-auto shrink-0 text-sm font-bold text-marine">{facture.montant}</span>
+                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                    facture.etat === 'Payée' ? 'bg-status-delivered/10 text-status-delivered'
+                                        : facture.etat === 'En retard' ? 'bg-status-incident/10 text-status-incident'
+                                            : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                    {facture.etat}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
+        </section>
+    );
+}
+
 function DernieresTraces({ journal }) {
     return (
         <section className="rounded-2xl bg-white p-6 shadow-sm">
@@ -266,6 +331,7 @@ export default function Dashboard({
     carte = [],
     carteTotal = 0,
     alertes = [],
+    facturation = null,
     exploitation = null,
     validations = null,
     journal = null,
@@ -420,15 +486,15 @@ export default function Dashboard({
                             </table>
                         </div>
                     </section>
-
-                    {/* Sept barres a zero ne racontent rien et donnent
-                        l'impression d'un graphique casse. */}
-                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                 </div>
 
                 <div className="space-y-4">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
+                    {facturation && <Facturation facturation={facturation} />}
+                    {/* Sept barres a zero ne racontent rien et donnent
+                        l'impression d'un graphique casse. */}
+                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                     {validations && <ValidationsEnAttente validations={validations} />}
                     {journal && <DernieresTraces journal={journal} />}
                 </div>
