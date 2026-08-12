@@ -443,6 +443,87 @@ function Facturation({ facturation }) {
     );
 }
 
+/**
+ * Ce qui n'est plus en regle dans la flotte, nomme plutot que compte : une
+ * alerte qui annonce cinquante-trois visites a renouveler ne dit pas
+ * lesquelles.
+ */
+function Conformite({ conformite }) {
+    const colonne = (titre, lignes, total, adresse, rendu) => (
+        <div>
+            <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">{titre}</h3>
+                {total > 0 && (
+                    <Link href={adresse} className="text-sm font-medium text-action hover:underline">
+                        Voir les {total}
+                    </Link>
+                )}
+            </div>
+
+            {lignes.length === 0 ? (
+                <p className="rounded-xl border border-status-delivered/30 bg-status-delivered/5 px-3 py-3 text-sm text-status-delivered">
+                    Tout est en règle.
+                </p>
+            ) : (
+                <ul className="space-y-2">{lignes.map(rendu)}</ul>
+            )}
+        </div>
+    );
+
+    const pastille = (disponible) => (
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+            disponible ? 'bg-status-incident/10 text-status-incident' : 'bg-slate-100 text-slate-700'
+        }`}>
+            {disponible ? 'En service' : 'Retiré'}
+        </span>
+    );
+
+    return (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="font-semibold text-marine">Flotte à mettre en règle</h2>
+            <p className="mb-5 text-sm text-slate-600">
+                Ce qui roule encore alors qu'une échéance est passée
+            </p>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+                {colonne(
+                    'Chauffeurs',
+                    conformite.chauffeurs,
+                    conformite.total_chauffeurs,
+                    route('drivers.index', { etat: 'visite' }),
+                    (c) => (
+                        <li key={c.id} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-marine">{c.nom}</span>
+                                <span className="block truncate text-xs text-slate-600">{c.motif}</span>
+                            </span>
+                            {pastille(c.disponible)}
+                        </li>
+                    ),
+                )}
+
+                {colonne(
+                    'Véhicules',
+                    conformite.vehicules,
+                    conformite.total_vehicules,
+                    route('vehicles.index', { etat: 'controle' }),
+                    (v) => (
+                        <li key={v.immatriculation} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-marine">
+                                    <span className="font-mono">{v.immatriculation}</span> — {v.modele}
+                                </span>
+                                <span className="block truncate text-xs text-slate-600">{v.motif}</span>
+                            </span>
+                            {pastille(v.disponible)}
+                        </li>
+                    ),
+                )}
+            </div>
+        </section>
+    );
+}
+
 function DernieresTraces({ journal }) {
     return (
         <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -500,6 +581,7 @@ export default function Dashboard({
     facturation = null,
     exploitation = null,
     validations = null,
+    conformite = null,
     journal = null,
 }) {
     const { auth } = usePage().props;
@@ -686,6 +768,12 @@ export default function Dashboard({
                 {validations && (
                     <div className="flex flex-col lg:col-start-3 lg:row-start-3">
                         <ValidationsEnAttente validations={validations} />
+                    </div>
+                )}
+
+                {conformite && (
+                    <div className="lg:col-span-3 lg:col-start-1 lg:row-start-4">
+                        <Conformite conformite={conformite} />
                     </div>
                 )}
             </div>
