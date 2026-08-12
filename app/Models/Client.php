@@ -46,4 +46,10 @@ class Client extends Model
     {
         return $this->belongsTo(User::class, 'validated_by');
     }
+
+    
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }
