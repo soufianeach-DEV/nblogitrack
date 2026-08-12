@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Support\FactureUbl;
 use App\Support\QrPaiement;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -134,6 +135,21 @@ class InvoiceController extends Controller
         ])
             ->setPaper('a4')
             ->download($invoice->reference.'.pdf');
+    }
+
+    public function ubl(Request $request, Invoice $invoice): \Symfony\Component\HttpFoundation\Response
+    {
+        $this->autoriserLecture($request->user(), $invoice);
+
+        $invoice->load([
+            'client:id,company_name,vat_number,peppol_id,billing_address,postal_code,city,country',
+            'lines',
+        ]);
+
+        return response(FactureUbl::pour($invoice), 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$invoice->reference.'.xml"',
+        ]);
     }
 
     private function qr(Invoice $invoice): ?string

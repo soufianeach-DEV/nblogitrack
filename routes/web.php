@@ -65,6 +65,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
         ->whereNumber('invoice')
         ->name('invoices.pdf');
+    Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
+        ->whereNumber('invoice')
+        ->name('invoices.ubl');
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')

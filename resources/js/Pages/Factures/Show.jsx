@@ -83,7 +83,15 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-marine shadow-sm transition hover:bg-surface"
                         >
                             <Icone nom="facture" className="h-4 w-4" />
-                            Télécharger le PDF
+                            PDF
+                        </a>
+                        <a
+                            href={route('invoices.ubl', facture.id)}
+                            title="Facture électronique structurée, format Peppol BIS Billing 3.0"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-marine shadow-sm transition hover:bg-surface"
+                        >
+                            <Icone nom="facture" className="h-4 w-4" />
+                            XML Peppol
                         </a>
                         {peutMarquerPayee && <BoutonPaiement facture={facture} />}
                     </div>

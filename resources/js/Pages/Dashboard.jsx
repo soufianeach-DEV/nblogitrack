@@ -48,7 +48,7 @@ function VolumeMensuel({ volume }) {
     const pic = volume.reduce((a, b) => (b.nombre > a.nombre ? b : a), volume[0]);
 
     return (
-        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-marine">Volume mensuel</h2>
             <p className="text-sm text-slate-600">Expéditions enregistrées sur les sept derniers mois</p>
 
@@ -77,7 +77,7 @@ function VolumeMensuel({ volume }) {
                 ))}
             </div>
 
-            <div className="mt-auto flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
+            <div className="mt-6 flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
                 <div>
                     <p className="text-xs uppercase tracking-wide text-slate-600">Sur la période</p>
                     <p className="font-bold text-marine">{total} expéditions</p>
@@ -247,7 +247,7 @@ function Facturation({ facturation }) {
     });
 
     return (
-        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">Facturation</h2>
                 <Link href={route('invoices.index')} className="text-sm font-medium text-action hover:underline">
@@ -497,19 +497,15 @@ export default function Dashboard({
                         </div>
                     </section>
 
-                    {/* Volume et facturation cote a cote, en hauteurs egales :
-                        deux blocs de meme rang ne doivent pas se decaler. */}
-                    {(volume.some((mois) => mois.nombre > 0) || facturation) && (
-                        <div className="grid items-stretch gap-4 xl:grid-cols-2">
-                            {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
-                            {facturation && <Facturation facturation={facturation} />}
-                        </div>
-                    )}
+                    {/* Sept barres a zero ne racontent rien et donnent
+                        l'impression d'un graphique casse. */}
+                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                 </div>
 
                 <div className="space-y-4">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
+                    {facturation && <Facturation facturation={facturation} />}
                     {validations && <ValidationsEnAttente validations={validations} />}
                     {journal && <DernieresTraces journal={journal} />}
                 </div>
