@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
+use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use Carbon\Carbon;
@@ -55,7 +56,8 @@ class TransportOrderController extends Controller
             'client:id,company_name,city,country',
             'vehicle:registration,brand,model,vehicle_type,capacity_tonnes',
             'driver.user:id,first_name,last_name',
-            'tariffGrid:id,label,service_level,delivery_days',
+            'tariffGrid:id,label,service_level,delivery_days', 'invoiceLine:id,invoice_id,transport_order_id',
+            'invoiceLine.invoice:id,reference,status,due_on,paid_on,amount_incl_tax',
         ]);
 
         return Inertia::render('TransportOrders/Show', [
@@ -63,6 +65,16 @@ class TransportOrderController extends Controller
             'chauffeur' => $transportOrder->driver?->user
                 ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
                 : null,
+            'facture' => $transportOrder->invoiceLine?->invoice ? [
+                'id' => $transportOrder->invoiceLine->invoice->id,
+                'reference' => $transportOrder->invoiceLine->invoice->reference,
+                'etat' => $transportOrder->invoiceLine->invoice->estEnRetard()
+                    ? 'En retard'
+                    : Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status],
+                'ttc' => (float) $transportOrder->invoiceLine->invoice->amount_incl_tax,
+                'echeance' => $transportOrder->invoiceLine->invoice->due_on->format('d/m/Y'),
+                'payee_le' => $transportOrder->invoiceLine->invoice->paid_on?->format('d/m/Y'),
+            ] : null,
         ]);
     }
 

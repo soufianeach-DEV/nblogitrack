@@ -21,8 +21,7 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders CASCADE');
-
+        DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders, invoices, invoice_lines CASCADE');
         $this->call([
             UserSeeder::class,
             VehicleSeeder::class,
@@ -31,6 +30,7 @@ class DatabaseSeeder extends Seeder
             ClientContactSeeder::class,
             DriverSeeder::class,
             TransportOrderSeeder::class,
+            InvoiceSeeder::class,
         ]);
 
         foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders'] as $t) {

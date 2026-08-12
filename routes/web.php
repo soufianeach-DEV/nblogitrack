@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GeoController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MissionController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
@@ -53,6 +54,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/missions', [MissionController::class, 'index'])->name('missions.index');
         Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
     });
+
+    Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/factures/{invoice}', [InvoiceController::class, 'show'])
+        ->whereNumber('invoice')
+        ->name('invoices.show');
+    Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
+        ->middleware('can:control-payments')
+        ->name('invoices.paid');
+    Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+        ->whereNumber('invoice')
+        ->name('invoices.pdf');
+    Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
+        ->whereNumber('invoice')
+        ->name('invoices.ubl');
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')

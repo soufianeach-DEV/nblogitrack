@@ -51,7 +51,6 @@ export default function CarteTrajets({
     trajets = [],
     selection = null,
     onSelection,
-    itineraire = null,
     peages = [],
     className = '',
 }) {
@@ -119,14 +118,15 @@ export default function CarteTrajets({
 
             // L'itineraire routier n'arrive qu'apres coup : tant qu'il manque,
             // la liaison directe tient la place.
-            const trace = actif && itineraire?.geometrie ? itineraire.geometrie : [depart, arrivee];
+            const trace = trajet.trace?.length ? trajet.trace : [depart, arrivee];
+            const routier = Boolean(trajet.trace?.length);
 
-            if (actif) {
+            if (routier) {
                 // Halo blanc sous le trait : il detache la route des voies
                 // grises du fond, qui ont parfois la meme epaisseur.
                 L.polyline(trace, {
                     color: HALO,
-                    weight: 9,
+                    weight: actif ? 9 : 6,
                     opacity: 1,
                     lineCap: 'round',
                     lineJoin: 'round',
@@ -134,22 +134,24 @@ export default function CarteTrajets({
             }
 
             const ligne = L.polyline(trace, {
-                color: actif ? TRACE : couleur,
-                weight: actif ? 5 : 2,
-                opacity: actif ? 1 : 0.7,
+                color: routier ? TRACE : couleur,
+                weight: actif ? 5 : routier ? 3 : 2,
+                opacity: actif || routier ? 1 : 0.7,
                 lineCap: 'round',
                 lineJoin: 'round',
             }).bindTooltip(etiquette, { sticky: true }).addTo(couche.current);
 
             ligne.on('click', () => clic.current?.(trajet.id));
 
-            if (actif) {
+            if (routier) {
                 L.marker(trace[0], { icon: MARQUEUR_DEPART })
                     .bindTooltip(`Enlèvement · ${trajet.depart}`)
-                    .addTo(couche.current);
+                    .addTo(couche.current)
+                    .on('click', () => clic.current?.(trajet.id));
                 L.marker(trace[trace.length - 1], { icon: MARQUEUR_ARRIVEE })
                     .bindTooltip(`Livraison · ${trajet.arrivee}`)
-                    .addTo(couche.current);
+                    .addTo(couche.current)
+                    .on('click', () => clic.current?.(trajet.id));
                 trace.forEach((point) => cadre.push(point));
             } else {
                 // Cercles plutot que les marqueurs par defaut : ceux-ci
@@ -186,7 +188,7 @@ export default function CarteTrajets({
                 maxZoom: choisi ? 12 : 8,
             });
         }
-    }, [trajets, selection, itineraire, peages]);
+    }, [trajets, selection, peages]);
 
     return <div ref={conteneur} className={className} />;
 }

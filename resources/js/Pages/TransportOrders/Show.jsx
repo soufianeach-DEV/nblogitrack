@@ -57,7 +57,7 @@ function Progression({ statut }) {
     );
 }
 
-export default function Show({ order, chauffeur }) {
+export default function Show({ order, chauffeur, facture = null }) {
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
         ? '—'
         : Number(valeur).toLocaleString('fr-FR', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }) + ' ' + unite;
@@ -159,6 +159,32 @@ export default function Show({ order, chauffeur }) {
                         {ligne('Code d\'accès', <span className="font-mono tracking-widest">{order.tracking_code}</span>)}
                         {ligne('Créée le', date(order.created_date))}
                     </dl>
+                ))}
+
+                {carte('Facturation', facture ? (
+                    <dl>
+                        {ligne('Facture', (
+                            <Link
+                                href={route('invoices.show', facture.id)}
+                                className="font-mono text-brand-blue transition hover:text-marine"
+                            >
+                                {facture.reference}
+                            </Link>
+                        ))}
+                        {ligne('Montant TTC', nombre(facture.ttc, '€', 2))}
+                        {facture.payee_le
+                            ? ligne('Payée le', facture.payee_le)
+                            : ligne('Échéance', facture.echeance)}
+                        {ligne('État', facture.etat)}
+                    </dl>
+                ) : (
+                    <p className="text-sm text-slate-600">
+                        {order.status === 'DELIVERED'
+                            ? 'Sera portée sur la facture du mois de livraison, émise le mois suivant.'
+                            : order.status === 'CANCELLED'
+                                ? 'Expédition annulée — rien à facturer.'
+                                : 'Facturée après livraison.'}
+                    </p>
                 ))}
 
                 {carte('Consignes particulières', (

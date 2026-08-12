@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Driver;
+use App\Models\Invoice;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -52,7 +53,9 @@ class DashboardController extends Controller
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
             'carte' => $this->carte(clone $query),
+            'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
             'alertes' => $this->alertes(clone $query, $personnel),
+            'facturation' => $this->facturation($utilisateur, $personnel),
             // Ces trois blocs relevent de l'exploitation, pas du dossier d'un
             // client : ils ne partent que vers le personnel.
             'exploitation' => $personnel ? [
@@ -108,10 +111,11 @@ class DashboardController extends Controller
     {
         $debut = now()->startOfMonth()->subMonths(6);
 
-        // Nombre et tonnage dans la meme requete : deux requetes separees
-        // risquaient de perdre le cloisonnement au client en chemin.
+        // Une seule requete couvre les sept mois et les memes sept mois un an
+        // plus tot : deux requetes separees risquaient de perdre le
+        // cloisonnement au client en chemin.
         $releve = $query
-            ->where('created_date', '>=', $debut->toDateString())
+            ->where('created_date', '>=', $debut->copy()->subYear()->toDateString())
             ->where('created_date', '<=', now()->endOfMonth()->toDateString())
             ->selectRaw("to_char(date_trunc('month', created_date), 'YYYY-MM') AS mois")
             ->selectRaw('count(*) AS nombre, coalesce(sum(weight), 0) AS poids')
@@ -125,15 +129,17 @@ class DashboardController extends Controller
         // rapproche deux mois qui ne se suivent pas.
         for ($i = 0; $i < 7; $i++) {
             $curseur = $debut->copy()->addMonths($i);
-            $cle = $curseur->format('Y-m');
-
-            $ligne = $releve[$cle] ?? null;
+            $ligne = $releve[$curseur->format('Y-m')] ?? null;
+            $precedent = $releve[$curseur->copy()->subYear()->format('Y-m')] ?? null;
 
             $mois[] = [
-                'cle' => $cle,
+                'cle' => $curseur->format('Y-m'),
                 'libelle' => $curseur->locale('fr')->isoFormat('MMM'),
+                'annee' => $curseur->format('Y'),
                 'nombre' => (int) ($ligne->nombre ?? 0),
                 'tonnes' => round(((float) ($ligne->poids ?? 0)) / 1000, 1),
+                'nombre_n1' => (int) ($precedent->nombre ?? 0),
+                'tonnes_n1' => round(((float) ($precedent->poids ?? 0)) / 1000, 1),
             ];
         }
 
@@ -143,6 +149,9 @@ class DashboardController extends Controller
     /**
      * Les expeditions en circulation, pour la carte du tableau de bord.
      *
+     * Huit au plus : chacune demande son itineraire routier, et quarante
+     * traces superposees ne se liraient de toute facon pas.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function carte(Builder $query): array
@@ -151,7 +160,8 @@ class DashboardController extends Controller
             ->where('status', 'IN_PROGRESS')
             ->whereNotNull('pickup_lat')
             ->whereNotNull('delivery_lat')
-            ->take(40)
+            ->latest('id')
+            ->take(8)
             ->get(['id', 'tracking_number', 'status', 'pickup_address', 'delivery_address',
                 'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng'])
             ->map(fn (TransportOrder $ordre) => [
@@ -283,6 +293,45 @@ class DashboardController extends Controller
         }
 
         return $alertes;
+    }
+
+    /**
+     * Ce que le client a paye, ce qu'il doit encore, et ses dernieres
+     * factures. Le personnel voit les memes chiffres pour tout le monde.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function facturation(User $utilisateur, bool $personnel): ?array
+    {
+        $requete = Invoice::query();
+
+        if (! $personnel) {
+            $requete->where('client_id', $utilisateur->id);
+        }
+
+        if ((clone $requete)->doesntExist()) {
+            return null;
+        }
+
+        $impayees = (clone $requete)->where('status', '!=', 'PAID');
+
+        return [
+            'paye' => round((float) (clone $requete)->where('status', 'PAID')->sum('amount_incl_tax'), 2),
+            'du' => round((float) (clone $impayees)->sum('amount_incl_tax'), 2),
+            'en_retard' => (clone $impayees)->where('due_on', '<', now()->toDateString())->count(),
+            'dernieres' => (clone $requete)
+                ->orderByDesc('issued_on')
+                ->orderByDesc('id')
+                ->take(5)
+                ->get()
+                ->map(fn (Invoice $facture) => [
+                    'id' => $facture->id,
+                    'reference' => $facture->reference,
+                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' €',
+                    'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
+                ])
+                ->all(),
+        ];
     }
 
     /**

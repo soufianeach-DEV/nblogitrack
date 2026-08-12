@@ -106,6 +106,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         Suivi
                     </LienMenu>
                 )}
+                <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
+                    Facturation
+                </LienMenu>
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
                         Demandes de devis

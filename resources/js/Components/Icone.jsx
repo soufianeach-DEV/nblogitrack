@@ -19,6 +19,7 @@ const TRACES = {
     agrandir: 'M9 4H4v5M4 4l6 6M15 20h5v-5M20 20l-6-6',
     reduire: 'M4 9h5V4M4 4l5 5M20 15h-5v5M20 20l-5-5',
     peage: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM14.5 9.5a3 3 0 1 0 0 5M8.5 11h5M8.5 13.5h5',
+    facture: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
     profil: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c0-3.3 3.6-5.5 8-5.5s8 2.2 8 5.5',
     retour: 'M19 12H5M11 18l-6-6 6-6',
 };

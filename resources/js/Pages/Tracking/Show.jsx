@@ -498,7 +498,9 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
 
                 <div className={`relative h-[420px] overflow-hidden rounded-2xl shadow-sm lg:h-auto ${agrandie ? 'lg:w-full' : 'lg:w-1/3'}`}>
                     <CarteTrajets
-                        trajets={expeditions}
+                        trajets={expeditions.map((expedition) => expedition.id === order?.id
+                            ? { ...expedition, trace: itineraire?.geometrie }
+                            : expedition)}
                         selection={order?.id ?? null}
                         onSelection={(id) => {
                             const cible = expeditions.find((e) => e.id === id);
@@ -507,7 +509,6 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                 ouvrir(cible.numero);
                             }
                         }}
-                        itineraire={itineraire}
                         peages={peages}
                         className="h-full w-full"
                     />
