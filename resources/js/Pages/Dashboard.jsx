@@ -1,7 +1,8 @@
 import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
 const STATUS = {
     PENDING: { label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
@@ -165,15 +166,66 @@ function Alertes({ alertes }) {
     );
 }
 
-function CarteEnCirculation({ carte }) {
+function CarteEnCirculation({ carte, total }) {
+    const [traces, setTraces] = useState({});
+
+    // Les itineraires arrivent un par un, apres la page. Les demander tous en
+    // meme temps saturerait le service, et la liaison directe tient la place
+    // en attendant chacun d'eux.
+    useEffect(() => {
+        let vivant = true;
+
+        (async () => {
+            for (const trajet of carte) {
+                try {
+                    const reponse = await fetch(route('tracking.itineraire', trajet.id), {
+                        headers: { Accept: 'application/json' },
+                    });
+
+                    if (! vivant) {
+                        return;
+                    }
+
+                    const donnees = reponse.ok ? await reponse.json() : null;
+
+                    if (vivant && donnees?.geometrie && ! donnees.direct) {
+                        setTraces((precedentes) => ({ ...precedentes, [trajet.id]: donnees.geometrie }));
+                    }
+                } catch (erreur) {
+                    // Un itineraire manquant laisse simplement la liaison directe.
+                }
+            }
+        })();
+
+        return () => {
+            vivant = false;
+        };
+    }, [carte]);
+
+    const trajets = carte.map((trajet) => ({ ...trajet, trace: traces[trajet.id] }));
+
+    const ouvrir = (id) => {
+        const cible = carte.find((trajet) => trajet.id === id);
+
+        if (cible) {
+            router.get(route('tracking.show'), { tracking_number: cible.numero });
+        }
+    };
+
     return (
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
             <div className="relative h-56">
-                <CarteTrajets trajets={carte} className="h-full w-full" />
+                <CarteTrajets trajets={trajets} onSelection={ouvrir} className="h-full w-full" />
                 <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
-                    {carte.length} en circulation
+                    {total > carte.length ? `${carte.length} des ${total}` : total} en circulation
                 </span>
             </div>
+            <Link
+                href={route('tracking.show')}
+                className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-action transition hover:bg-surface"
+            >
+                Ouvrir le suivi
+            </Link>
         </section>
     );
 }
@@ -212,6 +264,7 @@ export default function Dashboard({
     performance,
     volume = [],
     carte = [],
+    carteTotal = 0,
     alertes = [],
     exploitation = null,
     validations = null,
@@ -321,20 +374,40 @@ export default function Dashboard({
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                                        <th scope="col" className="px-6 py-3 font-semibold">Référence</th>
-                                        <th scope="col" className="px-6 py-3 font-semibold">Donneur d'ordre</th>
-                                        <th scope="col" className="px-6 py-3 font-semibold">Destination</th>
-                                        <th scope="col" className="px-6 py-3 font-semibold">Statut</th>
+                                        <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Référence</th>
+                                        <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Donneur d'ordre</th>
+                                        <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Destination</th>
+                                        <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Statut</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {recent.map((order) => (
-                                        <tr key={order.id} className="border-b border-slate-50 last:border-0">
-                                            <td className="px-6 py-4 font-mono font-semibold text-marine">{order.tracking_number}</td>
-                                            <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
-                                            <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${STATUS[order.status]?.cls ?? 'bg-slate-100 text-slate-600'}`}>
+                                        <tr
+                                            key={order.id}
+                                            onClick={() => router.get(route('transport-orders.show', order.id))}
+                                            className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-surface"
+                                        >
+                                            <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-marine">
+                                                <Link
+                                                    href={route('transport-orders.show', order.id)}
+                                                    className="transition hover:text-brand-blue"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {order.tracking_number}
+                                                </Link>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-700">
+                                                <span className="block max-w-[11rem] truncate" title={order.client?.company_name ?? ''}>
+                                                    {order.client?.company_name ?? '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600">
+                                                <span className="block max-w-[16rem] truncate" title={order.delivery_address}>
+                                                    {order.delivery_address}
+                                                </span>
+                                            </td>
+                                            <td className="whitespace-nowrap px-4 py-3">
+                                                <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold uppercase ${STATUS[order.status]?.cls ?? 'bg-slate-100 text-slate-600'}`}>
                                                     {STATUS[order.status]?.label ?? order.status}
                                                 </span>
                                             </td>
@@ -354,7 +427,7 @@ export default function Dashboard({
                 </div>
 
                 <div className="space-y-4">
-                    {carte.length > 0 && <CarteEnCirculation carte={carte} />}
+                    {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
                     {validations && <ValidationsEnAttente validations={validations} />}
                     {journal && <DernieresTraces journal={journal} />}

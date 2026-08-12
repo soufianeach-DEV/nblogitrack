@@ -52,6 +52,7 @@ class DashboardController extends Controller
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
             'carte' => $this->carte(clone $query),
+            'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
             'alertes' => $this->alertes(clone $query, $personnel),
             // Ces trois blocs relevent de l'exploitation, pas du dossier d'un
             // client : ils ne partent que vers le personnel.
@@ -143,6 +144,9 @@ class DashboardController extends Controller
     /**
      * Les expeditions en circulation, pour la carte du tableau de bord.
      *
+     * Huit au plus : chacune demande son itineraire routier, et quarante
+     * traces superposees ne se liraient de toute facon pas.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function carte(Builder $query): array
@@ -151,7 +155,8 @@ class DashboardController extends Controller
             ->where('status', 'IN_PROGRESS')
             ->whereNotNull('pickup_lat')
             ->whereNotNull('delivery_lat')
-            ->take(40)
+            ->latest('id')
+            ->take(8)
             ->get(['id', 'tracking_number', 'status', 'pickup_address', 'delivery_address',
                 'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng'])
             ->map(fn (TransportOrder $ordre) => [
