@@ -39,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('validate-clients', fn (User $user) => $user->isAdmin());
         Gate::define('control-payments', fn (User $user) => $user->isAdmin());
+        Gate::define('view-fleet', fn (User $user) => $user->isStaff());
         Gate::define('drive', fn (User $user) => $user->isDriver());
 
         Event::subscribe(JournaliserAuthentification::class);

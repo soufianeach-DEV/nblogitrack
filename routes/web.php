@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MissionController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
 use App\Http\Controllers\VatController;
+use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -68,6 +70,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
         ->whereNumber('invoice')
         ->name('invoices.ubl');
+
+    Route::middleware('can:view-fleet')->group(function () {
+        Route::get('/vehicules', [VehicleController::class, 'index'])->name('vehicles.index');
+        Route::get('/chauffeurs', [DriverController::class, 'index'])->name('drivers.index');
+    });
+
+    Route::middleware('can:manage-fleet')->group(function () {
+        Route::patch('/vehicules/{vehicle:registration}', [VehicleController::class, 'update'])->name('vehicles.update');
+        Route::patch('/chauffeurs/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+    });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')

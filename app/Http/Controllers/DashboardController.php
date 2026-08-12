@@ -264,7 +264,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $permis.' permis arrive'.($permis > 1 ? 'nt' : '').' à échéance',
                 'detail' => 'Validité inférieure à soixante jours.',
-                'lien' => null,
+                'lien' => route('drivers.index', ['etat' => 'permis']),
             ];
         }
 
@@ -277,7 +277,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $visite.' visite'.($visite > 1 ? 's' : '').' médicale'.($visite > 1 ? 's' : '').' à renouveler',
                 'detail' => 'Dernier examen il y a plus d\'un an.',
-                'lien' => null,
+                'lien' => route('drivers.index', ['etat' => 'visite']),
             ];
         }
 
@@ -290,7 +290,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => $controle.' contrôle'.($controle > 1 ? 's' : '').' technique'.($controle > 1 ? 's' : '').' dépassé'.($controle > 1 ? 's' : ''),
                 'detail' => 'Dernier passage il y a plus d\'un an.',
-                'lien' => null,
+                'lien' => route('vehicles.index', ['etat' => 'controle']),
             ];
         }
 
@@ -343,17 +343,27 @@ class DashboardController extends Controller
      */
     private function validations(): array
     {
-        return Client::where('is_validated', false)
+        return Client::with('user:id,first_name,last_name,email,phone')
+            ->where('is_validated', false)
             ->whereNull('rejection_reason')
             ->orderByDesc('id')
             ->take(4)
-            ->get(['id', 'company_name', 'country', 'business_sector', 'vat_number'])
+            ->get()
             ->map(fn (Client $client) => [
                 'id' => $client->id,
                 'entreprise' => $client->company_name,
                 'pays' => $client->country,
                 'secteur' => $client->business_sector,
                 'tva' => $client->vat_number,
+                'entreprise_numero' => $client->enterprise_number,
+                'peppol' => $client->peppol_id,
+                'adresse' => $client->billing_address,
+                'localite' => trim($client->postal_code.' '.$client->city),
+                'delai' => $client->payment_terms,
+                'plafond' => $client->credit_limit === null ? null : (float) $client->credit_limit,
+                'contact' => trim(($client->user?->first_name ?? '').' '.($client->user?->last_name ?? '')),
+                'courriel' => $client->user?->email,
+                'telephone' => $client->user?->phone,
             ])
             ->all();
     }
