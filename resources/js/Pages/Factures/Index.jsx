@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 const ETATS = {
     DRAFT: { libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
@@ -70,8 +70,13 @@ export default function Index({ factures = [] }) {
 
                                 return (
                                     <tr key={facture.id} className="border-b border-slate-50 last:border-0">
-                                        <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-marine">
-                                            {facture.reference}
+                                                                                <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold">
+                                            <Link
+                                                href={route('invoices.show', facture.id)}
+                                                className="text-brand-blue transition hover:text-marine"
+                                            >
+                                                {facture.reference}
+                                            </Link>
                                         </td>
                                         {canPlan && (
                                             <td className="px-4 py-3 text-slate-700">

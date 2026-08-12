@@ -56,6 +56,12 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/factures/{invoice}', [InvoiceController::class, 'show'])
+        ->whereNumber('invoice')
+        ->name('invoices.show');
+    Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
+        ->middleware('can:control-payments')
+        ->name('invoices.paid');
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')

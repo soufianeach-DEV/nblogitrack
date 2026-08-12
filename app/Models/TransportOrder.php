@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TransportOrder extends Model
 {
@@ -84,5 +85,10 @@ class TransportOrder extends Model
     public function tariffGrid(): BelongsTo
     {
         return $this->belongsTo(TariffGrid::class);
+    }
+
+    public function invoiceLine(): HasOne
+    {
+        return $this->hasOne(InvoiceLine::class);
     }
 }
