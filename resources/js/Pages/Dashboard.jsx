@@ -48,7 +48,7 @@ function VolumeMensuel({ volume }) {
     const pic = volume.reduce((a, b) => (b.nombre > a.nombre ? b : a), volume[0]);
 
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-marine">Volume mensuel</h2>
             <p className="text-sm text-slate-600">Expéditions enregistrées sur les sept derniers mois</p>
 
@@ -77,7 +77,7 @@ function VolumeMensuel({ volume }) {
                 ))}
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
+            <div className="mt-auto flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
                 <div>
                     <p className="text-xs uppercase tracking-wide text-slate-600">Sur la période</p>
                     <p className="font-bold text-marine">{total} expéditions</p>
@@ -247,7 +247,7 @@ function Facturation({ facturation }) {
     });
 
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">Facturation</h2>
                 <Link href={route('invoices.index')} className="text-sm font-medium text-action hover:underline">
@@ -437,9 +437,13 @@ export default function Dashboard({
                 </div>
             )}
 
+            {/* Chaque rangee aligne son bas : les derniers ordres finissent
+                avec les alertes, le volume commence avec la facturation. Les
+                positions sont explicites pour qu'un bloc absent ne fasse pas
+                glisser les autres. */}
             <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                <div className="space-y-4 lg:col-span-2">
-                    <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
+                    <section className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
                             <h2 className="font-semibold text-marine">Derniers ordres</h2>
                             <Link href={route('transport-orders.index')} className="text-sm font-medium text-action hover:underline">
@@ -496,19 +500,33 @@ export default function Dashboard({
                             </table>
                         </div>
                     </section>
-
-                    {/* Sept barres a zero ne racontent rien et donnent
-                        l'impression d'un graphique casse. */}
-                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                 </div>
 
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4 lg:col-start-3 lg:row-start-1">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
-                    {facturation && <Facturation facturation={facturation} />}
-                    {validations && <ValidationsEnAttente validations={validations} />}
-                    {journal && <DernieresTraces journal={journal} />}
                 </div>
+
+                {/* Sept barres a zero ne racontent rien et donnent
+                    l'impression d'un graphique casse. */}
+                {volume.some((mois) => mois.nombre > 0) && (
+                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
+                        <VolumeMensuel volume={volume} />
+                    </div>
+                )}
+
+                {facturation && (
+                    <div className="flex flex-col lg:col-start-3 lg:row-start-2">
+                        <Facturation facturation={facturation} />
+                    </div>
+                )}
+
+                {(validations || journal) && (
+                    <div className="flex flex-col gap-4 lg:col-start-3 lg:row-start-3">
+                        {validations && <ValidationsEnAttente validations={validations} />}
+                        {journal && <DernieresTraces journal={journal} />}
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );

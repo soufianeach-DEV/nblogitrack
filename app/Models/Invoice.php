@@ -18,7 +18,6 @@ class Invoice extends Model
         'OVERDUE' => 'En retard',
     ];
 
-    
     public const TAUX_TVA = 21.00;
 
     protected $fillable = [
@@ -53,8 +52,6 @@ class Invoice extends Model
         return $this->hasMany(InvoiceLine::class);
     }
 
-    
-  
     public function estEnRetard(): bool
     {
         return $this->status !== 'PAID' && $this->due_on->isPast();

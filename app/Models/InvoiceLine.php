@@ -21,17 +21,13 @@ class InvoiceLine extends Model
         return ['amount_excl_tax' => 'decimal:2'];
     }
 
-    
-
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
-
     public function transportOrder(): BelongsTo
     {
         return $this->belongsTo(TransportOrder::class);
     }
-
 }
