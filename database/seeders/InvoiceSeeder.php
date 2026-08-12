@@ -73,15 +73,15 @@ class InvoiceSeeder extends Seeder
                 'reverse_charge' => $autoliquidation,
                 'status' => $payee ? 'PAID' : 'SENT',
                 'paid_on' => $payee ? $echeance->copy()->subDays(3) : null,
-                'payment_reference' => $this->communicationStructuree($numero),
+                'payment_reference' => $this->communicationStructuree((int) $annee, $serie[$annee]),
             ]);
 
             foreach ($expeditions as $ordre) {
                 InvoiceLine::create([
                     'invoice_id' => $facture->id,
                     'transport_order_id' => $ordre->id,
-                    'description' => $ordre->tracking_number.' — '
-                        .$ordre->pickup_address.' vers '.$ordre->delivery_address,
+                    'description' => 'Transport '.$ordre->pickup_address
+                        .' vers '.$ordre->delivery_address,
                     'amount_excl_tax' => round((float) $ordre->estimated_cost, 2),
                 ]);
             }
@@ -104,10 +104,9 @@ class InvoiceSeeder extends Seeder
         };
     }
 
-
-    private function communicationStructuree(int $numero): string
+    private function communicationStructuree(int $annee, int $numero): string
     {
-        $base = str_pad((string) $numero, 10, '0', STR_PAD_LEFT);
+        $base = sprintf('%04d%06d', $annee, $numero);
         $controle = (int) $base % 97;
         $controle = $controle === 0 ? 97 : $controle;
 
