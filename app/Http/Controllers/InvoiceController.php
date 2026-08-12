@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Support\QrPaiement;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,6 +75,7 @@ class InvoiceController extends Controller
                 'autoliquidation' => (bool) $invoice->reverse_charge,
                 'communication' => $invoice->payment_reference,
                 'iban' => config('entreprise.iban'),
+                'qr' => $this->qr($invoice),
                 'client' => [
                     'nom' => $invoice->client->company_name,
                     'tva' => $invoice->client->vat_number,
@@ -126,9 +128,26 @@ class InvoiceController extends Controller
             'lines.transportOrder:id,tracking_number',
         ]);
 
-        return Pdf::loadView('pdf.facture', ['facture' => $invoice])
+        return Pdf::loadView('pdf.facture', [
+            'facture' => $invoice,
+            'qr' => $this->qr($invoice),
+        ])
             ->setPaper('a4')
             ->download($invoice->reference.'.pdf');
+    }
+
+    private function qr(Invoice $invoice): ?string
+    {
+        if ($invoice->status === 'PAID') {
+            return null;
+        }
+
+        return QrPaiement::epc(
+            config('entreprise.nom'),
+            config('entreprise.iban'),
+            (float) $invoice->amount_incl_tax,
+            $invoice->payment_reference,
+        );
     }
 
     private function autoriserLecture(User $utilisateur, Invoice $invoice): void

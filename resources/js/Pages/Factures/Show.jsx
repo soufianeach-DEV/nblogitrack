@@ -127,14 +127,27 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                 </section>
 
                 <section className="rounded-2xl bg-marine p-5 text-white shadow-sm">
-                    <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-300">
-                        {facture.etat === 'PAID' ? 'Paiement reçu' : 'À payer'}
-                    </h2>
-                    <p className="text-3xl font-bold">{euros(facture.ttc)}</p>
-                    <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">Compte</p>
-                    <p className="font-mono text-sm">{facture.iban}</p>
-                    <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Communication structurée</p>
-                    <p className="font-mono text-sm">{facture.communication}</p>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                {facture.etat === 'PAID' ? 'Paiement reçu' : 'À payer'}
+                            </h2>
+                            <p className="text-3xl font-bold">{euros(facture.ttc)}</p>
+                            <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">Compte</p>
+                            <p className="font-mono text-sm">{facture.iban}</p>
+                            <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Communication structurée</p>
+                            <p className="font-mono text-sm">{facture.communication}</p>
+                        </div>
+                        {facture.qr && (
+                            <div className="shrink-0 rounded-lg bg-white p-1.5" title="À scanner avec votre application bancaire">
+                                <img
+                                    src={facture.qr}
+                                    alt="QR de paiement à scanner avec votre application bancaire"
+                                    className="h-28 w-28"
+                                />
+                            </div>
+                        )}
+                    </div>
                 </section>
             </div>
 

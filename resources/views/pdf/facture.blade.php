@@ -5,36 +5,39 @@
     <title>{{ $facture->reference }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1e293b; }
-        .entete { background: #14324F; color: #ffffff; padding: 24px 32px; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1e293b; line-height: 1.5; }
+        .entete { background: #14324F; color: #ffffff; padding: 30px 40px; }
         .entete table { width: 100%; }
-        .marque { font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+        .marque { font-size: 21px; font-weight: bold; letter-spacing: 2px; }
         .marque-sous { font-size: 8px; letter-spacing: 3px; color: #cbd5e1; text-transform: uppercase; }
-        .doc-titre { font-size: 16px; font-weight: bold; text-align: right; }
+        .doc-titre { font-size: 17px; font-weight: bold; text-align: right; }
         .doc-ref { font-size: 12px; text-align: right; color: #cbd5e1; }
-        .corps { padding: 24px 32px; }
-        .blocs { width: 100%; margin-bottom: 20px; }
-        .blocs td { vertical-align: top; width: 33%; padding-right: 16px; }
-        .bloc-titre { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 5px; }
-        .bloc p { margin-bottom: 2px; }
+        .corps { padding: 32px 40px; }
+        .blocs { width: 100%; margin-bottom: 30px; }
+        .blocs td { vertical-align: top; width: 33%; padding-right: 20px; }
+        .bloc-titre { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px; }
+        .bloc p { margin-bottom: 4px; }
         .gras { font-weight: bold; }
         .mono { font-family: 'DejaVu Sans Mono', monospace; }
-        .lignes { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .lignes { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .lignes th { background: #f1f5f9; text-align: left; font-size: 8px; text-transform: uppercase;
-            letter-spacing: 1px; color: #475569; padding: 7px 8px; }
+            letter-spacing: 1px; color: #475569; padding: 9px 12px; }
         .lignes th.droite, .lignes td.droite { text-align: right; }
-        .lignes td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; }
-        .totaux { width: 260px; margin-left: auto; margin-top: 12px; border-collapse: collapse; }
-        .totaux td { padding: 4px 8px; }
+        .lignes td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+        .totaux { width: 270px; margin-left: auto; margin-top: 18px; border-collapse: collapse; }
+        .totaux td { padding: 6px 12px; }
         .totaux .droite { text-align: right; }
-        .totaux .ttc td { border-top: 2px solid #14324F; font-weight: bold; font-size: 12px; padding-top: 7px; }
-        .paiement { background: #14324F; color: #ffffff; margin-top: 22px; padding: 14px 18px; }
+        .totaux .ttc td { border-top: 2px solid #14324F; font-weight: bold; font-size: 12px; padding-top: 10px; }
+        .paiement { background: #14324F; color: #ffffff; margin-top: 30px; padding: 18px 22px; }
         .paiement table { width: 100%; }
-        .paiement .etiquette { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+        .paiement td { vertical-align: middle; }
+        .paiement .etiquette { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 3px; }
         .paiement .valeur { font-size: 11px; font-weight: bold; }
-        .mention { margin-top: 14px; font-size: 8.5px; color: #64748b; }
-        .pied { position: fixed; bottom: 18px; left: 32px; right: 32px; font-size: 8px; color: #94a3b8;
-            border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: center; }
+        .qr-boite { background: #ffffff; padding: 6px; display: inline-block; }
+        .qr-boite img { width: 74px; height: 74px; display: block; }
+        .mention { margin-top: 18px; font-size: 8.5px; color: #64748b; line-height: 1.6; }
+        .pied { position: fixed; bottom: 18px; left: 40px; right: 40px; font-size: 8px; color: #94a3b8;
+            border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: center; }
     </style>
 </head>
 <body>
@@ -132,15 +135,26 @@
                     <td>
                         <div class="etiquette">Compte</div>
                         <div class="valeur mono">{{ config('entreprise.iban') }}</div>
-                    </td>
-                    <td>
-                        <div class="etiquette">Communication structurée</div>
+                        <div class="etiquette" style="margin-top: 9px;">Communication structurée</div>
                         <div class="valeur mono">{{ $facture->payment_reference }}</div>
                     </td>
-                    <td style="text-align: right;">
-                        <div class="etiquette">À payer pour le {{ $facture->due_on->format('d/m/Y') }}</div>
-                        <div class="valeur">{{ number_format((float) $facture->amount_incl_tax, 2, ',', ' ') }} €</div>
+                    <td style="text-align: right; padding-right: 18px;">
+                        <div class="etiquette">
+                            @if ($facture->paid_on)
+                                Paiement reçu
+                            @else
+                                À payer pour le {{ $facture->due_on->format('d/m/Y') }}
+                            @endif
+                        </div>
+                        <div class="valeur" style="font-size: 15px;">{{ number_format((float) $facture->amount_incl_tax, 2, ',', ' ') }} €</div>
                     </td>
+                    @if ($qr ?? null)
+                        <td style="width: 88px; text-align: right;">
+                            <div class="qr-boite">
+                                <img src="{{ $qr }}" alt="QR de paiement">
+                            </div>
+                        </td>
+                    @endif
                 </tr>
             </table>
         </div>
