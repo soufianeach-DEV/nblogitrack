@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -48,11 +50,7 @@ class InvoiceController extends Controller
     {
         $utilisateur = $request->user();
 
-        abort_if($utilisateur->isDriver(), 403);
-        abort_if(
-            $utilisateur->cannot('view-all-orders') && $invoice->client_id !== $utilisateur->id,
-            404,
-        );
+        $this->autoriserLecture($utilisateur, $invoice);
 
         $invoice->load([
             'client:id,company_name,vat_number,billing_address,postal_code,city,country',
@@ -117,5 +115,28 @@ class InvoiceController extends Controller
         );
 
         return back()->with('success', 'Paiement enregistré.');
+    }
+
+    public function pdf(Request $request, Invoice $invoice): \Illuminate\Http\Response
+    {
+        $this->autoriserLecture($request->user(), $invoice);
+
+        $invoice->load([
+            'client:id,company_name,vat_number,billing_address,postal_code,city,country',
+            'lines.transportOrder:id,tracking_number',
+        ]);
+
+        return Pdf::loadView('pdf.facture', ['facture' => $invoice])
+            ->setPaper('a4')
+            ->download($invoice->reference.'.pdf');
+    }
+
+    private function autoriserLecture(User $utilisateur, Invoice $invoice): void
+    {
+        abort_if($utilisateur->isDriver(), 403);
+        abort_if(
+            $utilisateur->cannot('view-all-orders') && $invoice->client_id !== $utilisateur->id,
+            404,
+        );
     }
 }

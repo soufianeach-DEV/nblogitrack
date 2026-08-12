@@ -1,4 +1,5 @@
 import BoutonRetour from '@/Components/BoutonRetour';
+import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -77,6 +78,13 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
                             {etat.libelle}
                         </span>
+                        <a
+                            href={route('invoices.pdf', facture.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-marine shadow-sm transition hover:bg-surface"
+                        >
+                            <Icone nom="facture" className="h-4 w-4" />
+                            Télécharger le PDF
+                        </a>
                         {peutMarquerPayee && <BoutonPaiement facture={facture} />}
                     </div>
                 </div>

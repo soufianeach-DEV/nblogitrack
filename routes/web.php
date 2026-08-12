@@ -62,6 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
         ->middleware('can:control-payments')
         ->name('invoices.paid');
+    Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+        ->whereNumber('invoice')
+        ->name('invoices.pdf');
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
         ->middleware('can:view-logs')
