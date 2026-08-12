@@ -106,39 +106,38 @@ export default function AuthenticatedLayout({ header, children }) {
                         Suivi
                     </LienMenu>
                 )}
-                <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
-                    Facturation
-                </LienMenu>
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
                         Demandes de devis
                     </LienMenu>
                 )}
-            </Groupe>
-
-            {canViewFleet && (
-                <Groupe titre="Flotte">
-                    <LienMenu href={route('drivers.index')} active={route().current('drivers.index')} icone="profil" onClick={fermer}>
-                        Chauffeurs
-                    </LienMenu>
-                    <LienMenu href={route('vehicles.index')} active={route().current('vehicles.index')} icone="camion" onClick={fermer}>
-                        Véhicules
-                    </LienMenu>
-                </Groupe>
-            )}
-
-            {canValidateClients && (
-                <Groupe titre="Administration">
+                {canValidateClients && (
                     <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
                         Entreprises
                     </LienMenu>
-                </Groupe>
-            )}
+                )}
+                {canViewFleet && (
+                    <>
+                        <LienMenu href={route('drivers.index')} active={route().current('drivers.index')} icone="profil" onClick={fermer}>
+                            Chauffeurs
+                        </LienMenu>
+                        <LienMenu href={route('vehicles.index')} active={route().current('vehicles.index')} icone="camion" onClick={fermer}>
+                            Véhicules
+                        </LienMenu>
+                    </>
+                )}
+            </Groupe>
+
+            <Groupe titre="Finance &amp; data">
+                <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
+                    Facturation
+                </LienMenu>
+            </Groupe>
 
             {canViewLogs && (
                 <Groupe titre="Système">
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
-                        Journal d'activité
+                        Journaux
                     </LienMenu>
                 </Groupe>
             )}
