@@ -73,7 +73,7 @@ class InvoiceSeeder extends Seeder
                 'reverse_charge' => $autoliquidation,
                 'status' => $payee ? 'PAID' : 'SENT',
                 'paid_on' => $payee ? $echeance->copy()->subDays(3) : null,
-                'payment_reference' => $this->communicationStructuree((int) $annee, $serie[$annee]),
+                'payment_reference' => $this->communicationStructuree((int) $annee, $serie[$annee], $client->id),
             ]);
 
             foreach ($expeditions as $ordre) {
@@ -104,9 +104,9 @@ class InvoiceSeeder extends Seeder
         };
     }
 
-    private function communicationStructuree(int $annee, int $numero): string
+    private function communicationStructuree(int $annee, int $numero, int $clientId): string
     {
-        $base = sprintf('%04d%06d', $annee, $numero);
+        $base = sprintf('%03d%04d%03d', $numero, $annee, $clientId);
         $controle = (int) $base % 97;
         $controle = $controle === 0 ? 97 : $controle;
 
