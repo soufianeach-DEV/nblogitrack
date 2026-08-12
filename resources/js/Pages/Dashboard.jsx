@@ -111,33 +111,6 @@ function ValidationsEnAttente({ validations }) {
     );
 }
 
-function RepartitionMarchandises({ marchandises }) {
-    return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-marine">Répartition des marchandises</h2>
-            <p className="mb-4 text-sm text-slate-600">Les cinq premières natures expédiées</p>
-
-            {marchandises.length === 0 ? (
-                <p className="text-sm text-slate-600">Aucune expédition enregistrée.</p>
-            ) : (
-                <ul className="space-y-3">
-                    {marchandises.map((ligne) => (
-                        <li key={ligne.libelle}>
-                            <div className="flex items-baseline justify-between gap-3 text-sm">
-                                <span className="truncate text-marine">{ligne.libelle}</span>
-                                <span className="shrink-0 font-bold text-marine">{ligne.part} %</span>
-                            </div>
-                            <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface">
-                                <div className="h-full rounded-full bg-brand-blue" style={{ width: `${ligne.part}%` }} />
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </section>
-    );
-}
-
 function DernieresTraces({ journal }) {
     return (
         <section className="rounded-2xl bg-white p-6 shadow-sm">
@@ -171,7 +144,6 @@ export default function Dashboard({
     recent,
     performance,
     volume = [],
-    marchandises = [],
     exploitation = null,
     validations = null,
     journal = null,
@@ -269,10 +241,6 @@ export default function Dashboard({
 
             <div className="mt-6 grid gap-4 lg:grid-cols-3">
                 <div className="space-y-4 lg:col-span-2">
-                    {/* Sept barres a zero ne racontent rien et donnent
-                        l'impression d'un graphique casse. */}
-                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
-
                     <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
                             <h2 className="font-semibold text-marine">Derniers ordres</h2>
@@ -310,11 +278,14 @@ export default function Dashboard({
                             </table>
                         </div>
                     </section>
+
+                    {/* Sept barres a zero ne racontent rien et donnent
+                        l'impression d'un graphique casse. */}
+                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                 </div>
 
                 <div className="space-y-4">
                     {validations && <ValidationsEnAttente validations={validations} />}
-                    {marchandises.length > 0 && <RepartitionMarchandises marchandises={marchandises} />}
                     {journal && <DernieresTraces journal={journal} />}
                 </div>
             </div>

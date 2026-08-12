@@ -50,7 +50,6 @@ class DashboardController extends Controller
             'recent' => $recent,
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
-            'marchandises' => $this->marchandises(clone $query, $stats['total']),
             // Ces trois blocs relevent de l'exploitation, pas du dossier d'un
             // client : ils ne partent que vers le personnel.
             'exploitation' => $personnel ? [
@@ -136,35 +135,6 @@ class DashboardController extends Controller
         }
 
         return $mois;
-    }
-
-    /**
-     * La repartition des marchandises. Le prototype montre une repartition
-     * par mode aerien, maritime et routier : l'entreprise ne fait que du
-     * transport routier, cette repartition n'aurait qu'une barre. Celle des
-     * marchandises dit la meme chose de l'activite, et repose sur une
-     * donnee que la base porte vraiment.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function marchandises(Builder $query, int $total): array
-    {
-        if ($total === 0) {
-            return [];
-        }
-
-        return $query
-            ->selectRaw('goods_type, count(*) AS nombre')
-            ->groupBy('goods_type')
-            ->orderByDesc('nombre')
-            ->take(5)
-            ->get()
-            ->map(fn ($ligne) => [
-                'libelle' => $ligne->goods_type,
-                'nombre' => (int) $ligne->nombre,
-                'part' => round($ligne->nombre / $total * 100, 1),
-            ])
-            ->all();
     }
 
     /**
