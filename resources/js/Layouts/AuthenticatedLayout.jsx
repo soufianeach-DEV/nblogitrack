@@ -17,13 +17,13 @@ function LienMenu({ href, active, icone, onClick, children }) {
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             className={
-                'flex items-center gap-3 border-l-[3px] px-4 py-2.5 text-sm transition ' +
+                'flex items-center gap-3 border-l-[3px] px-4 py-2 text-sm transition ' +
                 (active
                     ? 'border-action bg-white/5 font-semibold text-action'
                     : 'border-transparent font-medium text-slate-300 hover:bg-white/5 hover:text-white')
             }
         >
-            <Icone nom={icone} className="h-[22px] w-[22px] shrink-0" />
+            <Icone nom={icone} className="h-5 w-5 shrink-0" />
             {children}
         </Link>
     );
@@ -31,17 +31,17 @@ function LienMenu({ href, active, icone, onClick, children }) {
 
 function Groupe({ titre, children }) {
     return (
-        <div className="mt-6">
-            <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+        <div className="mt-4">
+            <p className="px-4 pb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                 {titre}
             </p>
-            <div className="space-y-0.5">{children}</div>
+            <div>{children}</div>
         </div>
     );
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canHandleQuotes } = usePage().props.auth;
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
@@ -67,21 +67,21 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const marque = (
         <div className="px-4">
-            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[180px]" />
-            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[132px]" />
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {estAdmin ? 'Administration centrale' : 'Logistique B2B'}
             </p>
         </div>
     );
 
     const nouvelleExpedition = (
-        <div className="mt-5 px-4">
+        <div className="mt-4 px-4">
             <Link
                 href={route('transport-orders.create')}
                 onClick={fermer}
-                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-3 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
+                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
             >
-                <Icone nom="plus" className="h-5 w-5" />
+                <Icone nom="plus" className="h-4 w-4" />
                 Nouvelle expédition
             </Link>
         </div>
@@ -106,6 +106,11 @@ export default function AuthenticatedLayout({ header, children }) {
                         Suivi
                     </LienMenu>
                 )}
+                {canHandleQuotes && (
+                    <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
+                        Demandes de devis
+                    </LienMenu>
+                )}
             </Groupe>
 
             {canValidateClients && (
@@ -127,11 +132,11 @@ export default function AuthenticatedLayout({ header, children }) {
     );
 
     const pied = (
-        <div className="mt-6 border-t border-white/10 px-1 pt-3">
+        <div className="mt-4 border-t border-white/10 px-1 pt-2">
             <Link
                 href={route('profile.edit')}
                 onClick={fermer}
-                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
+                className="flex items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="aide" className="h-5 w-5 shrink-0" />
                 Mon profil
@@ -140,7 +145,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 href={route('logout')}
                 method="post"
                 as="button"
-                className="flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
+                className="flex w-full items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="sortie" className="h-5 w-5 shrink-0" />
                 Déconnexion
@@ -152,21 +157,21 @@ export default function AuthenticatedLayout({ header, children }) {
         <>
             {marque}
             {nouvelleExpedition}
-            <nav className="mt-2 flex-1">{navigation}</nav>
+            <nav className="mt-1 flex-1">{navigation}</nav>
             {pied}
         </>
     );
 
     return (
         <div className="min-h-screen bg-surface">
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-6 md:flex">
+            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-4 md:flex">
                 {panneau}
             </aside>
 
             {menuOuvert && (
                 <div className="fixed inset-0 z-40 md:hidden">
                     <div className="absolute inset-0 bg-marine-deep/70" onClick={fermer} aria-hidden="true" />
-                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-6 shadow-xl">
+                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-4 shadow-xl">
                         <button
                             type="button"
                             onClick={fermer}

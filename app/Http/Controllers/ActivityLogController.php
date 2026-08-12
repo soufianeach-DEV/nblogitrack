@@ -20,6 +20,7 @@ class ActivityLogController extends Controller
         'client.registered' => 'Inscription entreprise',
         'client.validated' => 'Validation entreprise',
         'client.rejected' => 'Refus entreprise',
+        'quote.handled' => 'Traitement de devis',
     ];
 
     public function index(Request $request): Response
