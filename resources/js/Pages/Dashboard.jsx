@@ -1,7 +1,8 @@
 import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
+import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const STATUS = {
@@ -137,7 +138,85 @@ function VolumeMensuel({ volume }) {
     );
 }
 
+function FicheEntreprise({ entreprise, onFermer }) {
+    const { post, processing } = useForm({});
+
+    const euros = (montant) => montant === null || montant === undefined
+        ? '—'
+        : Number(montant).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+    const ligne = (intitule, valeur, mono = false) => (
+        <div>
+            <dt className="text-xs uppercase tracking-wide text-slate-600">{intitule}</dt>
+            <dd className={`font-semibold text-marine ${mono ? 'font-mono text-sm' : ''}`}>{valeur || '—'}</dd>
+        </div>
+    );
+
+    return (
+        <div className="p-6">
+            <p className="text-xl font-bold text-marine">{entreprise.entreprise}</p>
+            <p className="text-sm text-slate-600">
+                {[entreprise.secteur, entreprise.pays].filter(Boolean).join(' · ')}
+            </p>
+
+            <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
+                {ligne('Numéro de TVA', entreprise.tva, true)}
+                {ligne("Numéro d'entreprise", entreprise.entreprise_numero, true)}
+                {ligne('Identifiant Peppol', entreprise.peppol, true)}
+                {ligne('Secteur', entreprise.secteur)}
+                {ligne('Adresse de facturation', entreprise.adresse)}
+                {ligne('Localité', [entreprise.localite, entreprise.pays].filter(Boolean).join(', '))}
+                {ligne('Délai de paiement', entreprise.delai)}
+                {ligne('Plafond de crédit', euros(entreprise.plafond))}
+            </dl>
+
+            <h3 className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Personne de contact
+            </h3>
+            <dl className="grid gap-4 sm:grid-cols-3">
+                {ligne('Nom', entreprise.contact)}
+                {ligne('Adresse électronique', entreprise.courriel)}
+                {ligne('Téléphone', entreprise.telephone)}
+            </dl>
+
+            <p className="mt-5 rounded-lg bg-surface px-3 py-2 text-xs text-slate-600">
+                Le numéro de TVA a été vérifié auprès du registre européen VIES au moment de l'inscription.
+                Valider donne à cette entreprise l'accès à son espace client.
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                    type="button"
+                    onClick={onFermer}
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-marine"
+                >
+                    Fermer
+                </button>
+                <Link
+                    href={route('clients.index')}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-marine transition hover:bg-surface"
+                >
+                    Ouvrir le dossier
+                </Link>
+                <button
+                    type="button"
+                    disabled={processing}
+                    onClick={() => post(route('clients.approve', entreprise.id), {
+                        preserveScroll: true,
+                        onSuccess: onFermer,
+                    })}
+                    className="rounded-lg bg-action px-5 py-2 text-sm font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
+                >
+                    {processing ? 'Validation…' : "Valider l'entreprise"}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function ValidationsEnAttente({ validations }) {
+    const [ouverte, setOuverte] = useState(null);
+
     return (
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
@@ -157,11 +236,26 @@ function ValidationsEnAttente({ validations }) {
                             <p className="truncate text-xs text-slate-600">
                                 {[entreprise.secteur, entreprise.pays].filter(Boolean).join(' · ')}
                             </p>
-                            <p className="mt-1 font-mono text-xs text-slate-600">{entreprise.tva}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                                <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">
+                                    {entreprise.tva}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setOuverte(entreprise)}
+                                    className="shrink-0 rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-marine transition hover:bg-surface"
+                                >
+                                    Voir
+                                </button>
+                            </div>
                         </li>
                     ))}
                 </ul>
             )}
+
+            <Modal show={ouverte !== null} onClose={() => setOuverte(null)} maxWidth="2xl">
+                {ouverte && <FicheEntreprise entreprise={ouverte} onFermer={() => setOuverte(null)} />}
+            </Modal>
         </section>
     );
 }
