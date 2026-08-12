@@ -46,4 +46,18 @@ class Pays
     {
         return self::CODES[trim((string) $nom)] ?? 'BE';
     }
+
+    /**
+     * Le chemin inverse : du code ISO vers le nom francais. Les grilles
+     * tarifaires couvrent aussi des pays hors Union, absents de la table
+     * ci-dessus.
+     */
+    public static function nom(?string $code): ?string
+    {
+        $hors = ['CH' => 'Suisse', 'GB' => 'Royaume-Uni', 'NO' => 'Norvège'];
+
+        return array_flip(self::CODES)[strtoupper((string) $code)]
+            ?? $hors[strtoupper((string) $code)]
+            ?? null;
+    }
 }

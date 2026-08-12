@@ -10,6 +10,7 @@ use App\Http\Controllers\MissionController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\TarifController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
 use App\Http\Controllers\VatController;
@@ -91,6 +92,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/entreprises/{client}/refus', [ClientValidationController::class, 'reject'])->name('clients.reject');
     });
 });
+
+// F3 : consulter les tarifs sans compte. Le calcul reste au serveur, la
+// grille ne part jamais vers un visiteur anonyme.
+Route::get('/tarifs', [TarifController::class, 'index'])->name('tarifs.index');
+Route::post('/tarifs/simulation', [TarifController::class, 'simuler'])
+    ->middleware('throttle:20,1')
+    ->name('tarifs.simuler');
 
 Route::get('/devis', [QuoteController::class, 'create'])->name('devis.create');
 Route::post('/devis', [QuoteController::class, 'store'])
