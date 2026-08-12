@@ -1,3 +1,4 @@
+import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
@@ -111,6 +112,72 @@ function ValidationsEnAttente({ validations }) {
     );
 }
 
+const NIVEAUX = {
+    grave: 'border-status-incident/30 bg-status-incident/5 text-status-incident',
+    attention: 'border-action/40 bg-action/10 text-action-dark',
+    info: 'border-brand-blue/30 bg-brand-blue/5 text-brand-blue',
+};
+
+/**
+ * Les alertes sortent des donnees et disparaissent quand le probleme est
+ * regle. Le prototype en montre deux ecrites en dur, qui resteraient
+ * affichees quoi qu'il arrive.
+ */
+function Alertes({ alertes }) {
+    return (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="mb-4 font-semibold text-marine">Alertes</h2>
+
+            {alertes.length === 0 ? (
+                <p className="rounded-xl border border-status-delivered/30 bg-status-delivered/5 px-3 py-4 text-sm text-status-delivered">
+                    Rien à signaler.
+                </p>
+            ) : (
+                <ul className="space-y-2">
+                    {alertes.map((alerte, i) => {
+                        const corps = (
+                            <>
+                                <p className="text-sm font-bold">{alerte.titre}</p>
+                                <p className="mt-0.5 text-xs text-slate-600">{alerte.detail}</p>
+                            </>
+                        );
+
+                        return (
+                            <li key={i}>
+                                {alerte.lien ? (
+                                    <Link
+                                        href={alerte.lien}
+                                        className={`block rounded-xl border px-3 py-2.5 transition hover:brightness-95 ${NIVEAUX[alerte.niveau] ?? NIVEAUX.info}`}
+                                    >
+                                        {corps}
+                                    </Link>
+                                ) : (
+                                    <div className={`rounded-xl border px-3 py-2.5 ${NIVEAUX[alerte.niveau] ?? NIVEAUX.info}`}>
+                                        {corps}
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+function CarteEnCirculation({ carte }) {
+    return (
+        <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="relative h-56">
+                <CarteTrajets trajets={carte} className="h-full w-full" />
+                <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
+                    {carte.length} en circulation
+                </span>
+            </div>
+        </section>
+    );
+}
+
 function DernieresTraces({ journal }) {
     return (
         <section className="rounded-2xl bg-white p-6 shadow-sm">
@@ -144,6 +211,8 @@ export default function Dashboard({
     recent,
     performance,
     volume = [],
+    carte = [],
+    alertes = [],
     exploitation = null,
     validations = null,
     journal = null,
@@ -285,6 +354,8 @@ export default function Dashboard({
                 </div>
 
                 <div className="space-y-4">
+                    {carte.length > 0 && <CarteEnCirculation carte={carte} />}
+                    <Alertes alertes={alertes} />
                     {validations && <ValidationsEnAttente validations={validations} />}
                     {journal && <DernieresTraces journal={journal} />}
                 </div>

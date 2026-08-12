@@ -8,6 +8,7 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Adresse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,8 @@ class DashboardController extends Controller
             'recent' => $recent,
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
+            'carte' => $this->carte(clone $query),
+            'alertes' => $this->alertes(clone $query, $personnel),
             // Ces trois blocs relevent de l'exploitation, pas du dossier d'un
             // client : ils ne partent que vers le personnel.
             'exploitation' => $personnel ? [
@@ -135,6 +138,151 @@ class DashboardController extends Controller
         }
 
         return $mois;
+    }
+
+    /**
+     * Les expeditions en circulation, pour la carte du tableau de bord.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function carte(Builder $query): array
+    {
+        return $query
+            ->where('status', 'IN_PROGRESS')
+            ->whereNotNull('pickup_lat')
+            ->whereNotNull('delivery_lat')
+            ->take(40)
+            ->get(['id', 'tracking_number', 'status', 'pickup_address', 'delivery_address',
+                'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng'])
+            ->map(fn (TransportOrder $ordre) => [
+                'id' => $ordre->id,
+                'numero' => $ordre->tracking_number,
+                'statut' => $ordre->status,
+                'depart' => Adresse::localite($ordre->pickup_address),
+                'arrivee' => Adresse::localite($ordre->delivery_address),
+                'coordonnees' => [
+                    [(float) $ordre->pickup_lat, (float) $ordre->pickup_lng],
+                    [(float) $ordre->delivery_lat, (float) $ordre->delivery_lng],
+                ],
+            ])
+            ->all();
+    }
+
+    /**
+     * Les alertes du tableau de bord.
+     *
+     * Le prototype en montre deux, ecrites en dur : une congestion du canal
+     * de Suez et une route ferroviaire de substitution. Elles n'ont aucune
+     * source, et une alerte inventee ne sert a rien : celles-ci sortent des
+     * donnees, et disparaissent quand le probleme est regle.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function alertes(Builder $query, bool $personnel): array
+    {
+        $alertes = [];
+        $aujourdhui = now()->toDateString();
+
+        $retard = (clone $query)
+            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereNotNull('requested_delivery_date')
+            ->where('requested_delivery_date', '<', $aujourdhui)
+            ->count();
+
+        if ($retard > 0) {
+            $alertes[] = [
+                'niveau' => 'grave',
+                'titre' => $retard.' expédition'.($retard > 1 ? 's' : '').' en retard',
+                'detail' => 'La date de livraison souhaitée est dépassée et la marchandise n\'est pas arrivée.',
+                'lien' => route('transport-orders.index'),
+            ];
+        }
+
+        if (! $personnel) {
+            $attente = (clone $query)->where('status', 'PENDING')->whereNull('vehicle_registration')->count();
+
+            if ($attente > 0) {
+                $alertes[] = [
+                    'niveau' => 'info',
+                    'titre' => $attente.' expédition'.($attente > 1 ? 's' : '').' en attente d\'affectation',
+                    'detail' => 'Un véhicule leur sera affecté par la planification.',
+                    'lien' => route('transport-orders.index'),
+                ];
+            }
+
+            return $alertes;
+        }
+
+        // La suite releve de l'exploitation : elle ne concerne pas un client.
+        $adr = TransportOrder::where('is_hazardous', true)
+            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereNull('driver_id')
+            ->count();
+
+        if ($adr > 0) {
+            $alertes[] = [
+                'niveau' => 'grave',
+                'titre' => $adr.' matière'.($adr > 1 ? 's' : '').' dangereuse'.($adr > 1 ? 's' : '').' sans chauffeur',
+                'detail' => 'Ces expéditions exigent un chauffeur certifié ADR.',
+                'lien' => route('planning.index'),
+            ];
+        }
+
+        $imminent = TransportOrder::where('status', 'PENDING')
+            ->whereNull('vehicle_registration')
+            ->whereNotNull('pickup_date')
+            ->where('pickup_date', '<=', now()->addDays(3))
+            ->count();
+
+        if ($imminent > 0) {
+            $alertes[] = [
+                'niveau' => 'attention',
+                'titre' => $imminent.' enlèvement'.($imminent > 1 ? 's' : '').' sous trois jours sans véhicule',
+                'detail' => 'À affecter avant la date d\'enlèvement prévue.',
+                'lien' => route('planning.index'),
+            ];
+        }
+
+        $permis = Driver::whereNotNull('license_expiry')
+            ->where('license_expiry', '<=', now()->addDays(60)->toDateString())
+            ->count();
+
+        if ($permis > 0) {
+            $alertes[] = [
+                'niveau' => 'attention',
+                'titre' => $permis.' permis arrive'.($permis > 1 ? 'nt' : '').' à échéance',
+                'detail' => 'Validité inférieure à soixante jours.',
+                'lien' => null,
+            ];
+        }
+
+        $visite = Driver::whereNotNull('medical_exam_date')
+            ->where('medical_exam_date', '<', now()->subYear()->toDateString())
+            ->count();
+
+        if ($visite > 0) {
+            $alertes[] = [
+                'niveau' => 'attention',
+                'titre' => $visite.' visite'.($visite > 1 ? 's' : '').' médicale'.($visite > 1 ? 's' : '').' à renouveler',
+                'detail' => 'Dernier examen il y a plus d\'un an.',
+                'lien' => null,
+            ];
+        }
+
+        $controle = Vehicle::whereNotNull('inspection_date')
+            ->where('inspection_date', '<', now()->subYear()->toDateString())
+            ->count();
+
+        if ($controle > 0) {
+            $alertes[] = [
+                'niveau' => 'attention',
+                'titre' => $controle.' contrôle'.($controle > 1 ? 's' : '').' technique'.($controle > 1 ? 's' : '').' dépassé'.($controle > 1 ? 's' : ''),
+                'detail' => 'Dernier passage il y a plus d\'un an.',
+                'lien' => null,
+            ];
+        }
+
+        return $alertes;
     }
 
     /**
