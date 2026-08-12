@@ -104,9 +104,16 @@ export default function CarteTrajets({
         const cadre = [];
 
         trajets.forEach((trajet) => {
-            const [depart, arrivee] = trajet.coordonnees;
             const actif = trajet.id === selection;
-            const vise = ! choisi || actif;
+
+            // Des qu'une expedition est ouverte, les autres disparaissent.
+            // Leur liaison directe traversait la carte en diagonale et
+            // pouvait se lire comme une portion de l'itineraire affiche.
+            if (choisi && ! actif) {
+                return;
+            }
+
+            const [depart, arrivee] = trajet.coordonnees;
             const couleur = COULEUR[trajet.statut] ?? COULEUR.PENDING;
             const etiquette = `${trajet.numero} · ${trajet.depart} → ${trajet.arrivee}`;
 
@@ -129,10 +136,9 @@ export default function CarteTrajets({
             const ligne = L.polyline(trace, {
                 color: actif ? TRACE : couleur,
                 weight: actif ? 5 : 2,
-                opacity: vise ? (actif ? 1 : 0.7) : 0.15,
+                opacity: actif ? 1 : 0.7,
                 lineCap: 'round',
                 lineJoin: 'round',
-                interactive: vise,
             }).bindTooltip(etiquette, { sticky: true }).addTo(couche.current);
 
             ligne.on('click', () => clic.current?.(trajet.id));
@@ -155,17 +161,14 @@ export default function CarteTrajets({
                         color: index === 0 ? '#ffffff' : couleur,
                         weight: index === 0 ? 2 : 3,
                         fillColor: index === 0 ? couleur : '#ffffff',
-                        fillOpacity: vise ? 1 : 0.2,
-                        interactive: vise,
+                        fillOpacity: 1,
                     })
                         .bindTooltip(index === 0 ? `Enlèvement · ${trajet.depart}` : `Livraison · ${trajet.arrivee}`)
                         .addTo(couche.current)
                         .on('click', () => clic.current?.(trajet.id));
                 });
 
-                if (vise) {
-                    cadre.push(depart, arrivee);
-                }
+                cadre.push(depart, arrivee);
             }
         });
 
