@@ -48,7 +48,7 @@ function VolumeMensuel({ volume }) {
     const pic = volume.reduce((a, b) => (b.nombre > a.nombre ? b : a), volume[0]);
 
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-marine">Volume mensuel</h2>
             <p className="text-sm text-slate-600">Expéditions enregistrées sur les sept derniers mois</p>
 
@@ -77,7 +77,7 @@ function VolumeMensuel({ volume }) {
                 ))}
             </div>
 
-            <div className="mt-4 flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
+            <div className="mt-auto flex flex-wrap justify-between gap-4 border-t border-slate-100 pt-4">
                 <div>
                     <p className="text-xs uppercase tracking-wide text-slate-600">Sur la période</p>
                     <p className="font-bold text-marine">{total} expéditions</p>
@@ -247,8 +247,13 @@ function Facturation({ facturation }) {
     });
 
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 font-semibold text-marine">Facturation</h2>
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-marine">Facturation</h2>
+                <Link href={route('invoices.index')} className="text-sm font-medium text-action hover:underline">
+                    Voir tout
+                </Link>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-status-delivered/5 px-3 py-2.5">
@@ -276,7 +281,11 @@ function Facturation({ facturation }) {
                     </h3>
                     <ul className="space-y-1.5">
                         {facturation.dernieres.map((facture) => (
-                            <li key={facture.reference} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
+                            <li key={facture.reference}>
+                                <Link
+                                    href={route('invoices.show', facture.id)}
+                                    className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 transition hover:bg-slate-200"
+                                >
                                 <span className="font-mono text-xs text-brand-blue">{facture.reference}</span>
                                 <span className="ml-auto shrink-0 text-sm font-bold text-marine">{facture.montant}</span>
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -286,6 +295,7 @@ function Facturation({ facturation }) {
                                 }`}>
                                     {facture.etat}
                                 </span>
+                                </Link>
                             </li>
                         ))}
                     </ul>
@@ -486,15 +496,20 @@ export default function Dashboard({
                             </table>
                         </div>
                     </section>
+
+                    {/* Volume et facturation cote a cote, en hauteurs egales :
+                        deux blocs de meme rang ne doivent pas se decaler. */}
+                    {(volume.some((mois) => mois.nombre > 0) || facturation) && (
+                        <div className="grid items-stretch gap-4 xl:grid-cols-2">
+                            {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
+                            {facturation && <Facturation facturation={facturation} />}
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-4">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
-                    {facturation && <Facturation facturation={facturation} />}
-                    {/* Sept barres a zero ne racontent rien et donnent
-                        l'impression d'un graphique casse. */}
-                    {volume.some((mois) => mois.nombre > 0) && <VolumeMensuel volume={volume} />}
                     {validations && <ValidationsEnAttente validations={validations} />}
                     {journal && <DernieresTraces journal={journal} />}
                 </div>

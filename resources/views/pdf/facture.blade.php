@@ -5,6 +5,7 @@
     <title>{{ $facture->reference }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { margin: 0; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1e293b; line-height: 1.5; }
         .entete { background: #14324F; color: #ffffff; padding: 30px 40px; }
         .entete table { width: 100%; }
@@ -12,8 +13,8 @@
         .marque-sous { font-size: 8px; letter-spacing: 3px; color: #cbd5e1; text-transform: uppercase; }
         .doc-titre { font-size: 17px; font-weight: bold; text-align: right; }
         .doc-ref { font-size: 12px; text-align: right; color: #cbd5e1; }
-        .corps { padding: 32px 40px; }
-        .blocs { width: 100%; margin-bottom: 30px; }
+        .corps { padding: 48px 40px; }
+        .blocs { width: 100%; margin-bottom: 38px; }
         .blocs td { vertical-align: top; width: 33%; padding-right: 20px; }
         .bloc-titre { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px; }
         .bloc p { margin-bottom: 4px; }
@@ -36,8 +37,8 @@
         .qr-boite { background: #ffffff; padding: 6px; display: inline-block; }
         .qr-boite img { width: 74px; height: 74px; display: block; }
         .mention { margin-top: 18px; font-size: 8.5px; color: #64748b; line-height: 1.6; }
-        .pied { position: fixed; bottom: 18px; left: 40px; right: 40px; font-size: 8px; color: #94a3b8;
-            border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: center; }
+        .pied { position: fixed; bottom: 24px; left: 40px; right: 40px; font-size: 8px; color: #94a3b8;
+            border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; }
     </style>
 </head>
 <body>

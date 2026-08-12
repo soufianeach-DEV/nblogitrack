@@ -322,6 +322,7 @@ class DashboardController extends Controller
                 ->take(5)
                 ->get()
                 ->map(fn (Invoice $facture) => [
+                    'id' => $facture->id,
                     'reference' => $facture->reference,
                     'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' €',
                     'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
