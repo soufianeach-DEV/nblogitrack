@@ -14,7 +14,7 @@ export default function VitrineLayout({ children }) {
 
                     <nav className="hidden items-center gap-6 md:flex">
                         <a href="/#services" className={lienNav}>Services</a>
-                        <a href="/#tarifs" className={lienNav}>Tarifs</a>
+                        <Link href={route('tarifs.index')} className={lienNav}>Tarifs</Link>
                         <a href="/#apropos" className={lienNav}>À propos</a>
                     </nav>
 

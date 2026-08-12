@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Localite;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -17,10 +18,19 @@ class GeoController extends Controller
             'q' => 'required|string|min:2|max:100',
         ]);
 
+        // La base ne connait que le nom local : taper Anvers doit malgre tout
+        // proposer Antwerpen, sans quoi un visiteur francophone ne trouve
+        // rien dans son propre pays.
+        $noms = array_merge([$data['q']], Localite::suggestions($data['q']));
+
         $villes = DB::table('postal_codes')
             ->selectRaw('city AS ville, MIN(region) AS region, AVG(lat) AS lat, AVG(lng) AS lng, COUNT(DISTINCT code) AS nb_codes, MIN(code) AS code')
             ->where('country_code', strtoupper($data['pays']))
-            ->where('city', 'ilike', $data['q'].'%')
+            ->where(function ($requete) use ($noms) {
+                foreach ($noms as $nom) {
+                    $requete->orWhere('city', 'ilike', $nom.'%');
+                }
+            })
             ->groupBy('city')
             ->orderByRaw('COUNT(*) DESC, city ASC')
             ->limit(12)

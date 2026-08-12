@@ -222,6 +222,13 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                     texte="Transport dédié, facturé au coût de revient réel plus marge."
                                 />
                             </ul>
+
+                            <Link
+                                href={route('tarifs.index')}
+                                className="mt-8 inline-flex items-center gap-2 rounded-lg bg-action px-7 py-3.5 text-base font-bold text-marine-deep transition hover:bg-action-dark"
+                            >
+                                Calculer mon tarif
+                            </Link>
                         </div>
 
                         <div className="group relative isolate overflow-hidden rounded-2xl shadow-lg transition-shadow duration-500 hover:shadow-2xl">

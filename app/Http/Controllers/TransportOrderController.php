@@ -7,10 +7,10 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Support\Tarificateur;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -131,7 +131,7 @@ class TransportOrderController extends Controller
             }
         }
 
-        $distanceKm = $this->roadDistanceKm($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
+        $distanceKm = Tarificateur::distanceRoutiere($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
         $hazardous = $request->boolean('is_hazardous');
 
         $nextId = TransportOrder::max('id') + 1;
@@ -155,7 +155,7 @@ class TransportOrderController extends Controller
             'status' => 'PENDING',
             'created_date' => now(),
             'distance_km' => (int) round($distanceKm),
-            'estimated_cost' => $this->computeCost($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
+            'estimated_cost' => Tarificateur::cout($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
             'tracking_code' => strtoupper(Str::random(12)),
             'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
         ]);
@@ -183,47 +183,5 @@ class TransportOrderController extends Controller
 
         return redirect()->route('transport-orders.index')
             ->with('success', $confirmation);
-    }
-
-    private function computeCost(TariffGrid $grid, float $distanceKm, float $weight, string $country, bool $hazardous): float
-    {
-        if ($grid->service_level === 'EXPRESS') {
-            $p = config('pricing');
-
-            $cost = $grid->base_rate
-                + $distanceKm * $p['consumption_l_per_100km'] / 100 * $p['diesel_price']
-                + $distanceKm * ($p['toll_per_km'][$country] ?? 0)
-                + $distanceKm * $p['driver_cost_per_km']
-                + $distanceKm * $p['vehicle_cost_per_km'];
-
-            $cost *= 1 + $p['margin'];
-        } else {
-            $cost = $grid->base_rate + $grid->price_per_kg * $weight + $grid->price_per_km * $distanceKm;
-        }
-
-        if ($hazardous) {
-            $cost *= $grid->adr_coefficient;
-        }
-
-        return round($cost, 2);
-    }
-
-    private function roadDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        try {
-            $res = Http::timeout(5)->get("https://router.project-osrm.org/route/v1/driving/{$lng1},{$lat1};{$lng2},{$lat2}", [
-                'overview' => 'false',
-            ]);
-            if ($res->ok() && isset($res->json()['routes'][0]['distance'])) {
-                return $res->json()['routes'][0]['distance'] / 1000;
-            }
-        } catch (\Throwable $e) {
-        }
-
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-
-        return 6371 * 2 * asin(sqrt($a)) * 1.3;
     }
 }
