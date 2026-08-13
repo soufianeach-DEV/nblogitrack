@@ -299,3 +299,8 @@ INSERT INTO transport_orders (id, client_id, created_date, pickup_date, pickup_a
   (298, 26, '2026-06-03', NULL, 'Avenue de Tervueren 52, 3000 Louvain', 'Avenue de Tervueren 5, 2000 Anvers', 21678.05, 41.37, 'Textile', FALSE, 'DELIVERED', 'NORMAL', 'TRK-2024-00298', 'Hayon requis', '2026-06-04', '2026-06-07', 4702.84, 2, 50.8796000, 4.7009000, 51.2199000, 4.4035000, '2026-06-03 02:53:57', '2026-08-11 20:16:54'),
   (299, 48, '2026-03-01', NULL, 'Industrielaan 81, 9000 Gand', 'Bedrijvenlaan 139, 4100 Seraing', 661.61, 1.23, 'Palettes', FALSE, 'CANCELLED', 'NORMAL', 'TRK-2025-00299', 'Livraison sur RDV', '2026-03-07', NULL, 2037.61, 8, 51.0500000, 3.7167000, 50.5711000, 5.5363000, '2026-03-01 00:25:10', '2026-08-11 20:16:54'),
   (300, 51, '2026-04-07', NULL, 'Quai des Usines 96, 9000 Gand', 'Boulevard du Souverain 10, 3500 Hasselt', 614.72, 1.64, 'Produits chimiques', TRUE, 'DELIVERED', 'LOW', 'TRK-2026-00300', 'Accès quai limité', '2026-04-17', '2026-04-16', 600.69, 4, 51.0500000, 3.7167000, 50.8991000, 5.3079000, '2026-04-07 04:53:28', '2028-06-10 20:16:54');
+
+-- Les envois legers de marchandise palettisee ou de detail vont vers un
+-- commerce sans quai : le dechargement demande un hayon elevateur.
+UPDATE transport_orders SET needs_tail_lift = TRUE
+WHERE weight < 3000 AND goods_type IN ('Palettes', 'Colis express', 'Mobilier', 'Textile', 'Boissons', 'Produits alimentaires');
