@@ -89,12 +89,15 @@ export default function Index({ factures = [] }) {
                                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{facture.emise_le}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{facture.echeance}</td>
                                         <td className="whitespace-nowrap px-4 py-3 text-right font-bold text-marine">
-                                            {euros(facture.ttc)}
                                             {facture.autoliquidation && (
-                                                <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                                                    Autoliq.
+                                                <span
+                                                    className="mr-2 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700"
+                                                    title="Le client est établi dans un autre pays de l'UE : la TVA n'est pas facturée ici, il la déclare et la paie dans son pays."
+                                                >
+                                                    TVA due par le client
                                                 </span>
                                             )}
+                                            {euros(facture.ttc)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>

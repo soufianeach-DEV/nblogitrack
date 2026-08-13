@@ -110,6 +110,8 @@ class TransportOrderController extends Controller
             'delivery_lat.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
             'delivery_lng.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
             'delivery_country.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
+            'pickup_date.after_or_equal' => 'La date d\'enlèvement ne peut pas être dans le passé.',
+            'requested_delivery_date.after_or_equal' => 'La date de livraison souhaitée ne peut pas être dans le passé.',
         ]);
 
         $grid = TariffGrid::find($data['tariff_grid_id']);

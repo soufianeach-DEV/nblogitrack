@@ -48,12 +48,11 @@ export default function UpdatePasswordForm({ className = '' }) {
         <section className={className}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900">
-                    Update Password
+                    Mot de passe
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Ensure your account is using a long, random password to stay
-                    secure.
+                    Choisissez un mot de passe long et difficile à deviner.
                 </p>
             </header>
 
@@ -61,7 +60,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div>
                     <InputLabel
                         htmlFor="current_password"
-                        value="Current Password"
+                        value="Mot de passe actuel"
                     />
 
                     <TextInput
@@ -83,7 +82,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="password" value="New Password" />
+                    <InputLabel htmlFor="password" value="Nouveau mot de passe" />
 
                     <TextInput
                         id="password"
@@ -101,7 +100,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div>
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Confirmation du mot de passe"
                     />
 
                     <TextInput
@@ -122,7 +121,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                    <PrimaryButton disabled={processing}>Enregistrer</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -132,7 +131,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600">
-                            Saved.
+                            Enregistré.
                         </p>
                     </Transition>
                 </div>

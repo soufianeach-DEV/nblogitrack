@@ -102,6 +102,8 @@ class DriverController extends Controller
             'adr_certified' => 'required|boolean',
             'medical_exam_date' => 'nullable|date|before_or_equal:today',
             'license_expiry' => 'nullable|date',
+        ], [
+            'medical_exam_date.before_or_equal' => 'La visite médicale ne peut pas être postérieure à aujourd\'hui.',
         ]);
 
         // Un chauffeur engage sur une expedition ne se retire pas du service,
