@@ -57,9 +57,12 @@ export default function BarreFiltres({ adresse, filtres, placeholder, listes = [
                         className="rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
                     >
                         <option value="">{liste.intitule}</option>
-                        {liste.options.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                        ))}
+                        {liste.options.map((option) => {
+                            const valeur = typeof option === 'string' ? option : option.valeur;
+                            const libelle = typeof option === 'string' ? option : option.libelle;
+
+                            return <option key={valeur} value={valeur}>{libelle}</option>;
+                        })}
                     </select>
                 ))}
             </div>

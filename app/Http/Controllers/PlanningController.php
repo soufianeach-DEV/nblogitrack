@@ -40,7 +40,7 @@ class PlanningController extends Controller
 
         $vehicles = Vehicle::where('is_available', true)
             ->orderBy('registration')
-            ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume']);
+            ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift']);
 
         $drivers = Driver::with('user:id,first_name,last_name')
             ->where('is_available', true)
@@ -90,6 +90,12 @@ class PlanningController extends Controller
         if ($vehicle->capacity_tonnes * 1000 < $transportOrder->weight) {
             return back()->withErrors([
                 'vehicle_registration' => 'Capacité insuffisante : '.$vehicle->capacity_tonnes.' t pour '.$transportOrder->weight.' kg.',
+            ]);
+        }
+
+        if ($transportOrder->needs_tail_lift && ! $vehicle->has_tail_lift) {
+            return back()->withErrors([
+                'vehicle_registration' => 'Cette expédition demande un hayon élévateur : ce véhicule n\'en a pas.',
             ]);
         }
 

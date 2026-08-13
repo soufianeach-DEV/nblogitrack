@@ -43,7 +43,7 @@ export default function Create({ tariffGrids, pricing }) {
     const { data, setData, post, processing, errors } = useForm({
         pickup_address: '', delivery_address: '', delivery_country: '',
         pickup_lat: '', pickup_lng: '', delivery_lat: '', delivery_lng: '',
-        weight: '', goods_type: '', is_hazardous: false, priority: 'NORMAL',
+        weight: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
         pickup_date: '', requested_delivery_date: '',
         tariff_grid_id: '', special_instructions: '',
     });
@@ -187,6 +187,10 @@ export default function Create({ tariffGrids, pricing }) {
                     <label className="flex items-center gap-2 sm:col-span-2">
                         <Checkbox name="is_hazardous" checked={data.is_hazardous} onChange={(e) => setData('is_hazardous', e.target.checked)} />
                         <span className="text-sm text-slate-600">Marchandise dangereuse (ADR)</span>
+                    </label>
+                    <label className="flex items-center gap-2 sm:col-span-2">
+                        <Checkbox name="needs_tail_lift" checked={data.needs_tail_lift} onChange={(e) => setData('needs_tail_lift', e.target.checked)} />
+                        <span className="text-sm text-slate-600">Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)</span>
                     </label>
                     <div className="sm:col-span-2">
                         <InputLabel htmlFor="priority">Priorité <span className="text-status-incident">*</span></InputLabel>

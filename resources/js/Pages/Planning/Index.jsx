@@ -36,6 +36,14 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     };
 
     const capaciteSuffisante = (v) => Number(v.capacity_tonnes) * 1000 >= Number(ordre.weight);
+    const hayonSuffisant = (v) => ! ordre.needs_tail_lift || v.has_tail_lift;
+    const vehiculeCompatible = (v) => capaciteSuffisante(v) && hayonSuffisant(v);
+    const motifRefus = (v) => {
+        if (! capaciteSuffisante(v)) return ' (capacité insuffisante)';
+        if (! hayonSuffisant(v)) return ' (sans hayon)';
+
+        return '';
+    };
     const chauffeurCompatible = (d) => ! ordre.is_hazardous || d.adr_certified;
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
@@ -50,9 +58,10 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                 >
                     <option value="">— Véhicule —</option>
                     {vehicles.map((v) => (
-                        <option key={v.registration} value={v.registration} disabled={! capaciteSuffisante(v)}>
+                        <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
                             {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString('fr-FR')} t
-                            {capaciteSuffisante(v) ? '' : ' (capacité insuffisante)'}
+                            {v.has_tail_lift ? ' · hayon' : ''}
+                            {motifRefus(v)}
                         </option>
                     ))}
                 </select>
@@ -172,6 +181,11 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs }) 
                                     {ordre.is_hazardous && (
                                         <span className="rounded-full bg-status-incident/10 px-2.5 py-0.5 text-xs font-medium text-status-incident">
                                             ADR
+                                        </span>
+                                    )}
+                                    {ordre.needs_tail_lift && (
+                                        <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
+                                            Hayon requis
                                         </span>
                                     )}
                                 </div>

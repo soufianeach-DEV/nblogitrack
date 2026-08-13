@@ -17,6 +17,9 @@ class VehicleController extends Controller
         $filtres = $request->validate([
             'q' => 'nullable|string|max:60',
             'type' => 'nullable|string|max:40',
+            'charge' => 'nullable|in:1,3,6,12,24',
+            'norme' => 'nullable|string|max:10',
+            'hayon' => 'nullable|in:1',
             'etat' => 'nullable|in:disponibles,indisponibles,controle',
         ]);
 
@@ -33,6 +36,20 @@ class VehicleController extends Controller
 
         if (! empty($filtres['type'])) {
             $requete->where('vehicle_type', $filtres['type']);
+        }
+
+        // La question du planificateur n'est pas « combien porte ce camion »
+        // mais « lesquels portent au moins ce que je dois expedier ».
+        if (! empty($filtres['charge'])) {
+            $requete->where('capacity_tonnes', '>=', (float) $filtres['charge']);
+        }
+
+        if (! empty($filtres['norme'])) {
+            $requete->where('euro_standard', $filtres['norme']);
+        }
+
+        if (! empty($filtres['hayon'])) {
+            $requete->where('has_tail_lift', true);
         }
 
         $limite = now()->subYear()->toDateString();
@@ -59,6 +76,7 @@ class VehicleController extends Controller
                 'carburant' => $v->fuel_type,
                 'capacite' => (float) $v->capacity_tonnes,
                 'volume' => (float) $v->capacity_volume,
+                'hayon' => (bool) $v->has_tail_lift,
                 'kilometrage' => (int) $v->mileage,
                 'controle' => $v->inspection_date?->format('Y-m-d'),
                 'controle_affiche' => $v->inspection_date?->format('d/m/Y'),
@@ -69,6 +87,7 @@ class VehicleController extends Controller
                 'vin' => $v->vin,
             ])->all(),
             'types' => Vehicle::distinct()->orderBy('vehicle_type')->pluck('vehicle_type'),
+            'normes' => Vehicle::whereNotNull('euro_standard')->distinct()->orderBy('euro_standard')->pluck('euro_standard'),
             'compteurs' => [
                 'total' => Vehicle::count(),
                 'disponibles' => Vehicle::where('is_available', true)->count(),

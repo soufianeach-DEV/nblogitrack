@@ -34,6 +34,7 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">Norme</dt><dd className="font-semibold text-marine">{vehicule.norme} · {vehicule.carburant}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">Charge utile</dt><dd className="font-semibold text-marine">{nombre(vehicule.capacite, 't', 1)}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">Volume</dt><dd className="font-semibold text-marine">{nombre(vehicule.volume, 'm³', 0)}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Hayon élévateur</dt><dd className="font-semibold text-marine">{vehicule.hayon ? 'Oui' : 'Non'}</dd></div>
                 <div className="col-span-2"><dt className="text-xs uppercase tracking-wide text-slate-600">Numéro de châssis</dt><dd className="font-mono text-xs text-marine">{vehicule.vin}</dd></div>
             </dl>
 
@@ -108,7 +109,15 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
     );
 }
 
-export default function Vehicules({ vehicules = [], types = [], compteurs, filtres = {}, peutModifier = false }) {
+const CHARGES = [
+    { valeur: '1', libelle: 'Porte au moins 1 t' },
+    { valeur: '3', libelle: 'Porte au moins 3 t' },
+    { valeur: '6', libelle: 'Porte au moins 6 t' },
+    { valeur: '12', libelle: 'Porte au moins 12 t' },
+    { valeur: '24', libelle: 'Porte au moins 24 t' },
+];
+
+export default function Vehicules({ vehicules = [], types = [], normes = [], compteurs, filtres = {}, peutModifier = false }) {
     const [ouvert, setOuvert] = useState(null);
 
     return (
@@ -128,7 +137,12 @@ export default function Vehicules({ vehicules = [], types = [], compteurs, filtr
                 adresse={route('vehicles.index')}
                 filtres={filtres}
                 placeholder="Immatriculation, marque, châssis…"
-                listes={[{ champ: 'type', intitule: 'Toutes les carrosseries', options: types }]}
+                listes={[
+                    { champ: 'type', intitule: 'Toutes les carrosseries', options: types },
+                    { champ: 'charge', intitule: 'Toutes les charges', options: CHARGES },
+                    { champ: 'norme', intitule: 'Toutes les normes', options: normes },
+                    { champ: 'hayon', intitule: 'Hayon indifférent', options: [{ valeur: '1', libelle: 'Avec hayon' }] },
+                ]}
                 compteurs={[
                     { libelle: 'Tous', valeur: null, nombre: compteurs.total },
                     { libelle: 'Disponibles', valeur: 'disponibles', nombre: compteurs.disponibles },
@@ -163,6 +177,11 @@ export default function Vehicules({ vehicules = [], types = [], compteurs, filtr
                                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                                         {v.type}
                                         <span className="ml-2 text-xs text-slate-600">{v.norme}</span>
+                                        {v.hayon && (
+                                            <span className="ml-2 rounded bg-brand-blue/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-blue">
+                                                Hayon
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{nombre(v.capacite, 't', 1)}</td>
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{nombre(v.kilometrage, 'km')}</td>
