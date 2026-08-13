@@ -47,7 +47,7 @@ class TransportOrder extends Model
 
     protected $fillable = [
         'client_id', 'created_date', 'pickup_date', 'pickup_address', 'delivery_address',
-        'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'status', 'priority',
+        'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
         'vehicle_registration', 'driver_id', 'assigned_at',
@@ -58,6 +58,7 @@ class TransportOrder extends Model
     {
         return [
             'is_hazardous' => 'boolean',
+            'needs_tail_lift' => 'boolean',
             'created_date' => 'date',
             'requested_delivery_date' => 'date',
             'actual_delivery_date' => 'date',

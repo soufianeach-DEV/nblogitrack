@@ -19,7 +19,7 @@ class Vehicle extends Model
 
     protected $fillable = [
         'registration', 'vin', 'vehicle_type', 'brand', 'model',
-        'euro_standard', 'capacity_tonnes', 'capacity_volume',
+        'euro_standard', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift',
         'mileage', 'is_available', 'inspection_date', 'fuel_type',
     ];
 
@@ -27,6 +27,7 @@ class Vehicle extends Model
     {
         return [
             'is_available' => 'boolean',
+            'has_tail_lift' => 'boolean',
             'inspection_date' => 'date',
         ];
     }
