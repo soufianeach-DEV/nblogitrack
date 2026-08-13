@@ -444,7 +444,8 @@ function Facturation({ facturation }) {
 }
 
 /**
- * Ce qui n'est plus en regle dans la flotte, nomme plutot que compte : une
+ * Ce qui n'est plus en regle chez les chauffeurs et les vehicules, nomme
+ * plutot que compte : une
  * alerte qui annonce cinquante-trois visites a renouveler ne dit pas
  * lesquelles.
  */
@@ -480,7 +481,7 @@ function Conformite({ conformite }) {
 
     return (
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-marine">Flotte à mettre en règle</h2>
+            <h2 className="font-semibold text-marine">Chauffeurs et véhicules à mettre en règle</h2>
             <p className="mb-5 text-sm text-slate-600">
                 Ce qui roule encore alors qu'une échéance est passée
             </p>
