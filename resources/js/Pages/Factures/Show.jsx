@@ -60,7 +60,7 @@ function BoutonPaiement({ facture }) {
     );
 }
 
-function BoutonPayerEnLigne({ facture }) {
+function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     const { post, processing } = useForm({});
 
     return (
@@ -68,7 +68,10 @@ function BoutonPayerEnLigne({ facture }) {
             type="button"
             onClick={() => post(route('payments.payer', facture.id))}
             disabled={processing}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-action px-4 py-2 text-sm font-bold text-marine-deep shadow-sm transition hover:bg-action-dark disabled:opacity-60"
+            className={
+                'inline-flex items-center justify-center gap-1.5 rounded-lg bg-action font-bold text-marine-deep shadow-sm transition hover:bg-action-dark disabled:opacity-60 '
+                + (pleineLargeur ? 'w-full px-4 py-2.5 text-sm' : 'px-4 py-2 text-sm')
+            }
         >
             <Icone nom="facture" className="h-4 w-4" />
             {processing ? 'Redirection…' : 'Payer en ligne'}
@@ -109,7 +112,6 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                             <Icone nom="facture" className="h-4 w-4" />
                             XML Peppol
                         </a>
-                        {peutPayerEnLigne && <BoutonPayerEnLigne facture={facture} />}
                         {peutMarquerPayee && <BoutonPaiement facture={facture} />}
                     </div>
                 </div>
@@ -185,6 +187,19 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                             </div>
                         )}
                     </div>
+
+                    {/* Le paiement en ligne rejoint les autres moyens de payer
+                        au lieu d'attendre en haut de page. Toutes les banques
+                        ne lisent pas le code : celle qui ne le lit pas laissait
+                        le client sans issue visible. */}
+                    {peutPayerEnLigne && (
+                        <div className="mt-4 border-t border-white/15 pt-4">
+                            <BoutonPayerEnLigne facture={facture} pleineLargeur />
+                            <p className="mt-2 text-center text-[11px] leading-tight text-slate-300">
+                                Votre banque ne lit pas le code ? Réglez par carte en quelques secondes.
+                            </p>
+                        </div>
+                    )}
                 </section>
             </div>
 

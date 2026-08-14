@@ -1,6 +1,6 @@
 import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 
 const ETATS = {
     DRAFT: { libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
@@ -103,9 +103,22 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                             {euros(facture.ttc)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">
-                                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
-                                                {etat.libelle}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
+                                                    {etat.libelle}
+                                                </span>
+                                                {/* Regler depuis la liste evite d'ouvrir chaque facture
+                                                    pour trouver ou payer. */}
+                                                {facture.peut_payer && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => router.post(route('payments.payer', facture.id))}
+                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark"
+                                                    >
+                                                        Payer
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );
