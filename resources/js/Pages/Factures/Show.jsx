@@ -152,10 +152,13 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                                     className="rounded-lg bg-white p-1.5"
                                     title="Virement SEPA au format EPC : votre application bancaire préremplit le compte, le montant et la communication."
                                 >
+                                    {/* 45 modules avec la marge : en dessous de
+                                        trois pixels par module, l'appareil
+                                        photo d'un telephone decroche. */}
                                     <img
                                         src={facture.qr}
                                         alt="QR de virement SEPA au format EPC, contenant le compte, le montant et la communication"
-                                        className="h-28 w-28"
+                                        className="h-44 w-44"
                                     />
                                 </div>
                                 <p className="mt-1.5 text-[11px] leading-tight text-slate-300">

@@ -15,11 +15,11 @@ class QrPaiement
      * Genere localement — un service de QR en ligne recevrait l'IBAN et le
      * montant de chaque facture.
      *
-     * Portee reelle : cette norme europeenne est lue par les applications
-     * allemandes, autrichiennes ou neerlandaises. Les banques belges suivent
-     * Payconiq, dont la charge est une adresse de transaction et qui exige un
-     * contrat commercant : hors de portee ici. Le QR reste utile pour un
-     * client etranger, et le paiement en ligne couvre le cas belge.
+     * La charge fait 80 octets, soit un code de version 5 : 37 modules de
+     * cote, 45 avec la marge obligatoire. Cette taille commande l'affichage.
+     * En dessous de trois pixels par module a l'ecran, ou de 25 mm de cote
+     * sur papier, l'appareil photo d'un telephone ne lit plus rien. La page
+     * et le PDF dimensionnent le code en consequence.
      *
      * Rendu vectoriel en donnee incorporee, utilisable tel quel par la page
      * comme par le PDF : aucune extension serveur exigee, et le code reste

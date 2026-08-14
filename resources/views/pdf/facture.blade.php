@@ -35,7 +35,9 @@
         .paiement .etiquette { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 3px; }
         .paiement .valeur { font-size: 11px; font-weight: bold; }
         .qr-boite { background: #ffffff; padding: 6px; display: inline-block; }
-        .qr-boite img { width: 74px; height: 74px; display: block; }
+        /* 99 px a 96 dpi font 26 mm de cote : la norme EPC exige au moins
+           25 mm sur papier, sous quoi le code devient illisible. */
+        .qr-boite img { width: 99px; height: 99px; display: block; }
         .mention { margin-top: 18px; font-size: 8.5px; color: #64748b; line-height: 1.6; }
         .pied { position: fixed; bottom: 24px; left: 40px; right: 40px; font-size: 8px; color: #94a3b8;
             border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; }
@@ -150,7 +152,7 @@
                         <div class="valeur" style="font-size: 15px;">{{ number_format((float) $facture->amount_incl_tax, 2, ',', ' ') }} €</div>
                     </td>
                     @if ($qr ?? null)
-                        <td style="width: 88px; text-align: right;">
+                        <td style="width: 113px; text-align: right;">
                             <div class="qr-boite">
                                 <img src="{{ $qr }}" alt="QR de virement SEPA au format EPC">
                             </div>
