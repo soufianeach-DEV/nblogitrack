@@ -136,9 +136,11 @@ class TrackingController extends Controller
      */
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
     {
+        // 404 et non 403 : un refus qui se distingue du neant laisserait
+        // enumerer les expeditions en faisant varier le numero.
         abort_if(
             $request->user()->cannot('view-all-orders') && $ordre->client_id !== $request->user()->id,
-            403,
+            404,
         );
 
         abort_if($ordre->pickup_lat === null || $ordre->delivery_lat === null, 404);
