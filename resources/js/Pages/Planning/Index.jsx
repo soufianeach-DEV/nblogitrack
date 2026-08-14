@@ -44,7 +44,14 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
 
         return '';
     };
-    const chauffeurCompatible = (d) => ! ordre.is_hazardous || d.adr_certified;
+    const chauffeurApte = (d) => (d.empechements ?? []).length === 0;
+    const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified);
+    const motifChauffeur = (d) => {
+        if (! chauffeurApte(d)) return ' (' + d.empechements[0] + ')';
+        if (ordre.is_hazardous && ! d.adr_certified) return ' (ADR requis)';
+
+        return '';
+    };
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
     return (
@@ -78,7 +85,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                     {drivers.map((d) => (
                         <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
                             {d.nom} · permis {d.license_type}{d.adr_certified ? ' · ADR' : ''}
-                            {chauffeurCompatible(d) ? '' : ' (ADR requis)'}
+                            {motifChauffeur(d)}
                         </option>
                     ))}
                 </select>
@@ -125,7 +132,7 @@ function BoutonsStatut({ ordre }) {
     );
 }
 
-export default function Index({ orders, vehicles, drivers, statut, compteurs }) {
+export default function Index({ orders, vehicles, drivers, statut, compteurs, priorite = null, priorites = [] }) {
     const flash = usePage().props.flash ?? {};
 
     const dateCourte = (valeur) => valeur
@@ -155,6 +162,38 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs }) 
                     >
                         {LIBELLE_STATUT[cle]}
                         <span className="ml-2 text-xs opacity-70">{compteurs[cle] ?? 0}</span>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Priorité</span>
+                <Link
+                    href={route('planning.index', { status: statut })}
+                    preserveScroll
+                    className={
+                        'rounded-full px-3 py-1 text-sm font-medium transition ' +
+                        (priorite === null ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
+                    }
+                >
+                    Toutes
+                </Link>
+                {priorites.map((p) => (
+                    <Link
+                        key={p.valeur}
+                        href={route('planning.index', { status: statut, priorite: p.valeur })}
+                        preserveScroll
+                        className={
+                            'rounded-full px-3 py-1 text-sm font-medium transition ' +
+                            (priorite === p.valeur
+                                ? 'bg-marine text-white'
+                                : p.valeur === 'URGENT' && p.nombre > 0
+                                    ? 'bg-status-incident/10 text-status-incident hover:bg-status-incident/20'
+                                    : 'bg-white text-marine hover:bg-slate-50')
+                        }
+                    >
+                        {LIBELLE_PRIORITE[p.valeur]}
+                        <span className="ml-1.5 text-xs opacity-70">{p.nombre}</span>
                     </Link>
                 ))}
             </div>

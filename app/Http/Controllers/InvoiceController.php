@@ -45,6 +45,7 @@ class InvoiceController extends Controller
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
                 ])
                 ->all(),
+            'peutGererAchats' => $utilisateur->can('control-payments'),
         ]);
     }
 

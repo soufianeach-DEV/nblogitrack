@@ -11,6 +11,9 @@ class TransportOrder extends Model
 {
     use HasFactory;
 
+    /** De la plus pressante a la moins pressante. */
+    public const PRIORITES = ['URGENT', 'HIGH', 'NORMAL', 'LOW'];
+
     /**
      * Le vocabulaire des marchandises, commun au formulaire de commande et au
      * jeu de donnees : un client doit pouvoir commander ce que l'historique montre.
