@@ -282,8 +282,8 @@ class DashboardController extends Controller
             ];
         }
 
-        $controle = Vehicle::whereNotNull('inspection_date')
-            ->where('inspection_date', '<', now()->subYear()->toDateString())
+        $controle = Vehicle::whereNotNull('inspection_valid_until')
+            ->where('inspection_valid_until', '<', now()->toDateString())
             ->count();
 
         if ($controle > 0) {
@@ -411,14 +411,14 @@ class DashboardController extends Controller
             })
             ->all();
 
-        $vehicules = Vehicle::where('inspection_date', '<', $visite)
-            ->orderBy('inspection_date')
+        $vehicules = Vehicle::where('inspection_valid_until', '<', now()->toDateString())
+            ->orderBy('inspection_valid_until')
             ->take(5)
             ->get()
             ->map(fn (Vehicle $vehicule) => [
                 'immatriculation' => $vehicule->registration,
                 'modele' => trim($vehicule->brand.' '.$vehicule->model),
-                'motif' => 'Contrôle technique du '.$vehicule->inspection_date->format('d/m/Y'),
+                'motif' => 'Contrôle échu depuis le '.$vehicule->inspection_valid_until->format('d/m/Y'),
                 'disponible' => (bool) $vehicule->is_available,
             ])
             ->all();
@@ -429,7 +429,7 @@ class DashboardController extends Controller
             'total_chauffeurs' => Driver::where(fn ($q) => $q
                 ->where('medical_exam_date', '<', $visite)
                 ->orWhere('license_expiry', '<=', $echeance))->count(),
-            'total_vehicules' => Vehicle::where('inspection_date', '<', $visite)->count(),
+            'total_vehicules' => Vehicle::where('inspection_valid_until', '<', now()->toDateString())->count(),
         ];
     }
 
