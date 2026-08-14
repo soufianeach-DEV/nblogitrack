@@ -471,11 +471,11 @@ function Conformite({ conformite }) {
         </div>
     );
 
-    const pastille = (disponible) => (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-            disponible ? 'bg-status-incident/10 text-status-incident' : 'bg-slate-100 text-slate-700'
-        }`}>
-            {disponible ? 'En service' : 'Retiré'}
+    // Tout ce qui figure ici roule encore : la pastille dit l'urgence, pas
+    // l'etat de service, qui serait le meme pour toute la liste.
+    const pastille = () => (
+        <span className="shrink-0 rounded-full bg-status-incident/10 px-2 py-0.5 text-[11px] font-semibold text-status-incident">
+            À traiter
         </span>
     );
 
@@ -483,7 +483,7 @@ function Conformite({ conformite }) {
         <section className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-marine">Chauffeurs et véhicules à mettre en règle</h2>
             <p className="mb-5 text-sm text-slate-600">
-                Ce qui roule encore alors qu'une échéance est passée
+                Uniquement ce qui roule encore alors qu'une échéance est passée
             </p>
 
             <div className="grid gap-6 lg:grid-cols-2">
@@ -498,7 +498,7 @@ function Conformite({ conformite }) {
                                 <span className="block truncate text-sm font-semibold text-marine">{c.nom}</span>
                                 <span className="block truncate text-xs text-slate-600">{c.motif}</span>
                             </span>
-                            {pastille(c.disponible)}
+                            {pastille()}
                         </li>
                     ),
                 )}
@@ -516,7 +516,7 @@ function Conformite({ conformite }) {
                                 </span>
                                 <span className="block truncate text-xs text-slate-600">{v.motif}</span>
                             </span>
-                            {pastille(v.disponible)}
+                            {pastille()}
                         </li>
                     ),
                 )}

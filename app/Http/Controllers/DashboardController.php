@@ -384,34 +384,52 @@ class DashboardController extends Controller
         $visite = now()->subYear()->toDateString();
         $echeance = now()->addDays(60)->toDateString();
 
-        $chauffeurs = Driver::with('user:id,first_name,last_name')
-            ->where(fn ($q) => $q
+        // Seuls ceux qui roulent encore appellent une intervention. Un
+        // chauffeur deja retire du service ou parti n'est pas un risque :
+        // le melanger aux autres noie ce qui demande une action aujourd'hui.
+        $chauffeursAlerte = fn ($q) => $q
+            ->where('is_available', true)
+            ->whereNull('left_on')
+            ->where(fn ($e) => $e
                 ->where('medical_exam_date', '<', $visite)
-                ->orWhere('license_expiry', '<=', $echeance))
+                ->orWhereNull('medical_exam_date')
+                ->orWhere('license_expiry', '<=', $echeance)
+                ->orWhere('cpc_expiry', '<', now()->toDateString())
+                ->orWhere('tacho_card_expiry', '<', now()->toDateString()));
+
+        $chauffeurs = Driver::with('user:id,first_name,last_name')
+            ->where($chauffeursAlerte)
             ->orderBy('medical_exam_date')
             ->take(5)
             ->get()
-            ->map(function (Driver $chauffeur) use ($visite, $echeance) {
-                $motifs = [];
+            ->map(function (Driver $chauffeur) use ($echeance) {
+                // Les empechements du modele disent deja pourquoi il ne peut
+                // pas rouler ; le permis qui approche s'y ajoute, parce qu'il
+                // se renouvelle avant d'expirer.
+                $motifs = $chauffeur->empechements();
 
-                if ($chauffeur->medical_exam_date !== null && $chauffeur->medical_exam_date->lt($visite)) {
-                    $motifs[] = 'Visite médicale du '.$chauffeur->medical_exam_date->format('d/m/Y');
-                }
-
-                if ($chauffeur->license_expiry !== null && $chauffeur->license_expiry->lte($echeance)) {
-                    $motifs[] = 'Permis expirant le '.$chauffeur->license_expiry->format('d/m/Y');
+                if ($chauffeur->license_expiry !== null
+                    && $chauffeur->license_expiry->gte(now()->startOfDay())
+                    && $chauffeur->license_expiry->lte($echeance)) {
+                    $motifs[] = 'permis expirant le '.$chauffeur->license_expiry->format('d/m/Y');
                 }
 
                 return [
                     'id' => $chauffeur->id,
                     'nom' => trim(($chauffeur->user?->first_name ?? '').' '.($chauffeur->user?->last_name ?? '')),
-                    'motif' => implode(' · ', $motifs),
+                    'motif' => ucfirst(implode(' · ', $motifs)),
                     'disponible' => (bool) $chauffeur->is_available,
                 ];
             })
             ->all();
 
-        $vehicules = Vehicle::where('inspection_date', '<', $visite)
+        // Meme regle pour le parc : un camion hors service attend deja au
+        // garage, il n'y a rien a decider a son sujet.
+        $vehiculesAlerte = fn ($q) => $q
+            ->where('is_available', true)
+            ->where('inspection_date', '<', $visite);
+
+        $vehicules = Vehicle::where($vehiculesAlerte)
             ->orderBy('inspection_date')
             ->take(5)
             ->get()
@@ -426,10 +444,8 @@ class DashboardController extends Controller
         return [
             'chauffeurs' => $chauffeurs,
             'vehicules' => $vehicules,
-            'total_chauffeurs' => Driver::where(fn ($q) => $q
-                ->where('medical_exam_date', '<', $visite)
-                ->orWhere('license_expiry', '<=', $echeance))->count(),
-            'total_vehicules' => Vehicle::where('inspection_date', '<', $visite)->count(),
+            'total_chauffeurs' => Driver::where($chauffeursAlerte)->count(),
+            'total_vehicules' => Vehicle::where($vehiculesAlerte)->count(),
         ];
     }
 
