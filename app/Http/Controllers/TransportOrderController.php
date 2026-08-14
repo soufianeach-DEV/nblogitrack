@@ -47,10 +47,14 @@ class TransportOrderController extends Controller
 
     public function show(Request $request, TransportOrder $transportOrder): Response
     {
-        // Un client n'accede qu'a ses propres expeditions.
-        if ($request->user()->cannot('view-all-orders') && $transportOrder->client_id !== $request->user()->id) {
-            abort(403);
-        }
+        // Un client n'accede qu'a ses propres expeditions. La reponse est 404
+        // et non 403 : les identifiants se suivent, et un refus distinct du
+        // neant permettrait de deviner combien d'expeditions existent et
+        // lesquelles, en changeant simplement le numero dans l'adresse.
+        abort_if(
+            $request->user()->cannot('view-all-orders') && $transportOrder->client_id !== $request->user()->id,
+            404,
+        );
 
         $transportOrder->load([
             'client:id,company_name,city,country',
