@@ -13,8 +13,20 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
     const { data, setData, patch, processing, errors } = useForm({
         is_available: vehicule.disponible,
         inspection_date: vehicule.controle ?? '',
+        inspection_valid_until: vehicule.controle_valide ?? '',
         mileage: vehicule.kilometrage,
     });
+
+    // Un nouveau passage au controle propose une validite d'un an, la regle
+    // generale ; elle reste modifiable pour les categories qui derogent.
+    const passageControle = (valeur) => {
+        const suggestion = valeur ? `${Number(valeur.slice(0, 4)) + 1}${valeur.slice(4)}` : '';
+        setData((precedent) => ({
+            ...precedent,
+            inspection_date: valeur,
+            inspection_valid_until: suggestion,
+        }));
+    };
 
     const enregistrer = (e) => {
         e.preventDefault();
@@ -59,19 +71,35 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                             Ce véhicule porte une expédition en cours : il ne peut pas être retiré du service.
                         </p>
                     )}
+                    {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
 
-                    <div>
-                        <label htmlFor="controle" className="text-xs uppercase tracking-wide text-slate-600">
-                            Dernier contrôle technique
-                        </label>
-                        <input
-                            id="controle"
-                            type="date"
-                            value={data.inspection_date ?? ''}
-                            onChange={(e) => setData('inspection_date', e.target.value)}
-                            className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        />
-                        {errors.inspection_date && <p className="mt-1 text-xs text-status-incident">{errors.inspection_date}</p>}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label htmlFor="controle" className="text-xs uppercase tracking-wide text-slate-600">
+                                Contrôle passé le
+                            </label>
+                            <input
+                                id="controle"
+                                type="date"
+                                value={data.inspection_date ?? ''}
+                                onChange={(e) => passageControle(e.target.value)}
+                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            />
+                            {errors.inspection_date && <p className="mt-1 text-xs text-status-incident">{errors.inspection_date}</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="controle-validite" className="text-xs uppercase tracking-wide text-slate-600">
+                                Valable jusqu'au
+                            </label>
+                            <input
+                                id="controle-validite"
+                                type="date"
+                                value={data.inspection_valid_until ?? ''}
+                                onChange={(e) => setData('inspection_valid_until', e.target.value)}
+                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            />
+                            {errors.inspection_valid_until && <p className="mt-1 text-xs text-status-incident">{errors.inspection_valid_until}</p>}
+                        </div>
                     </div>
 
                     <div>
@@ -185,8 +213,13 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{nombre(v.capacite, 't', 1)}</td>
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{nombre(v.kilometrage, 'km')}</td>
-                                    <td className={`whitespace-nowrap px-4 py-3 ${v.controle_depasse ? 'font-semibold text-status-incident' : 'text-slate-600'}`}>
-                                        {v.controle_affiche ?? '—'}
+                                    <td className="whitespace-nowrap px-4 py-3">
+                                        <span className={v.controle_depasse ? 'font-semibold text-status-incident' : 'text-slate-600'}>
+                                            {v.controle_valide_affiche ? `valable → ${v.controle_valide_affiche}` : '—'}
+                                        </span>
+                                        {v.controle_affiche && (
+                                            <span className="block text-xs text-slate-600">passé le {v.controle_affiche}</span>
+                                        )}
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3">
                                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${

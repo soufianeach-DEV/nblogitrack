@@ -282,8 +282,8 @@ class DashboardController extends Controller
             ];
         }
 
-        $controle = Vehicle::whereNotNull('inspection_date')
-            ->where('inspection_date', '<', now()->subYear()->toDateString())
+        $controle = Vehicle::whereNotNull('inspection_valid_until')
+            ->where('inspection_valid_until', '<', now()->toDateString())
             ->count();
 
         if ($controle > 0) {
@@ -424,19 +424,20 @@ class DashboardController extends Controller
             ->all();
 
         // Meme regle pour le parc : un camion hors service attend deja au
-        // garage, il n'y a rien a decider a son sujet.
+        // garage, il n'y a rien a decider a son sujet. C'est l'echeance de
+        // validite qui tranche, pas la date du dernier passage.
         $vehiculesAlerte = fn ($q) => $q
             ->where('is_available', true)
-            ->where('inspection_date', '<', $visite);
+            ->where('inspection_valid_until', '<', now()->toDateString());
 
         $vehicules = Vehicle::where($vehiculesAlerte)
-            ->orderBy('inspection_date')
+            ->orderBy('inspection_valid_until')
             ->take(5)
             ->get()
             ->map(fn (Vehicle $vehicule) => [
                 'immatriculation' => $vehicule->registration,
                 'modele' => trim($vehicule->brand.' '.$vehicule->model),
-                'motif' => 'Contrôle technique du '.$vehicule->inspection_date->format('d/m/Y'),
+                'motif' => 'Contrôle échu depuis le '.$vehicule->inspection_valid_until->format('d/m/Y'),
                 'disponible' => (bool) $vehicule->is_available,
             ])
             ->all();
