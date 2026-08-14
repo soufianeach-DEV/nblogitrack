@@ -9,6 +9,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MissionController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\TarifController;
 use App\Http\Controllers\TrackingController;
@@ -71,6 +72,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
         ->whereNumber('invoice')
         ->name('invoices.ubl');
+
+    // Les achats sont la comptabilite interne : ils ne sortent pas du perimetre
+    // de l'administrateur, comme le controle des paiements.
+    Route::middleware('can:control-payments')->group(function () {
+        Route::get('/achats', [PurchaseInvoiceController::class, 'index'])->name('purchases.index');
+        Route::post('/achats', [PurchaseInvoiceController::class, 'store'])->name('purchases.store');
+        Route::patch('/achats/{purchaseInvoice}/paiement', [PurchaseInvoiceController::class, 'markPaid'])
+            ->name('purchases.paid');
+        Route::get('/tva', [PurchaseInvoiceController::class, 'tva'])->name('purchases.tva');
+    });
 
     Route::middleware('can:view-fleet')->group(function () {
         Route::get('/vehicules', [VehicleController::class, 'index'])->name('vehicles.index');

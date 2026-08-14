@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders, invoices, invoice_lines CASCADE');
+        DB::statement('TRUNCATE users, vehicles, tariff_grids, clients, client_contacts, drivers, transport_orders, invoices, invoice_lines, purchase_invoices CASCADE');
         $this->call([
             UserSeeder::class,
             VehicleSeeder::class,
@@ -31,9 +31,10 @@ class DatabaseSeeder extends Seeder
             DriverSeeder::class,
             TransportOrderSeeder::class,
             InvoiceSeeder::class,
+            PurchaseInvoiceSeeder::class,
         ]);
 
-        foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders'] as $t) {
+        foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders', 'purchase_invoices'] as $t) {
             DB::statement("SELECT setval('{$t}_id_seq', (SELECT COALESCE(MAX(id), 1) FROM {$t}))");
         }
 

@@ -1,3 +1,4 @@
+import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 
@@ -13,7 +14,7 @@ const euros = (montant) => Number(montant).toLocaleString('fr-FR', {
     currency: 'EUR',
 });
 
-export default function Index({ factures = [] }) {
+export default function Index({ factures = [], peutGererAchats = false }) {
     const { canPlan } = usePage().props.auth;
 
     const du = factures.filter((f) => f.etat !== 'PAID').reduce((somme, f) => somme + f.ttc, 0);
@@ -32,6 +33,8 @@ export default function Index({ factures = [] }) {
             }
         >
             <Head title="Facturation" />
+
+            {peutGererAchats && <OngletsFacturation actif="ventes" />}
 
             <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
