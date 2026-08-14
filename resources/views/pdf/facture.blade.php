@@ -152,7 +152,10 @@
                     @if ($qr ?? null)
                         <td style="width: 88px; text-align: right;">
                             <div class="qr-boite">
-                                <img src="{{ $qr }}" alt="QR de paiement">
+                                <img src="{{ $qr }}" alt="QR de virement SEPA au format EPC">
+                            </div>
+                            <div style="font-size: 7px; color: #94a3b8; margin-top: 3px;">
+                                Virement SEPA — norme EPC
                             </div>
                         </td>
                     @endif

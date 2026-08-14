@@ -159,6 +159,13 @@ class InvoiceController extends Controller
             return null;
         }
 
+        // Le QR suit la norme EPC, que les banques de certains pays ne lisent
+        // pas. Le montrer a un client dont la banque le refusera ferait
+        // paraitre la facture cassee : mieux vaut ne rien montrer.
+        if (in_array($invoice->client?->country, config('entreprise.epc_non_lu_par', []), true)) {
+            return null;
+        }
+
         return QrPaiement::epc(
             config('entreprise.nom'),
             config('entreprise.iban'),

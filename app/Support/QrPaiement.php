@@ -10,10 +10,16 @@ use BaconQrCode\Writer;
 class QrPaiement
 {
     /**
-     * Le QR de virement au format EPC, celui que les applications bancaires
-     * scannent pour preremplir un paiement : beneficiaire, IBAN, montant et
-     * communication. Genere localement — un service de QR en ligne recevrait
-     * l'IBAN et le montant de chaque facture.
+     * Le QR de virement au format EPC 069-12 : beneficiaire, IBAN, montant
+     * et communication, preremplis dans l'application bancaire du payeur.
+     * Genere localement — un service de QR en ligne recevrait l'IBAN et le
+     * montant de chaque facture.
+     *
+     * Portee reelle : cette norme europeenne est lue par les applications
+     * allemandes, autrichiennes ou neerlandaises. Les banques belges suivent
+     * Payconiq, dont la charge est une adresse de transaction et qui exige un
+     * contrat commercant : hors de portee ici. Le QR reste utile pour un
+     * client etranger, et le paiement en ligne couvre le cas belge.
      *
      * Rendu vectoriel en donnee incorporee, utilisable tel quel par la page
      * comme par le PDF : aucune extension serveur exigee, et le code reste

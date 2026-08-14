@@ -147,12 +147,21 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                             <p className="font-mono text-sm">{facture.communication}</p>
                         </div>
                         {facture.qr && (
-                            <div className="shrink-0 rounded-lg bg-white p-1.5" title="À scanner avec votre application bancaire">
-                                <img
-                                    src={facture.qr}
-                                    alt="QR de paiement à scanner avec votre application bancaire"
-                                    className="h-28 w-28"
-                                />
+                            <div className="shrink-0 text-center">
+                                <div
+                                    className="rounded-lg bg-white p-1.5"
+                                    title="Virement SEPA au format EPC : votre application bancaire préremplit le compte, le montant et la communication."
+                                >
+                                    <img
+                                        src={facture.qr}
+                                        alt="QR de virement SEPA au format EPC, contenant le compte, le montant et la communication"
+                                        className="h-28 w-28"
+                                    />
+                                </div>
+                                <p className="mt-1.5 text-[11px] leading-tight text-slate-300">
+                                    Virement SEPA
+                                    <span className="block">norme EPC</span>
+                                </p>
                             </div>
                         )}
                     </div>
