@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -46,8 +47,12 @@ class QrPaiement
             $communication,
         ]);
 
-        $svg = (new Writer(new ImageRenderer(new RendererStyle(300, 2), new SvgImageBackEnd)))
-            ->writeString($charge);
+        // La marge de quatre modules et le niveau de correction M sont imposes
+        // par EPC069-12. La bibliotheque encoderait par defaut en ISO-8859-1
+        // alors que la ligne 3 annonce de l'UTF-8 : sans accent l'ecart ne se
+        // voit pas, avec un accent la banque lirait un nom errone.
+        $svg = (new Writer(new ImageRenderer(new RendererStyle(300, 4), new SvgImageBackEnd)))
+            ->writeString($charge, 'UTF-8', ErrorCorrectionLevel::M());
 
         return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
