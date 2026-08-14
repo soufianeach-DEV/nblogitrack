@@ -52,12 +52,12 @@ class VehicleController extends Controller
             $requete->where('has_tail_lift', true);
         }
 
-        $limite = now()->subYear()->toDateString();
+        $aujourdhui = now()->toDateString();
 
         match ($filtres['etat'] ?? null) {
             'disponibles' => $requete->where('is_available', true),
             'indisponibles' => $requete->where('is_available', false),
-            'controle' => $requete->where('inspection_date', '<', $limite),
+            'controle' => $requete->where('inspection_valid_until', '<', $aujourdhui),
             default => null,
         };
 
@@ -80,8 +80,10 @@ class VehicleController extends Controller
                 'kilometrage' => (int) $v->mileage,
                 'controle' => $v->inspection_date?->format('Y-m-d'),
                 'controle_affiche' => $v->inspection_date?->format('d/m/Y'),
-                'controle_depasse' => $v->inspection_date !== null
-                    && $v->inspection_date->lt(now()->subYear()),
+                'controle_valide' => $v->inspection_valid_until?->format('Y-m-d'),
+                'controle_valide_affiche' => $v->inspection_valid_until?->format('d/m/Y'),
+                'controle_depasse' => $v->inspection_valid_until !== null
+                    && $v->inspection_valid_until->lt(now()->startOfDay()),
                 'disponible' => (bool) $v->is_available,
                 'engage' => $engages->has($v->registration),
                 'vin' => $v->vin,
@@ -91,7 +93,7 @@ class VehicleController extends Controller
             'compteurs' => [
                 'total' => Vehicle::count(),
                 'disponibles' => Vehicle::where('is_available', true)->count(),
-                'controle' => Vehicle::where('inspection_date', '<', $limite)->count(),
+                'controle' => Vehicle::where('inspection_valid_until', '<', $aujourdhui)->count(),
             ],
             'filtres' => $filtres,
             'peutModifier' => $request->user()->can('manage-fleet'),
@@ -102,27 +104,37 @@ class VehicleController extends Controller
     {
         $donnees = $request->validate([
             'is_available' => 'required|boolean',
-            'inspection_date' => 'nullable|date|before_or_equal:'.now()->addYear()->toDateString(),
+            'inspection_date' => 'nullable|date|before_or_equal:today',
+            'inspection_valid_until' => 'nullable|date|after_or_equal:inspection_date',
             'mileage' => 'nullable|numeric|min:0|max:9999999',
+        ], [
+            'inspection_date.before_or_equal' => 'Un contrôle technique ne peut pas être daté dans le futur.',
+            'inspection_valid_until.after_or_equal' => 'La validité ne peut pas précéder le passage au contrôle.',
         ]);
 
         // Retirer du service un camion qui porte une expedition en cours
         // ferait perdre a la planification la trace de ce qui lui est confie.
-        // La base ne peut pas l'interdire : c'est une regle metier.
+        // La base ne peut pas l'interdire : c'est une regle metier. Le refus
+        // part en erreur de champ, pas en flash : un refus que l'ecran
+        // n'affiche pas ressemble a une acceptation.
         if ($donnees['is_available'] === false) {
             $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
                 ->where('vehicle_registration', $vehicle->registration)
                 ->exists();
 
             if ($engage) {
-                return back()->with('error',
-                    'Ce véhicule porte une expédition en cours : réaffectez-la avant de le retirer du service.');
+                return back()->withErrors([
+                    'is_available' => 'Ce véhicule porte une expédition en cours : réaffectez-la avant de le retirer du service.',
+                ]);
             }
         }
 
         // Le kilometrage d'un camion ne diminue pas.
         if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < (float) $vehicle->mileage) {
-            return back()->with('error', 'Le kilométrage ne peut pas être inférieur au relevé actuel.');
+            return back()->withErrors([
+                'mileage' => 'Le kilométrage ne peut pas descendre sous le relevé actuel ('
+                    .number_format((float) $vehicle->mileage, 0, ',', ' ').' km).',
+            ]);
         }
 
         $vehicle->update($donnees);
