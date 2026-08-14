@@ -17,9 +17,12 @@ const euros = (montant) => Number(montant).toLocaleString('fr-FR', {
 export default function Index({ factures = [], peutGererAchats = false }) {
     const { canPlan } = usePage().props.auth;
 
+    // Pas de colonne vide chez le personnel, qui ne paie jamais.
+    const colonnePaiement = factures.some((f) => f.peut_payer);
+
     const du = factures.filter((f) => f.etat !== 'PAID').reduce((somme, f) => somme + f.ttc, 0);
     const paye = factures.filter((f) => f.etat === 'PAID').reduce((somme, f) => somme + f.ttc, 0);
-    const echues = factures.filter((f) => f.etat === 'OVERDUE').length;
+    const enRetard = factures.filter((f) => f.etat === 'OVERDUE').length;
 
     return (
         <AuthenticatedLayout
@@ -46,9 +49,11 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                     <p className="text-2xl font-bold text-marine">{euros(du)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">Factures échues</p>
-                    <p className={`text-2xl font-bold ${echues > 0 ? 'text-status-incident' : 'text-marine'}`}>
-                        {echues}
+                    {/* Le tableau dit deja « en retard » pour cet etat : deux
+                        mots pour une meme notion obligeaient a traduire. */}
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Factures en retard</p>
+                    <p className={`text-2xl font-bold ${enRetard > 0 ? 'text-status-incident' : 'text-marine'}`}>
+                        {enRetard}
                     </p>
                 </div>
             </div>
@@ -65,6 +70,7 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Échéance</th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">Montant TTC</th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">État</th>
+                                {colonnePaiement && <th scope="col" className="px-4 py-3"><span className="sr-only">Paiement</span></th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -103,12 +109,14 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                             {euros(facture.ttc)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
-                                                    {etat.libelle}
-                                                </span>
-                                                {/* Regler depuis la liste evite d'ouvrir chaque facture
-                                                    pour trouver ou payer. */}
+                                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
+                                                {etat.libelle}
+                                            </span>
+                                        </td>
+                                        {/* Colonne a part : les etats n'ont pas la meme largeur,
+                                            les boutons ne s'aligneraient pas derriere eux. */}
+                                        {colonnePaiement && (
+                                            <td className="whitespace-nowrap px-4 py-3">
                                                 {facture.peut_payer && (
                                                     <button
                                                         type="button"
@@ -118,14 +126,14 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                                         Payer
                                                     </button>
                                                 )}
-                                            </div>
-                                        </td>
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
                             {factures.length === 0 && (
                                 <tr>
-                                    <td className="px-4 py-8 text-center text-slate-600" colSpan={canPlan ? 7 : 6}>
+                                    <td className="px-4 py-8 text-center text-slate-600" colSpan={(canPlan ? 7 : 6) + (colonnePaiement ? 1 : 0)}>
                                         Aucune facture pour l'instant.
                                     </td>
                                 </tr>

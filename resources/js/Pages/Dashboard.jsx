@@ -408,7 +408,7 @@ function Facturation({ facturation }) {
 
             {facturation.en_retard > 0 && (
                 <p className="mt-2 text-xs font-semibold text-status-incident">
-                    dont {facturation.en_retard} facture{facturation.en_retard > 1 ? 's' : ''} échue{facturation.en_retard > 1 ? 's' : ''}
+                    dont {facturation.en_retard} facture{facturation.en_retard > 1 ? 's' : ''} en retard
                 </p>
             )}
 
