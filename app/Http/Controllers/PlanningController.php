@@ -27,29 +27,47 @@ class PlanningController extends Controller
             $statut = 'PENDING';
         }
 
+        $priorite = $request->query('priorite');
+        if (! in_array($priorite, TransportOrder::PRIORITES, true)) {
+            $priorite = null;
+        }
+
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle:registration,brand,model,capacity_tonnes',
             'driver.user:id,first_name,last_name',
         ])
             ->where('status', $statut)
+            ->when($priorite, fn ($q) => $q->where('priority', $priorite))
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
             ->paginate(15)
             ->withQueryString();
 
+        // Le compte par priorite porte sur le statut affiche : un
+        // planificateur veut savoir combien d'urgences restent a traiter
+        // dans la colonne ou il travaille, pas dans toute la base.
+        $parPriorite = TransportOrder::where('status', $statut)
+            ->selectRaw('priority, count(*) AS total')
+            ->groupBy('priority')
+            ->pluck('total', 'priority');
+
         $vehicles = Vehicle::where('is_available', true)
             ->orderBy('registration')
             ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift']);
 
+        // Les chauffeurs inaptes restent dans la liste, grises et motives :
+        // les faire disparaitre laisserait le planificateur chercher un nom
+        // qu'il sait present dans l'entreprise.
         $drivers = Driver::with('user:id,first_name,last_name')
             ->where('is_available', true)
-            ->get(['id', 'license_type', 'adr_certified'])
-            ->map(fn ($d) => [
+            ->get()
+            ->map(fn (Driver $d) => [
                 'id' => $d->id,
                 'nom' => $d->user ? $d->user->first_name.' '.$d->user->last_name : 'Chauffeur '.$d->id,
                 'license_type' => $d->license_type,
                 'adr_certified' => $d->adr_certified,
+                'empechements' => $d->empechements(),
             ])
             ->sortBy('nom')
             ->values();
@@ -59,6 +77,10 @@ class PlanningController extends Controller
             'vehicles' => $vehicles,
             'drivers' => $drivers,
             'statut' => $statut,
+            'priorite' => $priorite,
+            'priorites' => collect(TransportOrder::PRIORITES)
+                ->map(fn (string $p) => ['valeur' => $p, 'nombre' => (int) ($parPriorite[$p] ?? 0)])
+                ->all(),
             'compteurs' => TransportOrder::selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
@@ -85,6 +107,14 @@ class PlanningController extends Controller
 
         if (! $driver->is_available) {
             return back()->withErrors(['driver_id' => 'Ce chauffeur n\'est plus disponible.']);
+        }
+
+        // Un titre perime n'est pas une alerte a afficher, c'est un refus :
+        // l'entreprise repond de ce qu'elle met sur la route.
+        if ($empechements = $driver->empechements()) {
+            return back()->withErrors([
+                'driver_id' => 'Ce chauffeur ne peut pas prendre la route : '.implode(', ', $empechements).'.',
+            ]);
         }
 
         if ($vehicle->capacity_tonnes * 1000 < $transportOrder->weight) {
