@@ -20,7 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Stripe notifie le paiement depuis ses serveurs : aucune session,
+        // donc aucun jeton de formulaire a presenter. L'appel est authentifie
+        // par la signature de son en-tete, verifiee dans le controleur.
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Une session dure deux heures. Passe ce delai, le jeton du

@@ -60,7 +60,23 @@ function BoutonPaiement({ facture }) {
     );
 }
 
-export default function Show({ facture, peutMarquerPayee = false }) {
+function BoutonPayerEnLigne({ facture }) {
+    const { post, processing } = useForm({});
+
+    return (
+        <button
+            type="button"
+            onClick={() => post(route('payments.payer', facture.id))}
+            disabled={processing}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-action px-4 py-2 text-sm font-bold text-marine-deep shadow-sm transition hover:bg-action-dark disabled:opacity-60"
+        >
+            <Icone nom="facture" className="h-4 w-4" />
+            {processing ? 'Redirection…' : 'Payer en ligne'}
+        </button>
+    );
+}
+
+export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLigne = false }) {
     const etat = ETATS[facture.etat] ?? ETATS.SENT;
 
     return (
@@ -93,6 +109,7 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                             <Icone nom="facture" className="h-4 w-4" />
                             XML Peppol
                         </a>
+                        {peutPayerEnLigne && <BoutonPayerEnLigne facture={facture} />}
                         {peutMarquerPayee && <BoutonPaiement facture={facture} />}
                     </div>
                 </div>

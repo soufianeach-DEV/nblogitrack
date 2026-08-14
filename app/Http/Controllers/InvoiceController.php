@@ -93,6 +93,11 @@ class InvoiceController extends Controller
                 ])->all(),
             ],
             'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
+            // Le client regle sa propre facture ; le personnel n'a pas a
+            // payer a sa place.
+            'peutPayerEnLigne' => $invoice->status === 'SENT'
+                && $utilisateur->cannot('view-all-orders')
+                && $invoice->client_id === $utilisateur->id,
         ]);
     }
 
