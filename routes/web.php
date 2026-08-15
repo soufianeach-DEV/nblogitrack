@@ -13,7 +13,9 @@ use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TarifController;
+use App\Http\Controllers\LangueController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\TranslationController;
 use App\Http\Controllers\TransportOrderController;
 use App\Http\Controllers\VatController;
 use App\Http\Controllers\VehicleController;
@@ -101,6 +103,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/personnel', [StaffController::class, 'store'])->name('staff.store');
         Route::patch('/personnel/{user}/activation', [StaffController::class, 'toggle'])->name('staff.toggle');
         Route::post('/personnel/{user}/lien-mot-de-passe', [StaffController::class, 'resetLink'])->name('staff.reset-link');
+
+        // A11 : corriger un texte sans toucher au code ni redeployer.
+        Route::get('/traductions', [TranslationController::class, 'index'])->name('translations.index');
+        Route::patch('/traductions/{translation}', [TranslationController::class, 'update'])->name('translations.update');
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
@@ -149,5 +155,10 @@ Route::middleware('throttle:120,1')->group(function () {
 Route::get('/verification-tva', [VatController::class, 'verifier'])
     ->middleware('throttle:20,1')
     ->name('vat.verify');
+
+// F11 : la bascule est ouverte au visiteur. Un client neerlandophone
+// doit pouvoir lire la page d'accueil dans sa langue avant de creer un
+// compte, pas apres.
+Route::get('/langue/{langue}', LangueController::class)->name('langue');
 
 require __DIR__.'/auth.php';

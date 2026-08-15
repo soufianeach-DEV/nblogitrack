@@ -1,5 +1,7 @@
+import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
 import Icone from '@/Components/Icone';
+import { useTraduction } from '@/traduire';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -42,6 +44,7 @@ function Groupe({ titre, children }) {
 
 export default function AuthenticatedLayout({ header, children }) {
     const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
@@ -91,10 +94,10 @@ export default function AuthenticatedLayout({ header, children }) {
         <>
             <Groupe titre="Opérations">
                 <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
-                    Tableau de bord
+                    {t('nav.tableau_de_bord', 'Tableau de bord')}
                 </LienMenu>
                 <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
-                    Ordres de transport
+                    {canPlan ? 'Ordres de transport' : t('nav.mes_expeditions', 'Mes expéditions')}
                 </LienMenu>
                 {canPlan && (
                     <LienMenu href={route('planning.index')} active={route().current('planning.index')} icone="planning" onClick={fermer}>
@@ -103,7 +106,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 )}
                 {! canPlan && (
                     <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
-                        Suivi
+                        {t('nav.suivi', 'Suivre un envoi')}
                     </LienMenu>
                 )}
                 {canHandleQuotes && (
@@ -135,7 +138,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
             <Groupe titre="Finance &amp; data">
                 <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
-                    Facturation
+                    {canPlan ? 'Facturation' : t('nav.mes_factures', 'Mes factures')}
                 </LienMenu>
             </Groupe>
 
@@ -144,6 +147,11 @@ export default function AuthenticatedLayout({ header, children }) {
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
                         Journaux
                     </LienMenu>
+                    {canManageUsers && (
+                        <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
+                            Traductions
+                        </LienMenu>
+                    )}
                 </Groupe>
             )}
         </>
@@ -157,7 +165,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="aide" className="h-5 w-5 shrink-0" />
-                Mon profil
+                {t('nav.profil', 'Mon profil')}
             </Link>
             <Link
                 href={route('logout')}
@@ -166,8 +174,12 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex w-full items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="sortie" className="h-5 w-5 shrink-0" />
-                Déconnexion
+                {t('nav.deconnexion', 'Déconnexion')}
             </Link>
+            <div className="flex items-center gap-2 px-4 pb-1 pt-2">
+                <span className="text-xs text-slate-500">{t('nav.langue', 'Langue')}</span>
+                <ChoixLangue sombre />
+            </div>
         </div>
     );
 

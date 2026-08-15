@@ -1,0 +1,7 @@
+﻿php : <claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+Au caractère Ligne:2 : 1
++ php artisan tinker --execute="foreach (App\Models\User::whereIn('emai ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (<claude-code-hi...ns-official" />:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

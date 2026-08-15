@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,12 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // DefinirLangue passe avant Inertia : le partage des traductions
+        // lit la langue deja choisie.
         $middleware->web(append: [
+            DefinirLangue::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
-
-        //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Une session dure deux heures. Passe ce delai, le jeton du

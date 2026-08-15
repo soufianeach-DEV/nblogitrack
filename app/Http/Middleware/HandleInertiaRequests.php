@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Translation;
+use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -43,6 +45,17 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],
+            // Le dictionnaire complet part avec chaque page. Il tient en
+            // cache cote serveur et vaut quelques kilo-octets : moins cher
+            // qu'un aller-retour supplementaire a chaque navigation.
+            //
+            // Il s'appelle dictionnaire et non traductions : une prop de
+            // page ecrase silencieusement une prop partagee de meme nom, et
+            // l'ecran d'administration renvoie justement sa liste sous le
+            // nom traductions. Le layout y perdait sa langue sans erreur.
+            'langue' => app()->getLocale(),
+            'langues' => Translation::LANGUES,
+            'dictionnaire' => fn () => Traductions::pour(app()->getLocale()),
         ];
     }
 }
