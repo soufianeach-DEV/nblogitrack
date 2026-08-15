@@ -180,14 +180,16 @@ function PlanDeCharge({ calendrier }) {
                     <Link
                         key={j.date}
                         href={route('planning.index', { status: 'PENDING' })}
-                        title={`${j.jour} ${j.numero} ${j.mois} — ${j.enlevements} enlèvement${j.enlevements > 1 ? 's' : ''}`
+                        title={`${j.jour} ${j.numero} ${j.mois}`
+                            + (j.ferie ? ` — ${j.ferie}, quai fermé` : '')
+                            + ` — ${j.enlevements} enlèvement${j.enlevements > 1 ? 's' : ''}`
                             + `, ${j.livraisons} livraison${j.livraisons > 1 ? 's' : ''} promise${j.livraisons > 1 ? 's' : ''}`
                             + (j.a_affecter > 0 ? ` — ${j.a_affecter} sans véhicule` : '')
                             + (j.sature ? ` — au-delà de la capacité de ${capacite}` : '')}
                         className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
                             j.aujourdhui ? 'border-action bg-action/5'
                                 : j.sature ? 'border-status-incident/40 bg-status-incident/5'
-                                : j.weekend ? 'border-slate-100 bg-surface hover:bg-slate-100'
+                                : j.chome ? 'border-slate-200 bg-slate-100 hover:bg-slate-200'
                                 : 'border-slate-100 hover:bg-surface'
                         }`}
                     >
@@ -231,7 +233,13 @@ function PlanDeCharge({ calendrier }) {
                             </span>
                         )}
 
-                        {j.enlevements === 0 && j.livraisons === 0 && (
+                        {j.ferie && (
+                            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                {j.ferie}
+                            </span>
+                        )}
+
+                        {j.enlevements === 0 && j.livraisons === 0 && ! j.ferie && (
                             <span className="text-[11px] text-slate-400">Rien de prévu</span>
                         )}
                     </Link>

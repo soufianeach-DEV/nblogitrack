@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Support\JoursFeries;
 use App\Support\Tarificateur;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -123,6 +124,22 @@ class TransportOrderController extends Controller
 
         if ($grid->zone !== $data['delivery_country']) {
             return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
+        }
+
+        // Le quai ne charge ni le dimanche ni un jour ferie legal. Le samedi
+        // reste ouvre : le transport y travaille, et la Belgique n'interdit
+        // pas la circulation des poids lourds le week-end.
+        if (! empty($data['pickup_date'])) {
+            $enlevement = Carbon::parse($data['pickup_date']);
+
+            if (JoursFeries::chome($enlevement)) {
+                return back()->withErrors([
+                    'pickup_date' => 'Aucun enlèvement le '
+                        .($enlevement->isSunday() ? 'dimanche' : strtolower(JoursFeries::nom($enlevement)))
+                        .'. Le premier jour ouvrable est le '
+                        .JoursFeries::prochainJourOuvrable($enlevement)->format('d/m/Y').'.',
+                ]);
+            }
         }
 
         if (! empty($data['requested_delivery_date'])) {

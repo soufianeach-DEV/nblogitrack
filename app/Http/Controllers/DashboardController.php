@@ -10,6 +10,7 @@ use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\JoursFeries;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -396,6 +397,10 @@ class DashboardController extends Controller
                 'mois' => $date->locale('fr')->isoFormat('MMM'),
                 'weekend' => $date->isWeekend(),
                 'aujourdhui' => $date->isToday(),
+                // Un quai ferme n'est pas un jour creux : le planificateur
+                // doit voir pourquoi il ne peut rien y poser.
+                'ferie' => JoursFeries::nom($date),
+                'chome' => JoursFeries::chome($date),
                 'enlevements' => $enlevement,
                 'a_affecter' => $aAffecter,
                 'livraisons' => (int) ($livraisons[$cle]->nombre ?? 0),
