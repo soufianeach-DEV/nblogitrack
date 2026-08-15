@@ -6,23 +6,34 @@ use App\Support\Traductions;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Choisit la langue de la requete.
  *
- * L'utilisateur connecte impose la sienne, elle le suit d'un poste a
- * l'autre. Le visiteur garde la sienne en session, le temps de sa
- * visite. A defaut le francais, langue de l'entreprise.
+ * L'adresse fait foi : /nl/tarieven est en neerlandais, quel que soit le
+ * compte qui la demande. C'est ce qui rend un lien partageable. A defaut
+ * de prefixe, sur les points d'entree JSON et les redirections, on
+ * retombe sur la langue du compte, puis sur celle de la session, puis
+ * sur le francais, langue de l'entreprise.
  */
 class DefinirLangue
 {
     public function handle(Request $request, Closure $suivant): Response
     {
-        $langue = $request->user()?->locale
+        $langue = $request->route('langue')
+            ?? $request->user()?->locale
             ?? $request->session()->get('langue');
 
-        App::setLocale(Traductions::estServie($langue) ? $langue : 'fr');
+        $langue = Traductions::estServie($langue) ? $langue : 'fr';
+
+        App::setLocale($langue);
+
+        // Sans cela chaque route() reclamerait la langue en argument. Le
+        // parametre se remplit tout seul, les appels existants ne changent
+        // pas et Ziggy reprend la meme valeur cote navigateur.
+        URL::defaults(['langue' => $langue]);
 
         return $suivant($request);
     }

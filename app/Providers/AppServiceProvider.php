@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +29,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // Toutes les pages portent la langue dans leur adresse. Hors requete
+        // HTTP il n'y a pas d'URL a lire : une commande console ou un mail
+        // envoye depuis la file d'attente n'aurait rien pour remplir le
+        // parametre, et route() leverait une exception. Le francais sert de
+        // valeur de depart, DefinirLangue la remplace a chaque requete.
+        URL::defaults(['langue' => 'fr']);
 
         // Le suivi se consulte sans compte, avec un numero et un code : la
         // limite serree y empeche d'essayer des numeros au hasard. Un client

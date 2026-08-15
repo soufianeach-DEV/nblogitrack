@@ -22,6 +22,17 @@ use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+/*
+ * Les pages portent la langue dans leur adresse : /fr/tarifs, /nl/tarifs.
+ * Chaque version a ainsi sa propre URL, partageable et indexable, ce qu'un
+ * choix garde en session ne permet pas.
+ *
+ * Les points d'entree JSON restent hors du prefixe, plus bas : une liste de
+ * codes postaux n'a pas de version neerlandaise, et les prefixer obligerait
+ * le JavaScript a connaitre la langue courante pour appeler le serveur.
+ */
+Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function () {
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -137,6 +148,14 @@ Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:suivi')
     ->name('tracking.show');
 
+require __DIR__.'/auth.php';
+
+}); // fin du groupe prefixe par la langue
+
+/*
+ * Ce qui suit ne rend pas de page : ni prefixe, ni traduit.
+ */
+
 // L'itineraire interroge deux services exterieurs : il reste derriere le
 // compte, et le controleur verifie en plus que l'expedition est consultable.
 Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
@@ -159,6 +178,23 @@ Route::get('/verification-tva', [VatController::class, 'verifier'])
 // F11 : la bascule est ouverte au visiteur. Un client neerlandophone
 // doit pouvoir lire la page d'accueil dans sa langue avant de creer un
 // compte, pas apres.
-Route::get('/langue/{langue}', LangueController::class)->name('langue');
+//
+// Le parametre s'appelle « vers » et non « langue » : URL::defaults pose
+// une valeur par defaut pour « langue », qui remplissait ce parametre
+// homonyme et renvoyait les trois boutons vers la langue courante.
+Route::get('/langue/{vers}', LangueController::class)->name('langue');
 
-require __DIR__.'/auth.php';
+// Une adresse sans prefixe rejoint la langue en cours plutot que de
+// renvoyer une erreur : les liens d'avant le prefixage continuent de
+// fonctionner, et l'on n'atterrit jamais sur une page morte.
+Route::get('/', fn () => redirect('/'.app()->getLocale()));
+
+Route::fallback(function (Illuminate\Http\Request $requete) {
+    $chemin = trim($requete->path(), '/');
+
+    // Deja prefixe : c'est une vraie page introuvable, pas un oubli.
+    abort_if(App\Support\Traductions::estServie(explode('/', $chemin)[0]), 404);
+
+    return redirect('/'.app()->getLocale().'/'.$chemin.
+        ($requete->getQueryString() ? '?'.$requete->getQueryString() : ''));
+});
