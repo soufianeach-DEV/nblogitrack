@@ -204,7 +204,10 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <div className="md:pl-64">
-                <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
+                {/* Au-dessus de tout ce qu'une page peut afficher : le menu du
+                    compte doit rester atteignable, y compris par-dessus une
+                    carte qui empile ses propres calques. */}
+                <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
                     <button
                         type="button"
                         onClick={() => setMenuOuvert(true)}

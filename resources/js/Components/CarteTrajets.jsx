@@ -190,5 +190,9 @@ export default function CarteTrajets({
         }
     }, [trajets, selection, peages]);
 
-    return <div ref={conteneur} className={className} />;
+    // isolate cree un contexte d'empilement autour de la carte. Leaflet place
+    // ses calques a un z-index de 400 et ses commandes a 1000 : sans cette
+    // barriere, ils passent au-dessus de l'en-tete et cachent le menu du
+    // compte, qui n'est qu'a 20.
+    return <div ref={conteneur} className={`isolate ${className ?? ''}`} />;
 }

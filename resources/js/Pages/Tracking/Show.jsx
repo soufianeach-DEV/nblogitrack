@@ -496,7 +496,11 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                     )}
                 </div>
 
-                <div className={`relative h-[420px] overflow-hidden rounded-2xl shadow-sm lg:h-auto ${agrandie ? 'lg:w-full' : 'lg:w-1/3'}`}>
+                {/* isolate enferme la carte et ses commandes dans leur propre
+                    contexte : le bouton d'agrandissement monte a 1100 pour
+                    passer devant les calques de Leaflet, et sans cette
+                    barriere il passait aussi devant l'en-tete. */}
+                <div className={`relative isolate h-[420px] overflow-hidden rounded-2xl shadow-sm lg:h-auto ${agrandie ? 'lg:w-full' : 'lg:w-1/3'}`}>
                     <CarteTrajets
                         trajets={expeditions.map((expedition) => expedition.id === order?.id
                             ? { ...expedition, trace: itineraire?.geometrie }
