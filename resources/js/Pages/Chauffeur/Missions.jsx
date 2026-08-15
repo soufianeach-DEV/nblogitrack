@@ -1,8 +1,9 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import ChauffeurLayout from '@/Layouts/ChauffeurLayout';
+import { positionActuelle } from '@/position';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
-import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 
 const STATUTS = {
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', pastille: 'bg-action/15 text-action-dark', barre: 'border-l-action' },
@@ -73,18 +74,32 @@ function CarteMission({ mission, active, onClick }) {
 function BoutonAvancement({ mission }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
-    const { patch, processing } = useForm({ statut: mission.action.statut });
+    const [processing, setProcessing] = useState(false);
 
-    const envoyer = () => {
+    const envoyer = async () => {
         if (! arme) {
             setArme(true);
 
             return;
         }
 
-        patch(route('missions.status', mission.id), {
+        setProcessing(true);
+
+        // La position accompagne la declaration quand le navigateur veut
+        // bien la donner. On l'attend au plus huit secondes : au-dela, on
+        // envoie le changement d'etat sans elle plutot que de laisser le
+        // chauffeur devant un bouton qui tourne.
+        const point = await positionActuelle();
+
+        router.patch(route('missions.status', mission.id), {
+            statut: mission.action.statut,
+            ...(point ?? {}),
+        }, {
             preserveScroll: true,
-            onFinish: () => setArme(false),
+            onFinish: () => {
+                setProcessing(false);
+                setArme(false);
+            },
         });
     };
 
@@ -115,6 +130,104 @@ function BoutonAvancement({ mission }) {
                     {t('action.annuler', 'Annuler')}
                 </button>
             )}
+        </div>
+    );
+}
+
+/**
+ * Le partage de position pendant une mission en cours.
+ *
+ * Il ne demarre que si le planificateur l'a ouvert pour cette
+ * mission-la, s'arrete des que la mission quitte l'etat « en cours », et
+ * se voit : un chauffeur doit savoir a l'instant meme si sa position
+ * part ou non. Un partage silencieux serait exactement ce que
+ * l'Autorite de protection des donnees reproche.
+ *
+ * Le serveur refuse de toute facon les points hors mission et impose la
+ * cadence : ce composant est une commodite, pas la garantie.
+ */
+function SuiviDirect({ mission }) {
+    const t = useTraduction();
+    const locale = useLocale();
+    const [dernier, setDernier] = useState(null);
+    const [refuse, setRefuse] = useState(false);
+    const actif = useRef(true);
+
+    const partage = mission.suivi_direct && mission.statut === 'IN_PROGRESS';
+
+    useEffect(() => {
+        if (! partage) return undefined;
+
+        actif.current = true;
+
+        const envoyer = async () => {
+            const point = await positionActuelle();
+
+            if (! actif.current) return;
+
+            if (! point) {
+                setRefuse(true);
+
+                return;
+            }
+
+            setRefuse(false);
+
+            try {
+                const reponse = await fetch(route('missions.position', mission.id), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-XSRF-TOKEN': decodeURIComponent(
+                            document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
+                        ),
+                    },
+                    body: JSON.stringify(point),
+                });
+
+                const resultat = await reponse.json();
+
+                // Le serveur a le dernier mot : s'il dit que le suivi est
+                // ferme, on cesse d'envoyer sans attendre un rechargement.
+                if (resultat.suivi === false) {
+                    actif.current = false;
+                } else if (resultat.retenu) {
+                    setDernier(new Date());
+                }
+            } catch {
+                // Une coupure reseau n'a pas a remonter au chauffeur : le
+                // point suivant repartira.
+            }
+        };
+
+        envoyer();
+        const minuteur = setInterval(envoyer, 5 * 60 * 1000);
+
+        return () => {
+            actif.current = false;
+            clearInterval(minuteur);
+        };
+    }, [partage, mission.id]);
+
+    if (! partage) return null;
+
+    return (
+        <div className={`mt-4 rounded-lg px-3 py-2.5 text-xs ${refuse ? 'bg-status-incident/10' : 'bg-brand-blue/10'}`}>
+            <p className={`font-semibold ${refuse ? 'text-status-incident' : 'text-brand-blue'}`}>
+                {refuse
+                    ? t('suivi_direct.refuse', 'Position non partagée')
+                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission')}
+            </p>
+            <p className="mt-0.5 text-slate-600">
+                {refuse
+                    ? t('suivi_direct.refuse_aide', 'Le client ne voit pas votre progression. La mission se déclare normalement.')
+                    : dernier
+                        ? t('suivi_direct.dernier_envoi', 'Dernier envoi à :heure. Le partage s\'arrête à la livraison.', {
+                            heure: dernier.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+                        })
+                        : t('suivi_direct.attente', 'Le partage s\'arrête automatiquement à la livraison.')}
+            </p>
         </div>
     );
 }
@@ -224,6 +337,8 @@ function Fiche({ mission, onRetour }) {
                         {t('mission.livree_le', 'Livrée le')} {mission.livree_le}
                     </p>
                 )}
+
+                <SuiviDirect mission={mission} />
             </div>
 
             {mission.action && <BoutonAvancement mission={mission} />}

@@ -212,6 +212,36 @@ class PlanningController extends Controller
         return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' affecté au véhicule '.$vehicle->registration.'.');
     }
 
+    /**
+     * Ouvre ou ferme le suivi de position pour une mission.
+     *
+     * C'est une decision, pas un reglage : elle se prend mission par
+     * mission, elle se journalise, et elle laisse une trace nominative.
+     * Le jour ou un chauffeur demande qui a decide de suivre sa tournee
+     * du 15 aout, le journal repond.
+     *
+     * La fermeture n'efface pas les points deja releves : c'est la purge
+     * qui s'en charge, apres la livraison.
+     */
+    public function suiviDirect(TransportOrder $transportOrder): RedirectResponse
+    {
+        $ouvert = ! $transportOrder->suivi_direct;
+
+        $transportOrder->update(['suivi_direct' => $ouvert]);
+
+        ActivityLog::record(
+            $ouvert ? 'order.tracking_opened' : 'order.tracking_closed',
+            ($ouvert ? 'Suivi de position ouvert' : 'Suivi de position fermé')
+                .' pour '.$transportOrder->tracking_number,
+            $transportOrder,
+            ['chauffeur_id' => $transportOrder->driver_id],
+        );
+
+        return back()->with('success', $ouvert
+            ? 'Suivi de position activé pour cette mission. Le chauffeur en est averti sur son écran.'
+            : 'Suivi de position désactivé.');
+    }
+
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
         $data = $request->validate([

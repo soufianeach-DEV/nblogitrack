@@ -65,6 +65,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
         Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
         Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
+
+    // Le suivi de position s'ouvre mission par mission, jamais pour toute
+    // la flotte : c'est ce qui le distingue d'une surveillance.
+    Route::patch('/planification/{transportOrder}/suivi', [PlanningController::class, 'suiviDirect'])
+        ->name('planning.tracking');
     });
 
     Route::middleware('can:handle-quotes')->group(function () {
@@ -75,6 +80,13 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:drive')->group(function () {
         Route::get('/missions', [MissionController::class, 'index'])->name('missions.index');
         Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
+
+        // Le point de route, envoye pendant la mission quand le suivi
+        // direct est ouvert. La limite de debit borne ce que l'ecran peut
+        // deposer meme s'il est modifie.
+        Route::post('/missions/{transportOrder}/position', [MissionController::class, 'position'])
+            ->middleware('throttle:30,1')
+            ->name('missions.position');
     });
 
     Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');

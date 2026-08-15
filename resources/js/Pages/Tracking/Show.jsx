@@ -228,7 +228,63 @@ function LigneExpedition({ expedition, active, onClick }) {
     );
 }
 
-function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [] }) {
+/**
+ * Les reperes geolocalises d'une expedition.
+ *
+ * Deux jalons au plus, releves quand le chauffeur a declare l'etape, et
+ * la derniere position connue si le suivi a ete ouvert pour cette
+ * mission. Jamais la trace complete du trajet : le client sait ou en est
+ * sa marchandise, il ne reconstitue pas une journee de travail.
+ */
+function Reperes({ jalons = [], position = null }) {
+    const t = useTraduction();
+
+    if ((jalons ?? []).length === 0 && ! position) {
+        return null;
+    }
+
+    return (
+        <div className="mt-4 border-t border-slate-100 pt-3">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                {t('suivi.reperes', 'Repères')}
+            </h3>
+
+            <ul className="space-y-1.5">
+                {(jalons ?? []).map((j) => (
+                    <li key={j.evenement} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${
+                            j.evenement === 'DELIVERED' ? 'bg-status-delivered' : 'bg-brand-blue'
+                        }`} />
+                        <span className="font-semibold text-marine">{j.libelle}</span>
+                        <span className="text-slate-600">{j.localite}</span>
+                        <span className="ml-auto font-mono text-xs text-slate-600">{j.horodatage}</span>
+                    </li>
+                ))}
+
+                {position && (
+                    <li className="flex flex-wrap items-baseline gap-x-2 rounded-lg bg-brand-blue/5 px-2 py-1.5 text-sm">
+                        <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-action" />
+                        <span className="font-semibold text-marine">{t('suivi.en_route', 'En route')}</span>
+                        <span className="text-slate-600">
+                            {position.minutes < 1
+                                ? t('suivi.a_l_instant', 'à l\'instant')
+                                : t('suivi.il_y_a', 'il y a :n min', { n: position.minutes })}
+                        </span>
+                        <span className="ml-auto font-mono text-xs text-slate-600">{position.horodatage}</span>
+                    </li>
+                )}
+            </ul>
+
+            {position && (
+                <p className="mt-2 text-[11px] text-slate-600">
+                    {t('suivi.position_aide', 'Position approximative, actualisée toutes les cinq minutes pendant le trajet. Elle cesse d\'être relevée à la livraison.')}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, historique, expeditions = [] }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const v = useVocabulaire();
@@ -273,7 +329,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
         {
             preserveState: true,
             preserveScroll: true,
-            only: ['order', 'chauffeur', 'etapes', 'historique', 'searched', 'expeditions'],
+            only: ['order', 'chauffeur', 'etapes', 'jalons', 'position', 'historique', 'searched', 'expeditions'],
         },
     );
 
@@ -343,6 +399,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                             ) : (
                                 <Frise etapes={etapes} />
                             )}
+
+                            <Reperes jalons={jalons} position={position} />
 
                             <div className="mt-4 border-t border-slate-100 pt-3">
                                 <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
@@ -520,6 +578,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                             ? { ...expedition, trace: itineraire?.geometrie }
                             : expedition)}
                         selection={order?.id ?? null}
+                        jalons={jalons ?? []}
+                        position={position}
                         onSelection={(id) => {
                             const cible = expeditions.find((e) => e.id === id);
 

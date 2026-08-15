@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
 use App\Support\Traductions;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +25,15 @@ class MissionController extends Controller
         'IN_PROGRESS' => 'PENDING',
         'DELIVERED' => 'IN_PROGRESS',
     ];
+
+    /**
+     * L'intervalle minimal entre deux points de route.
+     *
+     * Cinq minutes suffisent a montrer une progression sur une carte.
+     * Descendre plus bas n'apprendrait rien au client et rapprocherait le
+     * releve d'un suivi continu.
+     */
+    private const CADENCE_SECONDES = 300;
 
     /**
      * Les missions du chauffeur connecte.
@@ -62,6 +73,14 @@ class MissionController extends Controller
 
         $donnees = $request->validate([
             'statut' => 'required|in:'.implode(',', array_keys(self::TRANSITIONS)),
+            // La position accompagne le changement d'etat quand le
+            // navigateur veut bien la donner. Elle est facultative a
+            // dessein : un refus, un sous-sol ou un telephone sans signal
+            // ne doivent jamais empecher un chauffeur de declarer une
+            // livraison.
+            'lat' => 'nullable|numeric|between:-90,90',
+            'lng' => 'nullable|numeric|between:-180,180',
+            'precision_m' => 'nullable|integer|min:0|max:100000',
         ]);
 
         $vise = $donnees['statut'];
@@ -85,6 +104,8 @@ class MissionController extends Controller
 
         $transportOrder->update($changements);
 
+        $this->poserJalon($transportOrder, $vise, $donnees, $request->user()->id);
+
         ActivityLog::record(
             $vise === 'DELIVERED' ? 'mission.delivered' : 'mission.started',
             $vise === 'DELIVERED'
@@ -101,6 +122,88 @@ class MissionController extends Controller
         return back()->with('success', $vise === 'DELIVERED'
             ? 'Livraison enregistrée.'
             : 'Mission prise en charge.');
+    }
+
+    /**
+     * Le point de route envoye periodiquement par l'ecran du chauffeur.
+     *
+     * Trois verrous, verifies ici et non dans le navigateur : la mission
+     * est bien la sienne, elle est en cours, et le suivi direct a ete
+     * ouvert pour elle. Le premier qui manque arrete l'envoi.
+     *
+     * La cadence est imposee au serveur. Un client qui enverrait un point
+     * par seconde n'obtiendrait rien de plus : c'est de la minimisation
+     * tenue par le code, pas par la bonne volonte de l'appelant.
+     */
+    public function position(Request $request, TransportOrder $transportOrder): JsonResponse
+    {
+        abort_if($transportOrder->driver_id !== $request->user()->id, 404);
+
+        if ($transportOrder->status !== 'IN_PROGRESS' || ! $transportOrder->suivi_direct) {
+            return response()->json(['suivi' => false]);
+        }
+
+        $donnees = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'precision_m' => 'nullable|integer|min:0|max:100000',
+        ]);
+
+        $lat = (float) $donnees['lat'];
+        $lng = (float) $donnees['lng'];
+        $precision = isset($donnees['precision_m']) ? (int) $donnees['precision_m'] : null;
+
+        if (! ShipmentPosition::utilisable($lat, $lng, $precision)) {
+            return response()->json(['suivi' => true, 'retenu' => false]);
+        }
+
+        $dernier = ShipmentPosition::where('transport_order_id', $transportOrder->id)
+            ->where('type', ShipmentPosition::ROUTE)
+            ->latest('recorded_at')->first();
+
+        if ($dernier !== null && $dernier->recorded_at->diffInSeconds(now()) < self::CADENCE_SECONDES) {
+            return response()->json(['suivi' => true, 'retenu' => false]);
+        }
+
+        ShipmentPosition::create([
+            'transport_order_id' => $transportOrder->id,
+            'driver_id' => $request->user()->id,
+            'type' => ShipmentPosition::ROUTE,
+            'lat' => $lat,
+            'lng' => $lng,
+            'precision_m' => $precision,
+            'recorded_at' => now(),
+        ]);
+
+        return response()->json(['suivi' => true, 'retenu' => true]);
+    }
+
+    /**
+     * Enregistre ou la marchandise a ete prise en charge, ou livree.
+     *
+     * C'est un fait de gestion, au meme titre qu'une mention portee sur
+     * une lettre de voiture : deux points par mission, pas un suivi.
+     */
+    private function poserJalon(TransportOrder $ordre, string $statut, array $donnees, int $chauffeur): void
+    {
+        $lat = isset($donnees['lat']) ? (float) $donnees['lat'] : null;
+        $lng = isset($donnees['lng']) ? (float) $donnees['lng'] : null;
+        $precision = isset($donnees['precision_m']) ? (int) $donnees['precision_m'] : null;
+
+        if (! ShipmentPosition::utilisable($lat, $lng, $precision)) {
+            return;
+        }
+
+        ShipmentPosition::create([
+            'transport_order_id' => $ordre->id,
+            'driver_id' => $chauffeur,
+            'type' => ShipmentPosition::JALON,
+            'evenement' => $statut === 'DELIVERED' ? 'DELIVERED' : 'PICKED_UP',
+            'lat' => $lat,
+            'lng' => $lng,
+            'precision_m' => $precision,
+            'recorded_at' => now(),
+        ]);
     }
 
     /**
@@ -143,6 +246,9 @@ class MissionController extends Controller
             'volume' => $ordre->volume,
             'distance_km' => $ordre->distance_km,
             'consignes' => $ordre->special_instructions,
+            // Le chauffeur doit savoir si sa position part. L'ecran s'en
+            // sert pour afficher le bandeau et pour declencher l'envoi.
+            'suivi_direct' => (bool) $ordre->suivi_direct,
             'client' => $ordre->client?->company_name,
             'vehicule' => $ordre->vehicle ? [
                 'immatriculation' => $ordre->vehicle->registration,

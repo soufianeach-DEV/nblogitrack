@@ -368,6 +368,27 @@ export default function Index({
                                             {dateCourte(ordre.actual_delivery_date)}
                                         </span>
                                     )}
+
+                                    {/* Le suivi de position s'ouvre mission par mission.
+                                        Il n'a de sens qu'en cours de route : une fois
+                                        livre, il n'y a plus rien a suivre. */}
+                                    {ordre.status === 'IN_PROGRESS' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => router.patch(route('planning.tracking', ordre.id), {}, { preserveScroll: true })}
+                                            className={
+                                                'ml-auto rounded-lg px-3 py-1 text-xs font-semibold transition ' +
+                                                (ordre.suivi_direct
+                                                    ? 'bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20'
+                                                    : 'border border-slate-200 text-slate-600 hover:bg-surface')
+                                            }
+                                            title={t('planif.suivi_aide', 'Le chauffeur est averti sur son écran. Les positions s\'effacent après la livraison.')}
+                                        >
+                                            {ordre.suivi_direct
+                                                ? t('planif.suivi_actif', 'Suivi de position activé')
+                                                : t('planif.suivi_inactif', 'Activer le suivi de position')}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

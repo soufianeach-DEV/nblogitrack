@@ -54,7 +54,7 @@ class TransportOrder extends Model
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
-        'vehicle_registration', 'driver_id', 'assigned_at',
+        'vehicle_registration', 'driver_id', 'assigned_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
     ];
 
@@ -63,6 +63,7 @@ class TransportOrder extends Model
         return [
             'is_hazardous' => 'boolean',
             'needs_tail_lift' => 'boolean',
+            'suivi_direct' => 'boolean',
             'created_date' => 'date',
             'requested_delivery_date' => 'date',
             'actual_delivery_date' => 'date',

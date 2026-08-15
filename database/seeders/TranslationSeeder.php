@@ -589,6 +589,15 @@ class TranslationSeeder extends Seeder
 
         'planif' => [
             'besoins' => ['Besoins', 'Vereisten', 'Requirements'],
+
+            // L'ouverture du suivi de position, mission par mission.
+            'suivi_actif' => ['Suivi de position activé', 'Positieopvolging actief', 'Position tracking on'],
+            'suivi_inactif' => ['Activer le suivi de position', 'Positieopvolging activeren', 'Turn on position tracking'],
+            'suivi_aide' => [
+                'Le chauffeur est averti sur son écran. Les positions s\'effacent après la livraison.',
+                'De chauffeur wordt op zijn scherm verwittigd. De posities worden na de levering gewist.',
+                'The driver is notified on their screen. Positions are erased after delivery.',
+            ],
             'charge_utile' => ['Charge utile ≥', 'Laadvermogen ≥', 'Payload ≥'],
             'chauffeur_adr' => ['Chauffeur certifié ADR', 'ADR-gecertificeerde bestuurder', 'ADR-certified driver'],
             'camion' => ['camion', 'vrachtwagen', 'truck'],
@@ -1555,6 +1564,19 @@ class TranslationSeeder extends Seeder
         'suivi' => [
             'titre' => ['Suivre un envoi', 'Een zending volgen', 'Track a shipment'],
             'reference' => ['Numéro de suivi', 'Volgnummer', 'Tracking number'],
+
+            // Les reperes geolocalises de l'envoi.
+            'reperes' => ['Repères', 'Ijkpunten', 'Waypoints'],
+            'jalon_enlevement' => ['Prise en charge', 'Ophaling', 'Pickup'],
+            'jalon_livraison' => ['Livraison', 'Levering', 'Delivery'],
+            'en_route' => ['En route', 'Onderweg', 'En route'],
+            'a_l_instant' => ['à l\'instant', 'zonet', 'just now'],
+            'il_y_a' => ['il y a :n min', ':n min geleden', ':n min ago'],
+            'position_aide' => [
+                'Position approximative, actualisée toutes les cinq minutes pendant le trajet. Elle cesse d\'être relevée à la livraison.',
+                'Benaderende positie, om de vijf minuten bijgewerkt tijdens de rit. Ze wordt niet meer opgenomen na de levering.',
+                'Approximate position, refreshed every five minutes during the journey. It stops being recorded on delivery.',
+            ],
             'rechercher' => ['Rechercher', 'Zoeken', 'Search'],
             'introuvable' => [
                 'Aucun envoi ne correspond à ce numéro.',
@@ -1865,6 +1887,34 @@ class TranslationSeeder extends Seeder
             'appel' => ['Appel', 'Oproep', 'Call'],
             'code' => ['Code', 'Code', 'Code'],
             'duree' => ['Durée', 'Duur', 'Duration'],
+        ],
+
+        /*
+         * Le bandeau du chauffeur pendant un partage de position. Un
+         * partage silencieux serait precisement ce qu'on refuse.
+         */
+        'suivi_direct' => [
+            'actif' => [
+                'Votre position est partagée pour cette mission',
+                'Uw positie wordt gedeeld voor deze opdracht',
+                'Your position is shared for this mission',
+            ],
+            'refuse' => ['Position non partagée', 'Positie niet gedeeld', 'Position not shared'],
+            'refuse_aide' => [
+                'Le client ne voit pas votre progression. La mission se déclare normalement.',
+                'De klant ziet uw voortgang niet. De opdracht wordt gewoon aangegeven.',
+                'The customer cannot see your progress. The mission is declared as usual.',
+            ],
+            'dernier_envoi' => [
+                'Dernier envoi à :heure. Le partage s\'arrête à la livraison.',
+                'Laatste verzending om :heure. Het delen stopt bij de levering.',
+                'Last sent at :heure. Sharing stops on delivery.',
+            ],
+            'attente' => [
+                'Le partage s\'arrête automatiquement à la livraison.',
+                'Het delen stopt automatisch bij de levering.',
+                'Sharing stops automatically on delivery.',
+            ],
         ],
 
         'api_permission' => [

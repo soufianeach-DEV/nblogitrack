@@ -261,14 +261,28 @@ Visiteurs : données strictement nécessaires au fonctionnement du site et à sa
 - Assurer la sécurité de l'application, détecter les accès anormaux — intérêt légitime.
 - Répondre aux demandes de devis — mesures précontractuelles.
 
-## Suivi des envois : ce que l'application fait, et ce qu'elle ne fait pas
-Le suivi d'un envoi repose sur deux éléments, et deux seulement : les coordonnées des adresses d'enlèvement et de livraison, géocodées une fois à la création de l'ordre, et les changements de statut saisis par le conducteur.
+## Suivi géolocalisé des envois
+Le suivi repose sur trois éléments, et trois seulement.
 
-Les véhicules ne sont équipés d'aucun boîtier de géolocalisation. Aucune position n'est enregistrée en temps réel, aucun historique de déplacement n'est conservé, et le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller.
+Les coordonnées des adresses d'enlèvement et de livraison, géocodées une fois à la création de l'ordre. Les changements de statut saisis par le conducteur. Et deux repères de position, relevés au moment où il déclare la prise en charge puis la livraison : ce sont des faits de gestion, conservés comme une mention portée sur une lettre de voiture.
 
-Ce choix est délibéré. Localiser un véhicule revient à localiser son conducteur : c'est une donnée relative à un travailleur. L'Autorité de protection des données admet un tel traitement lorsqu'il poursuit un but professionnel précis, mais juge disproportionné un contrôle permanent et systématique. Or suivre une marchandise n'oblige pas à suivre un homme : le statut de l'envoi suffit à informer le client.
+## Suivi de position pendant le trajet
+Pour certaines missions, et pour celles-là seulement, une position intermédiaire est relevée pendant que la marchandise roule. Cette possibilité s'ouvre mission par mission, jamais pour la flotte entière, et la décision est journalisée avec le nom de qui l'a prise.
 
-Si un dispositif de géolocalisation était installé un jour, il ferait l'objet d'une information préalable et individuelle des conducteurs, serait limité aux heures de service et ne servirait pas à leur évaluation.
+Localiser un véhicule revient à localiser son conducteur : c'est une donnée relative à un travailleur. L'Autorité de protection des données admet un tel traitement lorsqu'il poursuit un but professionnel précis, mais juge disproportionné un contrôle permanent et systématique. Le dispositif est donc borné :
+
+- la position ne part que depuis l'écran du conducteur, pendant une mission en cours ; il n'existe aucun boîtier qui émette en dehors du travail ;
+- un bandeau visible lui indique, à l'instant même, que sa position est partagée ;
+- un relevé toutes les cinq minutes au plus, cadence imposée par le serveur ;
+- le client ne voit qu'un point, le dernier connu, sur l'itinéraire de son propre envoi ; il n'accède jamais à la trace du trajet ;
+- aucun écran de l'application ne permet de consulter les déplacements d'un conducteur donné, ni de reconstituer une journée de travail ;
+- ces positions ne servent jamais à évaluer, sanctionner ou noter un conducteur ;
+- elles sont effacées automatiquement dans les sept jours suivant la livraison, par une tâche planifiée et non par une intervention manuelle.
+
+Les conducteurs sont informés de ce dispositif préalablement et individuellement.
+
+## Ce que l'application ne fait pas
+Le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller. Aucun historique de déplacement n'est conservé au-delà du délai indiqué ci-dessus.
 
 ## Destinataires et sous-traitants
 Les données ne sont ni vendues, ni louées, ni échangées. Elles sont communiquées, dans la limite du nécessaire :
@@ -346,14 +360,28 @@ Bezoekers: uitsluitend de gegevens die nodig zijn voor de werking en de beveilig
 - De toepassing beveiligen en afwijkende toegang opsporen — gerechtvaardigd belang.
 - Offerteaanvragen beantwoorden — precontractuele maatregelen.
 
-## Zendingopvolging: wat de toepassing doet, en wat niet
-De opvolging van een zending steunt op twee elementen, en niet meer: de coördinaten van het ophaal- en het leveradres, eenmalig gegeocodeerd bij het aanmaken van de opdracht, en de statuswijzigingen die de chauffeur invoert.
+## Gelokaliseerde opvolging van zendingen
+De opvolging steunt op drie elementen, en niet meer.
 
-De voertuigen zijn met geen enkele geolokalisatiekast uitgerust. Er wordt geen enkele positie in real time geregistreerd, geen enkele verplaatsingsgeschiedenis bewaard, en de tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden.
+De coördinaten van het ophaal- en het leveradres, eenmalig gegeocodeerd bij het aanmaken van de opdracht. De statuswijzigingen die de chauffeur invoert. En twee positie-ijkpunten, opgenomen op het ogenblik waarop hij de ophaling en vervolgens de levering aangeeft: dat zijn beheersfeiten, bewaard zoals een vermelding op een vrachtbrief.
 
-Die keuze is bewust. Een voertuig lokaliseren komt neer op het lokaliseren van de chauffeur: dat is een gegeven over een werknemer. De Gegevensbeschermingsautoriteit aanvaardt zo'n verwerking wanneer zij een welbepaald professioneel doel nastreeft, maar acht een permanent en systematisch toezicht onevenredig. Een zending opvolgen verplicht echter niet tot het volgen van een mens: de status van de zending volstaat om de klant te informeren.
+## Positieopvolging tijdens de rit
+Voor bepaalde opdrachten, en enkel voor die, wordt een tussentijdse positie opgenomen terwijl de goederen onderweg zijn. Die mogelijkheid wordt opdracht per opdracht geopend, nooit voor de hele vloot, en de beslissing wordt gelogd met de naam van wie ze nam.
 
-Mocht ooit een geolokalisatiesysteem worden geïnstalleerd, dan zouden de chauffeurs vooraf en individueel worden geïnformeerd, zou het beperkt blijven tot de diensturen en zou het niet dienen voor hun beoordeling.
+Een voertuig lokaliseren komt neer op het lokaliseren van de chauffeur: dat is een gegeven over een werknemer. De Gegevensbeschermingsautoriteit aanvaardt zo'n verwerking wanneer zij een welbepaald professioneel doel nastreeft, maar acht een permanent en systematisch toezicht onevenredig. Het systeem is daarom begrensd:
+
+- de positie vertrekt enkel vanaf het scherm van de chauffeur, tijdens een lopende opdracht; er bestaat geen kastje dat buiten het werk uitzendt;
+- een zichtbare banner meldt hem op datzelfde ogenblik dat zijn positie wordt gedeeld;
+- hoogstens één opname om de vijf minuten, een cadans die de server oplegt;
+- de klant ziet slechts één punt, het laatst gekende, op de route van zijn eigen zending; hij krijgt nooit toegang tot het spoor van de rit;
+- geen enkel scherm van de toepassing laat toe de verplaatsingen van een bepaalde chauffeur te raadplegen of een werkdag te reconstrueren;
+- die posities dienen nooit om een chauffeur te beoordelen, te sanctioneren of te quoteren;
+- zij worden automatisch gewist binnen de zeven dagen na de levering, door een geplande taak en niet door een manuele ingreep.
+
+De chauffeurs worden vooraf en individueel over dit systeem geïnformeerd.
+
+## Wat de toepassing niet doet
+De tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden. Er wordt geen verplaatsingsgeschiedenis bewaard buiten de hierboven vermelde termijn.
 
 ## Ontvangers en verwerkers
 Gegevens worden niet verkocht, verhuurd of geruild. Zij worden meegedeeld, beperkt tot het noodzakelijke:
@@ -431,14 +459,28 @@ Visitors: strictly the data required for the website to work and remain secure.
 - Securing the application and detecting abnormal access — legitimate interest.
 - Answering quotation requests — pre-contractual measures.
 
-## Shipment tracking: what the application does, and what it does not
-Tracking a shipment rests on two elements, and two only: the coordinates of the pickup and delivery addresses, geocoded once when the order is created, and the status changes entered by the driver.
+## Geolocated shipment tracking
+Tracking rests on three elements, and three only.
 
-Vehicles carry no geolocation unit. No position is recorded in real time, no movement history is kept, and the tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor.
+The coordinates of the pickup and delivery addresses, geocoded once when the order is created. The status changes entered by the driver. And two position waypoints, recorded at the moment the driver declares pickup and then delivery: these are business facts, kept like an entry on a consignment note.
 
-This is a deliberate choice. Locating a vehicle amounts to locating its driver: that is data about a worker. The Belgian Data Protection Authority accepts such processing where it pursues a defined professional purpose, but considers permanent, systematic monitoring disproportionate. Yet tracking goods does not require tracking a person: the status of the shipment is enough to inform the customer.
+## Position tracking during the journey
+For certain missions, and only for those, an intermediate position is recorded while the goods are on the road. This is opened mission by mission, never for the whole fleet, and the decision is logged with the name of whoever took it.
 
-Should a geolocation system ever be installed, drivers would be informed beforehand and individually, it would be limited to service hours, and it would not be used to assess them.
+Locating a vehicle amounts to locating its driver: that is data about a worker. The Belgian Data Protection Authority accepts such processing where it pursues a defined professional purpose, but considers permanent, systematic monitoring disproportionate. The arrangement is therefore bounded:
+
+- the position leaves only from the driver's screen, during a mission in progress; no unit transmits outside working time;
+- a visible banner tells the driver, at that very moment, that their position is being shared;
+- one reading every five minutes at most, a cadence enforced by the server;
+- the customer sees one point only, the latest known, on the route of their own shipment; they never reach the trace of the journey;
+- no screen in the application allows the movements of a given driver to be consulted, or a working day to be reconstructed;
+- these positions are never used to assess, sanction or rate a driver;
+- they are erased automatically within seven days of delivery, by a scheduled task and not by a manual step.
+
+Drivers are informed of this arrangement beforehand and individually.
+
+## What the application does not do
+The tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor. No movement history is kept beyond the period stated above.
 
 ## Recipients and processors
 Data is never sold, rented or exchanged. It is disclosed, limited to what is necessary:
