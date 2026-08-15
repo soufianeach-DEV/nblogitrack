@@ -247,7 +247,7 @@ Elle décrit le traitement des données de quatre catégories de personnes :
 ## Données traitées
 Personnes de contact : nom, fonction, adresse professionnelle, téléphone, courriel, langue, numéro de TVA de l'entreprise, historique des expéditions, factures et paiements, journaux de connexion.
 
-Conducteurs et personnel : identité, coordonnées, numéro de permis et catégories, dates de validité, certificat ADR, aptitude médicale, données de temps de conduite et de repos issues du tachygraphe, position du véhicule pendant le service.
+Conducteurs et personnel : identité, coordonnées, numéro de permis et catégories, dates de validité, certificat ADR, date de l'examen médical, date d'expiration de la carte de conducteur, cumul d'heures de conduite de la journée, affectations aux missions.
 
 Expéditeurs et destinataires : nom, adresse d'enlèvement ou de livraison, téléphone de contact, nom de la personne ayant réceptionné la marchandise.
 
@@ -261,16 +261,21 @@ Visiteurs : données strictement nécessaires au fonctionnement du site et à sa
 - Assurer la sécurité de l'application, détecter les accès anormaux — intérêt légitime.
 - Répondre aux demandes de devis — mesures précontractuelles.
 
-## Géolocalisation des véhicules et données de conduite
-La position des véhicules est traitée pour organiser les tournées, informer le client de l'avancement de son envoi et assurer la sécurité des conducteurs et du chargement. Les données de temps de conduite et de repos sont traitées parce que la réglementation européenne l'impose.
+## Suivi des envois : ce que l'application fait, et ce qu'elle ne fait pas
+Le suivi d'un envoi repose sur deux éléments, et deux seulement : les coordonnées des adresses d'enlèvement et de livraison, géocodées une fois à la création de l'ordre, et les changements de statut saisis par le conducteur.
 
-Ces traitements suivent la position de l'Autorité de protection des données : ils poursuivent un but professionnel précis, ils sont limités aux heures de service, et ils ne servent pas à une surveillance permanente et systématique des conducteurs, laquelle serait disproportionnée. Les conducteurs en sont informés préalablement et individuellement.
+Les véhicules ne sont équipés d'aucun boîtier de géolocalisation. Aucune position n'est enregistrée en temps réel, aucun historique de déplacement n'est conservé, et le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller.
+
+Ce choix est délibéré. Localiser un véhicule revient à localiser son conducteur : c'est une donnée relative à un travailleur. L'Autorité de protection des données admet un tel traitement lorsqu'il poursuit un but professionnel précis, mais juge disproportionné un contrôle permanent et systématique. Or suivre une marchandise n'oblige pas à suivre un homme : le statut de l'envoi suffit à informer le client.
+
+Si un dispositif de géolocalisation était installé un jour, il ferait l'objet d'une information préalable et individuelle des conducteurs, serait limité aux heures de service et ne servirait pas à leur évaluation.
 
 ## Destinataires et sous-traitants
 Les données ne sont ni vendues, ni louées, ni échangées. Elles sont communiquées, dans la limite du nécessaire :
 - à l'hébergeur de l'application, établi dans l'Union européenne ;
-- au prestataire de paiement en ligne, pour les seules données nécessaires à la transaction ;
-- à l'opérateur de la taxe kilométrique et aux exploitants d'infrastructures à péage ;
+- au prestataire de paiement en ligne, pour les seules données que la transaction exige ;
+- au service de calcul d'itinéraire fondé sur OpenStreetMap, qui reçoit les coordonnées des points d'enlèvement et de livraison, sans nom ni référence de dossier ;
+- au service VIES de la Commission européenne et aux registres d'entreprises belge et français, pour vérifier un numéro de TVA ou l'identité d'une entreprise ;
 - aux sous-traitants de transport lorsqu'un envoi leur est confié ;
 - au cabinet comptable, à l'assureur et, le cas échéant, au conseil juridique ;
 - aux administrations lorsque la loi l'impose, notamment en matière fiscale, douanière et sociale.
@@ -283,7 +288,7 @@ Les données sont traitées au sein de l'Union européenne. Un transfert vers un
 ## Durées de conservation
 - Pièces comptables et factures : sept ans, conformément au Code de la TVA.
 - Documents de transport et lettres de voiture : cinq ans.
-- Données des conducteurs relatives au temps de conduite : la durée imposée par la réglementation sociale européenne.
+- Dates de validité des permis, certificats ADR et cartes de conducteur : la durée de la relation de travail, puis les délais de prescription sociale.
 - Journaux d'activité de l'application, qui enregistrent la date, l'utilisateur, l'action et l'adresse IP : douze mois.
 - Demandes de devis restées sans suite : deux ans.
 - Compte client : la durée de la relation commerciale, puis les délais de prescription applicables.
@@ -327,7 +332,7 @@ Het beschrijft de verwerking van gegevens van vier categorieën personen:
 ## Verwerkte gegevens
 Contactpersonen: naam, functie, professioneel adres, telefoon, e-mail, taal, btw-nummer van de onderneming, geschiedenis van zendingen, facturen en betalingen, aanmeldlogboeken.
 
-Chauffeurs en personeel: identiteit, contactgegevens, rijbewijsnummer en categorieën, geldigheidsdata, ADR-certificaat, medische geschiktheid, rij- en rusttijden uit de tachograaf, positie van het voertuig tijdens de dienst.
+Chauffeurs en personeel: identiteit, contactgegevens, rijbewijsnummer en categorieën, geldigheidsdata, ADR-certificaat, datum van het medisch onderzoek, vervaldatum van de bestuurderskaart, totaal aantal rijuren van de dag, toewijzing aan opdrachten.
 
 Afzenders en geadresseerden: naam, ophaal- of leveradres, contacttelefoon, naam van wie de goederen in ontvangst nam.
 
@@ -341,16 +346,21 @@ Bezoekers: uitsluitend de gegevens die nodig zijn voor de werking en de beveilig
 - De toepassing beveiligen en afwijkende toegang opsporen — gerechtvaardigd belang.
 - Offerteaanvragen beantwoorden — precontractuele maatregelen.
 
-## Geolokalisatie van voertuigen en rijgegevens
-De positie van de voertuigen wordt verwerkt om ritten te organiseren, de klant over zijn zending te informeren en de veiligheid van chauffeurs en lading te verzekeren. Rij- en rusttijden worden verwerkt omdat de Europese regelgeving dat oplegt.
+## Zendingopvolging: wat de toepassing doet, en wat niet
+De opvolging van een zending steunt op twee elementen, en niet meer: de coördinaten van het ophaal- en het leveradres, eenmalig gegeocodeerd bij het aanmaken van de opdracht, en de statuswijzigingen die de chauffeur invoert.
 
-Deze verwerkingen volgen het standpunt van de Gegevensbeschermingsautoriteit: zij streven een welbepaald professioneel doel na, zijn beperkt tot de diensturen en dienen niet voor een permanent en systematisch toezicht op de chauffeurs, wat onevenredig zou zijn. Chauffeurs worden vooraf en individueel geïnformeerd.
+De voertuigen zijn met geen enkele geolokalisatiekast uitgerust. Er wordt geen enkele positie in real time geregistreerd, geen enkele verplaatsingsgeschiedenis bewaard, en de tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden.
+
+Die keuze is bewust. Een voertuig lokaliseren komt neer op het lokaliseren van de chauffeur: dat is een gegeven over een werknemer. De Gegevensbeschermingsautoriteit aanvaardt zo'n verwerking wanneer zij een welbepaald professioneel doel nastreeft, maar acht een permanent en systematisch toezicht onevenredig. Een zending opvolgen verplicht echter niet tot het volgen van een mens: de status van de zending volstaat om de klant te informeren.
+
+Mocht ooit een geolokalisatiesysteem worden geïnstalleerd, dan zouden de chauffeurs vooraf en individueel worden geïnformeerd, zou het beperkt blijven tot de diensturen en zou het niet dienen voor hun beoordeling.
 
 ## Ontvangers en verwerkers
 Gegevens worden niet verkocht, verhuurd of geruild. Zij worden meegedeeld, beperkt tot het noodzakelijke:
 - aan de hostingpartij van de toepassing, gevestigd in de Europese Unie;
 - aan de aanbieder van onlinebetalingen, enkel de gegevens die de transactie vereist;
-- aan de exploitant van de kilometerheffing en aan tolinfrastructuurbeheerders;
+- aan de routeberekeningsdienst op basis van OpenStreetMap, die de coördinaten van het ophaal- en leverpunt ontvangt, zonder naam of dossierreferentie;
+- aan de VIES-dienst van de Europese Commissie en aan het Belgische en het Franse ondernemingsregister, om een btw-nummer of de identiteit van een onderneming te verifiëren;
 - aan onderaannemers in het vervoer wanneer een zending hen wordt toevertrouwd;
 - aan het boekhoudkantoor, de verzekeraar en, in voorkomend geval, de juridisch raadsman;
 - aan de overheid wanneer de wet dat oplegt, met name inzake fiscaliteit, douane en sociale zekerheid.
@@ -363,7 +373,7 @@ Gegevens worden binnen de Europese Unie verwerkt. Doorgifte naar een derde land 
 ## Bewaartermijnen
 - Boekhoudkundige stukken en facturen: zeven jaar, conform het Btw-wetboek.
 - Vervoersdocumenten en vrachtbrieven: vijf jaar.
-- Gegevens over rijtijden van chauffeurs: de termijn opgelegd door de Europese sociale regelgeving.
+- Geldigheidsdata van rijbewijzen, ADR-certificaten en bestuurderskaarten: de duur van de arbeidsrelatie, vervolgens de sociale verjaringstermijnen.
 - Activiteitenlogboeken van de toepassing, met datum, gebruiker, actie en IP-adres: twaalf maanden.
 - Offerteaanvragen zonder gevolg: twee jaar.
 - Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen.
@@ -407,7 +417,7 @@ It describes the processing of data relating to four categories of people:
 ## Data processed
 Contact persons: name, job title, business address, phone, email, language, company VAT number, shipment history, invoices and payments, sign-in logs.
 
-Drivers and staff: identity, contact details, licence number and categories, validity dates, ADR certificate, medical fitness, driving and rest time data from the tachograph, vehicle position during service.
+Drivers and staff: identity, contact details, licence number and categories, validity dates, ADR certificate, date of the medical examination, driver card expiry date, total driving hours for the day, assignment to missions.
 
 Senders and consignees: name, pickup or delivery address, contact phone, name of the person who received the goods.
 
@@ -421,16 +431,21 @@ Visitors: strictly the data required for the website to work and remain secure.
 - Securing the application and detecting abnormal access — legitimate interest.
 - Answering quotation requests — pre-contractual measures.
 
-## Vehicle geolocation and driving data
-Vehicle positions are processed to organise rounds, keep customers informed of their shipment and ensure the safety of drivers and cargo. Driving and rest time data are processed because European regulation requires it.
+## Shipment tracking: what the application does, and what it does not
+Tracking a shipment rests on two elements, and two only: the coordinates of the pickup and delivery addresses, geocoded once when the order is created, and the status changes entered by the driver.
 
-This processing follows the position of the Belgian Data Protection Authority: it pursues a defined professional purpose, is limited to service hours, and is not used for permanent, systematic monitoring of drivers, which would be disproportionate. Drivers are informed beforehand and individually.
+Vehicles carry no geolocation unit. No position is recorded in real time, no movement history is kept, and the tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor.
+
+This is a deliberate choice. Locating a vehicle amounts to locating its driver: that is data about a worker. The Belgian Data Protection Authority accepts such processing where it pursues a defined professional purpose, but considers permanent, systematic monitoring disproportionate. Yet tracking goods does not require tracking a person: the status of the shipment is enough to inform the customer.
+
+Should a geolocation system ever be installed, drivers would be informed beforehand and individually, it would be limited to service hours, and it would not be used to assess them.
 
 ## Recipients and processors
 Data is never sold, rented or exchanged. It is disclosed, limited to what is necessary:
 - to the application's hosting provider, established in the European Union;
 - to the online payment provider, for the data the transaction requires only;
-- to the kilometre charge operator and to toll infrastructure operators;
+- to the OpenStreetMap-based routing service, which receives the coordinates of the pickup and delivery points, without any name or file reference;
+- to the European Commission's VIES service and to the Belgian and French company registers, to verify a VAT number or a company's identity;
 - to transport subcontractors when a consignment is entrusted to them;
 - to the accounting firm, the insurer and, where applicable, legal counsel;
 - to public authorities where the law so requires, in particular in tax, customs and social security matters.
@@ -443,7 +458,7 @@ Data is processed within the European Union. Transfer to a third country occurs 
 ## Retention periods
 - Accounting records and invoices: seven years, under the Belgian VAT Code.
 - Transport documents and consignment notes: five years.
-- Driver driving time data: the period imposed by European social regulation.
+- Licence, ADR certificate and driver card validity dates: the duration of the employment relationship, then the applicable social limitation periods.
 - Application activity logs, recording date, user, action and IP address: twelve months.
 - Quotation requests left without follow-up: two years.
 - Customer account: the duration of the commercial relationship, then the applicable limitation periods.
