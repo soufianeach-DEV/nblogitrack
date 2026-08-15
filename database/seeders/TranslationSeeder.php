@@ -1923,9 +1923,9 @@ class TranslationSeeder extends Seeder
             'titre' => ['Titre', 'Titel', 'Title'],
             'corps' => ['Contenu', 'Inhoud', 'Content'],
             'corps_aide' => [
-                'Texte simple. Les sauts de ligne sont conservés ; le HTML n\'est pas interprété.',
-                'Platte tekst. Regeleinden blijven behouden; HTML wordt niet uitgevoerd.',
-                'Plain text. Line breaks are kept; HTML is not interpreted.',
+                'Une ligne commençant par ## devient un titre de rubrique, une ligne commençant par - devient une puce. Le HTML n\'est jamais interprété.',
+                'Een regel die met ## begint wordt een rubriektitel, een regel die met - begint wordt een opsommingsteken. HTML wordt nooit uitgevoerd.',
+                'A line starting with ## becomes a section heading, a line starting with - becomes a bullet. HTML is never interpreted.',
             ],
             'repli_aide' => [
                 'vide = le français sera affiché',

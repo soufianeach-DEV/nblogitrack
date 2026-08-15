@@ -3,11 +3,55 @@ import { useTraduction } from '@/traduire';
 import { Head, Link, usePage } from '@inertiajs/react';
 
 /**
- * Une page redigee depuis l'administration (A13).
+ * Le corps d'une page, decoupe en blocs.
  *
- * Le corps est rendu en texte, sauts de ligne respectes, rien
- * d'interprete : accepter du HTML saisi dans un formulaire reviendrait
- * a laisser injecter du script sur une page publique.
+ * Une page legale fait plusieurs milliers de mots : rendue d'un seul
+ * bloc, elle est illisible. Deux marques suffisent a la structurer, et
+ * elles sont volontairement pauvres :
+ *
+ *   ## Titre de rubrique
+ *   - element de liste
+ *
+ * Rien n'est interprete comme du HTML. Chaque bloc devient un element
+ * React dont le contenu reste du texte : un « <script> » saisi dans
+ * l'administration s'affiche, il ne s'execute pas. C'est la raison pour
+ * laquelle on ne prend pas une bibliotheque Markdown complete, qui
+ * accepterait le HTML brut et rouvrirait la porte.
+ */
+function blocs(corps) {
+    const sortie = [];
+    let liste = null;
+
+    const fermerListe = () => {
+        if (liste) {
+            sortie.push({ type: 'liste', elements: liste });
+            liste = null;
+        }
+    };
+
+    for (const ligne of (corps ?? '').split('\n')) {
+        const texte = ligne.trim();
+
+        if (texte === '') {
+            fermerListe();
+        } else if (texte.startsWith('## ')) {
+            fermerListe();
+            sortie.push({ type: 'titre', texte: texte.slice(3) });
+        } else if (texte.startsWith('- ')) {
+            liste = [...(liste ?? []), texte.slice(2)];
+        } else {
+            fermerListe();
+            sortie.push({ type: 'paragraphe', texte });
+        }
+    }
+
+    fermerListe();
+
+    return sortie;
+}
+
+/**
+ * Une page redigee depuis l'administration (A13).
  *
  * L'en-tete est plus sobre que celui de l'accueil, qui porte des ancres
  * vers des sections inexistantes ici. Le duplique complet aurait donne
@@ -40,9 +84,9 @@ export default function Show({ page }) {
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
-                <article className="rounded-2xl bg-white p-6 shadow-sm sm:p-10">
-                    <h1 className="text-3xl font-bold text-marine">{page.titre}</h1>
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6 sm:py-16">
+                <article className="rounded-2xl bg-white p-6 shadow-sm sm:p-12">
+                    <h1 className="text-3xl font-bold text-marine sm:text-4xl">{page.titre}</h1>
 
                     {page.repli && (
                         <p className="mt-4 rounded-lg bg-surface px-4 py-3 text-sm text-slate-600">
@@ -50,12 +94,33 @@ export default function Show({ page }) {
                         </p>
                     )}
 
-                    <div className="mt-6 whitespace-pre-line text-base leading-relaxed text-slate-700">
-                        {page.corps}
+                    <div className="mt-8 text-[15px] leading-relaxed text-slate-700">
+                        {blocs(page.corps).map((bloc, i) => {
+                            if (bloc.type === 'titre') {
+                                return (
+                                    <h2
+                                        key={i}
+                                        className="mb-3 mt-10 border-b border-slate-100 pb-2 text-lg font-bold text-marine first:mt-0"
+                                    >
+                                        {bloc.texte}
+                                    </h2>
+                                );
+                            }
+
+                            if (bloc.type === 'liste') {
+                                return (
+                                    <ul key={i} className="mb-4 ml-5 list-disc space-y-1.5 marker:text-slate-400">
+                                        {bloc.elements.map((e, j) => <li key={j}>{e}</li>)}
+                                    </ul>
+                                );
+                            }
+
+                            return <p key={i} className="mb-4">{bloc.texte}</p>;
+                        })}
                     </div>
 
                     {page.mise_a_jour && (
-                        <p className="mt-8 border-t border-slate-100 pt-4 text-xs text-slate-600">
+                        <p className="mt-10 border-t border-slate-100 pt-4 text-xs text-slate-600">
                             {t('page.mise_a_jour', 'Dernière mise à jour le :date', { date: page.mise_a_jour })}
                         </p>
                     )}
