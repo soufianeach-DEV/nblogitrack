@@ -1,12 +1,8 @@
 import Icone from '@/Components/Icone';
 import VitrineLayout from '@/Layouts/VitrineLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-
-const euros = (montant) => Number(montant).toLocaleString('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-});
 
 /**
  * Champ de localite qui puise dans les codes postaux importes localement.
@@ -67,6 +63,9 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
 }
 
 export default function Index({ destinations = [], formules = [] }) {
+    const t = useTraduction();
+    const locale = useLocale();
+    const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [depart, setDepart] = useState('');
     const [destination, setDestination] = useState('');
     const [pays, setPays] = useState('BE');
@@ -98,13 +97,13 @@ export default function Index({ destinations = [], formules = [] }) {
             const donnees = await reponse.json();
 
             if (! reponse.ok) {
-                setErreur(donnees.erreur ?? 'La simulation a échoué. Vérifiez les localités saisies.');
+                setErreur(donnees.erreur ?? t('tarifs.erreur_simulation', 'La simulation a échoué. Vérifiez les localités saisies.'));
                 setResultat(null);
             } else {
                 setResultat(donnees);
             }
         } catch (probleme) {
-            setErreur('Le service est momentanément indisponible.');
+            setErreur(t('tarifs.service_indisponible', 'Le service est momentanément indisponible.'));
         } finally {
             setEncours(false);
         }
@@ -112,14 +111,13 @@ export default function Index({ destinations = [], formules = [] }) {
 
     return (
         <VitrineLayout>
-            <Head title="Tarifs" />
+            <Head title={t('nav.tarifs', 'Tarifs')} />
 
             <section className="bg-marine py-16 text-white">
                 <div className="mx-auto max-w-4xl px-4 text-center">
-                    <h1 className="text-3xl font-bold sm:text-4xl">Calculez votre tarif</h1>
+                    <h1 className="text-3xl font-bold sm:text-4xl">{t('tarifs.calculez', 'Calculez votre tarif')}</h1>
                     <p className="mx-auto mt-3 max-w-2xl text-slate-300">
-                        Un prix indicatif en quelques secondes, sans compte et sans engagement.
-                        Départ de Belgique vers {destinations.length} destinations européennes.
+                        {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Départ de Belgique vers :n destinations européennes.', { n: destinations.length })}
                     </p>
                 </div>
             </section>
@@ -130,20 +128,20 @@ export default function Index({ destinations = [], formules = [] }) {
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
                                 <label htmlFor="depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    Enlèvement en Belgique
+                                    {t('tarifs.enlevement_be', 'Enlèvement en Belgique')}
                                 </label>
                                 <ChoixVille
                                     id="depart"
                                     pays="BE"
                                     valeur={depart}
                                     onChange={setDepart}
-                                    placeholder="Bruxelles, Anvers, Liège…"
+                                    placeholder={t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…')}
                                 />
                             </div>
 
                             <div>
                                 <label htmlFor="pays" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    Pays de destination
+                                    {t('tarifs.pays_destination', 'Pays de destination')}
                                 </label>
                                 <select
                                     id="pays"
@@ -159,20 +157,20 @@ export default function Index({ destinations = [], formules = [] }) {
 
                             <div>
                                 <label htmlFor="destination" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    Localité de livraison
+                                    {t('tarifs.localite', 'Localité de livraison')}
                                 </label>
                                 <ChoixVille
                                     id="destination"
                                     pays={pays}
                                     valeur={destination}
                                     onChange={setDestination}
-                                    placeholder="Commencez à taper…"
+                                    placeholder={t('tarifs.taper', 'Commencez à taper…')}
                                 />
                             </div>
 
                             <div>
                                 <label htmlFor="poids" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    Poids de la marchandise
+                                    {t('tarifs.poids', 'Poids de la marchandise')}
                                 </label>
                                 <div className="relative">
                                     <input
@@ -198,7 +196,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 className="rounded border-slate-300 text-marine focus:ring-marine"
                             />
                             <span className="text-sm text-marine">
-                                Matière dangereuse — transport soumis à l'accord ADR
+                                {t('tarifs.adr', 'Matière dangereuse — transport soumis à l\'accord ADR')}
                             </span>
                         </label>
 
@@ -207,7 +205,7 @@ export default function Index({ destinations = [], formules = [] }) {
                             disabled={encours || ! depart || ! destination}
                             className="mt-6 w-full rounded-lg bg-action px-6 py-3.5 text-base font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50 sm:w-auto sm:px-10"
                         >
-                            {encours ? 'Calcul en cours…' : 'Calculer mon tarif'}
+                            {encours ? t('tarifs.calcul', 'Calcul en cours…') : t('accueil.calculer', 'Calculer mon tarif')}
                         </button>
 
                         {erreur && (
@@ -225,8 +223,8 @@ export default function Index({ destinations = [], formules = [] }) {
                                     <span className="ml-2 text-sm font-normal text-slate-600">{resultat.pays}</span>
                                 </h2>
                                 <p className="text-sm text-slate-600">
-                                    {resultat.distance.toLocaleString('fr-FR')} km par la route ·{' '}
-                                    {resultat.poids.toLocaleString('fr-FR')} kg
+                                    {resultat.distance.toLocaleString(locale)} {t('tarifs.par_route', 'km par la route')} ·{' '}
+                                    {resultat.poids.toLocaleString(locale)} kg
                                     {resultat.adr && ' · ADR'}
                                 </p>
                             </div>
@@ -239,18 +237,17 @@ export default function Index({ destinations = [], formules = [] }) {
                                         </p>
                                         <p className="mt-2 text-2xl font-bold text-marine">{euros(f.prix)}</p>
                                         <p className="mt-1 text-sm text-slate-600">
-                                            livré en {f.delai} jour{f.delai > 1 ? 's' : ''}
+                                            {t('tarifs.livre_en', 'livré en')} {f.delai} {f.delai > 1 ? t('commun.jours', 'jours') : t('commun.jour', 'jour')}
                                         </p>
                                         {f.dedie && (
-                                            <p className="mt-2 text-xs text-action-dark">Véhicule dédié</p>
+                                            <p className="mt-2 text-xs text-action-dark">{t('tarifs.dedie', 'Véhicule dédié')}</p>
                                         )}
                                     </div>
                                 ))}
                             </div>
 
                             <p className="mt-5 text-xs text-slate-600">
-                                Prix hors TVA, à titre indicatif. Le tarif définitif tient compte de l'adresse exacte,
-                                de la date d'enlèvement et des contraintes de chargement.
+                                {t('tarifs.indicatif', 'Prix hors TVA, à titre indicatif. Le tarif définitif tient compte de l\'adresse exacte, de la date d\'enlèvement et des contraintes de chargement.')}
                             </p>
 
                             <div className="mt-5 flex flex-wrap gap-3">
@@ -258,13 +255,13 @@ export default function Index({ destinations = [], formules = [] }) {
                                     href={route('devis.create')}
                                     className="rounded-lg bg-marine px-6 py-3 text-sm font-bold text-white transition hover:bg-marine-deep"
                                 >
-                                    Demander un devis ferme
+                                    {t('tarifs.devis_ferme', 'Demander un devis ferme')}
                                 </Link>
                                 <Link
                                     href={route('register')}
                                     className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-bold text-marine transition hover:bg-surface"
                                 >
-                                    Ouvrir un compte
+                                    {t('tarifs.ouvrir_compte', 'Ouvrir un compte')}
                                 </Link>
                             </div>
                         </div>
@@ -279,10 +276,10 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <p className="text-sm text-slate-600">
                                     <span className="block font-semibold text-marine">{formule}</span>
                                     {formule === 'Express'
-                                        ? 'Un véhicule pour vous seul, au plus court.'
+                                        ? t('tarifs.express_texte', 'Un véhicule pour vous seul, au plus court.')
                                         : formule === 'Standard'
-                                            ? 'Le meilleur compromis entre délai et prix.'
-                                            : 'Groupage avec d\'autres envois, au tarif le plus bas.'}
+                                            ? t('tarifs.standard_texte', 'Le meilleur compromis entre délai et prix.')
+                                            : t('tarifs.eco_texte', 'Groupage avec d\'autres envois, au tarif le plus bas.')}
                                 </p>
                             </div>
                         ))}

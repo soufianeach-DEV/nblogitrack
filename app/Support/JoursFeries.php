@@ -5,6 +5,8 @@ namespace App\Support;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
+// Traductions vit dans le meme espace de noms : aucun import a ajouter.
+
 /**
  * Les dix jours feries legaux belges.
  *
@@ -16,18 +18,20 @@ use Illuminate\Support\Carbon;
  */
 class JoursFeries
 {
+    /** Chaque ferie porte sa cle de traduction et son libelle francais. */
     private const FIXES = [
-        '01-01' => 'Jour de l\'An',
-        '05-01' => 'Fete du Travail',
-        '07-21' => 'Fete nationale',
-        '08-15' => 'Assomption',
-        '11-01' => 'Toussaint',
-        '11-11' => 'Armistice',
-        '12-25' => 'Noel',
+        '01-01' => ['ferie.nouvel_an', 'Jour de l\'An'],
+        '05-01' => ['ferie.travail', 'Fête du Travail'],
+        '07-21' => ['ferie.nationale', 'Fête nationale'],
+        '08-15' => ['ferie.assomption', 'Assomption'],
+        '11-01' => ['ferie.toussaint', 'Toussaint'],
+        '11-11' => ['ferie.armistice', 'Armistice'],
+        '12-25' => ['ferie.noel', 'Noël'],
     ];
 
     /**
-     * Les feries d'une annee, indexes par date au format Y-m-d.
+     * Les feries d'une annee, indexes par date au format Y-m-d, nommes
+     * dans la langue de la requete.
      *
      * @return array<string, string>
      */
@@ -35,15 +39,15 @@ class JoursFeries
     {
         $feries = [];
 
-        foreach (self::FIXES as $jour => $nom) {
-            $feries[$annee.'-'.$jour] = $nom;
+        foreach (self::FIXES as $jour => [$cle, $nom]) {
+            $feries[$annee.'-'.$jour] = Traductions::t($cle, $nom);
         }
 
         $paques = self::paques($annee);
 
-        $feries[$paques->copy()->addDay()->toDateString()] = 'Lundi de Paques';
-        $feries[$paques->copy()->addDays(39)->toDateString()] = 'Ascension';
-        $feries[$paques->copy()->addDays(50)->toDateString()] = 'Lundi de Pentecote';
+        $feries[$paques->copy()->addDay()->toDateString()] = Traductions::t('ferie.paques', 'Lundi de Pâques');
+        $feries[$paques->copy()->addDays(39)->toDateString()] = Traductions::t('ferie.ascension', 'Ascension');
+        $feries[$paques->copy()->addDays(50)->toDateString()] = Traductions::t('ferie.pentecote', 'Lundi de Pentecôte');
 
         ksort($feries);
 

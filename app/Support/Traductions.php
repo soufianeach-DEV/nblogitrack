@@ -29,6 +29,26 @@ class Traductions
         );
     }
 
+    /**
+     * Traduit une cle cote serveur, dans la langue de la requete.
+     *
+     * Le second argument est le texte francais ecrit en clair a l'appel :
+     * il sert de repli et garde le code lisible, comme le t() de React.
+     * Les valeurs entre deux-points sont remplacees.
+     *
+     * @param  array<string, string|int>  $valeurs
+     */
+    public static function t(string $cle, string $defaut, array $valeurs = []): string
+    {
+        $texte = self::pour(app()->getLocale())[$cle] ?? $defaut;
+
+        foreach ($valeurs as $nom => $valeur) {
+            $texte = str_replace(':'.$nom, (string) $valeur, $texte);
+        }
+
+        return $texte;
+    }
+
     public static function oublier(): void
     {
         foreach (array_keys(Translation::LANGUES) as $langue) {

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\JoursFeries;
+use App\Support\Traductions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -139,7 +140,7 @@ class DashboardController extends Controller
 
             $mois[] = [
                 'cle' => $curseur->format('Y-m'),
-                'libelle' => $curseur->locale('fr')->isoFormat('MMM'),
+                'libelle' => $curseur->locale(app()->getLocale())->isoFormat('MMM'),
                 'annee' => $curseur->format('Y'),
                 'nombre' => (int) ($ligne->nombre ?? 0),
                 'tonnes' => round(((float) ($ligne->poids ?? 0)) / 1000, 1),
@@ -207,8 +208,8 @@ class DashboardController extends Controller
         if ($retard > 0) {
             $alertes[] = [
                 'niveau' => 'grave',
-                'titre' => $retard.' expédition'.($retard > 1 ? 's' : '').' en retard',
-                'detail' => 'La date de livraison souhaitée est dépassée et la marchandise n\'est pas arrivée.',
+                'titre' => self::phrase($retard, 'alerte.retard_un', ':n expÃ©dition en retard', 'alerte.retard_n', ':n expÃ©ditions en retard'),
+                'detail' => Traductions::t('alerte.retard_detail', 'La date de livraison souhaitÃ©e est dÃ©passÃ©e et la marchandise n\'est pas arrivÃ©e.'),
                 'lien' => route('transport-orders.index'),
             ];
         }
@@ -219,8 +220,8 @@ class DashboardController extends Controller
             if ($attente > 0) {
                 $alertes[] = [
                     'niveau' => 'info',
-                    'titre' => $attente.' expédition'.($attente > 1 ? 's' : '').' en attente d\'affectation',
-                    'detail' => 'Un véhicule leur sera affecté par la planification.',
+                    'titre' => self::phrase($attente, 'alerte.attente_un', ':n expÃ©dition en attente d\'affectation', 'alerte.attente_n', ':n expÃ©ditions en attente d\'affectation'),
+                    'detail' => Traductions::t('alerte.attente_detail', 'Un vÃ©hicule leur sera affectÃ© par la planification.'),
                     'lien' => route('transport-orders.index'),
                 ];
             }
@@ -237,8 +238,8 @@ class DashboardController extends Controller
         if ($adr > 0) {
             $alertes[] = [
                 'niveau' => 'grave',
-                'titre' => $adr.' matière'.($adr > 1 ? 's' : '').' dangereuse'.($adr > 1 ? 's' : '').' sans chauffeur',
-                'detail' => 'Ces expéditions exigent un chauffeur certifié ADR.',
+                'titre' => self::phrase($adr, 'alerte.adr_un', ':n matiÃ¨re dangereuse sans chauffeur', 'alerte.adr_n', ':n matiÃ¨res dangereuses sans chauffeur'),
+                'detail' => Traductions::t('alerte.adr_detail', 'Ces expÃ©ditions exigent un chauffeur certifiÃ© ADR.'),
                 'lien' => route('planning.index'),
             ];
         }
@@ -252,8 +253,8 @@ class DashboardController extends Controller
         if ($imminent > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => $imminent.' enlèvement'.($imminent > 1 ? 's' : '').' sous trois jours sans véhicule',
-                'detail' => 'À affecter avant la date d\'enlèvement prévue.',
+                'titre' => self::phrase($imminent, 'alerte.imminent_un', ':n enlÃ¨vement sous trois jours sans vÃ©hicule', 'alerte.imminent_n', ':n enlÃ¨vements sous trois jours sans vÃ©hicule'),
+                'detail' => Traductions::t('alerte.imminent_detail', 'Ã€ affecter avant la date d\'enlÃ¨vement prÃ©vue.'),
                 'lien' => route('planning.index'),
             ];
         }
@@ -265,8 +266,8 @@ class DashboardController extends Controller
         if ($permis > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => $permis.' permis arrive'.($permis > 1 ? 'nt' : '').' à échéance',
-                'detail' => 'Validité inférieure à soixante jours.',
+                'titre' => self::phrase($permis, 'alerte.permis_un', ':n permis arrive Ã  Ã©chÃ©ance', 'alerte.permis_n', ':n permis arrivent Ã  Ã©chÃ©ance'),
+                'detail' => Traductions::t('alerte.permis_detail', 'ValiditÃ© infÃ©rieure Ã  soixante jours.'),
                 'lien' => route('drivers.index', ['etat' => 'permis']),
             ];
         }
@@ -278,8 +279,8 @@ class DashboardController extends Controller
         if ($visite > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => $visite.' visite'.($visite > 1 ? 's' : '').' médicale'.($visite > 1 ? 's' : '').' à renouveler',
-                'detail' => 'Dernier examen il y a plus d\'un an.',
+                'titre' => self::phrase($visite, 'alerte.visite_un', ':n visite mÃ©dicale Ã  renouveler', 'alerte.visite_n', ':n visites mÃ©dicales Ã  renouveler'),
+                'detail' => Traductions::t('alerte.visite_detail', 'Dernier examen il y a plus d\'un an.'),
                 'lien' => route('drivers.index', ['etat' => 'visite']),
             ];
         }
@@ -291,13 +292,27 @@ class DashboardController extends Controller
         if ($controle > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => $controle.' contrôle'.($controle > 1 ? 's' : '').' technique'.($controle > 1 ? 's' : '').' dépassé'.($controle > 1 ? 's' : ''),
-                'detail' => 'Dernier passage il y a plus d\'un an.',
+                'titre' => self::phrase($controle, 'alerte.controle_un', ':n contrÃ´le technique dÃ©passÃ©', 'alerte.controle_n', ':n contrÃ´les techniques dÃ©passÃ©s'),
+                'detail' => Traductions::t('alerte.controle_detail', 'Dernier passage il y a plus d\'un an.'),
                 'lien' => route('vehicles.index', ['etat' => 'controle']),
             ];
         }
 
         return $alertes;
+    }
+
+    /**
+     * Une phrase au singulier ou au pluriel, traduite.
+     *
+     * Concatener un Â« s Â» conditionnel ne se traduit pas : le pluriel ne
+     * se forme pas de la meme facon d'une langue a l'autre. Chaque forme
+     * porte donc sa propre cle.
+     */
+    private static function phrase(int $nombre, string $cleUn, string $un, string $clePlusieurs, string $plusieurs): string
+    {
+        return $nombre > 1
+            ? Traductions::t($clePlusieurs, $plusieurs, ['n' => $nombre])
+            : Traductions::t($cleUn, $un, ['n' => $nombre]);
     }
 
     /**
@@ -332,7 +347,7 @@ class DashboardController extends Controller
                 ->map(fn (Invoice $facture) => [
                     'id' => $facture->id,
                     'reference' => $facture->reference,
-                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' €',
+                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' â‚¬',
                     'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
                 ])
                 ->all(),
@@ -392,9 +407,9 @@ class DashboardController extends Controller
 
             $jours[] = [
                 'date' => $cle,
-                'jour' => $date->locale('fr')->isoFormat('ddd'),
+                'jour' => $date->locale(app()->getLocale())->isoFormat('ddd'),
                 'numero' => $date->day,
-                'mois' => $date->locale('fr')->isoFormat('MMM'),
+                'mois' => $date->locale(app()->getLocale())->isoFormat('MMM'),
                 'weekend' => $date->isWeekend(),
                 'aujourdhui' => $date->isToday(),
                 // Un quai ferme n'est pas un jour creux : le planificateur
@@ -486,13 +501,14 @@ class DashboardController extends Controller
                 if ($chauffeur->license_expiry !== null
                     && $chauffeur->license_expiry->gte(now()->startOfDay())
                     && $chauffeur->license_expiry->lte($echeance)) {
-                    $motifs[] = 'permis expirant le '.$chauffeur->license_expiry->format('d/m/Y');
+                    $motifs[] = Traductions::t('empechement.permis_bientot', 'permis expirant le :date',
+                        ['date' => $chauffeur->license_expiry->format('d/m/Y')]);
                 }
 
                 return [
                     'id' => $chauffeur->id,
                     'nom' => trim(($chauffeur->user?->first_name ?? '').' '.($chauffeur->user?->last_name ?? '')),
-                    'motif' => ucfirst(implode(' · ', $motifs)),
+                    'motif' => ucfirst(implode(' Â· ', $motifs)),
                     'disponible' => (bool) $chauffeur->is_available,
                 ];
             })
@@ -512,7 +528,8 @@ class DashboardController extends Controller
             ->map(fn (Vehicle $vehicule) => [
                 'immatriculation' => $vehicule->registration,
                 'modele' => trim($vehicule->brand.' '.$vehicule->model),
-                'motif' => 'Contrôle échu depuis le '.$vehicule->inspection_valid_until->format('d/m/Y'),
+                'motif' => Traductions::t('empechement.controle', 'ContrÃ´le Ã©chu depuis le :date',
+                    ['date' => $vehicule->inspection_valid_until->format('d/m/Y')]),
                 'disponible' => (bool) $vehicule->is_available,
             ])
             ->all();
@@ -542,8 +559,8 @@ class DashboardController extends Controller
             'description' => $ligne->description,
             'auteur' => $auteurs[$ligne->user_id] ?? null
                 ? $auteurs[$ligne->user_id]->first_name.' '.$auteurs[$ligne->user_id]->last_name
-                : 'Système',
-            'horodatage' => $ligne->created_at->format('d/m/Y à H\hi'),
+                : 'SystÃ¨me',
+            'horodatage' => $ligne->created_at->format('d/m/Y Ã  H\hi'),
         ])->all();
     }
 }

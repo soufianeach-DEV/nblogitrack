@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
         <div className="px-4">
             <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[132px]" />
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                {estAdmin ? 'Administration centrale' : 'Logistique B2B'}
+                {estAdmin ? t('nav.admin_centrale', 'Administration centrale') : t('nav.logistique', 'Logistique B2B')}
             </p>
         </div>
     );
@@ -85,23 +85,23 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
             >
                 <Icone nom="plus" className="h-4 w-4" />
-                Nouvelle expédition
+                {t('commande.titre', 'Nouvelle expédition')}
             </Link>
         </div>
     );
 
     const navigation = (
         <>
-            <Groupe titre="Opérations">
+            <Groupe titre={t('nav.operations', 'Opérations')}>
                 <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
                     {t('nav.tableau_de_bord', 'Tableau de bord')}
                 </LienMenu>
                 <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
-                    {canPlan ? 'Ordres de transport' : t('nav.mes_expeditions', 'Mes expéditions')}
+                    {canPlan ? t('nav.ordres', 'Ordres de transport') : t('nav.mes_expeditions', 'Mes expéditions')}
                 </LienMenu>
                 {canPlan && (
                     <LienMenu href={route('planning.index')} active={route().current('planning.index')} icone="planning" onClick={fermer}>
-                        Planification
+                        {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
                 {! canPlan && (
@@ -111,45 +111,45 @@ export default function AuthenticatedLayout({ header, children }) {
                 )}
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
-                        Demandes de devis
+                        {t('nav.devis_demandes', 'Demandes de devis')}
                     </LienMenu>
                 )}
                 {canValidateClients && (
                     <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
-                        Entreprises
+                        {t('nav.entreprises', 'Entreprises')}
                     </LienMenu>
                 )}
                 {canManageUsers && (
                     <LienMenu href={route('staff.index')} active={route().current('staff.index')} icone="profil" onClick={fermer}>
-                        Personnel
+                        {t('nav.personnel', 'Personnel')}
                     </LienMenu>
                 )}
                 {canViewFleet && (
                     <>
                         <LienMenu href={route('drivers.index')} active={route().current('drivers.index')} icone="profil" onClick={fermer}>
-                            Chauffeurs
+                            {t('nav.chauffeurs', 'Chauffeurs')}
                         </LienMenu>
                         <LienMenu href={route('vehicles.index')} active={route().current('vehicles.index')} icone="camion" onClick={fermer}>
-                            Véhicules
+                            {t('nav.vehicules', 'Véhicules')}
                         </LienMenu>
                     </>
                 )}
             </Groupe>
 
-            <Groupe titre="Finance &amp; data">
+            <Groupe titre={t('nav.finance', 'Finance & data')}>
                 <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
-                    {canPlan ? 'Facturation' : t('nav.mes_factures', 'Mes factures')}
+                    {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
                 </LienMenu>
             </Groupe>
 
             {canViewLogs && (
-                <Groupe titre="Système">
+                <Groupe titre={t('nav.systeme', 'Système')}>
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
-                        Journaux
+                        {t('nav.journaux', 'Journaux')}
                     </LienMenu>
                     {canManageUsers && (
                         <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
-                            Traductions
+                            {t('nav.traductions', 'Traductions')}
                         </LienMenu>
                     )}
                 </Groupe>
@@ -237,8 +237,8 @@ export default function AuthenticatedLayout({ header, children }) {
                         <input
                             value={recherche}
                             onChange={(e) => setRecherche(e.target.value)}
-                            placeholder={estAdmin ? 'Rechercher une entreprise…' : 'Rechercher une expédition…'}
-                            aria-label={estAdmin ? 'Rechercher une entreprise' : 'Rechercher une expédition'}
+                            placeholder={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
+                            aria-label={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
                             className="w-full rounded-lg border-slate-200 bg-surface py-2 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
                         />
                     </form>
@@ -255,15 +255,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                             {user.first_name} {user.last_name}
                                         </span>
                                         <span className="block text-[11px] uppercase tracking-wider text-slate-600">
-                                            {ROLES[user.role] ?? user.role}
+                                            {t('roles.' + user.role.toLowerCase(), ROLES[user.role] ?? user.role)}
                                         </span>
                                     </span>
                                 </button>
                             </Dropdown.Trigger>
                             <Dropdown.Content>
-                                <Dropdown.Link href={route('profile.edit')}>Profil</Dropdown.Link>
+                                <Dropdown.Link href={route('profile.edit')}>{t('nav.profil_court', 'Profil')}</Dropdown.Link>
                                 <Dropdown.Link href={route('logout')} method="post" as="button">
-                                    Déconnexion
+                                    {t('nav.deconnexion', 'Déconnexion')}
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
