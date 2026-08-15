@@ -1,6 +1,6 @@
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, usePays, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -15,6 +15,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
     const flash = usePage().props.flash ?? {};
     const t = useTraduction();
     const v = useVocabulaire();
+    const p = usePays();
     const locale = useLocale();
     const [refus, setRefus] = useState(null);
     const [champs, setChamps] = useState({
@@ -195,7 +196,10 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                         )}
                                     </div>
                                     <p className="text-xs text-slate-600">
-                                        {client.billing_address} · {client.postal_code} {client.city} · {client.country}
+                                        {/* La rue et la localite restent telles qu'enregistrees :
+                                            elles identifient un point de livraison. Le pays, lui,
+                                            a une forme officielle par langue. */}
+                                        {client.billing_address} · {client.postal_code} {client.city} · {p(client.country)}
                                     </p>
                                 </div>
 

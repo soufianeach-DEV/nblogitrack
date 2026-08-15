@@ -41,16 +41,59 @@ export function useVocabulaire() {
     return (groupe, valeur) => {
         if (! valeur) return valeur;
 
-        // Les diacritiques s'ecrivent en echappement : leur plage depend
-        // sinon de l'encodage du fichier source.
-        const cle = valeur
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '_')
-            .replace(/^_+|_+$/g, '');
+        return t(`vocab.${groupe}.${slug(valeur)}`, valeur);
+    };
+}
 
-        return t(`vocab.${groupe}.${cle}`, valeur);
+/** Les pays desservis, par code ISO 3166-1. Doit suivre App\Support\Pays. */
+const CODES_PAYS = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI',
+    'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO',
+    'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
+
+// Les diacritiques s'ecrivent en echappement : leur plage depend sinon
+// de l'encodage du fichier source.
+const slug = (valeur) => valeur
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const nomsPays = {};
+const pays = (langue) => (nomsPays[langue] ??= new Intl.DisplayNames([langue], { type: 'region' }));
+
+/*
+ * L'index se calcule une fois : il associe chaque nom de pays, dans les
+ * trois langues, a son code. Il ne depend d'aucune langue de page, donc
+ * le construire au chargement du module est sans danger — contrairement
+ * a un libelle traduit, qui serait fige avant que la langue soit connue.
+ */
+const INDEX_PAYS = (() => {
+    const index = {};
+
+    for (const langue of ['fr', 'nl', 'en']) {
+        for (const code of CODES_PAYS) index[slug(pays(langue).of(code))] = code;
+    }
+
+    return index;
+})();
+
+/**
+ * Traduit un nom de pays enregistre en base.
+ *
+ * Les noms viennent de l'ICU du navigateur, pas du dictionnaire : un
+ * pays a une forme officielle par langue et personne ne la discute.
+ * Une valeur hors liste s'affiche telle quelle.
+ */
+export function usePays() {
+    const langue = useLangue();
+
+    return (nom) => {
+        if (! nom) return nom;
+
+        const code = INDEX_PAYS[slug(nom)];
+
+        return code ? pays(langue).of(code) : nom;
     };
 }
 

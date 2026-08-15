@@ -77,6 +77,29 @@ class Traductions
         return self::t('vocab.'.$groupe.'.'.self::cleDepuis($valeur), $valeur);
     }
 
+    /**
+     * Le chemin inverse : d'une valeur affichee vers le francais de la base.
+     *
+     * Un filtre montre les libelles traduits, mais la colonne ne connait
+     * que le francais. Sans ce retour, choisir « Bouw » dans la liste
+     * neerlandaise ne trouverait aucune entreprise.
+     */
+    public static function vocabulaireEnFrancais(string $groupe, string $valeur): string
+    {
+        $prefixe = 'vocab.'.$groupe.'.';
+        $cherche = self::cleDepuis($valeur);
+
+        foreach (array_keys(Translation::LANGUES) as $langue) {
+            foreach (self::pour($langue) as $cle => $texte) {
+                if (str_starts_with($cle, $prefixe) && self::cleDepuis($texte) === $cherche) {
+                    return self::pour('fr')[$cle] ?? $valeur;
+                }
+            }
+        }
+
+        return $valeur;
+    }
+
     /** Le slug d'une valeur : minuscules, sans accent, separateurs unifies. */
     public static function cleDepuis(string $valeur): string
     {

@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
+use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -381,8 +382,10 @@ class TrackingController extends Controller
             'statut' => $ordre->status,
             'priorite' => $ordre->priority,
             'client' => $ordre->client?->company_name,
-            'depart' => Adresse::localite($ordre->pickup_address),
-            'arrivee' => Adresse::localite($ordre->delivery_address),
+            // Etiquette de carte, comme au tableau de bord : elle situe
+            // le trajet du regard, elle ne conduit personne a une porte.
+            'depart' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
+            'arrivee' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
             'marchandise' => $ordre->goods_type,
             'adr' => (bool) $ordre->is_hazardous,
             'livraison' => $ordre->requested_delivery_date?->format('d/m/Y'),

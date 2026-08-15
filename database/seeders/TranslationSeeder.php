@@ -977,6 +977,45 @@ class TranslationSeeder extends Seeder
             'leasing' => ['Leasing', 'Leasing', 'Leasing'],
         ],
 
+        /*
+         * Les communes belges qui portent un nom officiel dans plusieurs
+         * langues. Ce ne sont pas des traductions libres : « Bergen » est
+         * le nom neerlandais legal de Mons, pas une tentative de rendre
+         * le mot francais.
+         *
+         * Ces libelles servent d'etiquette sur la carte et dans le suivi,
+         * jamais dans une adresse. La difference tient a l'usage : une
+         * etiquette situe un trajet du regard, une adresse conduit un
+         * camion a une porte. La fiche de mission garde donc l'adresse
+         * complete telle qu'elle est enregistree.
+         *
+         * Une commune absente de cette liste s'affiche telle quelle : la
+         * plupart n'ont qu'une seule forme officielle.
+         */
+        'vocab.ville' => [
+            'bruxelles' => ['Bruxelles', 'Brussel', 'Brussels'],
+            'anvers' => ['Anvers', 'Antwerpen', 'Antwerp'],
+            'gand' => ['Gand', 'Gent', 'Ghent'],
+            'bruges' => ['Bruges', 'Brugge', 'Bruges'],
+            'louvain' => ['Louvain', 'Leuven', 'Leuven'],
+            'malines' => ['Malines', 'Mechelen', 'Mechelen'],
+            'courtrai' => ['Courtrai', 'Kortrijk', 'Kortrijk'],
+            'ostende' => ['Ostende', 'Oostende', 'Ostend'],
+            'roulers' => ['Roulers', 'Roeselare', 'Roeselare'],
+            'alost' => ['Alost', 'Aalst', 'Aalst'],
+            'liege' => ['Liège', 'Luik', 'Liège'],
+            'namur' => ['Namur', 'Namen', 'Namur'],
+            'mons' => ['Mons', 'Bergen', 'Mons'],
+            'tournai' => ['Tournai', 'Doornik', 'Tournai'],
+            'wavre' => ['Wavre', 'Waver', 'Wavre'],
+            'hasselt' => ['Hasselt', 'Hasselt', 'Hasselt'],
+            'genk' => ['Genk', 'Genk', 'Genk'],
+            'charleroi' => ['Charleroi', 'Charleroi', 'Charleroi'],
+            'verviers' => ['Verviers', 'Verviers', 'Verviers'],
+            'seraing' => ['Seraing', 'Seraing', 'Seraing'],
+            'paris' => ['Paris', 'Parijs', 'Paris'],
+        ],
+
         'trad' => [
             'cles' => ['Clés', 'Sleutels', 'Keys'],
             'a_traduire' => ['à traduire', 'te vertalen', 'to translate'],

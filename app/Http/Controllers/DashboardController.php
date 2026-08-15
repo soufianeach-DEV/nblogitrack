@@ -174,8 +174,11 @@ class DashboardController extends Controller
                 'id' => $ordre->id,
                 'numero' => $ordre->tracking_number,
                 'statut' => $ordre->status,
-                'depart' => Adresse::localite($ordre->pickup_address),
-                'arrivee' => Adresse::localite($ordre->delivery_address),
+                // Etiquette de carte : « Bergen » situe le trajet pour un
+                // lecteur neerlandophone. L'adresse complete, elle, n'est
+                // pas traduite — voir la fiche de mission du chauffeur.
+                'depart' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
+                'arrivee' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
                 'coordonnees' => [
                     [(float) $ordre->pickup_lat, (float) $ordre->pickup_lng],
                     [(float) $ordre->delivery_lat, (float) $ordre->delivery_lng],
