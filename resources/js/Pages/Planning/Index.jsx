@@ -1,11 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 const LIBELLE_STATUT = {
-    PENDING: 'En attente',
-    IN_PROGRESS: 'En cours',
-    DELIVERED: 'Livré',
-    CANCELLED: 'Annulé',
+    PENDING: ['statut.en_attente', 'En attente'],
+    IN_PROGRESS: ['statut.en_cours', 'En cours'],
+    DELIVERED: ['statut.livre', 'Livré'],
+    CANCELLED: ['statut.annule', 'Annulé'],
 };
 
 const COULEUR_STATUT = {
@@ -15,7 +16,12 @@ const COULEUR_STATUT = {
     CANCELLED: 'bg-status-incident/10 text-status-incident',
 };
 
-const LIBELLE_PRIORITE = { LOW: 'Basse', NORMAL: 'Normale', HIGH: 'Haute', URGENT: 'Urgente' };
+const LIBELLE_PRIORITE = {
+    LOW: ['priorite.basse', 'Basse'],
+    NORMAL: ['priorite.normale', 'Normale'],
+    HIGH: ['priorite.haute', 'Haute'],
+    URGENT: ['priorite.urgente', 'Urgente'],
+};
 
 const COULEUR_PRIORITE = {
     LOW: 'text-slate-600',
@@ -34,6 +40,7 @@ const enHeures = (heures) => {
 };
 
 function LigneAffectation({ ordre, vehicles, drivers }) {
+    const t = useTraduction();
     const { data, setData, post, processing, errors } = useForm({
         vehicle_registration: '',
         driver_id: '',
@@ -48,8 +55,8 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     const hayonSuffisant = (v) => ! ordre.needs_tail_lift || v.has_tail_lift;
     const vehiculeCompatible = (v) => capaciteSuffisante(v) && hayonSuffisant(v);
     const motifRefus = (v) => {
-        if (! capaciteSuffisante(v)) return ' (capacité insuffisante)';
-        if (! hayonSuffisant(v)) return ' (sans hayon)';
+        if (! capaciteSuffisante(v)) return ' (' + t('planif.capacite_insuffisante', 'capacité insuffisante') + ')';
+        if (! hayonSuffisant(v)) return ' (' + t('planif.sans_hayon', 'sans hayon') + ')';
 
         return '';
     };
@@ -57,7 +64,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified);
     const motifChauffeur = (d) => {
         if (! chauffeurApte(d)) return ' (' + d.empechements[0] + ')';
-        if (ordre.is_hazardous && ! d.adr_certified) return ' (ADR requis)';
+        if (ordre.is_hazardous && ! d.adr_certified) return ' (' + t('planif.adr_requis', 'ADR requis') + ')';
 
         return '';
     };
@@ -69,14 +76,15 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     const camionsOk = vehicles.filter(vehiculeCompatible).length;
     const chauffeursOk = drivers.filter(chauffeurCompatible).length;
     const pastille = 'rounded-full px-2.5 py-0.5 font-medium';
+    const locale = useLocale();
 
     return (
         <>
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-semibold uppercase tracking-wide text-slate-600">Besoins</span>
+            <span className="font-semibold uppercase tracking-wide text-slate-600">{t('planif.besoins', 'Besoins')}</span>
 
             <span className={pastille + ' bg-surface text-marine'}>
-                Charge utile ≥ {(Number(ordre.weight) / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
+                {t('planif.charge_utile', 'Charge utile ≥')} {(Number(ordre.weight) / 1000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
             </span>
 
             {ordre.conduite && (
@@ -87,18 +95,18 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
 
             {ordre.is_hazardous && (
                 <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
-                    Chauffeur certifié ADR
+                    {t('planif.chauffeur_adr', 'Chauffeur certifié ADR')}
                 </span>
             )}
 
             {ordre.needs_tail_lift && (
                 <span className={pastille + ' bg-brand-blue/10 text-brand-blue'}>
-                    Hayon élévateur
+                    {t('devis.hayon', 'Hayon élévateur')}
                 </span>
             )}
 
             <span className={camionsOk === 0 || chauffeursOk === 0 ? 'font-semibold text-status-incident' : 'text-slate-600'}>
-                {camionsOk} camion{camionsOk > 1 ? 's' : ''} · {chauffeursOk} chauffeur{chauffeursOk > 1 ? 's' : ''} compatibles
+                {camionsOk} {camionsOk > 1 ? t('commun.camions', 'camions') : t('planif.camion', 'camion')} · {chauffeursOk} {chauffeursOk > 1 ? t('planif.chauffeurs_compat', 'chauffeurs compatibles') : t('planif.chauffeur_compat', 'chauffeur compatible')}
             </span>
         </div>
 
@@ -110,11 +118,11 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                     className={selectCls}
                     required
                 >
-                    <option value="">— Véhicule —</option>
+                    <option value="">— {t('ordres.vehicule', 'Véhicule')} —</option>
                     {vehicles.map((v) => (
                         <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
-                            {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString('fr-FR')} t
-                            {v.has_tail_lift ? ' · hayon' : ''}
+                            {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : ''}
                             {motifRefus(v)}
                         </option>
                     ))}
@@ -128,11 +136,11 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                     className={selectCls}
                     required
                 >
-                    <option value="">— Chauffeur —</option>
+                    <option value="">— {t('suivi.chauffeur', 'Chauffeur')} —</option>
                     {drivers.map((d) => (
                         <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
-                            {d.nom} · permis {d.license_type}{d.adr_certified ? ' · ADR' : ''}
-                            {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} cette semaine` : ''}
+                            {d.nom} · {t('suivi.permis', 'Permis').toLowerCase()} {d.license_type}{d.adr_certified ? ' · ADR' : ''}
+                            {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} ${t('planif.cette_semaine', 'cette semaine')}` : ''}
                             {motifChauffeur(d)}
                         </option>
                     ))}
@@ -144,7 +152,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                 disabled={processing}
                 className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
             >
-                Affecter
+                {t('planif.affecter', 'Affecter')}
             </button>
         </form>
         </>
@@ -152,6 +160,8 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
 }
 
 function BoutonsStatut({ ordre }) {
+    const t = useTraduction();
+
     const changer = (statut, confirmation) => {
         if (confirmation && ! window.confirm(confirmation)) return;
         router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true });
@@ -165,23 +175,26 @@ function BoutonsStatut({ ordre }) {
                     onClick={() => changer('DELIVERED')}
                     className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 >
-                    Marquer livré
+                    {t('planif.marquer_livre', 'Marquer livré')}
                 </button>
             )}
             {['PENDING', 'IN_PROGRESS'].includes(ordre.status) && (
                 <button
                     type="button"
-                    onClick={() => changer('CANCELLED', 'Annuler définitivement cet ordre ?')}
+                    onClick={() => changer('CANCELLED', t('planif.confirmer_annulation', 'Annuler définitivement cet ordre ?'))}
                     className="rounded-lg border border-status-incident px-3 py-1.5 text-xs font-semibold text-status-incident transition hover:bg-status-incident/5"
                 >
-                    Annuler
+                    {t('action.annuler', 'Annuler')}
                 </button>
             )}
         </div>
     );
 }
 
-const LIBELLE_CONTRAINTE = { adr: 'Matières dangereuses', hayon: 'Hayon requis' };
+const LIBELLE_CONTRAINTE = {
+    adr: ['planif.contrainte_adr', 'Matières dangereuses'],
+    hayon: ['planif.contrainte_hayon', 'Hayon requis'],
+};
 
 export default function Index({
     orders, vehicles, drivers, statut, compteurs,
@@ -189,14 +202,16 @@ export default function Index({
     contrainte = null, contraintes = [],
 }) {
     const flash = usePage().props.flash ?? {};
+    const t = useTraduction();
+    const locale = useLocale();
 
     const dateCourte = (valeur) => valeur
-        ? new Date(valeur).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '—';
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Planification</h1>}>
-            <Head title="Planification" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.planification', 'Planification')}</h1>}>
+            <Head title={t('nav.planification', 'Planification')} />
 
             {flash.success && (
                 <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
@@ -215,14 +230,14 @@ export default function Index({
                             (statut === cle ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
                         }
                     >
-                        {LIBELLE_STATUT[cle]}
+                        {t(...LIBELLE_STATUT[cle])}
                         <span className="ml-2 text-xs opacity-70">{compteurs[cle] ?? 0}</span>
                     </Link>
                 ))}
             </div>
 
             <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Priorité</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('commande.priorite', 'Priorité')}</span>
                 <Link
                     href={route('planning.index', { status: statut, contrainte })}
                     preserveScroll
@@ -231,7 +246,7 @@ export default function Index({
                         (priorite === null ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
                     }
                 >
-                    Toutes
+                    {t('planif.toutes', 'Toutes')}
                 </Link>
                 {priorites.map((p) => (
                     <Link
@@ -247,14 +262,14 @@ export default function Index({
                                     : 'bg-white text-marine hover:bg-slate-50')
                         }
                     >
-                        {LIBELLE_PRIORITE[p.valeur]}
+                        {t(...LIBELLE_PRIORITE[p.valeur])}
                         <span className="ml-1.5 text-xs opacity-70">{p.nombre}</span>
                     </Link>
                 ))}
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Contrainte</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('planif.contrainte', 'Contrainte')}</span>
                 <Link
                     href={route('planning.index', { status: statut, priorite })}
                     preserveScroll
@@ -263,7 +278,7 @@ export default function Index({
                         (contrainte === null ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
                     }
                 >
-                    Toutes
+                    {t('planif.toutes', 'Toutes')}
                 </Link>
                 {contraintes.map((c) => (
                     <Link
@@ -279,7 +294,7 @@ export default function Index({
                                     : 'bg-white text-marine hover:bg-slate-50')
                         }
                     >
-                        {LIBELLE_CONTRAINTE[c.valeur]}
+                        {t(...LIBELLE_CONTRAINTE[c.valeur])}
                         <span className="ml-1.5 text-xs opacity-70">{c.nombre}</span>
                     </Link>
                 ))}
@@ -288,7 +303,7 @@ export default function Index({
             <div className="space-y-3">
                 {orders.data.length === 0 && (
                     <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">
-                        Aucun ordre {LIBELLE_STATUT[statut].toLowerCase()}.
+                        {t('planif.aucun_ordre', 'Aucun ordre dans cet état.')}
                     </p>
                 )}
 
@@ -299,10 +314,10 @@ export default function Index({
                                 <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-semibold text-marine">{ordre.tracking_number}</span>
                                     <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + COULEUR_STATUT[ordre.status]}>
-                                        {LIBELLE_STATUT[ordre.status]}
+                                        {t(...LIBELLE_STATUT[ordre.status])}
                                     </span>
                                     <span className={'text-xs ' + COULEUR_PRIORITE[ordre.priority]}>
-                                        {LIBELLE_PRIORITE[ordre.priority]}
+                                        {t(...LIBELLE_PRIORITE[ordre.priority])}
                                     </span>
                                     {ordre.is_hazardous && (
                                         <span className="rounded-full bg-status-incident/10 px-2.5 py-0.5 text-xs font-medium text-status-incident">
@@ -311,7 +326,7 @@ export default function Index({
                                     )}
                                     {ordre.needs_tail_lift && (
                                         <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
-                                            Hayon requis
+                                            {t('planif.contrainte_hayon', 'Hayon requis')}
                                         </span>
                                     )}
                                 </div>
@@ -320,9 +335,9 @@ export default function Index({
                                     {ordre.pickup_address} → {ordre.delivery_address}
                                 </p>
                                 <p className="mt-1 text-xs text-slate-600">
-                                    {Number(ordre.weight).toLocaleString('fr-FR')} kg
-                                    {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString('fr-FR')} km` : ''}
-                                    {' · chargement '}{dateCourte(ordre.pickup_date)}
+                                    {Number(ordre.weight).toLocaleString(locale)} kg
+                                    {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString(locale)} km` : ''}
+                                    {' · ' + t('planif.chargement', 'chargement') + ' '}{dateCourte(ordre.pickup_date)}
                                     {ordre.goods_type ? ` · ${ordre.goods_type}` : ''}
                                 </p>
                             </div>
@@ -335,20 +350,20 @@ export default function Index({
                             ) : (
                                 <div className="flex flex-wrap gap-6 text-xs text-slate-600">
                                     <span>
-                                        <span className="text-slate-600">Véhicule : </span>
+                                        <span className="text-slate-600">{t('ordres.vehicule', 'Véhicule')} : </span>
                                         {ordre.vehicle
                                             ? `${ordre.vehicle.registration} · ${ordre.vehicle.brand} ${ordre.vehicle.model}`
-                                            : 'non affecté'}
+                                            : t('planif.non_affecte', 'non affecté')}
                                     </span>
                                     <span>
-                                        <span className="text-slate-600">Chauffeur : </span>
+                                        <span className="text-slate-600">{t('suivi.chauffeur', 'Chauffeur')} : </span>
                                         {ordre.driver?.user
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
-                                            : 'non affecté'}
+                                            : t('planif.non_affecte', 'non affecté')}
                                     </span>
                                     {ordre.actual_delivery_date && (
                                         <span>
-                                            <span className="text-slate-600">Livré le : </span>
+                                            <span className="text-slate-600">{t('planif.livre_le', 'Livré le')} : </span>
                                             {dateCourte(ordre.actual_delivery_date)}
                                         </span>
                                     )}
