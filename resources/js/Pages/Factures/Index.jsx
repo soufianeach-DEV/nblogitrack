@@ -19,6 +19,23 @@ export default function Index({ factures = [], peutGererAchats = false }) {
     // Pas de colonne vide chez le personnel, qui ne paie jamais.
     const colonnePaiement = factures.some((f) => f.peut_payer);
 
+    /**
+     * Toute la ligne ouvre la facture : viser un lien de huit caracteres
+     * dans une ligne de cinquante pixels de haut est inutilement penible.
+     *
+     * La reference reste un vrai lien : c'est lui qui porte l'acces
+     * clavier et ce qu'annonce un lecteur d'ecran. La ligne n'est qu'un
+     * raccourci a la souris, elle n'entre donc pas dans l'ordre de
+     * tabulation — sinon chaque facture y compterait deux fois.
+     */
+    const ouvrir = (facture) => (e) => {
+        // Un clic qui vient de terminer une selection de texte ne navigue
+        // pas : on voulait copier un montant, pas changer de page.
+        if (window.getSelection()?.toString()) return;
+
+        router.get(route('invoices.show', facture.id));
+    };
+
     const du = factures.filter((f) => f.etat !== 'PAID').reduce((somme, f) => somme + f.ttc, 0);
     const paye = factures.filter((f) => f.etat === 'PAID').reduce((somme, f) => somme + f.ttc, 0);
     const enRetard = factures.filter((f) => f.etat === 'OVERDUE').length;
@@ -79,10 +96,18 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                 const etat = ETATS[facture.etat] ?? ETATS.SENT;
 
                                 return (
-                                    <tr key={facture.id} className="border-b border-slate-50 last:border-0">
+                                    <tr
+                                        key={facture.id}
+                                        onClick={ouvrir(facture)}
+                                        className="cursor-pointer border-b border-slate-50 transition-colors last:border-0 hover:bg-surface"
+                                    >
                                         <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold">
                                             <Link
                                                 href={route('invoices.show', facture.id)}
+                                                // Le lien mene deja la ou mene la ligne : sans
+                                                // cette coupure, un clic dessus declencherait
+                                                // deux visites vers la meme page.
+                                                onClick={(e) => e.stopPropagation()}
                                                 className="text-brand-blue transition hover:text-marine"
                                             >
                                                 {facture.reference}
@@ -121,7 +146,12 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                                 {facture.peut_payer && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => router.post(route('payments.payer', facture.id))}
+                                                        onClick={(e) => {
+                                                            // Payer n'est pas consulter : le clic
+                                                            // s'arrete ici et n'ouvre pas la fiche.
+                                                            e.stopPropagation();
+                                                            router.post(route('payments.payer', facture.id));
+                                                        }}
                                                         className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark"
                                                     >
                                                         {t('facture.payer', 'Payer')}
