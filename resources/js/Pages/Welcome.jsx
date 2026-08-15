@@ -1,7 +1,7 @@
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import { useTraduction } from '@/traduire';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 // Trame de points, posee en fond des sections claires.
 const TRAME = {
@@ -44,14 +44,21 @@ function Certification({ icone, texte }) {
     );
 }
 
+/**
+ * Une colonne du pied. Un lien s'ecrit { libelle, href } et devient
+ * cliquable ; une simple chaine reste du texte, comme la liste des
+ * services qui ne mene nulle part.
+ */
 function ColonnePied({ titre, liens }) {
     return (
         <div>
             <h3 className="text-sm font-bold text-white">{titre}</h3>
             <ul className="mt-4 space-y-2 text-sm text-slate-300">
                 {liens.map((l) => (
-                    <li key={l} className="w-fit cursor-default transition-colors duration-200 hover:text-action">
-                        {l}
+                    <li key={l.libelle ?? l} className="w-fit transition-colors duration-200 hover:text-action">
+                        {l.href
+                            ? <Link href={l.href} className="hover:underline">{l.libelle}</Link>
+                            : <span className="cursor-default">{l}</span>}
                     </li>
                 ))}
             </ul>
@@ -61,6 +68,7 @@ function ColonnePied({ titre, liens }) {
 
 export default function Welcome({ auth, canLogin, canRegister }) {
     const t = useTraduction();
+    const { pages_pied: pagesPied = [] } = usePage().props;
     // Le trait orange se deploie sous le lien au survol.
     const lienNav = 'group relative text-[15px] font-bold text-marine transition-colors duration-200 hover:text-brand-blue';
     const soulignement = 'absolute -bottom-1.5 left-0 h-0.5 w-0 bg-action transition-all duration-300 group-hover:w-full';
@@ -294,9 +302,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                     t('accueil.pied_adr', 'Matières dangereuses'),
                                 ]}
                             />
+                            {/* A13 : les pages legales sont redigees depuis
+                                l'administration. Tant qu'aucune n'est
+                                publiee, le pied garde ses intitules. */}
                             <ColonnePied
                                 titre={t('accueil.pied_legal', 'Légal')}
-                                liens={[
+                                liens={pagesPied.length > 0 ? pagesPied : [
                                     t('accueil.pied_mentions', 'Mentions légales'),
                                     t('accueil.pied_rgpd', 'Confidentialité (RGPD)'),
                                     t('accueil.pied_conditions', 'Conditions générales'),

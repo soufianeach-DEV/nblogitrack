@@ -4,9 +4,12 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MissionController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\PagePubliqueController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
@@ -128,6 +131,22 @@ Route::middleware('auth')->group(function () {
         // A11 : corriger un texte sans toucher au code ni redeployer.
         Route::get('/traductions', [TranslationController::class, 'index'])->name('translations.index');
         Route::patch('/traductions/{translation}', [TranslationController::class, 'update'])->name('translations.update');
+
+        // A12 : les cles de l'API. L'API elle-meme vit dans routes/api.php,
+        // ceci n'en est que l'administration.
+        Route::get('/api', [ApiKeyController::class, 'index'])->name('api-keys.index');
+        Route::post('/api', [ApiKeyController::class, 'store'])->name('api-keys.store');
+        Route::patch('/api/{apiKey}/revocation', [ApiKeyController::class, 'revoke'])->name('api-keys.revoke');
+
+        // A13 : le contenu des pages publiques et les fichiers offerts.
+        Route::get('/pages', [PageController::class, 'index'])->name('pages.index');
+        Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
+        Route::patch('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
+        Route::patch('/pages/{page}/publication', [PageController::class, 'publier'])->name('pages.publish');
+        Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
+        Route::post('/pages/documents', [PageController::class, 'televerser'])->name('pages.documents.store');
+        Route::delete('/pages/documents/{pageDocument}', [PageController::class, 'supprimerDocument'])
+            ->name('pages.documents.destroy');
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])
@@ -157,6 +176,10 @@ Route::get('/devis/confirmation', [QuoteController::class, 'confirmation'])->nam
 Route::get('/suivi', [TrackingController::class, 'show'])
     ->middleware('throttle:suivi')
     ->name('tracking.show');
+
+// A13 : les pages redigees depuis l'administration. Elles sont sous le
+// prefixe de langue comme le reste de la vitrine : /fr/p/a-propos.
+Route::get('/p/{page:slug}', [PagePubliqueController::class, 'show'])->name('pages.show');
 
 require __DIR__.'/auth.php';
 
@@ -190,6 +213,13 @@ Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
 Route::get('/verification-tva', [VatController::class, 'verifier'])
     ->middleware('throttle:20,1')
     ->name('vat.verify');
+
+// A13 : les fichiers offerts aux visiteurs. Hors prefixe de langue — un
+// PDF n'a pas de langue d'interface — et servis par l'application, pas
+// depuis le dossier public.
+Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])
+    ->whereNumber('pageDocument')
+    ->name('pages.documents.show');
 
 // F11 : la bascule est ouverte au visiteur. Un client neerlandophone
 // doit pouvoir lire la page d'accueil dans sa langue avant de creer un

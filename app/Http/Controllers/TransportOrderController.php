@@ -158,8 +158,6 @@ class TransportOrderController extends Controller
         $distanceKm = Tarificateur::distanceRoutiere($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
         $hazardous = $request->boolean('is_hazardous');
 
-        $nextId = TransportOrder::max('id') + 1;
-
         $order = TransportOrder::create([
             'client_id' => $request->user()->id,
             'pickup_address' => $data['pickup_address'],
@@ -181,8 +179,8 @@ class TransportOrderController extends Controller
             'created_date' => now(),
             'distance_km' => (int) round($distanceKm),
             'estimated_cost' => Tarificateur::cout($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
-            'tracking_code' => strtoupper(Str::random(12)),
-            'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
+            'tracking_code' => TransportOrder::prochainCode(),
+            'tracking_number' => TransportOrder::prochainNumero(),
         ]);
 
         ActivityLog::record(

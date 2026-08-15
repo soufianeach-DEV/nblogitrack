@@ -148,9 +148,17 @@ export default function AuthenticatedLayout({ header, children }) {
                         {t('nav.journaux', 'Journaux')}
                     </LienMenu>
                     {canManageUsers && (
-                        <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
-                            {t('nav.traductions', 'Traductions')}
-                        </LienMenu>
+                        <>
+                            <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
+                                {t('nav.traductions', 'Traductions')}
+                            </LienMenu>
+                            <LienMenu href={route('pages.index')} active={route().current('pages.index')} icone="journal" onClick={fermer}>
+                                {t('nav.pages', 'Pages du site')}
+                            </LienMenu>
+                            <LienMenu href={route('api-keys.index')} active={route().current('api-keys.index')} icone="journal" onClick={fermer}>
+                                {t('nav.api', 'API REST')}
+                            </LienMenu>
+                        </>
                     )}
                 </Groupe>
             )}
