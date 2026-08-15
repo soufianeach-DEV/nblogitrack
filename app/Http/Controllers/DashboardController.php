@@ -67,6 +67,7 @@ class DashboardController extends Controller
                 'vehicules_disponibles' => Vehicle::where('is_available', true)->count(),
                 'vehicules_total' => Vehicle::count(),
             ] : null,
+            'calendrier' => $utilisateur->can('plan-orders') ? $this->calendrier() : null,
             'validations' => $personnel ? $this->validations() : null,
             'conformite' => $personnel ? $this->conformite() : null,
             'journal' => $utilisateur->can('view-logs') ? $this->journal() : null,
@@ -342,6 +343,73 @@ class DashboardController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
+    /**
+     * Le plan de charge des quinze prochains jours.
+     *
+     * Le planificateur ne se demande pas combien d'ordres restent en attente,
+     * il se demande s'il peut accepter une livraison jeudi. La reponse tient
+     * dans la confrontation, jour par jour, de ce qui est promis et de ce qui
+     * est disponible pour le tenir.
+     *
+     * @return array<string, mixed>
+     */
+    private function calendrier(): array
+    {
+        $debut = now()->startOfDay();
+        $fin = $debut->copy()->addDays(14);
+
+        $enlevements = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereBetween('pickup_date', [$debut, $fin->copy()->endOfDay()])
+            ->selectRaw('pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes')
+            ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
+
+        $livraisons = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereBetween('requested_delivery_date', [$debut->toDateString(), $fin->toDateString()])
+            ->selectRaw('requested_delivery_date AS jour, count(*) AS nombre')
+            ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
+
+        // La capacite du jour n'est pas le parc entier : un camion deja parti
+        // et un chauffeur inapte n'y comptent pas.
+        $camions = Vehicle::where('is_available', true)
+            ->where(fn ($q) => $q->whereNull('inspection_valid_until')
+                ->orWhere('inspection_valid_until', '>=', $debut->toDateString()))
+            ->count();
+
+        $conducteurs = Driver::where('is_available', true)->get()
+            ->filter(fn (Driver $d) => $d->estApte())
+            ->count();
+
+        $capacite = min($camions, $conducteurs);
+        $jours = [];
+
+        for ($date = $debut->copy(); $date->lte($fin); $date->addDay()) {
+            $cle = $date->toDateString();
+            $enlevement = (int) ($enlevements[$cle]->nombre ?? 0);
+            $aAffecter = $enlevement - (int) ($enlevements[$cle]->affectes ?? 0);
+
+            $jours[] = [
+                'date' => $cle,
+                'jour' => $date->locale('fr')->isoFormat('ddd'),
+                'numero' => $date->day,
+                'mois' => $date->locale('fr')->isoFormat('MMM'),
+                'weekend' => $date->isWeekend(),
+                'aujourdhui' => $date->isToday(),
+                'enlevements' => $enlevement,
+                'a_affecter' => $aAffecter,
+                'livraisons' => (int) ($livraisons[$cle]->nombre ?? 0),
+                'sature' => $enlevement > $capacite,
+            ];
+        }
+
+        return [
+            'jours' => $jours,
+            'capacite' => $capacite,
+            'camions' => $camions,
+            'conducteurs' => $conducteurs,
+            'a_affecter' => array_sum(array_column($jours, 'a_affecter')),
+        ];
+    }
+
     private function validations(): array
     {
         return Client::with('user:id,first_name,last_name,email,phone')

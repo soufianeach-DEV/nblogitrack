@@ -138,6 +138,103 @@ function VolumeMensuel({ volume }) {
     );
 }
 
+/**
+ * Le plan de charge du planificateur. Il ne se demande pas combien d'ordres
+ * attendent, il se demande s'il peut accepter une livraison jeudi : chaque
+ * jour confronte donc ce qui est promis a ce qui peut le tenir.
+ */
+function PlanDeCharge({ calendrier }) {
+    const { jours, capacite, camions, conducteurs, a_affecter: aAffecter } = calendrier;
+    const maximum = Math.max(...jours.map((j) => Math.max(j.enlevements, j.livraisons)), capacite, 1);
+
+    return (
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 className="font-semibold text-marine">Plan de charge</h2>
+                    <p className="text-sm text-slate-600">Quinze prochains jours — enlèvements et livraisons promises</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-sm bg-marine" />
+                        Enlèvements
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-sm bg-brand-blue/40" />
+                        Livraisons
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="h-0.5 w-4 bg-status-incident" />
+                        Capacité {capacite}
+                    </span>
+                </div>
+            </div>
+
+            <div className="mt-5 flex flex-1 items-end gap-1.5">
+                {jours.map((j) => (
+                    <Link
+                        key={j.date}
+                        href={route('planning.index', { status: 'PENDING' })}
+                        title={`${j.jour} ${j.numero} ${j.mois} — ${j.enlevements} enlèvement${j.enlevements > 1 ? 's' : ''}`
+                            + `, ${j.livraisons} livraison${j.livraisons > 1 ? 's' : ''} promise${j.livraisons > 1 ? 's' : ''}`
+                            + (j.a_affecter > 0 ? ` — ${j.a_affecter} sans véhicule` : '')
+                            + (j.sature ? ` — au-delà de la capacité de ${capacite}` : '')}
+                        className={`group flex h-full min-w-0 flex-1 flex-col justify-end rounded-lg px-0.5 pb-1 pt-2 transition ${
+                            j.aujourdhui ? 'bg-action/10' : j.weekend ? 'bg-surface' : 'hover:bg-surface'
+                        }`}
+                    >
+                        <span className={`mb-1 text-center text-[11px] font-semibold ${j.sature ? 'text-status-incident' : 'text-marine'}`}>
+                            {j.enlevements || ''}
+                        </span>
+
+                        {/* Le trait rouge marque la capacite du jour : une barre
+                            qui le depasse annonce une promesse intenable. */}
+                        <div className="relative flex h-full items-end justify-center gap-0.5">
+                            <div
+                                className="absolute inset-x-0 border-t border-dashed border-status-incident/50"
+                                style={{ bottom: `${(capacite / maximum) * 100}%` }}
+                            />
+                            <div
+                                className={`w-1/2 rounded-t ${j.sature ? 'bg-status-incident' : 'bg-marine'}`}
+                                style={{ height: `${Math.max((j.enlevements / maximum) * 100, j.enlevements > 0 ? 4 : 0)}%` }}
+                            />
+                            <div
+                                className="w-1/2 rounded-t bg-brand-blue/40"
+                                style={{ height: `${Math.max((j.livraisons / maximum) * 100, j.livraisons > 0 ? 4 : 0)}%` }}
+                            />
+                        </div>
+
+                        <span className={`mt-1.5 block text-center text-[11px] leading-tight ${
+                            j.aujourdhui ? 'font-bold text-action-dark' : j.weekend ? 'text-slate-500' : 'text-slate-600'
+                        }`}>
+                            <span className="block capitalize">{j.jour}</span>
+                            <span className="block font-semibold">{j.numero}</span>
+                        </span>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
+                <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Capacité du jour</p>
+                    <p className="font-bold text-marine">
+                        {capacite} attelages
+                        <span className="ml-2 text-xs font-normal text-slate-600">
+                            {camions} camions · {conducteurs} chauffeurs aptes
+                        </span>
+                    </p>
+                </div>
+                <div className="text-right">
+                    <p className="text-xs uppercase tracking-wide text-slate-600">Restent à affecter</p>
+                    <p className={`font-bold ${aAffecter > 0 ? 'text-status-incident' : 'text-status-delivered'}`}>
+                        {aAffecter > 0 ? `${aAffecter} expéditions` : 'Tout est affecté'}
+                    </p>
+                </div>
+            </div>
+        </section>
+    );
+}
+
 function FicheEntreprise({ entreprise, onFermer }) {
     const { post, processing } = useForm({});
 
@@ -363,7 +460,10 @@ function CarteEnCirculation({ carte, total }) {
 
     return (
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
-            <div className="relative h-56">
+            {/* Meme cloisonnement que sur le suivi : l'etiquette monte a 1100
+                pour couvrir les calques de Leaflet, elle ne doit pas pour
+                autant couvrir l'en-tete. */}
+            <div className="relative isolate h-56">
                 <CarteTrajets trajets={trajets} onSelection={ouvrir} className="h-full w-full" />
                 <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
                     {total > carte.length ? `${carte.length} des ${total}` : total} en circulation
@@ -583,6 +683,7 @@ export default function Dashboard({
     alertes = [],
     facturation = null,
     exploitation = null,
+    calendrier = null,
     validations = null,
     conformite = null,
     journal = null,
@@ -768,14 +869,29 @@ export default function Dashboard({
                     </div>
                 )}
 
+                {/* Le planificateur ne voit pas le journal : sa place revient
+                    au plan de charge, en face des validations. L'administrateur
+                    a les deux, le plan prend alors sa propre rangee. */}
+                {calendrier && ! journal && (
+                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
+                        <PlanDeCharge calendrier={calendrier} />
+                    </div>
+                )}
+
                 {validations && (
                     <div className="flex flex-col lg:col-start-3 lg:row-start-3">
                         <ValidationsEnAttente validations={validations} />
                     </div>
                 )}
 
-                {conformite && (
+                {calendrier && journal && (
                     <div className="lg:col-span-3 lg:col-start-1 lg:row-start-4">
+                        <PlanDeCharge calendrier={calendrier} />
+                    </div>
+                )}
+
+                {conformite && (
+                    <div className={`lg:col-span-3 lg:col-start-1 ${calendrier && journal ? 'lg:row-start-5' : 'lg:row-start-4'}`}>
                         <Conformite conformite={conformite} />
                     </div>
                 )}
