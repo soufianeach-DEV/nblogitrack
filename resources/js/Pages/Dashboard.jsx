@@ -145,14 +145,13 @@ function VolumeMensuel({ volume }) {
  */
 function PlanDeCharge({ calendrier }) {
     const { jours, capacite, camions, conducteurs, a_affecter: aAffecter } = calendrier;
-    const maximum = Math.max(...jours.map((j) => Math.max(j.enlevements, j.livraisons)), capacite, 1);
 
     return (
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 className="font-semibold text-marine">Plan de charge</h2>
-                    <p className="text-sm text-slate-600">Quinze prochains jours — enlèvements et livraisons promises</p>
+                    <p className="text-sm text-slate-600">Deux prochaines semaines — enlèvements et livraisons promises</p>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-slate-600">
                     <span className="flex items-center gap-1.5">
@@ -164,13 +163,15 @@ function PlanDeCharge({ calendrier }) {
                         Livraisons
                     </span>
                     <span className="flex items-center gap-1.5">
-                        <span className="h-0.5 w-4 bg-status-incident" />
-                        Capacité {capacite}
+                        <span className="h-2.5 w-2.5 rounded-sm bg-status-incident" />
+                        Camion manquant
                     </span>
                 </div>
             </div>
 
-            <div className="mt-5 flex flex-1 items-end gap-1.5">
+            {/* Quatorze cases sur deux rangees de sept. Le planificateur lit
+                une quinzaine d'un coup d'oeil, comme un agenda. */}
+            <div className="mt-5 grid flex-1 grid-cols-7 gap-1.5">
                 {jours.map((j) => (
                     <Link
                         key={j.date}
@@ -179,37 +180,56 @@ function PlanDeCharge({ calendrier }) {
                             + `, ${j.livraisons} livraison${j.livraisons > 1 ? 's' : ''} promise${j.livraisons > 1 ? 's' : ''}`
                             + (j.a_affecter > 0 ? ` — ${j.a_affecter} sans véhicule` : '')
                             + (j.sature ? ` — au-delà de la capacité de ${capacite}` : '')}
-                        className={`group flex h-full min-w-0 flex-1 flex-col justify-end rounded-lg px-0.5 pb-1 pt-2 transition ${
-                            j.aujourdhui ? 'bg-action/10' : j.weekend ? 'bg-surface' : 'hover:bg-surface'
+                        className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
+                            j.aujourdhui ? 'border-action bg-action/5'
+                                : j.sature ? 'border-status-incident/40 bg-status-incident/5'
+                                : j.weekend ? 'border-slate-100 bg-surface hover:bg-slate-100'
+                                : 'border-slate-100 hover:bg-surface'
                         }`}
                     >
-                        <span className={`mb-1 text-center text-[11px] font-semibold ${j.sature ? 'text-status-incident' : 'text-marine'}`}>
-                            {j.enlevements || ''}
+                        <span className="flex items-baseline justify-between gap-1">
+                            <span className={`truncate text-[11px] capitalize ${
+                                j.aujourdhui ? 'font-bold text-action-dark' : 'text-slate-500'
+                            }`}>
+                                {j.jour}
+                            </span>
+                            <span className={`text-sm font-bold leading-none ${
+                                j.aujourdhui ? 'text-action-dark' : 'text-marine'
+                            }`}>
+                                {j.numero}
+                            </span>
                         </span>
 
-                        {/* Le trait rouge marque la capacite du jour : une barre
-                            qui le depasse annonce une promesse intenable. */}
-                        <div className="relative flex h-full items-end justify-center gap-0.5">
-                            <div
-                                className="absolute inset-x-0 border-t border-dashed border-status-incident/50"
-                                style={{ bottom: `${(capacite / maximum) * 100}%` }}
-                            />
-                            <div
-                                className={`w-1/2 rounded-t ${j.sature ? 'bg-status-incident' : 'bg-marine'}`}
-                                style={{ height: `${Math.max((j.enlevements / maximum) * 100, j.enlevements > 0 ? 4 : 0)}%` }}
-                            />
-                            <div
-                                className="w-1/2 rounded-t bg-brand-blue/40"
-                                style={{ height: `${Math.max((j.livraisons / maximum) * 100, j.livraisons > 0 ? 4 : 0)}%` }}
-                            />
-                        </div>
+                        {/* Pas de truncate : a sept colonnes le mot depasse la
+                            case et se ferait couper. Il passe a la ligne. */}
+                        {j.enlevements > 0 && (
+                            <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
+                                j.sature ? 'bg-status-incident' : 'bg-marine'
+                            }`}>
+                                {j.enlevements} enlèvement{j.enlevements > 1 ? 's' : ''}
+                            </span>
+                        )}
 
-                        <span className={`mt-1.5 block text-center text-[11px] leading-tight ${
-                            j.aujourdhui ? 'font-bold text-action-dark' : j.weekend ? 'text-slate-500' : 'text-slate-600'
-                        }`}>
-                            <span className="block capitalize">{j.jour}</span>
-                            <span className="block font-semibold">{j.numero}</span>
-                        </span>
+                        {j.livraisons > 0 && (
+                            <span className="rounded bg-brand-blue/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-marine">
+                                {j.livraisons} livraison{j.livraisons > 1 ? 's' : ''}
+                            </span>
+                        )}
+
+                        {/* La couverture plutot que le manque : afficher le
+                            nombre non affecte repetait le nombre d'enlevements
+                            tant que rien n'est attribue. */}
+                        {j.enlevements > 0 && (
+                            <span className={`truncate text-[10px] font-semibold ${
+                                j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
+                            }`}>
+                                {j.enlevements - j.a_affecter}/{j.enlevements} affecté{j.enlevements > 1 ? 's' : ''}
+                            </span>
+                        )}
+
+                        {j.enlevements === 0 && j.livraisons === 0 && (
+                            <span className="text-[11px] text-slate-400">Rien de prévu</span>
+                        )}
                     </Link>
                 ))}
             </div>

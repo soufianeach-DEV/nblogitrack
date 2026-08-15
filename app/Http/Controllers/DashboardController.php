@@ -355,8 +355,10 @@ class DashboardController extends Controller
      */
     private function calendrier(): array
     {
+        // Quatorze jours et pas quinze : la grille se lit en deux semaines
+        // de sept, un jour de plus casserait l'alignement des colonnes.
         $debut = now()->startOfDay();
-        $fin = $debut->copy()->addDays(14);
+        $fin = $debut->copy()->addDays(13);
 
         $enlevements = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
             ->whereBetween('pickup_date', [$debut, $fin->copy()->endOfDay()])
