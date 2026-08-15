@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
+use App\Support\TempsDeConduite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -53,7 +54,13 @@ class PlanningController extends Controller
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
             ->paginate(15)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function (TransportOrder $o) {
+                $o->setAttribute('conduite', TempsDeConduite::resume($o->distance_km));
+                $o->setAttribute('conduite_heures', TempsDeConduite::heuresDeConduite($o->distance_km));
+
+                return $o;
+            });
 
         // Le compte par priorite porte sur le statut affiche : un
         // planificateur veut savoir combien d'urgences restent a traiter
@@ -75,6 +82,16 @@ class PlanningController extends Controller
             ->orderBy('registration')
             ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift']);
 
+        // La conduite deja engagee cette semaine, en une seule requete. Le
+        // plafond reel depend de la semaine de l'enlevement, donc le serveur
+        // tranche a l'affectation : ce chiffre-ci informe, il ne decide pas.
+        $conduiteSemaine = TransportOrder::whereNotNull('driver_id')
+            ->where('status', '!=', 'CANCELLED')
+            ->whereBetween('pickup_date', [now()->startOfWeek(), now()->endOfWeek()])
+            ->selectRaw('driver_id, sum(distance_km) AS km')
+            ->groupBy('driver_id')
+            ->pluck('km', 'driver_id');
+
         // Les chauffeurs inaptes restent dans la liste, grises et motives :
         // les faire disparaitre laisserait le planificateur chercher un nom
         // qu'il sait present dans l'entreprise.
@@ -87,6 +104,7 @@ class PlanningController extends Controller
                 'license_type' => $d->license_type,
                 'adr_certified' => $d->adr_certified,
                 'empechements' => $d->empechements(),
+                'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
             ])
             ->sortBy('nom')
             ->values();
@@ -155,6 +173,22 @@ class PlanningController extends Controller
 
         if ($transportOrder->is_hazardous && ! $driver->adr_certified) {
             return back()->withErrors(['driver_id' => 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.']);
+        }
+
+        // Le temps de conduite se refuse comme le reste : c'est un plafond
+        // legal, pas un conseil. Le calcul porte sur les missions connues,
+        // sans carte tachygraphe, et le refus le dit.
+        $conduite = TempsDeConduite::empechements(
+            $driver->id,
+            $transportOrder->distance_km,
+            $transportOrder->pickup_date,
+            $transportOrder->id,
+        );
+
+        if ($conduite !== []) {
+            return back()->withErrors([
+                'driver_id' => 'Temps de conduite : '.implode(' ; ', $conduite).'.',
+            ]);
         }
 
         $transportOrder->update([

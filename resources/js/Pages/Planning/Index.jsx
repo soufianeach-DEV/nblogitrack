@@ -24,6 +24,15 @@ const COULEUR_PRIORITE = {
     URGENT: 'text-status-incident font-semibold',
 };
 
+const enHeures = (heures) => {
+    const h = Math.floor(heures);
+    const min = Math.round((heures - h) * 60);
+
+    if (min === 60) return `${h + 1} h`;
+
+    return min === 0 ? `${h} h` : `${h} h ${String(min).padStart(2, '0')}`;
+};
+
 function LigneAffectation({ ordre, vehicles, drivers }) {
     const { data, setData, post, processing, errors } = useForm({
         vehicle_registration: '',
@@ -69,6 +78,12 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
             <span className={pastille + ' bg-surface text-marine'}>
                 Charge utile ≥ {(Number(ordre.weight) / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
             </span>
+
+            {ordre.conduite && (
+                <span className={pastille + ' bg-surface text-marine'}>
+                    {ordre.conduite}
+                </span>
+            )}
 
             {ordre.is_hazardous && (
                 <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
@@ -117,6 +132,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                     {drivers.map((d) => (
                         <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
                             {d.nom} · permis {d.license_type}{d.adr_certified ? ' · ADR' : ''}
+                            {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} cette semaine` : ''}
                             {motifChauffeur(d)}
                         </option>
                     ))}
