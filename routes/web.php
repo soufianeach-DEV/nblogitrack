@@ -11,6 +11,7 @@ use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TarifController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\TransportOrderController;
@@ -91,6 +92,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:manage-fleet')->group(function () {
         Route::patch('/vehicules/{vehicle:registration}', [VehicleController::class, 'update'])->name('vehicles.update');
         Route::patch('/chauffeurs/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+    });
+
+    // A2 : les comptes du personnel. Le client s'inscrit lui-meme, le
+    // chauffeur, le planificateur et l'administrateur sont crees ici.
+    Route::middleware('can:manage-users')->group(function () {
+        Route::get('/personnel', [StaffController::class, 'index'])->name('staff.index');
+        Route::post('/personnel', [StaffController::class, 'store'])->name('staff.store');
+        Route::patch('/personnel/{user}/activation', [StaffController::class, 'toggle'])->name('staff.toggle');
+        Route::post('/personnel/{user}/lien-mot-de-passe', [StaffController::class, 'resetLink'])->name('staff.reset-link');
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])

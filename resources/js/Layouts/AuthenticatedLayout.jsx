@@ -41,7 +41,7 @@ function Groupe({ titre, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
@@ -114,6 +114,11 @@ export default function AuthenticatedLayout({ header, children }) {
                 {canValidateClients && (
                     <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
                         Entreprises
+                    </LienMenu>
+                )}
+                {canManageUsers && (
+                    <LienMenu href={route('staff.index')} active={route().current('staff.index')} icone="profil" onClick={fermer}>
+                        Personnel
                     </LienMenu>
                 )}
                 {canViewFleet && (
