@@ -5,14 +5,16 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useLangue, useTraduction } from '@/traduire';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-
-const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
 
 const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU' };
 
 export default function Register({ secteurs, fonctions }) {
+    const t = useTraduction();
+    // Le nom du pays s'affiche dans la langue de la page.
+    const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
     const { data, setData, post, processing, errors, reset } = useForm({
         company_name: '', vat_number: '', billing_address: '', postal_code: '',
         city: '', country: '', business_sector: '',
@@ -35,7 +37,7 @@ export default function Register({ secteurs, fonctions }) {
     const verifierTva = async () => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
         if (tva.length < 6) {
-            setVies({ statut: 'format', message: 'Saisis le numéro complet, code pays inclus (ex. BE0123456789).' });
+            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisis le numéro complet, code pays inclus (ex. BE0123456789).') });
             return;
         }
 
@@ -64,7 +66,7 @@ export default function Register({ secteurs, fonctions }) {
                 });
             }
         } catch {
-            setVies({ statut: 'indisponible', message: 'Le service européen VIES est momentanément injoignable.' });
+            setVies({ statut: 'indisponible', message: t('auth.vies_indisponible', 'Le service européen VIES est momentanément injoignable.') });
         } finally {
             setVerification(false);
         }
@@ -124,30 +126,30 @@ export default function Register({ secteurs, fonctions }) {
 
     return (
         <GuestLayout large>
-            <Head title="Inscription" />
+            <Head title={t('auth.inscription', 'Inscription')} />
 
-            <div className="mb-2 flex gap-8 border-b border-slate-200 text-sm font-semibold">
-                <Link href={route('login')} className="pb-2 text-slate-600 hover:text-marine">CONNEXION</Link>
-                <span className="border-b-2 border-action pb-2 text-marine">INSCRIPTION</span>
+            <div className="mb-2 flex gap-8 border-b border-slate-200 text-sm font-semibold uppercase">
+                <Link href={route('login')} className="pb-2 text-slate-600 hover:text-marine">{t('auth.connexion', 'Connexion')}</Link>
+                <span className="border-b-2 border-action pb-2 text-marine">{t('auth.inscription', 'Inscription')}</span>
             </div>
 
-            <h1 className="text-lg font-bold text-marine">Inscrire votre entreprise</h1>
+            <h1 className="text-lg font-bold text-marine">{t('auth.inscrire_titre', 'Inscrire votre entreprise')}</h1>
             <p className="text-xs text-slate-600">
-                Votre compte sera activé après vérification de votre entreprise par nos services.
+                {t('auth.activation', 'Votre compte sera activé après vérification de votre entreprise par nos services.')}
             </p>
 
             <form onSubmit={submit} className="mt-3">
                 <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
                     <div>
-                        <p className={titre}>Entreprise</p>
+                        <p className={titre}>{t('compte.entreprise', 'Entreprise')}</p>
 
                         <div>
-                            {etiquette('vat_number', 'Numéro de TVA')}
+                            {etiquette('vat_number', t('compte.numero_tva', 'Numéro de TVA'))}
                             <div className="mt-0.5 flex gap-2">
                                 <TextInput
                                     id="vat_number"
                                     value={data.vat_number}
-                                    placeholder="ex. BE0123456789 ou SIRET 34119222700013"
+                                    placeholder={t('auth.tva_exemple', 'ex. BE0123456789 ou SIRET 34119222700013')}
                                     className="block w-full py-1 text-sm"
                                     onChange={(e) => { setData('vat_number', e.target.value.toUpperCase()); setVies(null); }}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
@@ -158,19 +160,21 @@ export default function Register({ secteurs, fonctions }) {
                                     disabled={verification}
                                     className="shrink-0 rounded-md bg-marine px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-marine-deep disabled:opacity-50"
                                 >
-                                    {verification ? 'Vérification…' : 'Vérifier'}
+                                    {verification ? t('auth.verification', 'Vérification…') : t('auth.verifier', 'Vérifier')}
                                 </button>
                             </div>
                             <InputError message={errors.vat_number} className="mt-1" />
                             {vies?.statut === 'valide' && vies.entreprise?.situation?.acceptable === false && (
                                 <p className="mt-1 text-xs font-medium text-status-incident">
-                                    Situation juridique : {vies.entreprise.situation.libelle}. L'inscription ne peut pas être acceptée.
+                                    {t('auth.situation_refus', 'Situation juridique : :libelle. L\'inscription ne peut pas être acceptée.', { libelle: vies.entreprise.situation.libelle })}
                                 </p>
                             )}
                             {vies?.statut === 'valide' && vies.entreprise?.situation?.acceptable !== false && (
                                 <p className="mt-1 text-xs text-status-delivered">
-                                    Numéro actif{vies.entreprise?.situation ? ', '.concat(vies.entreprise.situation.libelle.toLowerCase()) : ''}, entreprise identifiée dans le registre européen VIES.
-                                    {vies.entreprise?.dirigeant && ' Dirigeant repris du registre national : vérifiez ou remplacez-le.'}
+                                    {t('auth.tva_actif', 'Numéro actif')}
+                                    {vies.entreprise?.situation ? ', '.concat(vies.entreprise.situation.libelle.toLowerCase()) : ''}
+                                    {t('auth.tva_identifie', ', entreprise identifiée dans le registre européen VIES.')}
+                                    {vies.entreprise?.dirigeant && ' ' + t('auth.dirigeant_repris', 'Dirigeant repris du registre national : vérifiez ou remplacez-le.')}
                                 </p>
                             )}
                             {vies && vies.statut !== 'valide' && (
@@ -179,30 +183,30 @@ export default function Register({ secteurs, fonctions }) {
                         </div>
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            {champ('company_name', 'Raison sociale', { large: true, exemple: 'ex. Transports Dupont SA' })}
-                            {liste('business_sector', "Secteur d'activité", secteurs, 'ex. Construction', { large: true })}
+                            {champ('company_name', t('auth.raison_sociale', 'Raison sociale'), { large: true, exemple: t('auth.raison_sociale_ex', 'ex. Transports Dupont SA') })}
+                            {liste('business_sector', t('auth.secteur', 'Secteur d\'activité'), secteurs, t('auth.secteur_ex', 'ex. Construction'), { large: true })}
                         </div>
 
                         <div className="mt-3">
                             {adresseVerifiee ? (
                                 <>
-                                    {etiquette('adresse_officielle', 'Adresse du siège')}
+                                    {etiquette('adresse_officielle', t('auth.adresse_siege', 'Adresse du siège'))}
                                     <div className="mt-1 rounded-md border border-status-delivered/40 bg-status-delivered/5 px-3 py-2 text-sm text-marine">
                                         {data.billing_address}<br />
                                         {data.postal_code} {data.city} · {data.country}
-                                        <span className="mt-1 block text-xs text-status-delivered">Adresse officielle du registre VIES</span>
+                                        <span className="mt-1 block text-xs text-status-delivered">{t('auth.adresse_officielle', 'Adresse officielle du registre VIES')}</span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => { setAdresseManuelle(true); setData({ ...data, billing_address: '', postal_code: '', city: '', country: '' }); }}
                                         className="mt-1 text-xs text-brand-blue hover:underline"
                                     >
-                                        Saisir une autre adresse
+                                        {t('auth.autre_adresse', 'Saisir une autre adresse')}
                                     </button>
                                 </>
                             ) : (
                                 <AdresseAutocompletion
-                                    label="Adresse du siège"
+                                    label={t('auth.adresse_siege', 'Adresse du siège')}
                                     required
                                     compact
                                     onChange={() => setData({ ...data, billing_address: '', postal_code: '', city: '', country: '' })}
@@ -225,27 +229,27 @@ export default function Register({ secteurs, fonctions }) {
                         </div>
 
                         <p className="mt-2 text-xs text-slate-600">
-                            Identifiant Peppol :{' '}
+                            {t('auth.peppol', 'Identifiant Peppol :')}{' '}
                             {peppol
                                 ? <span className="font-mono text-brand-blue">{peppol}</span>
-                                : <span>déduit après vérification du numéro</span>}
+                                : <span>{t('auth.peppol_attente', 'déduit après vérification du numéro')}</span>}
                         </p>
                     </div>
 
                     <div>
-                        <p className={titre}>Personne de contact</p>
+                        <p className={titre}>{t('auth.personne_contact', 'Personne de contact')}</p>
                         <div className="grid gap-2 sm:grid-cols-2">
-                            {champ('first_name', 'Prénom', { autoComplete: 'given-name' })}
-                            {champ('last_name', 'Nom', { autoComplete: 'family-name' })}
-                            {liste('position', 'Fonction', fonctions, 'ex. Directeur logistique', { large: true })}
-                            {champ('phone', 'Téléphone', { large: true, exemple: 'ex. +32 2 123 45 67' })}
+                            {champ('first_name', t('auth.prenom', 'Prénom'), { autoComplete: 'given-name' })}
+                            {champ('last_name', t('auth.nom', 'Nom'), { autoComplete: 'family-name' })}
+                            {liste('position', t('auth.fonction', 'Fonction'), fonctions, t('auth.fonction_ex', 'ex. Directeur logistique'), { large: true })}
+                            {champ('phone', t('auth.telephone', 'Téléphone'), { large: true, exemple: 'ex. +32 2 123 45 67' })}
                         </div>
 
-                        <p className={titre + ' mt-5'}>Identifiants</p>
+                        <p className={titre + ' mt-5'}>{t('auth.identifiants_titre', 'Identifiants')}</p>
                         <div className="grid gap-2 sm:grid-cols-2">
-                            {champ('email', 'E-mail professionnel', { large: true, type: 'email', autoComplete: 'username', exemple: 'nom@entreprise.be' })}
-                            {champ('password', 'Mot de passe', { large: true, type: 'password', autoComplete: 'new-password' })}
-                            {champ('password_confirmation', 'Confirmer le mot de passe', { large: true, type: 'password', autoComplete: 'new-password' })}
+                            {champ('email', t('compte.email', 'E-mail professionnel'), { large: true, type: 'email', autoComplete: 'username', exemple: 'nom@entreprise.be' })}
+                            {champ('password', t('compte.mot_de_passe', 'Mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
+                            {champ('password_confirmation', t('auth.confirmer_mdp', 'Confirmer le mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
                         </div>
                     </div>
                 </div>
@@ -258,14 +262,14 @@ export default function Register({ secteurs, fonctions }) {
                         className="mt-0.5 rounded border-gray-300 text-marine focus:ring-marine"
                     />
                     <span className="text-xs text-slate-600">
-                        Je certifie que cette dénomination sociale ne porte pas atteinte à une marque déposée.
+                        {t('auth.marque', 'Je certifie que cette dénomination sociale ne porte pas atteinte à une marque déposée.')}
                         <span className="text-status-incident"> *</span>
                     </span>
                 </label>
                 <InputError message={errors.marque_declaree} className="mt-1" />
 
                 <PrimaryButton className="mt-3 w-full" disabled={processing || situationBloquante}>
-                    Envoyer la demande
+                    {t('auth.envoyer_demande', 'Envoyer la demande')}
                 </PrimaryButton>
             </form>
 

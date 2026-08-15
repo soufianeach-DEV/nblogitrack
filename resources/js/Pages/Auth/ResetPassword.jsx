@@ -3,9 +3,11 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useTraduction } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function ResetPassword({ token, email }) {
+    const t = useTraduction();
     const { data, setData, post, processing, errors, reset } = useForm({
         token: token,
         email: email,
@@ -23,11 +25,11 @@ export default function ResetPassword({ token, email }) {
 
     return (
         <GuestLayout>
-            <Head title="Nouveau mot de passe" />
+            <Head title={t('auth.nouveau_mdp', 'Nouveau mot de passe')} />
 
             <form onSubmit={submit}>
                 <div>
-                    <InputLabel htmlFor="email" value="Adresse électronique" />
+                    <InputLabel htmlFor="email" value={t('auth.adresse_email', 'Adresse électronique')} />
 
                     <TextInput
                         id="email"
@@ -43,7 +45,7 @@ export default function ResetPassword({ token, email }) {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Mot de passe" />
+                    <InputLabel htmlFor="password" value={t('compte.mot_de_passe', 'Mot de passe')} />
 
                     <TextInput
                         id="password"
@@ -62,7 +64,7 @@ export default function ResetPassword({ token, email }) {
                 <div className="mt-4">
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirmation du mot de passe"
+                        value={t('auth.confirmation_mdp', 'Confirmation du mot de passe')}
                     />
 
                     <TextInput
@@ -85,7 +87,7 @@ export default function ResetPassword({ token, email }) {
 
                 <div className="mt-4 flex items-center justify-end">
                     <PrimaryButton className="ms-4" disabled={processing}>
-                        Enregistrer le mot de passe
+                        {t('auth.enregistrer_mdp', 'Enregistrer le mot de passe')}
                     </PrimaryButton>
                 </div>
             </form>

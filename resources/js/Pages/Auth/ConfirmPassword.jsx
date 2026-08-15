@@ -3,9 +3,11 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useTraduction } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function ConfirmPassword() {
+    const t = useTraduction();
     const { data, setData, post, processing, errors, reset } = useForm({
         password: '',
     });
@@ -20,16 +22,15 @@ export default function ConfirmPassword() {
 
     return (
         <GuestLayout>
-            <Head title="Confirmation du mot de passe" />
+            <Head title={t('auth.confirm_titre', 'Confirmation du mot de passe')} />
 
             <div className="mb-4 text-sm text-gray-600">
-                Cette partie de l'application est protégée. Confirmez votre mot
-                de passe pour continuer.
+                {t('auth.confirm_texte', 'Cette partie de l\'application est protégée. Confirmez votre mot de passe pour continuer.')}
             </div>
 
             <form onSubmit={submit}>
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Mot de passe" />
+                    <InputLabel htmlFor="password" value={t('compte.mot_de_passe', 'Mot de passe')} />
 
                     <TextInput
                         id="password"
@@ -46,7 +47,7 @@ export default function ConfirmPassword() {
 
                 <div className="mt-4 flex items-center justify-end">
                     <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirmer
+                        {t('auth.confirmer', 'Confirmer')}
                     </PrimaryButton>
                 </div>
             </form>

@@ -2,9 +2,11 @@ import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useTraduction } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 
 export default function ForgotPassword({ status }) {
+    const t = useTraduction();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
     });
@@ -17,11 +19,10 @@ export default function ForgotPassword({ status }) {
 
     return (
         <GuestLayout>
-            <Head title="Mot de passe oublié" />
+            <Head title={t('auth.mdp_oublie', 'Mot de passe oublié')} />
 
             <div className="mb-4 text-sm text-gray-600">
-                Indiquez l'adresse électronique de votre compte : nous vous
-                envoyons un lien qui vous permettra d'en choisir un nouveau.
+                {t('auth.mdp_oublie_texte', 'Indiquez l\'adresse électronique de votre compte : nous vous envoyons un lien qui vous permettra d\'en choisir un nouveau.')}
             </div>
 
             {status && (
@@ -45,7 +46,7 @@ export default function ForgotPassword({ status }) {
 
                 <div className="mt-4 flex items-center justify-end">
                     <PrimaryButton className="ms-4" disabled={processing}>
-                        Envoyer le lien
+                        {t('auth.envoyer_lien', 'Envoyer le lien')}
                     </PrimaryButton>
                 </div>
             </form>
