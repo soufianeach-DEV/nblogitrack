@@ -614,6 +614,77 @@ class TranslationSeeder extends Seeder
             'livre_le' => ['Livré le', 'Geleverd op', 'Delivered on'],
         ],
 
+        'personnel' => [
+            'nouveau' => ['Nouveau compte', 'Nieuw account', 'New account'],
+            'mdp_par_lien' => [
+                'L\'intéressé choisira son mot de passe par un lien envoyé à son adresse.',
+                'De betrokkene kiest zijn wachtwoord via een link die naar zijn adres wordt gestuurd.',
+                'The person will choose their password through a link sent to their address.',
+            ],
+            'role' => ['Rôle', 'Rol', 'Role'],
+            'entree_service' => ['Entrée en service', 'Indiensttreding', 'Start of service'],
+            'titres_conduite' => ['Titres de conduite', 'Rijbevoegdheden', 'Driving credentials'],
+            'numero_permis' => ['Numéro de permis', 'Rijbewijsnummer', 'Licence number'],
+            'categorie' => ['Catégorie', 'Categorie', 'Category'],
+            'permis_valable' => ['Permis valable jusqu\'au', 'Rijbewijs geldig tot', 'Licence valid until'],
+            'qualifs_ensuite' => [
+                'La visite médicale, la qualification code 95 et la carte tachygraphe se complètent ensuite depuis la fiche du chauffeur.',
+                'Het medisch onderzoek, de kwalificatie code 95 en de tachograafkaart worden nadien aangevuld vanuit de fiche van de bestuurder.',
+                'The medical check-up, code 95 qualification and tachograph card are completed afterwards from the driver\'s record.',
+            ],
+            'creation' => ['Création…', 'Aanmaken…', 'Creating…'],
+            'creer' => ['Créer le compte', 'Account aanmaken', 'Create the account'],
+            'compte' => [
+                ':total comptes, :actifs actifs',
+                ':total accounts, :actifs actief',
+                ':total accounts, :actifs active',
+            ],
+            'filtre' => [
+                'Nom, prénom, adresse électronique…',
+                'Naam, voornaam, e-mailadres…',
+                'Last name, first name, email…',
+            ],
+            'tous_roles' => ['Tous les rôles', 'Alle rollen', 'All roles'],
+            'actifs' => ['Actifs', 'Actief', 'Active'],
+            'desactives' => ['Désactivés', 'Gedeactiveerd', 'Deactivated'],
+            'personne' => ['Personne', 'Persoon', 'Person'],
+            'actif' => ['Actif', 'Actief', 'Active'],
+            'desactive' => ['Désactivé', 'Gedeactiveerd', 'Deactivated'],
+            'parti_le' => ['parti le', 'vertrokken op', 'left on'],
+            'mdp_pas_choisi' => [
+                'mot de passe pas encore choisi',
+                'wachtwoord nog niet gekozen',
+                'password not yet chosen',
+            ],
+            'lien_mdp' => ['Lien mot de passe', 'Wachtwoordlink', 'Password link'],
+            'desactiver' => ['Désactiver', 'Deactiveren', 'Deactivate'],
+            'reactiver' => ['Réactiver', 'Heractiveren', 'Reactivate'],
+            'aucun' => [
+                'Aucun compte ne correspond à cette recherche.',
+                'Geen enkel account komt overeen met deze zoekopdracht.',
+                'No account matches this search.',
+            ],
+        ],
+
+        'journal' => [
+            'titre' => ['Journal d\'activité', 'Activiteitenlogboek', 'Activity log'],
+            'entrees' => ['Entrées enregistrées', 'Geregistreerde vermeldingen', 'Recorded entries'],
+            'aujourdhui' => ['Aujourd\'hui', 'Vandaag', 'Today'],
+            'echecs' => ['Échecs de connexion', 'Mislukte aanmeldingen', 'Failed sign-ins'],
+            'filtre_utilisateur' => ['Utilisateur ou e-mail', 'Gebruiker of e-mail', 'User or email'],
+            'toutes_actions' => ['Toutes les actions', 'Alle acties', 'All actions'],
+            'ip' => ['Adresse IP', 'IP-adres', 'IP address'],
+            'reinitialiser' => ['Réinitialiser les filtres', 'Filters wissen', 'Reset filters'],
+            'date' => ['Date', 'Datum', 'Date'],
+            'utilisateur' => ['Utilisateur', 'Gebruiker', 'User'],
+            'description' => ['Description', 'Omschrijving', 'Description'],
+            'aucune' => [
+                'Aucune entrée ne correspond aux filtres.',
+                'Geen enkele vermelding komt overeen met de filters.',
+                'No entry matches the filters.',
+            ],
+        ],
+
         'parc' => [
             'titre_vehicules' => ['Parc de véhicules', 'Wagenpark', 'Vehicle fleet'],
             'compte_vehicules' => [
