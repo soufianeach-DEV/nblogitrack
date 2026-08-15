@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Fichier cree par une redirection PowerShell mal ecrite (2>$null).
+$null
