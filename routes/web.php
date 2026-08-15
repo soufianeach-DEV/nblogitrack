@@ -128,12 +128,12 @@ Route::post('/devis', [QuoteController::class, 'store'])
 Route::get('/devis/confirmation', [QuoteController::class, 'confirmation'])->name('devis.confirmation');
 
 Route::get('/suivi', [TrackingController::class, 'show'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:suivi')
     ->name('tracking.show');
 
 // L'itineraire interroge deux services exterieurs : il reste derriere le
 // compte, et le controleur verifie en plus que l'expedition est consultable.
-Route::middleware(['auth', 'throttle:60,1'])->group(function () {
+Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
     Route::get('/suivi/{transportOrder}/itineraire', [TrackingController::class, 'itineraire'])
         ->name('tracking.itineraire');
     Route::get('/suivi/{transportOrder}/peages', [TrackingController::class, 'peages'])

@@ -273,7 +273,9 @@ const NIVEAUX = {
  */
 function Alertes({ alertes }) {
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        // Dernier bloc de sa colonne : il s'etire jusqu'au bas de la rangee,
+        // sinon la liste des ordres, plus haute, laisse un vide a droite.
+        <section className="flex flex-1 flex-col rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 font-semibold text-marine">Alertes</h2>
 
             {alertes.length === 0 ? (
