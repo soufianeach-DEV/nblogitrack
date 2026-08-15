@@ -54,7 +54,39 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     };
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
+    // Les exigences etaient affichees en tete de carte, les listes tout en
+    // bas : au moment de choisir le planificateur ne les avait plus sous les
+    // yeux. Elles sont rappelees ici, avec le nombre de candidats retenus.
+    const camionsOk = vehicles.filter(vehiculeCompatible).length;
+    const chauffeursOk = drivers.filter(chauffeurCompatible).length;
+    const pastille = 'rounded-full px-2.5 py-0.5 font-medium';
+
     return (
+        <>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-semibold uppercase tracking-wide text-slate-600">Besoins</span>
+
+            <span className={pastille + ' bg-surface text-marine'}>
+                Charge utile ≥ {(Number(ordre.weight) / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
+            </span>
+
+            {ordre.is_hazardous && (
+                <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
+                    Chauffeur certifié ADR
+                </span>
+            )}
+
+            {ordre.needs_tail_lift && (
+                <span className={pastille + ' bg-brand-blue/10 text-brand-blue'}>
+                    Hayon élévateur
+                </span>
+            )}
+
+            <span className={camionsOk === 0 || chauffeursOk === 0 ? 'font-semibold text-status-incident' : 'text-slate-600'}>
+                {camionsOk} camion{camionsOk > 1 ? 's' : ''} · {chauffeursOk} chauffeur{chauffeursOk > 1 ? 's' : ''} compatibles
+            </span>
+        </div>
+
         <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <select
@@ -99,6 +131,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                 Affecter
             </button>
         </form>
+        </>
     );
 }
 
@@ -132,7 +165,13 @@ function BoutonsStatut({ ordre }) {
     );
 }
 
-export default function Index({ orders, vehicles, drivers, statut, compteurs, priorite = null, priorites = [] }) {
+const LIBELLE_CONTRAINTE = { adr: 'Matières dangereuses', hayon: 'Hayon requis' };
+
+export default function Index({
+    orders, vehicles, drivers, statut, compteurs,
+    priorite = null, priorites = [],
+    contrainte = null, contraintes = [],
+}) {
     const flash = usePage().props.flash ?? {};
 
     const dateCourte = (valeur) => valeur
@@ -166,10 +205,10 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs, pr
                 ))}
             </div>
 
-            <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Priorité</span>
                 <Link
-                    href={route('planning.index', { status: statut })}
+                    href={route('planning.index', { status: statut, contrainte })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -181,7 +220,7 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs, pr
                 {priorites.map((p) => (
                     <Link
                         key={p.valeur}
-                        href={route('planning.index', { status: statut, priorite: p.valeur })}
+                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -194,6 +233,38 @@ export default function Index({ orders, vehicles, drivers, statut, compteurs, pr
                     >
                         {LIBELLE_PRIORITE[p.valeur]}
                         <span className="ml-1.5 text-xs opacity-70">{p.nombre}</span>
+                    </Link>
+                ))}
+            </div>
+
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">Contrainte</span>
+                <Link
+                    href={route('planning.index', { status: statut, priorite })}
+                    preserveScroll
+                    className={
+                        'rounded-full px-3 py-1 text-sm font-medium transition ' +
+                        (contrainte === null ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
+                    }
+                >
+                    Toutes
+                </Link>
+                {contraintes.map((c) => (
+                    <Link
+                        key={c.valeur}
+                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur })}
+                        preserveScroll
+                        className={
+                            'rounded-full px-3 py-1 text-sm font-medium transition ' +
+                            (contrainte === c.valeur
+                                ? 'bg-marine text-white'
+                                : c.valeur === 'adr' && c.nombre > 0
+                                    ? 'bg-status-incident/10 text-status-incident hover:bg-status-incident/20'
+                                    : 'bg-white text-marine hover:bg-slate-50')
+                        }
+                    >
+                        {LIBELLE_CONTRAINTE[c.valeur]}
+                        <span className="ml-1.5 text-xs opacity-70">{c.nombre}</span>
                     </Link>
                 ))}
             </div>

@@ -32,6 +32,16 @@ class PlanningController extends Controller
             $priorite = null;
         }
 
+        // Une mission dangereuse sur quarante-deux en attente se trouvait au
+        // vingt-cinquieme rang, donc en page deux : le badge ne servait que
+        // si le planificateur tombait dessus.
+        $contrainte = $request->query('contrainte');
+        if (! in_array($contrainte, ['adr', 'hayon'], true)) {
+            $contrainte = null;
+        }
+
+        $colonneContrainte = ['adr' => 'is_hazardous', 'hayon' => 'needs_tail_lift'];
+
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle:registration,brand,model,capacity_tonnes',
@@ -39,6 +49,7 @@ class PlanningController extends Controller
         ])
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
             ->paginate(15)
@@ -46,11 +57,19 @@ class PlanningController extends Controller
 
         // Le compte par priorite porte sur le statut affiche : un
         // planificateur veut savoir combien d'urgences restent a traiter
-        // dans la colonne ou il travaille, pas dans toute la base.
+        // dans la colonne ou il travaille, pas dans toute la base. Chaque
+        // facette compte sous l'autre filtre, pour ne jamais proposer un
+        // bouton qui ne ramene rien.
         $parPriorite = TransportOrder::where('status', $statut)
+            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
             ->selectRaw('priority, count(*) AS total')
             ->groupBy('priority')
             ->pluck('total', 'priority');
+
+        $parContrainte = TransportOrder::where('status', $statut)
+            ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
+            ->first();
 
         $vehicles = Vehicle::where('is_available', true)
             ->orderBy('registration')
@@ -78,9 +97,14 @@ class PlanningController extends Controller
             'drivers' => $drivers,
             'statut' => $statut,
             'priorite' => $priorite,
+            'contrainte' => $contrainte,
             'priorites' => collect(TransportOrder::PRIORITES)
                 ->map(fn (string $p) => ['valeur' => $p, 'nombre' => (int) ($parPriorite[$p] ?? 0)])
                 ->all(),
+            'contraintes' => [
+                ['valeur' => 'adr', 'nombre' => (int) $parContrainte->adr],
+                ['valeur' => 'hayon', 'nombre' => (int) $parContrainte->hayon],
+            ],
             'compteurs' => TransportOrder::selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
