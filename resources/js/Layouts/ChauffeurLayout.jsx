@@ -1,4 +1,6 @@
+import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
+import { useTraduction } from '@/traduire';
 import { Link, usePage } from '@inertiajs/react';
 
 function Onglet({ href, actif, icone, children }) {
@@ -27,6 +29,7 @@ function Onglet({ href, actif, icone, children }) {
  */
 export default function ChauffeurLayout({ children }) {
     const { auth } = usePage().props;
+    const t = useTraduction();
     const route_actuelle = typeof route !== 'undefined' ? route().current() : null;
 
     const initiales = [auth.user.first_name, auth.user.last_name]
@@ -42,14 +45,15 @@ export default function ChauffeurLayout({ children }) {
 
                     <nav className="ml-6 hidden items-center gap-1 lg:flex">
                         <Onglet href={route('missions.index')} actif={route_actuelle === 'missions.index'} icone="camion">
-                            Missions
+                            {t('mission.onglet', 'Missions')}
                         </Onglet>
                         <Onglet href={route('profile.edit')} actif={route_actuelle === 'profile.edit'} icone="profil">
-                            Mon profil
+                            {t('nav.profil', 'Mon profil')}
                         </Onglet>
                     </nav>
 
                     <div className="ml-auto flex items-center gap-3">
+                        <ChoixLangue sombre />
                         <span className="hidden text-sm text-slate-300 sm:block">
                             {auth.user.first_name} {auth.user.last_name}
                         </span>
@@ -60,7 +64,7 @@ export default function ChauffeurLayout({ children }) {
                             href={route('logout')}
                             method="post"
                             as="button"
-                            aria-label="Se déconnecter"
+                            aria-label={t('nav.deconnexion', 'Déconnexion')}
                             className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
                         >
                             <Icone nom="sortie" className="h-5 w-5" />
@@ -75,10 +79,10 @@ export default function ChauffeurLayout({ children }) {
 
             <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-white/10 bg-marine lg:hidden">
                 <Onglet href={route('missions.index')} actif={route_actuelle === 'missions.index'} icone="camion">
-                    Missions
+                    {t('mission.onglet', 'Missions')}
                 </Onglet>
                 <Onglet href={route('profile.edit')} actif={route_actuelle === 'profile.edit'} icone="profil">
-                    Mon profil
+                    {t('nav.profil', 'Mon profil')}
                 </Onglet>
             </nav>
         </div>

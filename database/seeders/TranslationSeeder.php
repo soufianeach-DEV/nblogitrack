@@ -703,6 +703,45 @@ class TranslationSeeder extends Seeder
             'confirmer_refus' => ['Confirmer le refus', 'Weigering bevestigen', 'Confirm the rejection'],
         ],
 
+        'mission' => [
+            'mes_missions' => ['Mes missions', 'Mijn opdrachten', 'My missions'],
+            'onglet' => ['Missions', 'Opdrachten', 'Missions'],
+            'a_venir' => ['À venir', 'Komt eraan', 'Upcoming'],
+            'livree' => ['Livrée', 'Geleverd', 'Delivered'],
+            'annulee' => ['Annulée', 'Geannuleerd', 'Cancelled'],
+            'active' => ['active', 'actief', 'active'],
+            'actives' => ['actives', 'actief', 'active'],
+            'confirmer' => [
+                'Appuyez à nouveau pour confirmer',
+                'Druk opnieuw om te bevestigen',
+                'Press again to confirm',
+            ],
+            'confirmer_prise' => [
+                'Confirmer la prise en charge',
+                'Overname bevestigen',
+                'Confirm pickup',
+            ],
+            'confirmer_livraison' => ['Confirmer la livraison', 'Levering bevestigen', 'Confirm delivery'],
+            'non_affecte' => ['Non affecté', 'Niet toegewezen', 'Not assigned'],
+            'livree_le' => ['Livrée le', 'Geleverd op', 'Delivered on'],
+            'pas_affectee' => [
+                'Cette mission ne vous est pas affectée.',
+                'Deze opdracht is niet aan u toegewezen.',
+                'This mission is not assigned to you.',
+            ],
+            'aucune' => ['Aucune mission affectée', 'Geen opdracht toegewezen', 'No mission assigned'],
+            'aucune_texte' => [
+                'Le planificateur vous préviendra dès qu\'une expédition vous est confiée.',
+                'De planner verwittigt u zodra u een zending toegewezen krijgt.',
+                'The planner will notify you as soon as a shipment is entrusted to you.',
+            ],
+            'choisir' => [
+                'Choisissez une mission pour voir son détail.',
+                'Kies een opdracht om het detail te zien.',
+                'Choose a mission to see its details.',
+            ],
+        ],
+
         'journal' => [
             'titre' => ['Journal d\'activité', 'Activiteitenlogboek', 'Activity log'],
             'entrees' => ['Entrées enregistrées', 'Geregistreerde vermeldingen', 'Recorded entries'],

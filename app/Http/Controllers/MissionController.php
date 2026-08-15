@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -151,8 +152,14 @@ class MissionController extends Controller
             // Le bouton affiche depend de l'etat : un seul geste possible
             // a la fois, pas de liste d'actions a trier.
             'action' => match ($ordre->status) {
-                'PENDING' => ['statut' => 'IN_PROGRESS', 'libelle' => 'Confirmer la prise en charge'],
-                'IN_PROGRESS' => ['statut' => 'DELIVERED', 'libelle' => 'Confirmer la livraison'],
+                'PENDING' => [
+                    'statut' => 'IN_PROGRESS',
+                    'libelle' => Traductions::t('mission.confirmer_prise', 'Confirmer la prise en charge'),
+                ],
+                'IN_PROGRESS' => [
+                    'statut' => 'DELIVERED',
+                    'libelle' => Traductions::t('mission.confirmer_livraison', 'Confirmer la livraison'),
+                ],
                 default => null,
             },
         ]);
