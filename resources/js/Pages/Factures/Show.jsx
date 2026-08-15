@@ -1,22 +1,19 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 const ETATS = {
-    DRAFT: { libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
-    SENT: { libelle: 'Envoyée', classe: 'bg-brand-blue/10 text-brand-blue' },
-    PAID: { libelle: 'Payée', classe: 'bg-status-delivered/10 text-status-delivered' },
-    OVERDUE: { libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
+    DRAFT: { cle: 'facture.brouillon', libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
+    SENT: { cle: 'statut.envoyee', libelle: 'Envoyée', classe: 'bg-brand-blue/10 text-brand-blue' },
+    PAID: { cle: 'statut.payee', libelle: 'Payée', classe: 'bg-status-delivered/10 text-status-delivered' },
+    OVERDUE: { cle: 'statut.en_retard', libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
 };
 
-const euros = (montant) => Number(montant).toLocaleString('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-});
-
 function BoutonPaiement({ facture }) {
+    const t = useTraduction();
     const [arme, setArme] = useState(false);
     const { patch, processing } = useForm({});
 
@@ -45,7 +42,11 @@ function BoutonPaiement({ facture }) {
                         : 'bg-action text-marine-deep hover:bg-action-dark'
                 }`}
             >
-                {processing ? 'Enregistrement…' : arme ? 'Confirmer le paiement' : 'Marquer payée'}
+                {processing
+                    ? t('action.enregistrement', 'Enregistrement…')
+                    : arme
+                        ? t('facture.confirmer_paiement', 'Confirmer le paiement')
+                        : t('facture.marquer_payee', 'Marquer payée')}
             </button>
             {arme && ! processing && (
                 <button
@@ -53,7 +54,7 @@ function BoutonPaiement({ facture }) {
                     onClick={() => setArme(false)}
                     className="text-sm font-semibold text-slate-600 transition hover:text-marine"
                 >
-                    Annuler
+                    {t('action.annuler', 'Annuler')}
                 </button>
             )}
         </div>
@@ -61,6 +62,9 @@ function BoutonPaiement({ facture }) {
 }
 
 export default function Show({ facture, peutMarquerPayee = false }) {
+    const t = useTraduction();
+    const locale = useLocale();
+    const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const etat = ETATS[facture.etat] ?? ETATS.SENT;
 
     return (
@@ -68,15 +72,18 @@ export default function Show({ facture, peutMarquerPayee = false }) {
             header={
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <BoutonRetour href={route('invoices.index')}>Facturation</BoutonRetour>
+                        <BoutonRetour href={route('invoices.index')}>{t('nav.facturation', 'Facturation')}</BoutonRetour>
                         <h1 className="mt-2 font-mono text-2xl font-bold text-marine">{facture.reference}</h1>
                         <p className="text-sm text-slate-600">
-                            Prestations du {facture.periode_debut} au {facture.periode_fin}
+                            {t('facture.prestations', 'Prestations du :debut au :fin', {
+                                debut: facture.periode_debut,
+                                fin: facture.periode_fin,
+                            })}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
-                            {etat.libelle}
+                            {t(etat.cle, etat.libelle)}
                         </span>
                         <a
                             href={route('invoices.pdf', facture.id)}
@@ -87,7 +94,7 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                         </a>
                         <a
                             href={route('invoices.ubl', facture.id)}
-                            title="Facture électronique structurée, format Peppol BIS Billing 3.0"
+                            title={t('facture.peppol_aide', 'Facture électronique structurée, format Peppol BIS Billing 3.0')}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-marine shadow-sm transition hover:bg-surface"
                         >
                             <Icone nom="facture" className="h-4 w-4" />
@@ -103,7 +110,7 @@ export default function Show({ facture, peutMarquerPayee = false }) {
             <div className="grid gap-4 lg:grid-cols-3">
                 <section className="rounded-2xl bg-white p-5 shadow-sm">
                     <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Facturé à
+                        {t('facture.facture_a', 'Facturé à')}
                     </h2>
                     <p className="font-bold text-marine">{facture.client.nom}</p>
                     <p className="text-sm text-slate-600">{facture.client.adresse}</p>
@@ -114,20 +121,20 @@ export default function Show({ facture, peutMarquerPayee = false }) {
 
                 <section className="rounded-2xl bg-white p-5 shadow-sm">
                     <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                        Dates
+                        {t('facture.dates', 'Dates')}
                     </h2>
                     <dl className="space-y-2 text-sm">
                         <div className="flex justify-between gap-3">
-                            <dt className="text-slate-600">Émise le</dt>
+                            <dt className="text-slate-600">{t('facture.emise_le', 'Émise le')}</dt>
                             <dd className="font-semibold text-marine">{facture.emise_le}</dd>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <dt className="text-slate-600">Échéance</dt>
+                            <dt className="text-slate-600">{t('facture.echeance', 'Échéance')}</dt>
                             <dd className="font-semibold text-marine">{facture.echeance}</dd>
                         </div>
                         {facture.payee_le && (
                             <div className="flex justify-between gap-3">
-                                <dt className="text-slate-600">Payée le</dt>
+                                <dt className="text-slate-600">{t('ordres.payee_le', 'Payée le')}</dt>
                                 <dd className="font-semibold text-status-delivered">{facture.payee_le}</dd>
                             </div>
                         )}
@@ -138,32 +145,34 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                     <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-300">
-                                {facture.etat === 'PAID' ? 'Paiement reçu' : 'À payer'}
+                                {facture.etat === 'PAID'
+                                    ? t('facture.paiement_recu', 'Paiement reçu')
+                                    : t('facture.a_payer', 'À payer')}
                             </h2>
                             <p className="text-3xl font-bold">{euros(facture.ttc)}</p>
-                            <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">Compte</p>
+                            <p className="mt-3 text-xs uppercase tracking-wide text-slate-300">{t('facture.compte', 'Compte')}</p>
                             <p className="font-mono text-sm">{facture.iban}</p>
-                            <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">Communication structurée</p>
+                            <p className="mt-2 text-xs uppercase tracking-wide text-slate-300">{t('facture.communication', 'Communication structurée')}</p>
                             <p className="font-mono text-sm">{facture.communication}</p>
                         </div>
                         {facture.qr && (
                             <div className="shrink-0 text-center">
                                 <div
                                     className="rounded-lg bg-white p-1.5"
-                                    title="Virement SEPA au format EPC : votre application bancaire préremplit le compte, le montant et la communication."
+                                    title={t('facture.qr_aide', 'Virement SEPA au format EPC : votre application bancaire préremplit le compte, le montant et la communication.')}
                                 >
                                     {/* 45 modules avec la marge : en dessous de
                                         trois pixels par module, l'appareil
                                         photo d'un telephone decroche. */}
                                     <img
                                         src={facture.qr}
-                                        alt="QR de virement SEPA au format EPC, contenant le compte, le montant et la communication"
+                                        alt={t('facture.qr_alt', 'QR de virement SEPA au format EPC, contenant le compte, le montant et la communication')}
                                         className="h-44 w-44"
                                     />
                                 </div>
                                 <p className="mt-1.5 text-[11px] leading-tight text-slate-300">
-                                    Virement SEPA
-                                    <span className="block">norme EPC</span>
+                                    {t('facture.virement_sepa', 'Virement SEPA')}
+                                    <span className="block">{t('facture.norme_epc', 'norme EPC')}</span>
                                 </p>
                             </div>
                         )}
@@ -176,9 +185,9 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Expédition</th>
-                                <th scope="col" className="px-4 py-3 font-semibold">Prestation</th>
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">Montant HT</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('ordres.expedition', 'Expédition')}</th>
+                                <th scope="col" className="px-4 py-3 font-semibold">{t('facture.prestation', 'Prestation')}</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">{t('facture.montant_ht', 'Montant HT')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -199,7 +208,7 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                                     <td className="px-4 py-3 text-slate-600">
                                         {ligne.description.startsWith('Transport ') ? (
                                             <>
-                                                <strong className="font-semibold text-marine">Transport</strong>
+                                                <strong className="font-semibold text-marine">{t('facture.transport', 'Transport')}</strong>
                                                 {ligne.description.slice(9)}
                                             </>
                                         ) : ligne.description}
@@ -212,17 +221,17 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                         </tbody>
                         <tfoot className="text-sm">
                             <tr className="border-t border-slate-100">
-                                <td colSpan="2" className="px-4 py-2 text-right text-slate-600">Total HT</td>
+                                <td colSpan="2" className="px-4 py-2 text-right text-slate-600">{t('facture.total_ht', 'Total HT')}</td>
                                 <td className="whitespace-nowrap px-4 py-2 text-right font-semibold text-marine">{euros(facture.ht)}</td>
                             </tr>
                             <tr>
                                 <td colSpan="2" className="px-4 py-2 text-right text-slate-600">
-                                    TVA {facture.taux.toLocaleString('fr-FR')} %
+                                    {t('facture.tva', 'TVA')} {facture.taux.toLocaleString(locale)} %
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-2 text-right font-semibold text-marine">{euros(facture.tva)}</td>
                             </tr>
                             <tr className="border-t border-slate-100">
-                                <td colSpan="2" className="px-4 py-3 text-right font-bold text-marine">Total TTC</td>
+                                <td colSpan="2" className="px-4 py-3 text-right font-bold text-marine">{t('facture.total_ttc', 'Total TTC')}</td>
                                 <td className="whitespace-nowrap px-4 py-3 text-right text-lg font-bold text-marine">{euros(facture.ttc)}</td>
                             </tr>
                         </tfoot>
@@ -230,8 +239,7 @@ export default function Show({ facture, peutMarquerPayee = false }) {
                 </div>
                 {facture.autoliquidation && (
                     <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-600">
-                        Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ;
-                        art. 44 de la directive 2006/112/CE).
+                        {t('facture.autoliq_mention', 'Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).')}
                     </p>
                 )}
             </div>

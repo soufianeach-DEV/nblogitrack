@@ -35,6 +35,15 @@ class DefinirLangue
         // pas et Ziggy reprend la meme valeur cote navigateur.
         URL::defaults(['langue' => $langue]);
 
+        // Le prefixe a fait son office : il sort des parametres de route.
+        //
+        // Laravel n'injecte un modele deja resolu qu'une fois, puis remplit
+        // les arguments restants du controleur avec les parametres de route
+        // dans l'ordre. Laisser « langue » en tete revenait a passer « nl »
+        // la ou la methode attend une facture ou une expedition, sur chaque
+        // action qui repose sur la liaison implicite.
+        $request->route()?->forgetParameter('langue');
+
         return $suivant($request);
     }
 }

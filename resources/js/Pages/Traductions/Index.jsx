@@ -1,8 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useTraduction } from '@/traduire';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 function Ligne({ traduction, langues }) {
+    const t = useTraduction();
     const [ouverte, setOuverte] = useState(false);
     const { data, setData, patch, processing, errors, isDirty } = useForm({
         fr: traduction.fr ?? '',
@@ -34,10 +36,14 @@ function Ligne({ traduction, langues }) {
                 <span className="flex shrink-0 items-center gap-2">
                     {manquantes.length > 0 && (
                         <span className="rounded-full bg-status-incident/10 px-2.5 py-0.5 text-xs font-medium uppercase text-status-incident">
-                            {manquantes.join(' ')} manquant{manquantes.length > 1 ? 's' : ''}
+                            {manquantes.join(' ')} {manquantes.length > 1
+                                ? t('trad.manquants', 'manquants')
+                                : t('trad.manquant', 'manquant')}
                         </span>
                     )}
-                    <span className="text-xs text-slate-500">{ouverte ? 'Fermer' : 'Modifier'}</span>
+                    <span className="text-xs text-slate-500">
+                        {ouverte ? t('action.fermer', 'Fermer') : t('trad.modifier', 'Modifier')}
+                    </span>
                 </span>
             </button>
 
@@ -63,7 +69,7 @@ function Ligne({ traduction, langues }) {
                     </div>
 
                     <p className="mt-3 text-xs text-slate-600">
-                        Le français fait foi. Une langue laissée vide affiche le texte français plutôt qu'une clé technique.
+                        {t('trad.francais_fait_foi', 'Le français fait foi. Une langue laissée vide affiche le texte français plutôt qu\'une clé technique.')}
                     </p>
 
                     <div className="mt-3 flex justify-end gap-2">
@@ -72,14 +78,14 @@ function Ligne({ traduction, langues }) {
                             onClick={() => setOuverte(false)}
                             className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-surface"
                         >
-                            Annuler
+                            {t('action.annuler', 'Annuler')}
                         </button>
                         <button
                             type="submit"
                             disabled={processing || ! isDirty}
                             className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
                         >
-                            Enregistrer
+                            {t('action.enregistrer', 'Enregistrer')}
                         </button>
                     </div>
                 </form>
@@ -89,6 +95,7 @@ function Ligne({ traduction, langues }) {
 }
 
 export default function Index({ traductions, groupes, langues, recherche, groupe, manquantes }) {
+    const t = useTraduction();
     const [terme, setTerme] = useState(recherche ?? '');
 
     const chercher = (e) => {
@@ -99,12 +106,12 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
     const couverture = (code) => Math.round(((manquantes.total - manquantes[code]) / manquantes.total) * 100);
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Traductions</h1>}>
-            <Head title="Traductions" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.traductions', 'Traductions')}</h1>}>
+            <Head title={t('nav.traductions', 'Traductions')} />
 
             <div className="mb-5 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">Clés</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('trad.cles', 'Clés')}</p>
                     <p className="mt-1 text-2xl font-bold text-marine">{manquantes.total}</p>
                 </div>
                 {['nl', 'en'].map((code) => (
@@ -114,7 +121,9 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
                             {couverture(code)} %
                         </p>
                         <p className="text-xs text-slate-600">
-                            {manquantes[code] > 0 ? `${manquantes[code]} à traduire` : 'Complet'}
+                            {manquantes[code] > 0
+                                ? `${manquantes[code]} ${t('trad.a_traduire', 'à traduire')}`
+                                : t('trad.complet', 'Complet')}
                         </p>
                     </div>
                 ))}
@@ -124,11 +133,11 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
                 <input
                     value={terme}
                     onChange={(e) => setTerme(e.target.value)}
-                    placeholder="Chercher une clé ou un texte…"
+                    placeholder={t('trad.chercher', 'Chercher une clé ou un texte…')}
                     className="min-w-[16rem] flex-1 rounded-lg border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                 />
                 <button type="submit" className="rounded-lg bg-marine px-4 py-2 text-sm font-semibold text-white transition hover:bg-marine-deep">
-                    Rechercher
+                    {t('action.rechercher', 'Rechercher')}
                 </button>
             </form>
 
@@ -140,7 +149,7 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
                         ! groupe ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50'
                     }`}
                 >
-                    Tous
+                    {t('parc.tous', 'Tous')}
                 </Link>
                 {groupes.map((g) => (
                     <Link
@@ -159,7 +168,7 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
 
             <div className="space-y-2">
                 {traductions.data.length === 0 && (
-                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">Aucune traduction.</p>
+                    <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">{t('trad.aucune', 'Aucune traduction.')}</p>
                 )}
                 {traductions.data.map((t) => (
                     <Ligne key={t.id} traduction={t} langues={langues} />
