@@ -170,8 +170,12 @@ function PlanDeCharge({ calendrier }) {
             </div>
 
             {/* Quatorze cases sur deux rangees de sept. Le planificateur lit
-                une quinzaine d'un coup d'oeil, comme un agenda. */}
-            <div className="mt-5 grid flex-1 grid-cols-7 gap-1.5">
+                une quinzaine d'un coup d'oeil, comme un agenda.
+
+                content-start empeche les rangees de s'etirer sur toute la
+                hauteur : la carte reste alignee sur sa voisine, mais les
+                cases gardent la taille de leur contenu. */}
+            <div className="mt-5 grid flex-1 content-start grid-cols-7 gap-1.5">
                 {jours.map((j) => (
                     <Link
                         key={j.date}
