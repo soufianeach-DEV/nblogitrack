@@ -560,8 +560,8 @@ function Facturation({ facturation }) {
             {facturation.en_retard > 0 && (
                 <p className="mt-2 text-xs font-semibold text-status-incident">
                     {t('tdb.dont', 'dont')} {facturation.en_retard} {facturation.en_retard > 1
-                        ? t('tdb.factures_echues', 'factures échues')
-                        : t('tdb.facture_echue', 'facture échue')}
+                        ? t('tdb.factures_retard', 'factures en retard')
+                        : t('tdb.facture_retard', 'facture en retard')}
                 </p>
             )}
 

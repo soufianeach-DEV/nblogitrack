@@ -406,8 +406,11 @@ class TranslationSeeder extends Seeder
             'regle' => ['Réglé', 'Betaald', 'Settled'],
             'reste_du' => ['Reste dû', 'Nog verschuldigd', 'Outstanding'],
             'dont' => ['dont', 'waarvan', 'of which'],
-            'facture_echue' => ['facture échue', 'vervallen factuur', 'overdue invoice'],
-            'factures_echues' => ['factures échues', 'vervallen facturen', 'overdue invoices'],
+            // Un seul mot pour cet etat dans toute l'application : le
+            // tableau dit deja « en retard », « echue » ferait un second
+            // vocabulaire a traduire pour la meme notion.
+            'facture_retard' => ['facture en retard', 'achterstallige factuur', 'overdue invoice'],
+            'factures_retard' => ['factures en retard', 'achterstallige facturen', 'overdue invoices'],
             'dernieres_factures' => ['Dernières factures', 'Laatste facturen', 'Latest invoices'],
 
             'conformite_titre' => [
@@ -1713,7 +1716,32 @@ class TranslationSeeder extends Seeder
                 'Uw facturen en hun betaalstatus.',
                 'Your invoices and their payment status.',
             ],
-            'echues' => ['Factures échues', 'Vervallen facturen', 'Overdue invoices'],
+            'en_retard' => ['Factures en retard', 'Achterstallige facturen', 'Overdue invoices'],
+
+            // F6 : le reglement en ligne.
+            'paiement' => ['Paiement', 'Betaling', 'Payment'],
+            'payer' => ['Payer', 'Betalen', 'Pay'],
+            'payer_en_ligne' => ['Payer en ligne', 'Online betalen', 'Pay online'],
+            'redirection' => ['Redirection…', 'Doorverwijzen…', 'Redirecting…'],
+            'paiement_accepte' => ['Paiement accepté', 'Betaling aanvaard', 'Payment accepted'],
+            'regle_pour' => [
+                ':montant pour la facture :reference.',
+                ':montant voor factuur :reference.',
+                ':montant for invoice :reference.',
+            ],
+            'attente_notification' => [
+                'Votre banque a accepté le paiement. Son enregistrement définitif nous parvient par une notification signée de l\'opérateur, ce qui prend quelques secondes : la facture peut rester affichée comme envoyée un court instant.',
+                'Uw bank heeft de betaling aanvaard. De definitieve registratie bereikt ons via een ondertekende melding van de betaaldienst, wat enkele seconden duurt: de factuur kan even als verzonden blijven staan.',
+                'Your bank has accepted the payment. Final registration reaches us through a signed notification from the payment provider, which takes a few seconds: the invoice may still show as sent for a short while.',
+            ],
+            'paiement_non_confirme' => ['Paiement non confirmé', 'Betaling niet bevestigd', 'Payment not confirmed'],
+            'sans_confirmation' => [
+                'Nous n\'avons pas reçu de confirmation pour la facture :reference. Si vous venez de régler, patientez un instant puis rechargez cette page.',
+                'Wij hebben geen bevestiging ontvangen voor factuur :reference. Als u zopas betaald hebt, wacht dan even en vernieuw deze pagina.',
+                'We have not received a confirmation for invoice :reference. If you have just paid, wait a moment and reload this page.',
+            ],
+            'voir_la_facture' => ['Voir la facture', 'Factuur bekijken', 'View invoice'],
+            'mes_factures' => ['Mes factures', 'Mijn facturen', 'My invoices'],
             'periode' => ['Période', 'Periode', 'Period'],
             'emise_le' => ['Émise le', 'Uitgereikt op', 'Issued on'],
             'aucune' => ['Aucune facture pour l\'instant.', 'Voorlopig geen facturen.', 'No invoices yet.'],

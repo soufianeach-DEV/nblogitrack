@@ -1,7 +1,7 @@
 import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 
 const ETATS = {
     DRAFT: { cle: 'facture.brouillon', libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
@@ -16,9 +16,12 @@ export default function Index({ factures = [], peutGererAchats = false }) {
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
+    // Pas de colonne vide chez le personnel, qui ne paie jamais.
+    const colonnePaiement = factures.some((f) => f.peut_payer);
+
     const du = factures.filter((f) => f.etat !== 'PAID').reduce((somme, f) => somme + f.ttc, 0);
     const paye = factures.filter((f) => f.etat === 'PAID').reduce((somme, f) => somme + f.ttc, 0);
-    const echues = factures.filter((f) => f.etat === 'OVERDUE').length;
+    const enRetard = factures.filter((f) => f.etat === 'OVERDUE').length;
 
     return (
         <AuthenticatedLayout
@@ -47,9 +50,11 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                     <p className="text-2xl font-bold text-marine">{euros(du)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('facture.echues', 'Factures échues')}</p>
-                    <p className={`text-2xl font-bold ${echues > 0 ? 'text-status-incident' : 'text-marine'}`}>
-                        {echues}
+                    {/* Le tableau dit deja « en retard » pour cet etat : deux
+                        mots pour une meme notion feraient deux traductions. */}
+                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('facture.en_retard', 'Factures en retard')}</p>
+                    <p className={`text-2xl font-bold ${enRetard > 0 ? 'text-status-incident' : 'text-marine'}`}>
+                        {enRetard}
                     </p>
                 </div>
             </div>
@@ -66,6 +71,7 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('facture.echeance', 'Échéance')}</th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">{t('ordres.montant_ttc', 'Montant TTC')}</th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('ordres.etat', 'État')}</th>
+                                {colonnePaiement && <th scope="col" className="px-4 py-3"><span className="sr-only">{t('facture.paiement', 'Paiement')}</span></th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -108,12 +114,27 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                                 {t(etat.cle, etat.libelle)}
                                             </span>
                                         </td>
+                                        {/* Colonne a part : les etats n'ont pas la meme largeur,
+                                            les boutons ne s'aligneraient pas derriere eux. */}
+                                        {colonnePaiement && (
+                                            <td className="whitespace-nowrap px-4 py-3">
+                                                {facture.peut_payer && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => router.post(route('payments.payer', facture.id))}
+                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark"
+                                                    >
+                                                        {t('facture.payer', 'Payer')}
+                                                    </button>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
                             {factures.length === 0 && (
                                 <tr>
-                                    <td className="px-4 py-8 text-center text-slate-600" colSpan={canPlan ? 7 : 6}>
+                                    <td className="px-4 py-8 text-center text-slate-600" colSpan={(canPlan ? 7 : 6) + (colonnePaiement ? 1 : 0)}>
                                         {t('facture.aucune', 'Aucune facture pour l\'instant.')}
                                     </td>
                                 </tr>

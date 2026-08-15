@@ -7,6 +7,7 @@ use App\Http\Controllers\DriverController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MissionController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -86,6 +87,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
         ->whereNumber('invoice')
         ->name('invoices.ubl');
+
+    // F6 : le client regle sa facture en ligne. Le retour du navigateur
+    // n'ecrit rien, il informe ; c'est le webhook qui fait foi.
+    Route::post('/factures/{invoice}/payer', [PaymentController::class, 'payer'])
+        ->whereNumber('invoice')
+        ->name('payments.payer');
+    Route::get('/factures/{invoice}/paiement/retour', [PaymentController::class, 'retour'])
+        ->whereNumber('invoice')
+        ->name('payments.retour');
 
     // Les achats sont la comptabilite interne : ils ne sortent pas du perimetre
     // de l'administrateur, comme le controle des paiements.
@@ -170,6 +180,12 @@ Route::middleware('throttle:120,1')->group(function () {
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
     Route::get('/geo/numeros', [GeoController::class, 'numeros'])->name('geo.numeros');
 });
+
+// Stripe appelle cette adresse depuis ses serveurs : pas de session, donc
+// pas de jeton CSRF. L'exception est declaree dans bootstrap/app.php et
+// c'est la signature de l'en-tete qui authentifie l'appel.
+Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
+    ->name('payments.webhook');
 
 Route::get('/verification-tva', [VatController::class, 'verifier'])
     ->middleware('throttle:20,1')
