@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useTraduction } from '@/traduire';
+import { useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -23,6 +23,7 @@ function StatusBadge({ status }) {
 
 export default function Index({ orders, filters }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const [search, setSearch] = useState({
         tracking: filters.tracking ?? '',
         client: filters.client ?? '',
@@ -107,7 +108,7 @@ export default function Index({ orders, filters }) {
                                         >
                                             {order.tracking_number}
                                         </Link>
-                                        <div className="text-xs text-slate-600">{order.goods_type ?? '—'}</div>
+                                        <div className="text-xs text-slate-600">{v('marchandise', order.goods_type) ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
                                     <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>

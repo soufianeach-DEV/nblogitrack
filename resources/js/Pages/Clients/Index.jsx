@@ -1,6 +1,6 @@
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -14,6 +14,7 @@ const ONGLETS = {
 export default function Index({ clients, etat, filtres, suggestions, compteurs }) {
     const flash = usePage().props.flash ?? {};
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     const [refus, setRefus] = useState(null);
     const [champs, setChamps] = useState({
@@ -225,8 +226,10 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {ligne(t('compte.numero_tva', 'Numéro de TVA'), client.vat_number)}
                                 {ligne(t('ent.peppol', 'Identifiant Peppol'), client.peppol_id)}
-                                {ligne(t('auth.secteur', 'Secteur d\'activité'), client.business_sector)}
-                                {ligne(t('nav.contact', 'Contact'), contact ? `${contact.first_name} ${contact.last_name}${contact.position ? ' — ' + contact.position : ''}` : null)}
+                                {ligne(t('auth.secteur', 'Secteur d\'activité'), v('secteur', client.business_sector))}
+                                {ligne(t('nav.contact', 'Contact'), contact
+                                    ? `${contact.first_name} ${contact.last_name}${contact.position ? ' — ' + v('fonction', contact.position) : ''}`
+                                    : null)}
                                 {ligne(t('devis.email', 'Adresse e-mail'), client.user?.email)}
                                 {ligne(t('auth.telephone', 'Téléphone'), contact?.phone)}
                             </dl>

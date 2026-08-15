@@ -902,6 +902,81 @@ class TranslationSeeder extends Seeder
             'suivant' => ['Suivant', 'Volgende', 'Next'],
         ],
 
+        /*
+         * Vocabulaires enregistres en base. La cle derive de la valeur
+         * francaise : « Chargé de clientèle » donne charge_de_clientele.
+         * Une saisie hors liste retombe sur le texte enregistre.
+         *
+         * Les adresses n'y figurent pas et n'y figureront pas : un nom de
+         * rue est un identifiant postal. Traduire « Nijverheidsstraat »
+         * donnerait une adresse absente du registre, en desaccord avec
+         * l'etiquette, la lettre de voiture et le navigateur du chauffeur.
+         * Seule Bruxelles-Capitale a des noms de voirie officiels dans les
+         * deux langues.
+         */
+        'vocab.fonction' => [
+            'directeur_logistique' => ['Directeur logistique', 'Logistiek directeur', 'Logistics director'],
+            'assistant_administratif' => ['Assistant administratif', 'Administratief medewerker', 'Administrative assistant'],
+            'comptable' => ['Comptable', 'Boekhouder', 'Accountant'],
+            'responsable_achats' => ['Responsable achats', 'Aankoopverantwoordelijke', 'Purchasing manager'],
+            'directeur_financier' => ['Directeur financier', 'Financieel directeur', 'Finance director'],
+            'gestionnaire_de_flotte' => ['Gestionnaire de flotte', 'Wagenparkbeheerder', 'Fleet manager'],
+            'responsable_expeditions' => ['Responsable expéditions', 'Verantwoordelijke verzendingen', 'Shipping manager'],
+            'charge_de_clientele' => ['Chargé de clientèle', 'Accountmanager', 'Account manager'],
+        ],
+
+        'vocab.secteur' => [
+            'logistique' => ['Logistique', 'Logistiek', 'Logistics'],
+            'e_commerce' => ['E-commerce', 'E-commerce', 'E-commerce'],
+            'metallurgie' => ['Métallurgie', 'Metaalindustrie', 'Metallurgy'],
+            'chimie' => ['Chimie', 'Chemie', 'Chemicals'],
+            'construction' => ['Construction', 'Bouw', 'Construction'],
+            'distribution' => ['Distribution', 'Distributie', 'Distribution'],
+            'agroalimentaire' => ['Agroalimentaire', 'Voedingsindustrie', 'Food industry'],
+            'electronique' => ['Électronique', 'Elektronica', 'Electronics'],
+            'grande_distribution' => ['Grande distribution', 'Grootdistributie', 'Retail'],
+            'automobile' => ['Automobile', 'Automobiel', 'Automotive'],
+            'mobilier' => ['Mobilier', 'Meubelen', 'Furniture'],
+            'pharmaceutique' => ['Pharmaceutique', 'Farmaceutica', 'Pharmaceuticals'],
+            'textile' => ['Textile', 'Textiel', 'Textiles'],
+            'agriculture' => ['Agriculture', 'Landbouw', 'Agriculture'],
+            'plasturgie' => ['Plasturgie', 'Kunststofverwerking', 'Plastics processing'],
+            'recyclage' => ['Recyclage', 'Recyclage', 'Recycling'],
+            'transport' => ['Transport', 'Transport', 'Transport'],
+        ],
+
+        'vocab.marchandise' => [
+            'palettes' => ['Palettes', 'Paletten', 'Pallets'],
+            'machines' => ['Machines', 'Machines', 'Machinery'],
+            'materiaux_de_construction' => ['Matériaux de construction', 'Bouwmaterialen', 'Construction materials'],
+            'materiel_electronique' => ['Matériel électronique', 'Elektronisch materiaal', 'Electronic equipment'],
+            'produits_chimiques' => ['Produits chimiques', 'Chemische producten', 'Chemical products'],
+            'produits_alimentaires' => ['Produits alimentaires', 'Voedingsmiddelen', 'Food products'],
+            'boissons' => ['Boissons', 'Dranken', 'Beverages'],
+            'pieces_automobiles' => ['Pièces automobiles', 'Auto-onderdelen', 'Automotive parts'],
+            'produits_pharmaceutiques' => ['Produits pharmaceutiques', 'Farmaceutische producten', 'Pharmaceutical products'],
+            'colis_express' => ['Colis express', 'Expreszendingen', 'Express parcels'],
+            'mobilier' => ['Mobilier', 'Meubelen', 'Furniture'],
+            'textile' => ['Textile', 'Textiel', 'Textiles'],
+            'autre' => ['Autre', 'Andere', 'Other'],
+        ],
+
+        'vocab.achat' => [
+            'carburant' => ['Carburant', 'Brandstof', 'Fuel'],
+            // La constante du modele porte le libelle complet : la cle se
+            // derive de cette valeur-la, pas d'un raccourci.
+            'peages_et_taxe_kilometrique' => [
+                'Péages et taxe kilométrique',
+                'Tol en kilometerheffing',
+                'Tolls and kilometre charge',
+            ],
+            'peage' => ['Péage', 'Tol', 'Toll'],
+            'entretien' => ['Entretien', 'Onderhoud', 'Maintenance'],
+            'reparation' => ['Réparation', 'Herstelling', 'Repair'],
+            'assurance' => ['Assurance', 'Verzekering', 'Insurance'],
+            'leasing' => ['Leasing', 'Leasing', 'Leasing'],
+        ],
+
         'trad' => [
             'cles' => ['Clés', 'Sleutels', 'Keys'],
             'a_traduire' => ['à traduire', 'te vertalen', 'to translate'],

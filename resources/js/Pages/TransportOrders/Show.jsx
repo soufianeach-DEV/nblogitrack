@@ -1,6 +1,6 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 
 const ETAPES = [
@@ -62,6 +62,7 @@ function Progression({ statut }) {
 
 export default function Show({ order, chauffeur, facture = null }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
 
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
@@ -138,7 +139,7 @@ export default function Show({ order, chauffeur, facture = null }) {
 
                 {carte(t('devis.marchandise', 'Marchandise'), (
                     <dl>
-                        {ligne(t('ordres.nature', 'Nature'), order.goods_type)}
+                        {ligne(t('ordres.nature', 'Nature'), v('marchandise', order.goods_type))}
                         {ligne(t('commande.poids', 'Poids'), nombre(order.weight, 'kg'))}
                         {ligne(t('ordres.dangereuse', 'Matière dangereuse'), order.is_hazardous
                             ? t('ordres.oui_adr', 'Oui — ADR')

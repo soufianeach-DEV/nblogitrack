@@ -3,7 +3,7 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -188,6 +188,7 @@ function Frise({ etapes }) {
  */
 function LigneExpedition({ expedition, active, onClick }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const statut = STATUTS[expedition.statut] ?? STATUTS.PENDING;
     const priorite = PRIORITES[expedition.priorite];
 
@@ -213,7 +214,7 @@ function LigneExpedition({ expedition, active, onClick }) {
                     {expedition.depart} <span className="text-slate-600">→</span> {expedition.arrivee}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
-                    <span className="truncate">{expedition.marchandise}</span>
+                    <span className="truncate">{v('marchandise', expedition.marchandise)}</span>
                     {expedition.livraison && <span>· {expedition.livraison}</span>}
                     {expedition.adr && (
                         <span className="rounded bg-status-incident/10 px-1.5 font-semibold text-status-incident">ADR</span>
@@ -230,6 +231,7 @@ function LigneExpedition({ expedition, active, onClick }) {
 function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expeditions = [] }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     const [agrandie, setAgrandie] = useState(false);
     const [itineraire, setItineraire] = useState(null);
@@ -325,7 +327,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, historique, expedit
                                 <div className="rounded-lg bg-surface px-3 py-2">
                                     <p className="text-[11px] uppercase tracking-wide text-slate-600">{t('devis.marchandise', 'Marchandise')}</p>
                                     <p className="truncate text-sm font-bold text-marine">
-                                        {order.goods_type}{order.is_hazardous && ' · ADR'}
+                                        {v('marchandise', order.goods_type)}{order.is_hazardous && ' · ADR'}
                                     </p>
                                 </div>
                             </div>

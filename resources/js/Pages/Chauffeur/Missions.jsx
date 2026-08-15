@@ -1,6 +1,6 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import ChauffeurLayout from '@/Layouts/ChauffeurLayout';
-import { useLangue, useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -24,6 +24,7 @@ function Etape({ intitule, heure, lieu }) {
 
 function CarteMission({ mission, active, onClick }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
     return (
@@ -50,7 +51,7 @@ function CarteMission({ mission, active, onClick }) {
 
                 <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                     <span className="text-sm text-slate-600">
-                        {mission.marchandise}
+                        {v('marchandise', mission.marchandise)}
                         {mission.adr && (
                             <span className="ml-2 rounded bg-status-incident/10 px-1.5 py-0.5 text-[11px] font-bold text-status-incident">
                                 ADR
@@ -120,6 +121,7 @@ function BoutonAvancement({ mission }) {
 
 function Fiche({ mission, onRetour }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
@@ -170,7 +172,7 @@ function Fiche({ mission, onRetour }) {
 
                 <div className="mt-4 border-t border-slate-100 pt-4">
                     <p className="text-sm font-semibold text-marine">
-                        {mission.marchandise}
+                        {v('marchandise', mission.marchandise)}
                         {mission.adr && (
                             <span className="ml-2 rounded bg-status-incident/10 px-1.5 py-0.5 text-[11px] font-bold text-status-incident">
                                 ADR

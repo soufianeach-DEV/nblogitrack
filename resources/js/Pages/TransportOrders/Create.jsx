@@ -5,7 +5,7 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
-import { useLangue, useLocale, useTraduction } from '@/traduire';
+import { useLangue, useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -40,6 +40,7 @@ const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
 export default function Create({ tariffGrids, pricing }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     // Le nom du pays de destination s'affiche dans la langue de la page.
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
@@ -181,8 +182,11 @@ export default function Create({ tariffGrids, pricing }) {
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="goods_type" value={data.goods_type} onChange={(e) => setData('goods_type', e.target.value)} className={selectCls}>
                             <option value="">{t('commande.choisir', '— Choisir —')}</option>
+                            {/* La valeur envoyee reste le francais : c'est ce
+                                que le serveur valide et enregistre. Seul le
+                                libelle affiche suit la langue. */}
                             {MARCHANDISES.map((m) => (
-                                <option key={m} value={m}>{m}</option>
+                                <option key={m} value={m}>{v('marchandise', m)}</option>
                             ))}
                         </select>
                         <InputError message={(soumis && manque.goods) || errors.goods_type} className="mt-2" />

@@ -24,6 +24,36 @@ export function useTraduction() {
     };
 }
 
+/**
+ * Traduit une valeur de vocabulaire venue de la base : fonction d'un
+ * contact, secteur d'activite, nature d'une marchandise.
+ *
+ * La cle se derive de la valeur francaise enregistree. Une saisie libre
+ * inconnue du dictionnaire retombe sur cette valeur, ce qui vaut mieux
+ * qu'une cle technique affichee au client. Le meme calcul existe cote
+ * serveur dans Traductions::cleDepuis.
+ *
+ * Les adresses n'y passent pas : une adresse postale est un identifiant.
+ */
+export function useVocabulaire() {
+    const t = useTraduction();
+
+    return (groupe, valeur) => {
+        if (! valeur) return valeur;
+
+        // Les diacritiques s'ecrivent en echappement : leur plage depend
+        // sinon de l'encodage du fichier source.
+        const cle = valeur
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+
+        return t(`vocab.${groupe}.${cle}`, valeur);
+    };
+}
+
 /** La langue courante, pour les formats de date et de nombre. */
 export function useLangue() {
     const { langue = 'fr' } = usePage().props;

@@ -49,6 +49,47 @@ class Traductions
         return $texte;
     }
 
+    /**
+     * Traduit une valeur de vocabulaire enregistree en base.
+     *
+     * Certaines colonnes portent du texte francais que l'application a
+     * elle-meme propose : la fonction d'un contact, le secteur d'une
+     * entreprise, la nature d'une marchandise. Ce sont des listes fermees
+     * en pratique, mais saisies en clair, donc impossibles a traiter comme
+     * des cles fixes.
+     *
+     * La cle se derive de la valeur : « Chargé de clientèle » donne
+     * vocab.fonction.charge_de_clientele. Une saisie libre inconnue du
+     * dictionnaire retombe sur le texte enregistre, ce qui vaut mieux
+     * qu'une cle technique sous les yeux du client.
+     *
+     * Les adresses ne passent jamais par ici : une adresse postale est un
+     * identifiant, pas du texte. Traduire un nom de rue produirait une
+     * adresse qui ne correspond plus a l'etiquette ni a la lettre de
+     * voiture.
+     */
+    public static function vocabulaire(string $groupe, ?string $valeur): ?string
+    {
+        if ($valeur === null || trim($valeur) === '') {
+            return $valeur;
+        }
+
+        return self::t('vocab.'.$groupe.'.'.self::cleDepuis($valeur), $valeur);
+    }
+
+    /** Le slug d'une valeur : minuscules, sans accent, separateurs unifies. */
+    public static function cleDepuis(string $valeur): string
+    {
+        $sansAccent = strtr(
+            mb_strtolower($valeur, 'UTF-8'),
+            ['à' => 'a', 'â' => 'a', 'ä' => 'a', 'ç' => 'c', 'é' => 'e', 'è' => 'e',
+                'ê' => 'e', 'ë' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o',
+                'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'œ' => 'oe'],
+        );
+
+        return trim(preg_replace('/[^a-z0-9]+/', '_', $sansAccent), '_');
+    }
+
     public static function oublier(): void
     {
         foreach (array_keys(Translation::LANGUES) as $langue) {

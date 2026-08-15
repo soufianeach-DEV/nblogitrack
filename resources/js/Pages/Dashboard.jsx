@@ -2,7 +2,7 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -273,6 +273,7 @@ function PlanDeCharge({ calendrier }) {
 
 function FicheEntreprise({ entreprise, onFermer }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     const { post, processing } = useForm({});
 
@@ -291,14 +292,14 @@ function FicheEntreprise({ entreprise, onFermer }) {
         <div className="p-6">
             <p className="text-xl font-bold text-marine">{entreprise.entreprise}</p>
             <p className="text-sm text-slate-600">
-                {[entreprise.secteur, entreprise.pays].filter(Boolean).join(' · ')}
+                {[v('secteur', entreprise.secteur), entreprise.pays].filter(Boolean).join(' · ')}
             </p>
 
             <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
                 {ligne(t('compte.numero_tva', 'Numéro de TVA'), entreprise.tva, true)}
                 {ligne(t('ent.numero', 'Numéro d\'entreprise'), entreprise.entreprise_numero, true)}
                 {ligne(t('ent.peppol', 'Identifiant Peppol'), entreprise.peppol, true)}
-                {ligne(t('ent.secteur', 'Secteur'), entreprise.secteur)}
+                {ligne(t('ent.secteur', 'Secteur'), v('secteur', entreprise.secteur))}
                 {ligne(t('ent.adresse_fact', 'Adresse de facturation'), entreprise.adresse)}
                 {ligne(t('ent.localite', 'Localité'), [entreprise.localite, entreprise.pays].filter(Boolean).join(', '))}
                 {ligne(t('ent.delai', 'Délai de paiement'), entreprise.delai)}
@@ -350,6 +351,7 @@ function FicheEntreprise({ entreprise, onFermer }) {
 
 function ValidationsEnAttente({ validations }) {
     const t = useTraduction();
+    const v = useVocabulaire();
     const [ouverte, setOuverte] = useState(null);
 
     return (
@@ -369,7 +371,7 @@ function ValidationsEnAttente({ validations }) {
                         <li key={entreprise.id} className="rounded-xl border border-slate-200 p-3">
                             <p className="truncate font-semibold text-marine">{entreprise.entreprise}</p>
                             <p className="truncate text-xs text-slate-600">
-                                {[entreprise.secteur, entreprise.pays].filter(Boolean).join(' · ')}
+                                {[v('secteur', entreprise.secteur), entreprise.pays].filter(Boolean).join(' · ')}
                             </p>
                             <div className="mt-2 flex items-center gap-2">
                                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-600">

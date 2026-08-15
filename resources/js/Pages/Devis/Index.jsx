@@ -1,6 +1,6 @@
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -14,6 +14,7 @@ const COULEUR = {
 export default function Index({ demandes, statut, recherche, statuts, compteurs }) {
     const flash = usePage().props.flash ?? {};
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
     const [champ, setChamp] = useState(recherche ?? '');
     const [traitement, setTraitement] = useState(null);
@@ -168,7 +169,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                             {ligne(t('demandes.livraison', 'Livraison'), d.delivery_address)}
                             {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + d.date_flexibility)}
                             {ligne(t('devis.trajet', 'Trajet'), d.trip_type + ' · ' + d.frequency)}
-                            {ligne(t('devis.marchandise', 'Marchandise'), d.goods_type + (d.weight ? ' · ' + Number(d.weight).toLocaleString(locale) + ' kg' : ''))}
+                            {ligne(t('devis.marchandise', 'Marchandise'), v('marchandise', d.goods_type) + (d.weight ? ' · ' + Number(d.weight).toLocaleString(locale) + ' kg' : ''))}
                             {ligne(t('commande.volume', 'Volume'), d.volume)}
                             {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), d.vehicle_type)}
                             {ligne(t('demandes.assurance', 'Assurance'), d.insurance_value)}

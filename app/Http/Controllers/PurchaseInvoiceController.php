@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\PurchaseInvoice;
 use App\Models\Vehicle;
+use App\Support\Traductions;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,7 @@ class PurchaseInvoiceController extends Controller
                 'id' => $a->id,
                 'fournisseur' => $a->supplier_name,
                 'reference' => $a->reference,
-                'categorie' => PurchaseInvoice::CATEGORIES[$a->category] ?? $a->category,
+                'categorie' => Traductions::vocabulaire('achat', PurchaseInvoice::CATEGORIES[$a->category] ?? $a->category),
                 'vehicule' => $a->vehicle_registration,
                 'vehicule_detail' => trim(($a->vehicle?->brand ?? '').' '.($a->vehicle?->model ?? '')),
                 'periode' => $a->period_start->locale('fr')->isoFormat('MMMM YYYY'),
@@ -76,7 +77,11 @@ class PurchaseInvoiceController extends Controller
                 'a_payer_ttc' => (float) PurchaseInvoice::where('status', 'TO_PAY')->sum('amount_incl_tax'),
                 'deductible' => (float) PurchaseInvoice::where('vat_deductible', true)->sum('vat_amount'),
             ],
-            'categories' => PurchaseInvoice::CATEGORIES,
+            // La constante porte le francais : elle est evaluee au
+            // chargement de la classe, avant que la langue soit connue.
+            'categories' => collect(PurchaseInvoice::CATEGORIES)
+                ->map(fn (string $libelle) => Traductions::vocabulaire('achat', $libelle))
+                ->all(),
             'vehicules' => Vehicle::orderBy('registration')->get(['registration', 'brand', 'model'])
                 ->map(fn (Vehicle $v) => ['valeur' => $v->registration, 'libelle' => $v->registration.' — '.$v->brand.' '.$v->model]),
             'fournisseurs' => PurchaseInvoice::distinct()->orderBy('supplier_name')->pluck('supplier_name'),

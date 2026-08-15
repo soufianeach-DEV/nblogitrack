@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 const LIBELLE_STATUT = {
@@ -203,6 +203,7 @@ export default function Index({
 }) {
     const flash = usePage().props.flash ?? {};
     const t = useTraduction();
+    const v = useVocabulaire();
     const locale = useLocale();
 
     const dateCourte = (valeur) => valeur
@@ -338,7 +339,7 @@ export default function Index({
                                     {Number(ordre.weight).toLocaleString(locale)} kg
                                     {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString(locale)} km` : ''}
                                     {' · ' + t('planif.chargement', 'chargement') + ' '}{dateCourte(ordre.pickup_date)}
-                                    {ordre.goods_type ? ` · ${ordre.goods_type}` : ''}
+                                    {ordre.goods_type ? ` · ${v('marchandise', ordre.goods_type)}` : ''}
                                 </p>
                             </div>
                             <BoutonsStatut ordre={ordre} />
