@@ -803,6 +803,15 @@ export default function Dashboard({
                 </div>
             )}
 
+            {/* Le planificateur ouvre sur sa quinzaine. C'est ce qu'il
+                regarde en premier, avant meme les derniers ordres, donc le
+                plan de charge occupe toute la largeur en tete de page. */}
+            {calendrier && (
+                <div className="mt-6">
+                    <PlanDeCharge calendrier={calendrier} />
+                </div>
+            )}
+
             {/* Chaque rangee aligne son bas : les derniers ordres finissent
                 avec les alertes, le volume commence avec la facturation. Les
                 positions sont explicites pour qu'un bloc absent ne fasse pas
@@ -893,29 +902,19 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {/* Le planificateur ne voit pas le journal : sa place revient
-                    au plan de charge, en face des validations. L'administrateur
-                    a les deux, le plan prend alors sa propre rangee. */}
-                {calendrier && ! journal && (
-                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
-                        <PlanDeCharge calendrier={calendrier} />
-                    </div>
-                )}
-
                 {validations && (
                     <div className="flex flex-col lg:col-start-3 lg:row-start-3">
                         <ValidationsEnAttente validations={validations} />
                     </div>
                 )}
 
-                {calendrier && journal && (
-                    <div className="lg:col-span-3 lg:col-start-1 lg:row-start-4">
-                        <PlanDeCharge calendrier={calendrier} />
-                    </div>
-                )}
-
+                {/* Le journal n'est visible que de l'administrateur. Sans lui
+                    la rangee trois n'aurait que les validations a droite : la
+                    mise en conformite vient combler la gauche. */}
                 {conformite && (
-                    <div className={`lg:col-span-3 lg:col-start-1 ${calendrier && journal ? 'lg:row-start-5' : 'lg:row-start-4'}`}>
+                    <div className={journal
+                        ? 'lg:col-span-3 lg:col-start-1 lg:row-start-4'
+                        : 'flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3'}>
                         <Conformite conformite={conformite} />
                     </div>
                 )}
