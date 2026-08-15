@@ -606,7 +606,7 @@ function Conformite({ conformite }) {
     );
 
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-marine">Chauffeurs et véhicules à mettre en règle</h2>
             <p className="mb-5 text-sm text-slate-600">
                 Uniquement ce qui roule encore alors qu'une échéance est passée
