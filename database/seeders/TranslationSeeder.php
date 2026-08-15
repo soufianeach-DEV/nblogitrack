@@ -287,6 +287,7 @@ class TranslationSeeder extends Seeder
             'fonction' => ['Fonction', 'Functie', 'Position'],
             'fonction_ex' => ['ex. Directeur logistique', 'bv. Logistiek directeur', 'e.g. Logistics manager'],
             'telephone' => ['Téléphone', 'Telefoon', 'Phone'],
+            'pays' => ['Pays', 'Land', 'Country'],
             'identifiants_titre' => ['Identifiants', 'Aanmeldgegevens', 'Credentials'],
             'confirmer_mdp' => ['Confirmer le mot de passe', 'Wachtwoord bevestigen', 'Confirm password'],
             'marque' => [
@@ -664,6 +665,42 @@ class TranslationSeeder extends Seeder
                 'Geen enkel account komt overeen met deze zoekopdracht.',
                 'No account matches this search.',
             ],
+        ],
+
+        'entreprises' => [
+            'titre' => ['Entreprises inscrites', 'Geregistreerde ondernemingen', 'Registered companies'],
+            'tout' => ['Tout', 'Alles', 'All'],
+            'validees' => ['Validées', 'Goedgekeurd', 'Approved'],
+            'refusees' => ['Refusées', 'Geweigerd', 'Rejected'],
+            'validee' => ['Validée', 'Goedgekeurd', 'Approved'],
+            'refusee' => ['Refusée', 'Geweigerd', 'Rejected'],
+            'le' => ['le', 'op', 'on'],
+            'filtre' => [
+                'Entreprise, numéro de TVA, Peppol ou localité',
+                'Onderneming, btw-nummer, Peppol of gemeente',
+                'Company, VAT number, Peppol or locality',
+            ],
+            'aucune' => [
+                'Aucune entreprise ne correspond.',
+                'Geen enkele onderneming komt overeen.',
+                'No company matches.',
+            ],
+            'modifier_motif' => ['Modifier le motif', 'Reden wijzigen', 'Edit the reason'],
+            'refuser' => ['Refuser', 'Weigeren', 'Reject'],
+            'revalider' => ['Revalider', 'Opnieuw goedkeuren', 'Approve again'],
+            'valider' => ['Valider', 'Goedkeuren', 'Approve'],
+            'motif_refus' => ['Motif du refus :', 'Reden van weigering:', 'Reason for rejection:'],
+            'motif_envoye' => [
+                'Le motif est envoyé par e-mail au contact et conservé dans le journal.',
+                'De reden wordt per e-mail naar de contactpersoon gestuurd en in het logboek bewaard.',
+                'The reason is emailed to the contact and kept in the log.',
+            ],
+            'motif_ex' => [
+                'ex. Le numéro de TVA ne correspond pas à l\'adresse du siège.',
+                'bv. Het btw-nummer stemt niet overeen met het adres van de zetel.',
+                'e.g. The VAT number does not match the registered office address.',
+            ],
+            'confirmer_refus' => ['Confirmer le refus', 'Weigering bevestigen', 'Confirm the rejection'],
         ],
 
         'journal' => [

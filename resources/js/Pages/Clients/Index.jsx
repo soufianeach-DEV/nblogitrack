@@ -1,12 +1,20 @@
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
-const ONGLETS = { tout: 'Tout', attente: 'En attente', validees: 'Validées', refusees: 'Refusées' };
+const ONGLETS = {
+    tout: ['entreprises.tout', 'Tout'],
+    attente: ['statut.en_attente', 'En attente'],
+    validees: ['entreprises.validees', 'Validées'],
+    refusees: ['entreprises.refusees', 'Refusées'],
+};
 
 export default function Index({ clients, etat, filtres, suggestions, compteurs }) {
     const flash = usePage().props.flash ?? {};
+    const t = useTraduction();
+    const locale = useLocale();
     const [refus, setRefus] = useState(null);
     const [champs, setChamps] = useState({
         q: filtres.q ?? '',
@@ -56,7 +64,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
     };
 
     const dateCourte = (valeur) => valeur
-        ? new Date(valeur).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '—';
 
     const ligne = (libelle, valeur) => (
@@ -78,8 +86,8 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
     };
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Entreprises inscrites</h1>}>
-            <Head title="Entreprises inscrites" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('entreprises.titre', 'Entreprises inscrites')}</h1>}>
+            <Head title={t('entreprises.titre', 'Entreprises inscrites')} />
 
             {flash.success && (
                 <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
@@ -88,7 +96,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
             )}
 
             <div className="mb-4 flex flex-wrap gap-2">
-                {Object.entries(ONGLETS).map(([cle, libelle]) => (
+                {Object.entries(ONGLETS).map(([cle, etiquette]) => (
                     <Link
                         key={cle}
                         href={route('clients.index', { etat: cle, ...champs })}
@@ -98,7 +106,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             (etat === cle ? 'bg-marine text-white' : 'bg-white text-marine hover:bg-slate-50')
                         }
                     >
-                        {libelle}
+                        {t(...etiquette)}
                         <span className="ml-2 text-xs opacity-70">{compteurs[cle] ?? 0}</span>
                     </Link>
                 ))}
@@ -111,7 +119,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             list="liste-entreprises"
                             value={champs.q}
                             onChange={(e) => filtrer('q', e.target.value)}
-                            placeholder="Entreprise, numéro de TVA, Peppol ou localité"
+                            placeholder={t('entreprises.filtre', 'Entreprise, numéro de TVA, Peppol ou localité')}
                             className={champCls}
                         />
                         <datalist id="liste-entreprises">
@@ -124,7 +132,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             list="liste-pays"
                             value={champs.pays}
                             onChange={(e) => filtrer('pays', e.target.value)}
-                            placeholder="Pays"
+                            placeholder={t('auth.pays', 'Pays')}
                             className={champCls}
                         />
                         <datalist id="liste-pays">
@@ -137,7 +145,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             list="liste-secteurs"
                             value={champs.secteur}
                             onChange={(e) => filtrer('secteur', e.target.value)}
-                            placeholder="Secteur d'activité"
+                            placeholder={t('auth.secteur', 'Secteur d\'activité')}
                             className={champCls}
                         />
                         <datalist id="liste-secteurs">
@@ -148,7 +156,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
 
                 {(champs.q || champs.pays || champs.secteur) && (
                     <button type="button" onClick={reinitialiser} className="mt-3 text-xs text-brand-blue hover:underline">
-                        Réinitialiser les filtres
+                        {t('journal.reinitialiser', 'Réinitialiser les filtres')}
                     </button>
                 )}
             </div>
@@ -156,7 +164,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
             <div className="space-y-3">
                 {clients.data.length === 0 && (
                     <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">
-                        Aucune entreprise ne correspond.
+                        {t('entreprises.aucune', 'Aucune entreprise ne correspond.')}
                     </p>
                 )}
 
@@ -179,7 +187,9 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                                         : 'bg-status-incident/10 text-status-incident')
                                                 }
                                             >
-                                                {etatClient === 'validee' ? 'Validée' : 'Refusée'} le {dateCourte(client.validated_at)}
+                                                {etatClient === 'validee'
+                                                    ? t('entreprises.validee', 'Validée')
+                                                    : t('entreprises.refusee', 'Refusée')} {t('entreprises.le', 'le')} {dateCourte(client.validated_at)}
                                             </span>
                                         )}
                                     </div>
@@ -195,31 +205,35 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                             onClick={() => ouvrirRefus(client)}
                                             className="rounded-lg border border-status-incident px-4 py-2 text-sm font-semibold text-status-incident transition hover:bg-status-incident/5"
                                         >
-                                            {etatClient === 'refusee' ? 'Modifier le motif' : 'Refuser'}
+                                            {etatClient === 'refusee'
+                                                ? t('entreprises.modifier_motif', 'Modifier le motif')
+                                                : t('entreprises.refuser', 'Refuser')}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => valider(client)}
                                             className="rounded-lg bg-status-delivered px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
                                         >
-                                            {etatClient === 'refusee' ? 'Revalider' : 'Valider'}
+                                            {etatClient === 'refusee'
+                                                ? t('entreprises.revalider', 'Revalider')
+                                                : t('entreprises.valider', 'Valider')}
                                         </button>
                                     </div>
                                 )}
                             </div>
 
                             <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {ligne('Numéro de TVA', client.vat_number)}
-                                {ligne('Identifiant Peppol', client.peppol_id)}
-                                {ligne("Secteur d'activité", client.business_sector)}
-                                {ligne('Contact', contact ? `${contact.first_name} ${contact.last_name}${contact.position ? ' — ' + contact.position : ''}` : null)}
-                                {ligne('E-mail', client.user?.email)}
-                                {ligne('Téléphone', contact?.phone)}
+                                {ligne(t('compte.numero_tva', 'Numéro de TVA'), client.vat_number)}
+                                {ligne(t('ent.peppol', 'Identifiant Peppol'), client.peppol_id)}
+                                {ligne(t('auth.secteur', 'Secteur d\'activité'), client.business_sector)}
+                                {ligne(t('nav.contact', 'Contact'), contact ? `${contact.first_name} ${contact.last_name}${contact.position ? ' — ' + contact.position : ''}` : null)}
+                                {ligne(t('devis.email', 'Adresse e-mail'), client.user?.email)}
+                                {ligne(t('auth.telephone', 'Téléphone'), contact?.phone)}
                             </dl>
 
                             {client.rejection_reason && (
                                 <p className="mt-3 rounded-lg bg-status-incident/5 px-3 py-2 text-xs text-status-incident">
-                                    Motif du refus : {client.rejection_reason}
+                                    {t('entreprises.motif_refus', 'Motif du refus :')} {client.rejection_reason}
                                     {client.validator && ` — ${client.validator.first_name} ${client.validator.last_name}`}
                                 </p>
                             )}
@@ -247,26 +261,26 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
 
             <Modal show={refus !== null} onClose={() => setRefus(null)} maxWidth="lg">
                 <form onSubmit={envoyerRefus} className="p-6">
-                    <h2 className="text-lg font-bold text-marine">Refuser {refus?.company_name}</h2>
+                    <h2 className="text-lg font-bold text-marine">{t('entreprises.refuser', 'Refuser')} {refus?.company_name}</h2>
                     <p className="mt-1 text-sm text-slate-600">
-                        Le motif est envoyé par e-mail au contact et conservé dans le journal.
+                        {t('entreprises.motif_envoye', 'Le motif est envoyé par e-mail au contact et conservé dans le journal.')}
                     </p>
 
                     <textarea
                         value={data.motif}
                         onChange={(e) => setData('motif', e.target.value)}
                         rows="3"
-                        placeholder="ex. Le numéro de TVA ne correspond pas à l'adresse du siège."
+                        placeholder={t('entreprises.motif_ex', 'ex. Le numéro de TVA ne correspond pas à l\'adresse du siège.')}
                         className="mt-4 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                     />
                     {errors.motif && <p className="mt-1 text-sm text-status-incident">{errors.motif}</p>}
 
                     <div className="mt-4 flex justify-end gap-2">
                         <button type="button" onClick={() => setRefus(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:text-marine">
-                            Annuler
+                            {t('action.annuler', 'Annuler')}
                         </button>
                         <button disabled={processing} className="rounded-lg bg-status-incident px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-                            Confirmer le refus
+                            {t('entreprises.confirmer_refus', 'Confirmer le refus')}
                         </button>
                     </div>
                 </form>
