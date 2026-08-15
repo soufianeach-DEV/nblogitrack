@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import { useLangue, useLocale, useTraduction } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -37,9 +38,11 @@ const NOMS_OFFRE = { ECO: 'Éco', STANDARD: 'Standard', EXPRESS: 'Express' };
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
-
 export default function Create({ tariffGrids, pricing }) {
+    const t = useTraduction();
+    const locale = useLocale();
+    // Le nom du pays de destination s'affiche dans la langue de la page.
+    const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
     const { data, setData, post, processing, errors } = useForm({
         pickup_address: '', delivery_address: '', delivery_country: '',
         pickup_lat: '', pickup_lng: '', delivery_lat: '', delivery_lng: '',
@@ -67,8 +70,8 @@ export default function Create({ tariffGrids, pricing }) {
             .finally(() => setLoadingDist(false));
     }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng]);
 
-    const fr = (n, dec = 2) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-    const kmTxt = distance != null ? distance.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : '';
+    const fr = (n, dec = 2) => Number(n).toLocaleString(locale, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    const kmTxt = distance != null ? distance.toLocaleString(locale, { maximumFractionDigits: 1 }) : '';
 
     const grillesVisibles = data.delivery_country
         ? tariffGrids.filter((g) => g.zone === data.delivery_country)
@@ -114,12 +117,12 @@ export default function Create({ tariffGrids, pricing }) {
     const [soumis, setSoumis] = useState(false);
 
     const manque = {
-        pickup: !data.pickup_lat ? "Complète l'adresse de départ : pays, ville, code postal, rue et numéro." : null,
-        delivery: !data.delivery_lat ? "Complète l'adresse de destination : pays, ville, code postal, rue et numéro." : null,
-        weight: !data.weight ? 'Indique le poids de la marchandise.' : null,
-        goods: !data.goods_type ? 'Choisis le type de marchandise.' : null,
-        grille: !data.tariff_grid_id ? 'Choisis une formule de livraison.' : null,
-        delai: delaiTropCourt ? `Aucune formule ne tient ce délai : compte au moins ${grilleAuto.delivery_days} jours vers cette destination.` : null,
+        pickup: !data.pickup_lat ? t('commande.manque_depart', 'Complétez l\'adresse de départ : pays, ville, code postal, rue et numéro.') : null,
+        delivery: !data.delivery_lat ? t('commande.manque_destination', 'Complétez l\'adresse de destination : pays, ville, code postal, rue et numéro.') : null,
+        weight: !data.weight ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.') : null,
+        goods: !data.goods_type ? t('commande.manque_marchandise', 'Choisissez le type de marchandise.') : null,
+        grille: !data.tariff_grid_id ? t('commande.manque_formule', 'Choisissez une formule de livraison.') : null,
+        delai: delaiTropCourt ? t('commande.delai_impossible', 'Aucune formule ne tient ce délai : comptez au moins :n jours vers cette destination.', { n: grilleAuto.delivery_days }) : null,
     };
 
     const submit = (e) => {
@@ -150,34 +153,34 @@ export default function Create({ tariffGrids, pricing }) {
     const detail = prixDetail(selectedGrid);
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Nouvelle expédition</h1>}>
-            <Head title="Nouvelle expédition" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('commande.titre', 'Nouvelle expédition')}</h1>}>
+            <Head title={t('commande.titre', 'Nouvelle expédition')} />
 
             <form onSubmit={submit} className="w-full space-y-5 rounded-2xl bg-white p-8 shadow-sm">
                 <div className="grid gap-5 sm:grid-cols-2">
                     <AdresseAutocompletion
-                        label="Adresse de départ"
+                        label={t('commande.adresse_depart', 'Adresse de départ')}
                         required
                         onChange={(v) => setData({ ...data, pickup_address: v, pickup_lat: '', pickup_lng: '' })}
                         onSelect={({ address, lat, lng }) => setData({ ...data, pickup_address: address, pickup_lat: lat, pickup_lng: lng })}
                         error={(soumis && manque.pickup) || errors.pickup_address || errors.pickup_lat}
                     />
                     <AdresseAutocompletion
-                        label="Adresse de destination"
+                        label={t('commande.adresse_destination', 'Adresse de destination')}
                         required
                         onChange={(v) => setData({ ...data, delivery_address: v, delivery_lat: '', delivery_lng: '', delivery_country: '', tariff_grid_id: '' })}
                         onSelect={({ address, lat, lng, pays }) => setData({ ...data, delivery_address: address, delivery_lat: lat, delivery_lng: lng, delivery_country: pays, tariff_grid_id: '' })}
                         error={(soumis && manque.delivery) || errors.delivery_address || errors.delivery_lat || errors.delivery_country}
                     />
                     <div>
-                        <InputLabel htmlFor="weight">Poids (kg) <span className="text-status-incident">*</span></InputLabel>
-                        <TextInput id="weight" type="number" step="0.01" min="0" value={data.weight} onChange={(e) => setData('weight', e.target.value)} placeholder="ex. 300" className="mt-1 block w-full" />
+                        <InputLabel htmlFor="weight">{t('commande.poids_kg', 'Poids (kg)')} <span className="text-status-incident">*</span></InputLabel>
+                        <TextInput id="weight" type="number" step="0.01" min="0" value={data.weight} onChange={(e) => setData('weight', e.target.value)} placeholder={t('commande.poids_ex', 'ex. 300')} className="mt-1 block w-full" />
                         <InputError message={(soumis && manque.weight) || errors.weight} className="mt-2" />
                     </div>
                     <div>
-                        <InputLabel htmlFor="goods_type">Type de marchandise <span className="text-status-incident">*</span></InputLabel>
+                        <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="goods_type" value={data.goods_type} onChange={(e) => setData('goods_type', e.target.value)} className={selectCls}>
-                            <option value="">— Choisir —</option>
+                            <option value="">{t('commande.choisir', '— Choisir —')}</option>
                             {MARCHANDISES.map((m) => (
                                 <option key={m} value={m}>{m}</option>
                             ))}
@@ -186,27 +189,27 @@ export default function Create({ tariffGrids, pricing }) {
                     </div>
                     <label className="flex items-center gap-2 sm:col-span-2">
                         <Checkbox name="is_hazardous" checked={data.is_hazardous} onChange={(e) => setData('is_hazardous', e.target.checked)} />
-                        <span className="text-sm text-slate-600">Marchandise dangereuse (ADR)</span>
+                        <span className="text-sm text-slate-600">{t('devis.adr', 'Marchandise dangereuse (ADR)')}</span>
                     </label>
                     <label className="flex items-center gap-2 sm:col-span-2">
                         <Checkbox name="needs_tail_lift" checked={data.needs_tail_lift} onChange={(e) => setData('needs_tail_lift', e.target.checked)} />
-                        <span className="text-sm text-slate-600">Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)</span>
+                        <span className="text-sm text-slate-600">{t('commande.hayon_long', 'Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)')}</span>
                     </label>
                     <div className="sm:col-span-2">
-                        <InputLabel htmlFor="priority">Priorité <span className="text-status-incident">*</span></InputLabel>
+                        <InputLabel htmlFor="priority">{t('commande.priorite', 'Priorité')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="priority" value={data.priority} onChange={(e) => setData('priority', e.target.value)} className={selectCls} disabled={urgence48h}>
-                            <option value="LOW">Basse</option>
-                            <option value="NORMAL">Normale</option>
-                            <option value="HIGH">Haute</option>
-                            <option value="URGENT">Urgente</option>
+                            <option value="LOW">{t('priorite.basse', 'Basse')}</option>
+                            <option value="NORMAL">{t('priorite.normale', 'Normale')}</option>
+                            <option value="HIGH">{t('priorite.haute', 'Haute')}</option>
+                            <option value="URGENT">{t('priorite.urgente', 'Urgente')}</option>
                         </select>
                         {urgence48h && (
-                            <p className="mt-1 text-xs text-slate-600">Livraison souhaitée sous 48 h : priorité Urgente appliquée automatiquement.</p>
+                            <p className="mt-1 text-xs text-slate-600">{t('commande.urgence48', 'Livraison souhaitée sous 48 h : priorité Urgente appliquée automatiquement.')}</p>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-5 sm:col-span-2">
                         <div>
-                            <InputLabel htmlFor="pickup_date" value="Chargement (date et heure)" />
+                            <InputLabel htmlFor="pickup_date" value={t('commande.chargement_dh', 'Chargement (date et heure)')} />
                             <TextInput
                                 id="pickup_date"
                                 type="datetime-local"
@@ -218,7 +221,7 @@ export default function Create({ tariffGrids, pricing }) {
                             <InputError message={errors.pickup_date} className="mt-2" />
                         </div>
                         <div>
-                            <InputLabel htmlFor="requested_delivery_date" value="Livraison souhaitée" />
+                            <InputLabel htmlFor="requested_delivery_date" value={t('ordres.livraison_souhaitee', 'Livraison souhaitée')} />
                             <TextInput
                                 id="requested_delivery_date"
                                 type="date"
@@ -233,7 +236,11 @@ export default function Create({ tariffGrids, pricing }) {
                 </div>
 
                 <div>
-                    <InputLabel>{data.delivery_country ? `Formule de livraison — ${nomRegion.of(data.delivery_country)}` : 'Formule de livraison'} <span className="text-status-incident">*</span></InputLabel>
+                    <InputLabel>
+                        {t('commande.formule', 'Formule de livraison')}
+                        {data.delivery_country ? ' — ' + nomRegion.of(data.delivery_country) : ''}
+                        {' '}<span className="text-status-incident">*</span>
+                    </InputLabel>
                     {data.delivery_country ? (
                         <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             {offres.map((g) => {
@@ -250,21 +257,21 @@ export default function Create({ tariffGrids, pricing }) {
                                         className={`rounded-xl border p-4 text-left transition ${actif ? 'border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue' : tropLent ? 'border-gray-200 bg-gray-50 opacity-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
                                     >
                                         <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ?? g.label}</p>
-                                        <p className="text-xs text-gray-500">livré en {g.delivery_days} j</p>
+                                        <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {g.delivery_days} {t('ordres.j', 'j')}</p>
                                         <p className="mt-2 text-lg font-bold text-action-dark">{p ? `${fr(p.total)} €` : '—'}</p>
-                                        {tropLent && <p className="mt-1 text-xs text-gray-400">trop lent pour la date demandée</p>}
+                                        {tropLent && <p className="mt-1 text-xs text-gray-400">{t('commande.trop_lent', 'trop lent pour la date demandée')}</p>}
                                     </button>
                                 );
                             })}
                         </div>
                     ) : (
-                        <p className="mt-1 text-sm text-slate-600">Choisis d'abord l'adresse de destination : la zone tarifaire est déduite automatiquement.</p>
+                        <p className="mt-1 text-sm text-slate-600">{t('commande.destination_dabord', 'Choisissez d\'abord l\'adresse de destination : la zone tarifaire est déduite automatiquement.')}</p>
                     )}
                     {data.delivery_country && delaiJours !== null && !delaiTropCourt && (
-                        <p className="mt-2 text-xs text-slate-600">Livraison demandée en {delaiJours} j : la formule la moins chère qui tient ce délai est appliquée.</p>
+                        <p className="mt-2 text-xs text-slate-600">{t('commande.formule_auto', 'Livraison demandée en :n j : la formule la moins chère qui tient ce délai est appliquée.', { n: delaiJours })}</p>
                     )}
                     {delaiTropCourt && (
-                        <p className="mt-2 text-xs text-status-incident">Délai demandé ({delaiJours} j) trop court pour cette destination : notre meilleur délai est de {grilleAuto.delivery_days} j.</p>
+                        <p className="mt-2 text-xs text-status-incident">{t('commande.delai_court', 'Délai demandé (:n j) trop court pour cette destination : notre meilleur délai est de :min j.', { n: delaiJours, min: grilleAuto.delivery_days })}</p>
                     )}
                     <InputError message={(soumis && manque.grille) || errors.tariff_grid_id} className="mt-2" />
                 </div>
@@ -272,25 +279,27 @@ export default function Create({ tariffGrids, pricing }) {
                 {(data.pickup_lat && data.delivery_lat) && (
                     <div className="rounded-xl bg-surface p-4">
                         {loadingDist ? (
-                            <p className="text-sm text-slate-600">Calcul de la distance…</p>
+                            <p className="text-sm text-slate-600">{t('commande.calcul_distance', 'Calcul de la distance…')}</p>
                         ) : (
                             <div className="flex items-center justify-between gap-4">
                                 <div>
                                     <p className="text-sm font-medium text-marine">
-                                        {detail ? 'Estimation du prix' : `Distance : ${kmTxt} km`}
+                                        {detail
+                                            ? t('commande.estimation_prix', 'Estimation du prix')
+                                            : t('commande.distance', 'Distance') + ' : ' + kmTxt + ' km'}
                                     </p>
                                     {detail ? (
                                         detail.carburant != null ? (
                                             <p className="text-xs text-gray-500">
-                                                Véhicule dédié · {kmTxt} km — Carburant {fr(detail.carburant, 0)} € + Péages {fr(detail.peages, 0)} € + Chauffeur {fr(detail.chauffeur, 0)} € + Véhicule {fr(detail.vehicule, 0)} € + Frais fixes {fr(selectedGrid.base_rate, 0)} € + Marge {Math.round(pricing.margin * 100)} %{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · livré en {selectedGrid.delivery_days} j
+                                                {t('tarifs.dedie', 'Véhicule dédié')} · {kmTxt} km — {t('commande.carburant', 'Carburant')} {fr(detail.carburant, 0)} € + {t('commande.peages', 'Péages')} {fr(detail.peages, 0)} € + {t('suivi.chauffeur', 'Chauffeur')} {fr(detail.chauffeur, 0)} € + {t('ordres.vehicule', 'Véhicule')} {fr(detail.vehicule, 0)} € + {t('commande.frais_fixes', 'Frais fixes')} {fr(selectedGrid.base_rate, 0)} € + {t('commande.marge', 'Marge')} {Math.round(pricing.margin * 100)} %{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
                                             </p>
                                         ) : (
                                             <p className="text-xs text-gray-500">
-                                                Base {fr(selectedGrid.base_rate)} € + {fr(selectedGrid.price_per_kg, 3)} €/kg × {data.weight} kg + {fr(selectedGrid.price_per_km)} €/km × {kmTxt} km{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · livré en {selectedGrid.delivery_days} j
+                                                {t('commande.base', 'Base')} {fr(selectedGrid.base_rate)} € + {fr(selectedGrid.price_per_kg, 3)} €/kg × {data.weight} kg + {fr(selectedGrid.price_per_km)} €/km × {kmTxt} km{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
                                             </p>
                                         )
                                     ) : (
-                                        <p className="text-xs text-gray-500">Indique le poids pour voir les prix groupage.</p>
+                                        <p className="text-xs text-gray-500">{t('commande.poids_pour_prix', 'Indiquez le poids pour voir les prix groupage.')}</p>
                                     )}
                                 </div>
                                 {detail && <p className="text-3xl font-bold text-action-dark">{fr(detail.total)} €</p>}
@@ -300,11 +309,11 @@ export default function Create({ tariffGrids, pricing }) {
                 )}
 
                 <div>
-                    <InputLabel htmlFor="special_instructions" value="Instructions particulières" />
-                    <textarea id="special_instructions" value={data.special_instructions} onChange={(e) => setData('special_instructions', e.target.value)} rows="3" placeholder="ex. Livraison sur rendez-vous, hayon nécessaire, sonner au quai B…" className={selectCls} />
+                    <InputLabel htmlFor="special_instructions" value={t('commande.instructions', 'Instructions particulières')} />
+                    <textarea id="special_instructions" value={data.special_instructions} onChange={(e) => setData('special_instructions', e.target.value)} rows="3" placeholder={t('commande.instructions_ex', 'ex. Livraison sur rendez-vous, hayon nécessaire, sonner au quai B…')} className={selectCls} />
                 </div>
 
-                <PrimaryButton disabled={processing}>Créer l'expédition</PrimaryButton>
+                <PrimaryButton disabled={processing}>{t('commande.creer', 'Créer l\'expédition')}</PrimaryButton>
             </form>
         </AuthenticatedLayout>
     );

@@ -1,25 +1,28 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 
 const ETAPES = [
-    { cle: 'PENDING', libelle: 'En attente', detail: 'Commande enregistrée.' },
-    { cle: 'IN_PROGRESS', libelle: 'En cours', detail: 'Marchandise en transit.' },
-    { cle: 'DELIVERED', libelle: 'Livré', detail: 'Livraison effectuée.' },
+    { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
+    { cle: 'IN_PROGRESS', libelle: ['statut.en_cours', 'En cours'], detail: ['suivi.detail_transit', 'Marchandise en transit.'] },
+    { cle: 'DELIVERED', libelle: ['statut.livre', 'Livré'], detail: ['suivi.detail_livree', 'Livraison effectuée.'] },
 ];
 
 const PRIORITE = {
-    LOW: 'Basse',
-    NORMAL: 'Normale',
-    HIGH: 'Haute',
-    URGENT: 'Urgente',
+    LOW: ['priorite.basse', 'Basse'],
+    NORMAL: ['priorite.normale', 'Normale'],
+    HIGH: ['priorite.haute', 'Haute'],
+    URGENT: ['priorite.urgente', 'Urgente'],
 };
 
 function Progression({ statut }) {
+    const t = useTraduction();
+
     if (statut === 'CANCELLED') {
         return (
             <div className="rounded-lg bg-status-incident/10 p-4 text-status-incident">
-                <p className="font-semibold">Expédition annulée</p>
+                <p className="font-semibold">{t('suivi.expedition_annulee', 'Expédition annulée')}</p>
             </div>
         );
     }
@@ -47,8 +50,8 @@ function Progression({ statut }) {
                             )}
                         </div>
                         <div className={`pt-1 ${actif ? 'text-marine' : 'text-slate-600'}`}>
-                            <div className="font-semibold">{etape.libelle}</div>
-                            <div className="text-sm text-slate-600">{etape.detail}</div>
+                            <div className="font-semibold">{t(...etape.libelle)}</div>
+                            <div className="text-sm text-slate-600">{t(...etape.detail)}</div>
                         </div>
                     </li>
                 );
@@ -58,9 +61,12 @@ function Progression({ statut }) {
 }
 
 export default function Show({ order, chauffeur, facture = null }) {
+    const t = useTraduction();
+    const locale = useLocale();
+
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
         ? '—'
-        : Number(valeur).toLocaleString('fr-FR', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }) + ' ' + unite;
+        : Number(valeur).toLocaleString(locale, { minimumFractionDigits: decimales, maximumFractionDigits: decimales }) + ' ' + unite;
 
     const date = (valeur, avecHeure = false) => {
         if (! valeur) {
@@ -74,7 +80,7 @@ export default function Show({ order, chauffeur, facture = null }) {
             options.minute = '2-digit';
         }
 
-        return new Date(valeur).toLocaleString('fr-FR', options);
+        return new Date(valeur).toLocaleString(locale, options);
     };
 
     const ligne = (libelle, valeur) => (
@@ -97,73 +103,75 @@ export default function Show({ order, chauffeur, facture = null }) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <BoutonRetour href={route('transport-orders.index')}>
-                            Ordres de transport
+                            {t('nav.ordres', 'Ordres de transport')}
                         </BoutonRetour>
                         <h1 className="mt-1 text-2xl font-bold text-marine">{order.tracking_number}</h1>
                         <p className="text-sm text-slate-600">{order.client?.company_name}</p>
                     </div>
                     <span className="rounded-full bg-marine px-4 py-1.5 text-sm font-semibold text-white">
-                        {PRIORITE[order.priority] ?? order.priority}
+                        {PRIORITE[order.priority] ? t(...PRIORITE[order.priority]) : order.priority}
                     </span>
                 </div>
             }
         >
-            <Head title={'Expédition ' + order.tracking_number} />
+            <Head title={t('ordres.expedition', 'Expédition') + ' ' + order.tracking_number} />
 
             <div className="grid gap-4 lg:grid-cols-3">
-                {carte('État de livraison', (
+                {carte(t('suivi.etat', 'État de livraison'), (
                     <>
                         <Progression statut={order.status} />
                         <dl className="mt-4 border-t border-slate-100 pt-3">
-                            {ligne('Livraison souhaitée', date(order.requested_delivery_date))}
-                            {ligne('Livraison effective', date(order.actual_delivery_date))}
+                            {ligne(t('ordres.livraison_souhaitee', 'Livraison souhaitée'), date(order.requested_delivery_date))}
+                            {ligne(t('ordres.livraison_effective', 'Livraison effective'), date(order.actual_delivery_date))}
                         </dl>
                     </>
                 ))}
 
-                {carte('Trajet', (
+                {carte(t('devis.trajet', 'Trajet'), (
                     <dl>
-                        {ligne('Départ', order.pickup_address)}
-                        {ligne('Destination', order.delivery_address)}
-                        {ligne('Distance routière', nombre(order.distance_km, 'km'))}
-                        {ligne('Chargement', date(order.pickup_date, true))}
+                        {ligne(t('suivi.depart', 'Départ'), order.pickup_address)}
+                        {ligne(t('suivi.destination', 'Destination'), order.delivery_address)}
+                        {ligne(t('suivi.distance_routiere', 'Distance routière'), nombre(order.distance_km, 'km'))}
+                        {ligne(t('ordres.chargement', 'Chargement'), date(order.pickup_date, true))}
                     </dl>
                 ))}
 
-                {carte('Marchandise', (
+                {carte(t('devis.marchandise', 'Marchandise'), (
                     <dl>
-                        {ligne('Nature', order.goods_type)}
-                        {ligne('Poids', nombre(order.weight, 'kg'))}
-                        {ligne('Matière dangereuse', order.is_hazardous ? 'Oui — ADR' : 'Non')}
-                        {ligne('Formule', order.tariff_grid
-                            ? order.tariff_grid.label + ' — ' + order.tariff_grid.delivery_days + ' j'
+                        {ligne(t('ordres.nature', 'Nature'), order.goods_type)}
+                        {ligne(t('commande.poids', 'Poids'), nombre(order.weight, 'kg'))}
+                        {ligne(t('ordres.dangereuse', 'Matière dangereuse'), order.is_hazardous
+                            ? t('ordres.oui_adr', 'Oui — ADR')
+                            : t('ordres.non', 'Non'))}
+                        {ligne(t('ordres.formule', 'Formule'), order.tariff_grid
+                            ? order.tariff_grid.label + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
                             : null)}
-                        {ligne('Prix estimé', nombre(order.estimated_cost, '€', 2))}
+                        {ligne(t('commande.estimation', 'Prix estimé'), nombre(order.estimated_cost, '€', 2))}
                     </dl>
                 ))}
 
-                {carte('Affectation', (
+                {carte(t('ordres.affectation', 'Affectation'), (
                     <dl>
-                        {ligne('Véhicule', order.vehicle
+                        {ligne(t('ordres.vehicule', 'Véhicule'), order.vehicle
                             ? order.vehicle.registration + ' — ' + order.vehicle.brand + ' ' + order.vehicle.model
-                            : 'Pas encore affecté')}
-                        {ligne('Capacité', order.vehicle ? nombre(order.vehicle.capacity_tonnes, 't', 1) : null)}
-                        {ligne('Chauffeur', chauffeur ?? 'Pas encore affecté')}
-                        {ligne('Affecté le', date(order.assigned_at, true))}
+                            : t('ordres.pas_affecte', 'Pas encore affecté'))}
+                        {ligne(t('ordres.capacite', 'Capacité'), order.vehicle ? nombre(order.vehicle.capacity_tonnes, 't', 1) : null)}
+                        {ligne(t('suivi.chauffeur', 'Chauffeur'), chauffeur ?? t('ordres.pas_affecte', 'Pas encore affecté'))}
+                        {ligne(t('ordres.affecte_le', 'Affecté le'), date(order.assigned_at, true))}
                     </dl>
                 ))}
 
-                {carte('Suivi client', (
+                {carte(t('ordres.suivi_client', 'Suivi client'), (
                     <dl>
-                        {ligne('Numéro de suivi', <span className="font-mono">{order.tracking_number}</span>)}
-                        {ligne('Code d\'accès', <span className="font-mono tracking-widest">{order.tracking_code}</span>)}
-                        {ligne('Créée le', date(order.created_date))}
+                        {ligne(t('suivi.reference', 'Numéro de suivi'), <span className="font-mono">{order.tracking_number}</span>)}
+                        {ligne(t('ordres.code_acces', 'Code d\'accès'), <span className="font-mono tracking-widest">{order.tracking_code}</span>)}
+                        {ligne(t('ordres.creee_le', 'Créée le'), date(order.created_date))}
                     </dl>
                 ))}
 
-                {carte('Facturation', facture ? (
+                {carte(t('nav.facturation', 'Facturation'), facture ? (
                     <dl>
-                        {ligne('Facture', (
+                        {ligne(t('facture.titre', 'Facture'), (
                             <Link
                                 href={route('invoices.show', facture.id)}
                                 className="font-mono text-brand-blue transition hover:text-marine"
@@ -171,25 +179,25 @@ export default function Show({ order, chauffeur, facture = null }) {
                                 {facture.reference}
                             </Link>
                         ))}
-                        {ligne('Montant TTC', nombre(facture.ttc, '€', 2))}
+                        {ligne(t('ordres.montant_ttc', 'Montant TTC'), nombre(facture.ttc, '€', 2))}
                         {facture.payee_le
-                            ? ligne('Payée le', facture.payee_le)
-                            : ligne('Échéance', facture.echeance)}
-                        {ligne('État', facture.etat)}
+                            ? ligne(t('ordres.payee_le', 'Payée le'), facture.payee_le)
+                            : ligne(t('facture.echeance', 'Échéance'), facture.echeance)}
+                        {ligne(t('ordres.etat', 'État'), facture.etat)}
                     </dl>
                 ) : (
                     <p className="text-sm text-slate-600">
                         {order.status === 'DELIVERED'
-                            ? 'Sera portée sur la facture du mois de livraison, émise le mois suivant.'
+                            ? t('ordres.fact_apres', 'Sera portée sur la facture du mois de livraison, émise le mois suivant.')
                             : order.status === 'CANCELLED'
-                                ? 'Expédition annulée — rien à facturer.'
-                                : 'Facturée après livraison.'}
+                                ? t('ordres.fact_annulee', 'Expédition annulée — rien à facturer.')
+                                : t('ordres.fact_livraison', 'Facturée après livraison.')}
                     </p>
                 ))}
 
-                {carte('Consignes particulières', (
+                {carte(t('ordres.consignes', 'Consignes particulières'), (
                     <p className="text-sm text-slate-600">
-                        {order.special_instructions || 'Aucune consigne particulière.'}
+                        {order.special_instructions || t('ordres.aucune_consigne', 'Aucune consigne particulière.')}
                     </p>
                 ))}
             </div>

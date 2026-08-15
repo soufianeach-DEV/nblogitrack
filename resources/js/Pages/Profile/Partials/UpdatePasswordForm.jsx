@@ -2,11 +2,13 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import { useTraduction } from '@/traduire';
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 
 export default function UpdatePasswordForm({ className = '' }) {
+    const t = useTraduction();
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
 
@@ -48,11 +50,11 @@ export default function UpdatePasswordForm({ className = '' }) {
         <section className={className}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900">
-                    Mot de passe
+                    {t('compte.mot_de_passe', 'Mot de passe')}
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Choisissez un mot de passe long et difficile à deviner.
+                    {t('profil.mdp_conseil', 'Choisissez un mot de passe long et difficile à deviner.')}
                 </p>
             </header>
 
@@ -60,7 +62,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div>
                     <InputLabel
                         htmlFor="current_password"
-                        value="Mot de passe actuel"
+                        value={t('profil.mdp_actuel', 'Mot de passe actuel')}
                     />
 
                     <TextInput
@@ -82,7 +84,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="password" value="Nouveau mot de passe" />
+                    <InputLabel htmlFor="password" value={t('auth.nouveau_mdp', 'Nouveau mot de passe')} />
 
                     <TextInput
                         id="password"
@@ -100,7 +102,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div>
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirmation du mot de passe"
+                        value={t('auth.confirmation_mdp', 'Confirmation du mot de passe')}
                     />
 
                     <TextInput
@@ -121,7 +123,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Enregistrer</PrimaryButton>
+                    <PrimaryButton disabled={processing}>{t('action.enregistrer', 'Enregistrer')}</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -131,7 +133,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600">
-                            Enregistré.
+                            {t('action.enregistre', 'Enregistré.')}
                         </p>
                     </Transition>
                 </div>
