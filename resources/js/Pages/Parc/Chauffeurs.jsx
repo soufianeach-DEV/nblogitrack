@@ -1,12 +1,14 @@
 import BarreFiltres from '@/Components/BarreFiltres';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useTraduction } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 const jjmmaaaaVersIso = (valeur) => (valeur ? valeur.split('/').reverse().join('-') : '');
 
 function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
+    const t = useTraduction();
     const [sortie, setSortie] = useState(Boolean(chauffeur.sorti_le));
 
     const { data, setData, patch, processing, errors } = useForm({
@@ -48,7 +50,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
             {chauffeur.empechements.length > 0 && (
                 <div className="mt-4 rounded-lg bg-status-incident/10 px-3 py-2 text-xs text-status-incident">
-                    <p className="font-semibold">Ne peut pas prendre la route</p>
+                    <p className="font-semibold">{t('chauffeurs.pas_la_route', 'Ne peut pas prendre la route')}</p>
                     <ul className="mt-1 list-inside list-disc">
                         {chauffeur.empechements.map((motif) => <li key={motif}>{motif}</li>)}
                     </ul>
@@ -56,32 +58,34 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
             )}
 
             <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Permis</dt><dd className="font-semibold text-marine">{chauffeur.permis}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Numéro</dt><dd className="font-mono text-xs text-marine">{chauffeur.numero_permis}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Statut</dt><dd className="font-semibold text-marine">{chauffeur.statut}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Entrée en service</dt><dd className="font-semibold text-marine">{chauffeur.embauche ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Téléphone</dt><dd className="font-semibold text-marine">{chauffeur.telephone ?? '—'}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">Missions confiées</dt><dd className="font-semibold text-marine">{chauffeur.missions}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('suivi.permis', 'Permis')}</dt><dd className="font-semibold text-marine">{chauffeur.permis}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.numero', 'Numéro')}</dt><dd className="font-mono text-xs text-marine">{chauffeur.numero_permis}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('commun.statut', 'Statut')}</dt><dd className="font-semibold text-marine">{chauffeur.statut}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('personnel.entree_service', 'Entrée en service')}</dt><dd className="font-semibold text-marine">{chauffeur.embauche ?? '—'}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('auth.telephone', 'Téléphone')}</dt><dd className="font-semibold text-marine">{chauffeur.telephone ?? '—'}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.missions_confiees', 'Missions confiées')}</dt><dd className="font-semibold text-marine">{chauffeur.missions}</dd></div>
                 <div>
-                    <dt className="text-xs uppercase tracking-wide text-slate-600">Âge</dt>
-                    <dd className="font-semibold text-marine">{chauffeur.age !== null ? chauffeur.age + ' ans' : '—'}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.age', 'Âge')}</dt>
+                    <dd className="font-semibold text-marine">{chauffeur.age !== null ? chauffeur.age + ' ' + t('chauffeurs.ans', 'ans') : '—'}</dd>
                 </div>
                 <div>
-                    <dt className="text-xs uppercase tracking-wide text-slate-600">Retraite</dt>
+                    <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.retraite', 'Retraite')}</dt>
                     <dd className="font-semibold text-marine">{chauffeur.retraite_affichee ?? '—'}</dd>
                 </div>
             </dl>
 
             {chauffeur.sorti_le && (
                 <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
-                    Parti le {chauffeur.sorti_le} — {chauffeur.motif_sortie}. La fiche est conservée
-                    pour que les missions passées gardent un nom.
+                    {t('chauffeurs.parti_le', 'Parti le :date — :motif. La fiche est conservée pour que les missions passées gardent un nom.', {
+                        date: chauffeur.sorti_le,
+                        motif: chauffeur.motif_sortie,
+                    })}
                 </p>
             )}
 
             {! peutModifier ? (
                 <p className="mt-5 rounded-lg bg-surface px-3 py-2 text-sm text-slate-600">
-                    Consultation seule — la modification des profils est réservée à l'administrateur.
+                    {t('chauffeurs.lecture_seule', 'Consultation seule — la modification des profils est réservée à l\'administrateur.')}
                 </p>
             ) : (
                 <div className="mt-5 space-y-4 border-t border-slate-100 pt-4">
@@ -92,7 +96,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                             onChange={(e) => setData('is_available', e.target.checked)}
                             className="rounded border-slate-300 text-marine focus:ring-marine"
                         />
-                        <span className="text-sm font-semibold text-marine">Disponible pour affectation</span>
+                        <span className="text-sm font-semibold text-marine">{t('parc.dispo_affectation', 'Disponible pour affectation')}</span>
                     </label>
 
                     <label className="flex items-center gap-3">
@@ -102,7 +106,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                             onChange={(e) => setData('adr_certified', e.target.checked)}
                             className="rounded border-slate-300 text-marine focus:ring-marine"
                         />
-                        <span className="text-sm font-semibold text-marine">Certifié ADR — matières dangereuses</span>
+                        <span className="text-sm font-semibold text-marine">{t('chauffeurs.adr', 'Certifié ADR — matières dangereuses')}</span>
                     </label>
 
                     {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
@@ -110,14 +114,14 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
                     {chauffeur.engage && (
                         <p className="rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
-                            Ce chauffeur porte une mission en cours : il ne peut pas être retiré du service.
+                            {t('chauffeurs.engage', 'Ce chauffeur porte une mission en cours : il ne peut pas être retiré du service.')}
                         </p>
                     )}
 
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label htmlFor="statut" className="text-xs uppercase tracking-wide text-slate-600">
-                                Statut
+                                {t('commun.statut', 'Statut')}
                             </label>
                             <select
                                 id="statut"
@@ -132,7 +136,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         </div>
                         <div>
                             <label htmlFor="embauche" className="text-xs uppercase tracking-wide text-slate-600">
-                                Entrée en service
+                                {t('personnel.entree_service', 'Entrée en service')}
                             </label>
                             <input
                                 id="embauche"
@@ -145,7 +149,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         </div>
                         <div>
                             <label htmlFor="naissance" className="text-xs uppercase tracking-wide text-slate-600">
-                                Date de naissance
+                                {t('chauffeurs.naissance', 'Date de naissance')}
                             </label>
                             <input
                                 id="naissance"
@@ -158,7 +162,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         </div>
                         <div>
                             <label htmlFor="retraite" className="text-xs uppercase tracking-wide text-slate-600">
-                                Retraite prévue
+                                {t('chauffeurs.retraite_prevue', 'Retraite prévue')}
                             </label>
                             <input
                                 id="retraite"
@@ -172,7 +176,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
                     <div>
                         <label htmlFor="visite" className="text-xs uppercase tracking-wide text-slate-600">
-                            Dernière visite médicale
+                            {t('chauffeurs.derniere_visite', 'Dernière visite médicale')}
                         </label>
                         <input
                             id="visite"
@@ -187,7 +191,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label htmlFor="code95" className="text-xs uppercase tracking-wide text-slate-600">
-                                Code 95 valable jusqu'au
+                                {t('chauffeurs.code95', 'Code 95 valable jusqu\'au')}
                             </label>
                             <input
                                 id="code95"
@@ -199,7 +203,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         </div>
                         <div>
                             <label htmlFor="tacho" className="text-xs uppercase tracking-wide text-slate-600">
-                                Carte tachygraphe jusqu'au
+                                {t('chauffeurs.tacho', 'Carte tachygraphe jusqu\'au')}
                             </label>
                             <input
                                 id="tacho"
@@ -213,7 +217,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
                     <div>
                         <label htmlFor="echeance" className="text-xs uppercase tracking-wide text-slate-600">
-                            Échéance du permis
+                            {t('chauffeurs.echeance_permis', 'Échéance du permis')}
                         </label>
                         <input
                             id="echeance"
@@ -235,14 +239,14 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                             onClick={() => setSortie(true)}
                             className="text-sm font-semibold text-status-incident transition hover:underline"
                         >
-                            Enregistrer un départ
+                            {t('chauffeurs.enregistrer_depart', 'Enregistrer un départ')}
                         </button>
                     ) : (
                         <div className="space-y-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-600">Départ de l'entreprise</p>
+                            <p className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.depart', 'Départ de l\'entreprise')}</p>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="sortie" className="text-xs text-slate-600">Date</label>
+                                    <label htmlFor="sortie" className="text-xs text-slate-600">{t('journal.date', 'Date')}</label>
                                     <input
                                         id="sortie"
                                         type="date"
@@ -253,14 +257,14 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                                     {errors.left_on && <p className="mt-1 text-xs text-status-incident">{errors.left_on}</p>}
                                 </div>
                                 <div>
-                                    <label htmlFor="motif" className="text-xs text-slate-600">Motif</label>
+                                    <label htmlFor="motif" className="text-xs text-slate-600">{t('chauffeurs.motif', 'Motif')}</label>
                                     <select
                                         id="motif"
                                         value={data.departure_reason ?? ''}
                                         onChange={(e) => setData('departure_reason', e.target.value)}
                                         className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                                     >
-                                        <option value="">— Choisir —</option>
+                                        <option value="">{t('commande.choisir', '— Choisir —')}</option>
                                         {Object.entries(motifsSortie).map(([valeur, libelle]) => (
                                             <option key={valeur} value={valeur}>{libelle}</option>
                                         ))}
@@ -269,8 +273,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                                 </div>
                             </div>
                             <p className="rounded-lg bg-surface px-3 py-2 text-xs text-slate-600">
-                                La fiche n'est jamais supprimée : le compte est fermé, les missions
-                                passées gardent leur conducteur.
+                                {t('chauffeurs.fiche_conservee', 'La fiche n\'est jamais supprimée : le compte est fermé, les missions passées gardent leur conducteur.')}
                             </p>
                             {! chauffeur.sorti_le && (
                                 <button
@@ -281,7 +284,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                                     }}
                                     className="text-xs font-semibold text-slate-600 transition hover:text-marine"
                                 >
-                                    Annuler le départ
+                                    {t('chauffeurs.annuler_depart', 'Annuler le départ')}
                                 </button>
                             )}
                         </div>
@@ -291,7 +294,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
             <div className="mt-6 flex justify-end gap-3">
                 <button type="button" onClick={onFermer} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-marine">
-                    Fermer
+                    {t('action.fermer', 'Fermer')}
                 </button>
                 {peutModifier && (
                     <button
@@ -299,7 +302,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         disabled={processing}
                         className="rounded-lg bg-marine px-5 py-2 text-sm font-bold text-white transition hover:bg-marine-deep disabled:opacity-50"
                     >
-                        {processing ? 'Enregistrement…' : 'Enregistrer'}
+                        {processing ? t('action.enregistrement', 'Enregistrement…') : t('action.enregistrer', 'Enregistrer')}
                     </button>
                 )}
             </div>
@@ -308,33 +311,38 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 }
 
 export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {}, motifsSortie = {}, compteurs, filtres = {}, peutModifier = false }) {
+    const t = useTraduction();
     const [ouvert, setOuvert] = useState(null);
 
     return (
         <AuthenticatedLayout
             header={
                 <div>
-                    <h1 className="text-2xl font-bold text-marine">Chauffeurs</h1>
+                    <h1 className="text-2xl font-bold text-marine">{t('nav.chauffeurs', 'Chauffeurs')}</h1>
                     <p className="text-sm text-slate-600">
-                        {compteurs.total} chauffeurs, {compteurs.disponibles} disponibles, {compteurs.adr} certifiés ADR
+                        {t('chauffeurs.compte', ':total chauffeurs, :dispo disponibles, :adr certifiés ADR', {
+                            total: compteurs.total,
+                            dispo: compteurs.disponibles,
+                            adr: compteurs.adr,
+                        })}
                     </p>
                 </div>
             }
         >
-            <Head title="Chauffeurs" />
+            <Head title={t('nav.chauffeurs', 'Chauffeurs')} />
 
             <BarreFiltres
                 adresse={route('drivers.index')}
                 filtres={filtres}
-                placeholder="Nom, adresse électronique, numéro de permis…"
-                listes={[{ champ: 'permis', intitule: 'Tous les permis', options: permis }]}
+                placeholder={t('chauffeurs.filtre', 'Nom, adresse électronique, numéro de permis…')}
+                listes={[{ champ: 'permis', intitule: t('chauffeurs.tous_permis', 'Tous les permis'), options: permis }]}
                 compteurs={[
-                    { libelle: 'Tous', valeur: null, nombre: compteurs.total },
-                    { libelle: 'Aptes', valeur: 'disponibles', nombre: compteurs.disponibles },
-                    { libelle: 'Certifiés ADR', valeur: 'adr', nombre: compteurs.adr },
-                    { libelle: 'Ne peuvent pas rouler', valeur: 'inaptes', nombre: compteurs.inaptes, alerte: true },
-                    { libelle: 'Visite à renouveler', valeur: 'visite', nombre: compteurs.visite, alerte: true },
-                    { libelle: 'Sortis', valeur: 'sortis', nombre: compteurs.sortis },
+                    { libelle: t('parc.tous', 'Tous'), valeur: null, nombre: compteurs.total },
+                    { libelle: t('chauffeurs.aptes', 'Aptes'), valeur: 'disponibles', nombre: compteurs.disponibles },
+                    { libelle: t('chauffeurs.certifies_adr', 'Certifiés ADR'), valeur: 'adr', nombre: compteurs.adr },
+                    { libelle: t('chauffeurs.inaptes', 'Ne peuvent pas rouler'), valeur: 'inaptes', nombre: compteurs.inaptes, alerte: true },
+                    { libelle: t('chauffeurs.visite_renouveler', 'Visite à renouveler'), valeur: 'visite', nombre: compteurs.visite, alerte: true },
+                    { libelle: t('chauffeurs.sortis', 'Sortis'), valeur: 'sortis', nombre: compteurs.sortis },
                 ]}
             />
 
@@ -343,12 +351,12 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Chauffeur</th>
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Permis</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('suivi.chauffeur', 'Chauffeur')}</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('suivi.permis', 'Permis')}</th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">ADR</th>
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Visite médicale</th>
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">Missions</th>
-                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">État</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('chauffeurs.visite', 'Visite médicale')}</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 text-right font-semibold">{t('mission.onglet', 'Missions')}</th>
+                                <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">{t('ordres.etat', 'État')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -366,7 +374,9 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                                         <span className="font-semibold text-marine">{c.permis}</span>
                                         <span className="ml-2 font-mono text-xs text-slate-600">{c.numero_permis}</span>
                                         <span className={`block text-xs ${c.permis_bientot ? 'font-semibold text-status-incident' : 'text-slate-600'}`}>
-                                            {c.permis_echeance ? `expire le ${c.permis_echeance}` : 'échéance inconnue'}
+                                            {c.permis_echeance
+                                                ? `${t('chauffeurs.expire_le', 'expire le')} ${c.permis_echeance}`
+                                                : t('chauffeurs.echeance_inconnue', 'échéance inconnue')}
                                         </span>
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3">
@@ -388,10 +398,10 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                                                         : c.disponible ? 'bg-status-delivered/10 text-status-delivered'
                                                             : 'bg-slate-100 text-slate-700'
                                         }`}>
-                                            {c.sorti_le ? 'Parti'
-                                                : c.empechements.length > 0 ? 'Ne peut pas rouler'
-                                                    : c.engage ? 'En mission'
-                                                        : c.disponible ? 'Disponible' : 'Indisponible'}
+                                            {c.sorti_le ? t('chauffeurs.parti', 'Parti')
+                                                : c.empechements.length > 0 ? t('chauffeurs.ne_peut_rouler', 'Ne peut pas rouler')
+                                                    : c.engage ? t('parc.en_mission', 'En mission')
+                                                        : c.disponible ? t('parc.disponible', 'Disponible') : t('chauffeurs.indisponible', 'Indisponible')}
                                         </span>
                                         {c.empechements.length > 0 && ! c.sorti_le && (
                                             <span className="mt-1 block max-w-[16rem] truncate text-xs text-slate-600" title={c.empechements.join(' · ')}>
@@ -404,7 +414,7 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                             {chauffeurs.length === 0 && (
                                 <tr>
                                     <td className="px-4 py-8 text-center text-slate-600" colSpan="6">
-                                        Aucun chauffeur ne correspond à cette recherche.
+                                        {t('chauffeurs.aucun', 'Aucun chauffeur ne correspond à cette recherche.')}
                                     </td>
                                 </tr>
                             )}
