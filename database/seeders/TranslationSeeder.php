@@ -591,6 +591,12 @@ class TranslationSeeder extends Seeder
         'planif' => [
             'besoins' => ['Besoins', 'Vereisten', 'Requirements'],
 
+            'chercher' => [
+                'Numéro, entreprise, ville de départ ou d\'arrivée…',
+                'Nummer, onderneming, vertrek- of aankomststad…',
+                'Number, company, departure or arrival city…',
+            ],
+
             // L'ouverture du suivi de position, mission par mission.
             'suivi_actif' => ['Suivi de position activé', 'Positieopvolging actief', 'Position tracking on'],
             'suivi_inactif' => ['Activer le suivi de position', 'Positieopvolging activeren', 'Turn on position tracking'],
@@ -615,6 +621,17 @@ class TranslationSeeder extends Seeder
                 'Annuler définitivement cet ordre ?',
                 'Deze opdracht definitief annuleren?',
                 'Cancel this order permanently?',
+            ],
+            'desaffecter' => ['Désaffecter', 'Toewijzing opheffen', 'Unassign'],
+            'motif_desaffectation' => [
+                'Motif de la désaffectation (accident, panne, immobilisation…) :',
+                'Reden voor het opheffen van de toewijzing (ongeval, panne, immobilisatie…):',
+                'Reason for unassigning (accident, breakdown, immobilisation…):',
+            ],
+            'motif_requis' => [
+                'Le motif est obligatoire (5 caractères minimum).',
+                'De reden is verplicht (minstens 5 tekens).',
+                'A reason is required (at least 5 characters).',
             ],
             'contrainte' => ['Contrainte', 'Beperking', 'Constraint'],
             'contrainte_adr' => ['Matières dangereuses', 'Gevaarlijke stoffen', 'Dangerous goods'],

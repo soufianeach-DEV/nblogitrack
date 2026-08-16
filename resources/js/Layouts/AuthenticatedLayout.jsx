@@ -1,6 +1,7 @@
 import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
 import Icone from '@/Components/Icone';
+import RechercheGlobale from '@/Components/RechercheGlobale';
 import { useTraduction } from '@/traduire';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -50,7 +51,6 @@ export default function AuthenticatedLayout({ header, children }) {
     const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
     const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
-    const [recherche, setRecherche] = useState('');
 
     const estAdmin = canValidateClients;
 
@@ -63,13 +63,13 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const fermer = () => setMenuOuvert(false);
 
-    // L'administrateur cherche une entreprise, les autres une expedition.
-    const rechercher = (e) => {
-        e.preventDefault();
-
+    // Le repli quand on valide sans avoir choisi de suggestion :
+    // l'administrateur retombe sur la liste des entreprises filtree, les
+    // autres sur celle des expeditions.
+    const rechercher = (terme) => {
         estAdmin
-            ? router.get(route('clients.index'), { etat: 'tout', q: recherche })
-            : router.get(route('transport-orders.index'), { tracking: recherche });
+            ? router.get(route('clients.index'), { etat: 'tout', q: terme })
+            : router.get(route('transport-orders.index'), { tracking: terme });
     };
 
     const marque = (
@@ -246,18 +246,12 @@ export default function AuthenticatedLayout({ header, children }) {
                         <Icone nom="menu" className="h-6 w-6" />
                     </button>
 
-                    <form onSubmit={rechercher} className="relative hidden w-full max-w-md sm:block">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-600">
-                            <Icone nom="recherche" className="h-5 w-5" />
-                        </span>
-                        <input
-                            value={recherche}
-                            onChange={(e) => setRecherche(e.target.value)}
-                            placeholder={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
-                            aria-label={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
-                            className="w-full rounded-lg border-slate-200 bg-surface py-2 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        />
-                    </form>
+                    <RechercheGlobale
+                        placeholder={estAdmin
+                            ? t('nav.chercher_entreprise', 'Rechercher une entreprise…')
+                            : t('nav.chercher_expedition', 'Rechercher une expédition…')}
+                        onValider={rechercher}
+                    />
 
                     <div className="ml-auto">
                         <Dropdown>

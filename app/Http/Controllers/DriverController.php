@@ -188,7 +188,7 @@ class DriverController extends Controller
             // champ concerne.
             if ($donnees['is_available'] === false && empty($donnees['left_on']) && (clone $encours)->exists()) {
                 return back()->withErrors([
-                    'is_available' => 'Ce chauffeur porte une mission en cours : réaffectez-la avant de le retirer du service.',
+                    'is_available' => 'Ce chauffeur porte une mission en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.',
                 ]);
             }
 

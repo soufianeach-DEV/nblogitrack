@@ -17,6 +17,7 @@ use App\Http\Controllers\ProcessingRecordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\RechercheController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TarifController;
 use App\Http\Controllers\TrackingController;
@@ -60,6 +61,12 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->name('transport-orders.store');
         Route::get('/transport-orders', [TransportOrderController::class, 'index'])
             ->name('transport-orders.index');
+
+        // Les suggestions de la barre du bandeau. Le cloisonnement se fait
+        // dans le controleur : un client n'y trouve que ses expeditions.
+        Route::get('/recherche', [RechercheController::class, 'suggestions'])
+            ->middleware('throttle:60,1')
+            ->name('recherche.suggestions');
         Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
             ->whereNumber('transportOrder')
             ->name('transport-orders.show');
@@ -68,6 +75,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
             Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
             Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
+            Route::post('/planification/{transportOrder}/desaffectation', [PlanningController::class, 'desaffecter'])->name('planning.desaffecter');
 
             // Le suivi de position s'ouvre mission par mission, jamais pour toute
             // la flotte : c'est ce qui le distingue d'une surveillance.

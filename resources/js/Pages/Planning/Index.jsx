@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useRef, useState } from 'react';
 
 const LIBELLE_STATUT = {
     PENDING: ['statut.en_attente', 'En attente'],
@@ -167,6 +168,16 @@ function BoutonsStatut({ ordre }) {
         router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true });
     };
 
+    const desaffecter = () => {
+        const motif = window.prompt(t('planif.motif_desaffectation', 'Motif de la désaffectation (accident, panne, immobilisation…) :'));
+        if (motif === null) return;
+        if (motif.trim().length < 5) {
+            window.alert(t('planif.motif_requis', 'Le motif est obligatoire (5 caractères minimum).'));
+            return;
+        }
+        router.post(route('planning.desaffecter', ordre.id), { motif: motif.trim() }, { preserveScroll: true });
+    };
+
     return (
         <div className="flex flex-wrap gap-2">
             {ordre.status === 'IN_PROGRESS' && (
@@ -176,6 +187,15 @@ function BoutonsStatut({ ordre }) {
                     className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 >
                     {t('planif.marquer_livre', 'Marquer livré')}
+                </button>
+            )}
+            {ordre.status === 'IN_PROGRESS' && (
+                <button
+                    type="button"
+                    onClick={desaffecter}
+                    className="rounded-lg border border-marine px-3 py-1.5 text-xs font-semibold text-marine transition hover:bg-marine/5"
+                >
+                    {t('planif.desaffecter', 'Désaffecter')}
                 </button>
             )}
             {['PENDING', 'IN_PROGRESS'].includes(ordre.status) && (
@@ -200,11 +220,35 @@ export default function Index({
     orders, vehicles, drivers, statut, compteurs,
     priorite = null, priorites = [],
     contrainte = null, contraintes = [],
+    q = '', suggestions = [],
 }) {
     const flash = usePage().props.flash ?? {};
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
+
+    const [champs, setChamps] = useState(q);
+    const minuteur = useRef(null);
+
+    // La frappe est temporisee : sans cela chaque touche relancerait la
+    // requete, et les reponses arriveraient dans le desordre.
+    const chercher = (valeur) => {
+        setChamps(valeur);
+        clearTimeout(minuteur.current);
+        minuteur.current = setTimeout(() => {
+            router.get(route('planning.index'), {
+                status: statut,
+                priorite,
+                contrainte,
+                q: valeur || undefined,
+            }, {
+                only: ['orders', 'priorites', 'contraintes', 'compteurs', 'suggestions', 'q'],
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        }, 250);
+    };
 
     const dateCourte = (valeur) => valeur
         ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -220,11 +264,38 @@ export default function Index({
                 </div>
             )}
 
+            {/* Les facettes reduisent par categorie, elles ne retrouvent pas
+                une mission precise. Ce champ complete la liste au lieu de
+                la remplacer : les onglets et les compteurs le suivent. */}
+            <div className="mb-4">
+                <input
+                    list="suggestions-planification"
+                    value={champs}
+                    onChange={(e) => chercher(e.target.value)}
+                    placeholder={t('planif.chercher', 'Numéro, entreprise, ville de départ ou d\'arrivée…')}
+                    aria-label={t('planif.chercher', 'Numéro, entreprise, ville de départ ou d\'arrivée…')}
+                    className="w-full rounded-lg border-slate-200 bg-white py-2.5 px-4 text-sm shadow-sm focus:border-marine focus:ring-marine sm:max-w-xl"
+                />
+                <datalist id="suggestions-planification">
+                    {suggestions.map((s) => <option key={s} value={s} />)}
+                </datalist>
+
+                {champs !== '' && (
+                    <button
+                        type="button"
+                        onClick={() => chercher('')}
+                        className="ml-3 text-xs text-brand-blue hover:underline"
+                    >
+                        {t('journal.reinitialiser', 'Réinitialiser les filtres')}
+                    </button>
+                )}
+            </div>
+
             <div className="mb-5 flex flex-wrap gap-2">
                 {Object.keys(LIBELLE_STATUT).map((cle) => (
                     <Link
                         key={cle}
-                        href={route('planning.index', { status: cle })}
+                        href={route('planning.index', { status: cle, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-lg px-4 py-2 text-sm font-medium transition ' +
@@ -240,7 +311,7 @@ export default function Index({
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('commande.priorite', 'Priorité')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, contrainte })}
+                    href={route('planning.index', { status: statut, contrainte, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -252,7 +323,7 @@ export default function Index({
                 {priorites.map((p) => (
                     <Link
                         key={p.valeur}
-                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte })}
+                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -272,7 +343,7 @@ export default function Index({
             <div className="mb-5 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('planif.contrainte', 'Contrainte')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, priorite })}
+                    href={route('planning.index', { status: statut, priorite, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -284,7 +355,7 @@ export default function Index({
                 {contraintes.map((c) => (
                     <Link
                         key={c.valeur}
-                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur })}
+                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
