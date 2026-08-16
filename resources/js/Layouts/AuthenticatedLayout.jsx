@@ -19,7 +19,10 @@ function LienMenu({ href, active, icone, onClick, children }) {
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             className={
-                'flex items-center gap-3 border-l-[3px] px-4 py-2 text-sm transition ' +
+                // py-1.5 plutot que py-2 : quatorze entrees en profil
+                // administrateur, quatre pixels chacune font cinquante-six
+                // pixels, soit une entree et demie regagnee.
+                'flex items-center gap-3 border-l-[3px] px-4 py-1.5 text-sm transition ' +
                 (active
                     ? 'border-action bg-white/5 font-semibold text-action'
                     : 'border-transparent font-medium text-slate-300 hover:bg-white/5 hover:text-white')
@@ -33,11 +36,49 @@ function LienMenu({ href, active, icone, onClick, children }) {
 
 function Groupe({ titre, children }) {
     return (
-        <div className="mt-4">
-            <p className="px-4 pb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+        <div className="mt-3">
+            <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                 {titre}
             </p>
             <div>{children}</div>
+        </div>
+    );
+}
+
+/**
+ * Un groupe qui se replie.
+ *
+ * Reserve aux ecrans qu'on ouvre quelques fois par mois : journaux,
+ * traductions, pages, cles d'API, registre. Les garder deplies en
+ * permanence coute cinq entrees a un menu qui en porte quatorze, pour
+ * des pages qu'on ne consulte pas dans la journee.
+ *
+ * Le groupe s'ouvre de lui-meme quand on est deja sur l'un de ses
+ * ecrans : un menu qui se referme sur la page ou l'on se trouve fait
+ * perdre ses reperes.
+ */
+function GroupeRepliable({ titre, ouvertParDefaut = false, children }) {
+    const [ouvert, setOuvert] = useState(ouvertParDefaut);
+
+    return (
+        <div className="mt-3">
+            <button
+                type="button"
+                onClick={() => setOuvert(! ouvert)}
+                aria-expanded={ouvert}
+                className="flex w-full items-center gap-1.5 px-4 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 transition hover:text-slate-200"
+            >
+                {titre}
+                <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className={'h-3 w-3 shrink-0 transition-transform ' + (ouvert ? 'rotate-90' : '')}
+                >
+                    <path d="M7.5 5.5 12 10l-4.5 4.5V5.5Z" />
+                </svg>
+            </button>
+            {ouvert && <div>{children}</div>}
         </div>
     );
 }
@@ -70,7 +111,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const marque = (
         <div className="px-4">
-            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[132px]" />
+            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[112px]" />
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {estAdmin ? t('nav.admin_centrale', 'Administration centrale') : t('nav.logistique', 'Logistique B2B')}
             </p>
@@ -78,11 +119,11 @@ export default function AuthenticatedLayout({ header, children }) {
     );
 
     const nouvelleExpedition = (
-        <div className="mt-4 px-4">
+        <div className="mt-3 px-4">
             <Link
                 href={route('transport-orders.create')}
                 onClick={fermer}
-                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
+                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
             >
                 <Icone nom="plus" className="h-4 w-4" />
                 {t('commande.titre', 'Nouvelle expédition')}
@@ -143,7 +184,14 @@ export default function AuthenticatedLayout({ header, children }) {
             </Groupe>
 
             {canViewLogs && (
-                <Groupe titre={t('nav.systeme', 'Système')}>
+                <GroupeRepliable
+                    titre={t('nav.systeme', 'Système')}
+                    ouvertParDefaut={route().current('activity-logs.*')
+                        || route().current('translations.*')
+                        || route().current('pages.*')
+                        || route().current('api-keys.*')
+                        || route().current('registre.*')}
+                >
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
                         {t('nav.journaux', 'Journaux')}
                     </LienMenu>
@@ -163,13 +211,13 @@ export default function AuthenticatedLayout({ header, children }) {
                             </LienMenu>
                         </>
                     )}
-                </Groupe>
+                </GroupeRepliable>
             )}
         </>
     );
 
     const pied = (
-        <div className="mt-4 border-t border-white/10 px-1 pt-2">
+        <div className="mt-3 border-t border-white/10 px-1 pt-1.5">
             <Link
                 href={route('profile.edit')}
                 onClick={fermer}
@@ -205,14 +253,14 @@ export default function AuthenticatedLayout({ header, children }) {
 
     return (
         <div className="min-h-screen bg-surface">
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-4 md:flex">
+            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-3 md:flex">
                 {panneau}
             </aside>
 
             {menuOuvert && (
                 <div className="fixed inset-0 z-40 md:hidden">
                     <div className="absolute inset-0 bg-marine-deep/70" onClick={fermer} aria-hidden="true" />
-                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-4 shadow-xl">
+                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-3 shadow-xl">
                         <button
                             type="button"
                             onClick={fermer}
