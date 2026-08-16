@@ -16,16 +16,17 @@ use Symfony\Component\HttpFoundation\Response;
  * etre requalifie par le navigateur et execute comme du script.
  *
  * La politique de contenu est ecrite a partir de ce que l'application
- * appelle reellement, pas d'une liste recopiee : Photon pour completer
- * une adresse, OSRM pour estimer une distance, CARTO pour les tuiles de
- * carte. Tout le reste vient de nous, polices comprises.
+ * appelle reellement, pas d'une liste recopiee : Photon, la BAN
+ * francaise et le PDOK neerlandais pour completer une adresse, OSRM
+ * pour estimer une distance, CARTO pour les tuiles de carte. Tout le
+ * reste vient de nous, polices comprises.
  */
 class EnTetesDeSecurite
 {
     /** Ce que le navigateur a le droit d'aller chercher ailleurs. */
     private const IMAGES = 'https://*.basemaps.cartocdn.com';
 
-    private const APPELS = 'https://photon.komoot.io https://router.project-osrm.org';
+    private const APPELS = 'https://photon.komoot.io https://router.project-osrm.org https://api-adresse.data.gouv.fr https://api.pdok.nl';
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -118,6 +118,60 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         return (json.features || []).filter((f) => (f.properties.countrycode || '').toUpperCase() === paysCode);
     };
 
+    // Registres officiels en surcouche de Photon : la France (BAN) et les
+    // Pays-Bas (PDOK) publient une API d'adresses nationale, gratuite et
+    // sans clé. Les réponses sont remises au format Photon pour que le
+    // reste du composant ne voie aucune différence, et Photon reste le
+    // filet si le registre ne rend rien ou tombe.
+    const banRues = async (q, limit = 30) => {
+        const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
+        const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&type=street&limit=${limit}${centre}`;
+        let res;
+        try {
+            res = await fetch(url);
+        } catch {
+            return [];
+        }
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (json.features || [])
+            .filter((f) => f.properties && f.properties.name && f.geometry)
+            .map((f) => ({
+                properties: {
+                    name: f.properties.name,
+                    postcode: f.properties.postcode || '',
+                    city: f.properties.city || '',
+                },
+                geometry: f.geometry,
+            }));
+    };
+
+    const pdokRues = async (q, limit = 30) => {
+        const url = `https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}&fq=type:weg&rows=${limit}`;
+        let res;
+        try {
+            res = await fetch(url);
+        } catch {
+            return [];
+        }
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (((json.response || {}).docs) || [])
+            .map((d) => {
+                const m = /POINT\(([-0-9.]+) ([-0-9.]+)\)/.exec(d.centroide_ll || '');
+                if (!m || !d.straatnaam) return null;
+                return {
+                    properties: {
+                        name: d.straatnaam,
+                        postcode: d.postcode || '',
+                        city: d.woonplaatsnaam || '',
+                    },
+                    geometry: { coordinates: [parseFloat(m[1]), parseFloat(m[2])] },
+                };
+            })
+            .filter(Boolean);
+    };
+
     const formatCp = (v) => {
         if (pays === 'NL') {
             const s = v.toUpperCase().replace(/[^0-9A-Z]/g, '');
@@ -315,9 +369,32 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         timer.current = setTimeout(async () => {
             try {
                 const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
-                let res = await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                let res = [];
+                if (pays === 'FR') {
+                    res = await banRues(`${v} ${cpLocalite || ville}`);
+                    if (res.length === 0) res = await banRues(v);
+                } else if (pays === 'NL') {
+                    res = await pdokRues(`${v} ${cpLocalite || ville}`);
+                    if (res.length === 0) res = await pdokRues(v);
+                }
+                if (res.length === 0) {
+                    res = await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                }
                 if (res.length === 0) {
                     res = await photon(v, `&layer=street${centre}`, pays, 30);
+                }
+                // En Flandre comme ailleurs, une rue ne porte que son nom
+                // local : « rue Rubens » ne matche rien à Antwerpen. On
+                // retente donc avec le seul mot distinctif — Photon retrouve
+                // Rubenslei ou Statiestraat à partir de « rubens » ou « statie ».
+                const distinctif = v
+                    .replace(/^(rue|avenue|place|chauss[ée]e|boulevard|impasse|quai|all[ée]e|chemin|square|cour|passage|galerie|dr[èe]ve)\s+(de\s+la\s+|de\s+l'|du\s+|des\s+|de\s+|d'|la\s+|le\s+|les\s+)?/i, '')
+                    .trim();
+                if (res.length === 0 && distinctif.length >= 2 && distinctif !== v) {
+                    res = await photon(`${distinctif} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                    if (res.length === 0) {
+                        res = await photon(distinctif, `&layer=street${centre}`, pays, 30);
+                    }
                 }
                 if (villeCoords) {
                     res = res.filter((f) => {
@@ -644,7 +721,11 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         </div>
                     </div>
                     {aucuneRue && rue.length >= 2 && (
-                        <p className="mt-1 text-xs text-status-incident">Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</p>
+                        <p className="mt-1 text-xs text-status-incident">
+                            {pays === 'BE'
+                                ? <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).</>
+                                : <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</>}
+                        </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
                         <p className="mt-1 text-xs text-slate-600">Choisis la rue dans la liste de suggestions.</p>
