@@ -10,14 +10,11 @@ const ETATS = {
     OVERDUE: { cle: 'statut.en_retard', libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
 };
 
-export default function Index({ factures = [], peutGererAchats = false }) {
+export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
-
-    // Pas de colonne vide chez le personnel, qui ne paie jamais.
-    const colonnePaiement = factures.some((f) => f.peut_payer);
 
     /**
      * Toute la ligne ouvre la facture : viser un lien de huit caracteres
@@ -35,10 +32,6 @@ export default function Index({ factures = [], peutGererAchats = false }) {
 
         router.get(route('invoices.show', facture.id));
     };
-
-    const du = factures.filter((f) => f.etat !== 'PAID').reduce((somme, f) => somme + f.ttc, 0);
-    const paye = factures.filter((f) => f.etat === 'PAID').reduce((somme, f) => somme + f.ttc, 0);
-    const enRetard = factures.filter((f) => f.etat === 'OVERDUE').length;
 
     return (
         <AuthenticatedLayout
@@ -60,18 +53,18 @@ export default function Index({ factures = [], peutGererAchats = false }) {
             <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('tdb.regle', 'Réglé')}</p>
-                    <p className="text-2xl font-bold text-status-delivered">{euros(paye)}</p>
+                    <p className="text-2xl font-bold text-status-delivered">{euros(cartes.paye)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('tdb.reste_du', 'Reste dû')}</p>
-                    <p className="text-2xl font-bold text-marine">{euros(du)}</p>
+                    <p className="text-2xl font-bold text-marine">{euros(cartes.du)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
                     {/* Le tableau dit deja « en retard » pour cet etat : deux
                         mots pour une meme notion feraient deux traductions. */}
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('facture.en_retard', 'Factures en retard')}</p>
-                    <p className={`text-2xl font-bold ${enRetard > 0 ? 'text-status-incident' : 'text-marine'}`}>
-                        {enRetard}
+                    <p className={`text-2xl font-bold ${cartes.en_retard > 0 ? 'text-status-incident' : 'text-marine'}`}>
+                        {cartes.en_retard}
                     </p>
                 </div>
             </div>
@@ -92,7 +85,7 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {factures.map((facture) => {
+                            {factures.data.map((facture) => {
                                 const etat = ETATS[facture.etat] ?? ETATS.SENT;
 
                                 return (
@@ -162,7 +155,7 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                                     </tr>
                                 );
                             })}
-                            {factures.length === 0 && (
+                            {factures.data.length === 0 && (
                                 <tr>
                                     <td className="px-4 py-8 text-center text-slate-600" colSpan={(canPlan ? 7 : 6) + (colonnePaiement ? 1 : 0)}>
                                         {t('facture.aucune', 'Aucune facture pour l\'instant.')}
@@ -173,6 +166,30 @@ export default function Index({ factures = [], peutGererAchats = false }) {
                     </table>
                 </div>
             </div>
+
+            {factures.last_page > 1 && (
+                <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+                    <span>
+                        {t('achats.pagination', 'Page :page sur :total — :n factures', {
+                            page: factures.current_page,
+                            total: factures.last_page,
+                            n: factures.total,
+                        })}
+                    </span>
+                    <div className="flex gap-2">
+                        {factures.prev_page_url && (
+                            <Link href={factures.prev_page_url} preserveScroll className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-marine transition hover:bg-surface">
+                                {t('achats.precedent', 'Précédent')}
+                            </Link>
+                        )}
+                        {factures.next_page_url && (
+                            <Link href={factures.next_page_url} preserveScroll className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-marine transition hover:bg-surface">
+                                {t('achats.suivant', 'Suivant')}
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }
