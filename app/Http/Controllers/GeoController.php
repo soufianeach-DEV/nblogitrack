@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\Localite;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -92,9 +94,10 @@ class GeoController extends Controller
 
         if ($numeros === null) {
             $numeros = $this->interrogerOverpass($data['rue'], $lat, $lng);
-            if ($numeros !== []) {
-                Cache::put($cle, $numeros, now()->addDays(7));
-            }
+            // Le vide se met en cache aussi : beaucoup de pays n'ont pas
+            // leurs numeros dans OpenStreetMap, et sans cette entree chaque
+            // frappe du client repayait l'interrogation complete.
+            Cache::put($cle, $numeros, $numeros === [] ? now()->addHours(6) : now()->addDays(7));
         }
 
         if (! empty($data['cp'])) {
@@ -122,19 +125,32 @@ class GeoController extends Controller
         // figurer, et ce qui reste ne signifie plus rien pour un moteur
         // d'expressions regulieres.
         $motif = preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
-        $requete = '[out:json][timeout:10];('
+        // Le service tiers a un budget, pas un cheque en blanc : quatre
+        // secondes cote Overpass, cinq cote client. Les deux miroirs sont
+        // interroges en parallele et le premier qui repond correctement
+        // l'emporte ; en serie, deux miroirs satures coutaient 24 secondes
+        // au formulaire.
+        $requete = '[out:json][timeout:4];('
             .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .');out tags center 400;';
 
-        foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'] as $hote) {
-            try {
-                $reponse = Http::timeout(12)
-                    ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
-                    ->asForm()
-                    ->post($hote, ['data' => $requete]);
+        $reponses = Http::pool(fn (Pool $pool) => [
+            $pool->as('de')->timeout(6)->connectTimeout(2)
+                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
+                ->asForm()->post('https://overpass-api.de/api/interpreter', ['data' => $requete]),
+            $pool->as('kumi')->timeout(6)->connectTimeout(2)
+                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
+                ->asForm()->post('https://overpass.kumi.systems/api/interpreter', ['data' => $requete]),
+            $pool->as('coffee')->timeout(6)->connectTimeout(2)
+                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
+                ->asForm()->post('https://overpass.private.coffee/api/interpreter', ['data' => $requete]),
+        ]);
 
-                if (! $reponse->ok()) {
+        foreach (['de', 'kumi', 'coffee'] as $hote) {
+            $reponse = $reponses[$hote] ?? null;
+            try {
+                if (! $reponse instanceof Response || ! $reponse->ok()) {
                     continue;
                 }
 
