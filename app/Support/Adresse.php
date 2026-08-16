@@ -31,4 +31,25 @@ class Adresse
 
         return $dernier !== '' ? $dernier : $adresse;
     }
+
+    /**
+     * Le pays d'une adresse, quand elle le porte.
+     *
+     * Le formulaire de commande ecrit « ..., 1000 Bruxelles, Belgique » :
+     * le pays est alors le dernier segment, et il vient apres celui qui
+     * porte le code postal. Le jeu de donnees s'arrete a la localite et
+     * n'en a pas ; on rend null plutot que de prendre la ville pour un
+     * pays.
+     */
+    public static function pays(string $adresse): ?string
+    {
+        $segments = array_values(array_filter(array_map('trim', explode(',', $adresse))));
+        $dernier = (string) end($segments);
+
+        if (count($segments) < 2 || $dernier === '' || preg_match('/\d/', $dernier)) {
+            return null;
+        }
+
+        return $dernier;
+    }
 }
