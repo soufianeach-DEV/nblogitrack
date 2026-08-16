@@ -11,6 +11,22 @@ use Illuminate\Support\Facades\Http;
 class VatController extends Controller
 {
     /**
+     * Le temps qu'on accorde à un registre extérieur avant d'abandonner.
+     *
+     * Une inscription enchaîne deux appels sortants, et le processus PHP
+     * reste occupé pendant toute leur durée. Mesure faite le 16/08/2026
+     * depuis cette machine, trois essais chacun : VIES répond entre 0,67
+     * et 0,78 s, la Banque-Carrefour entre 0,83 et 0,96 s, le registre
+     * français entre 0,61 et 0,90 s.
+     *
+     * Cinq secondes laissent donc plus de cinq fois la marge du pire cas
+     * observé. Les douze secondes précédentes immobilisaient un processus
+     * quinze fois plus longtemps que nécessaire : le pire cas d'une
+     * inscription tombe de trente-cinq secondes à une quinzaine.
+     */
+    private const DELAI_REGISTRE = 5;
+
+    /**
      * Vérifie un numéro de TVA auprès du service VIES de la Commission européenne
      * et retourne les données officielles de l'entreprise.
      */
@@ -57,7 +73,7 @@ class VatController extends Controller
         $numero = substr($tva, 2);
 
         try {
-            $reponse = Http::timeout(12)
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
                 ->withHeaders(['Accept' => 'application/json'])
                 ->get("https://ec.europa.eu/taxation_customs/vies/rest-api/ms/{$pays}/vat/{$numero}");
 
@@ -88,7 +104,10 @@ class VatController extends Controller
 
             if (in_array($corps['userError'] ?? '', $pannes, true)) {
                 if ($tentative < 2) {
-                    sleep(1);
+                    // Assez pour laisser passer un hoquet du registre, pas
+                    // assez pour immobiliser le processus une seconde de
+                    // plus alors qu'il attend deja depuis cinq.
+                    usleep(400_000);
 
                     return $this->interrogerVies($tva, $identifiant, $tentative + 1);
                 }
@@ -142,7 +161,7 @@ class VatController extends Controller
         }
 
         try {
-            $reponse = Http::timeout(8)
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
                 ->get('https://recherche-entreprises.api.gouv.fr/search', ['q' => $siren, 'per_page' => 1]);
 
             if (! $reponse->ok()) {
@@ -212,7 +231,7 @@ class VatController extends Controller
         }
 
         try {
-            $reponse = Http::timeout(10)
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
                 ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
                 ->get('https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html', [
                     'lang' => 'fr',
