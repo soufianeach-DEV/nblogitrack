@@ -5,17 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Symfony\Component\HttpFoundation\Response as BaseResponse;
 
 class PaymentController extends Controller
 {
-    public function payer(Request $request, Invoice $invoice): RedirectResponse
+    public function payer(Request $request, Invoice $invoice): BaseResponse
     {
         $this->autoriserPaiement($request, $invoice);
 
@@ -47,7 +47,9 @@ class PaymentController extends Controller
             'cancel_url' => route('invoices.show', $invoice),
         ]);
 
-        return redirect()->away($session->url);
+        // Un XHR Inertia ne peut pas suivre une redirection vers un autre
+        // domaine : Inertia::location fait naviguer le navigateur lui-meme.
+        return Inertia::location($session->url);
     }
 
     /**
