@@ -616,6 +616,17 @@ class TranslationSeeder extends Seeder
                 'Deze opdracht definitief annuleren?',
                 'Cancel this order permanently?',
             ],
+            'desaffecter' => ['Désaffecter', 'Toewijzing opheffen', 'Unassign'],
+            'motif_desaffectation' => [
+                'Motif de la désaffectation (accident, panne, immobilisation…) :',
+                'Reden voor het opheffen van de toewijzing (ongeval, panne, immobilisatie…):',
+                'Reason for unassigning (accident, breakdown, immobilisation…):',
+            ],
+            'motif_requis' => [
+                'Le motif est obligatoire (5 caractères minimum).',
+                'De reden is verplicht (minstens 5 tekens).',
+                'A reason is required (at least 5 characters).',
+            ],
             'contrainte' => ['Contrainte', 'Beperking', 'Constraint'],
             'contrainte_adr' => ['Matières dangereuses', 'Gevaarlijke stoffen', 'Dangerous goods'],
             'contrainte_hayon' => ['Hayon requis', 'Laadklep vereist', 'Tail lift required'],

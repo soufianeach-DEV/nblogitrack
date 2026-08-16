@@ -124,7 +124,7 @@ class VehicleController extends Controller
 
             if ($engage) {
                 return back()->withErrors([
-                    'is_available' => 'Ce véhicule porte une expédition en cours : réaffectez-la avant de le retirer du service.',
+                    'is_available' => 'Ce véhicule porte une expédition en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.',
                 ]);
             }
         }

@@ -167,6 +167,16 @@ function BoutonsStatut({ ordre }) {
         router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true });
     };
 
+    const desaffecter = () => {
+        const motif = window.prompt(t('planif.motif_desaffectation', 'Motif de la désaffectation (accident, panne, immobilisation…) :'));
+        if (motif === null) return;
+        if (motif.trim().length < 5) {
+            window.alert(t('planif.motif_requis', 'Le motif est obligatoire (5 caractères minimum).'));
+            return;
+        }
+        router.post(route('planning.desaffecter', ordre.id), { motif: motif.trim() }, { preserveScroll: true });
+    };
+
     return (
         <div className="flex flex-wrap gap-2">
             {ordre.status === 'IN_PROGRESS' && (
@@ -176,6 +186,15 @@ function BoutonsStatut({ ordre }) {
                     className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 >
                     {t('planif.marquer_livre', 'Marquer livré')}
+                </button>
+            )}
+            {ordre.status === 'IN_PROGRESS' && (
+                <button
+                    type="button"
+                    onClick={desaffecter}
+                    className="rounded-lg border border-marine px-3 py-1.5 text-xs font-semibold text-marine transition hover:bg-marine/5"
+                >
+                    {t('planif.desaffecter', 'Désaffecter')}
                 </button>
             )}
             {['PENDING', 'IN_PROGRESS'].includes(ordre.status) && (

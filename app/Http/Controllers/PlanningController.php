@@ -298,4 +298,51 @@ class PlanningController extends Controller
 
         return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' : statut mis à jour.');
     }
+
+    /**
+     * Rend une mission a la file d'attente : accident, panne, immobilisation.
+     *
+     * Annuler n'est pas la bonne reponse a un camion arrete : la commande
+     * du client reste due. La mission retourne en attente, son numero de
+     * suivi et son historique intacts, et se reaffecte avec les memes
+     * garde-fous que la premiere fois.
+     */
+    public function desaffecter(Request $request, TransportOrder $transportOrder): RedirectResponse
+    {
+        $donnees = $request->validate([
+            'motif' => 'required|string|min:5|max:200',
+        ], [
+            'motif.required' => 'Indiquez le motif de la désaffectation.',
+            'motif.min' => 'Le motif doit faire au moins 5 caractères.',
+        ]);
+
+        if ($transportOrder->status !== 'IN_PROGRESS') {
+            return back()->withErrors(['motif' => 'Seule une mission en cours peut être désaffectée.']);
+        }
+
+        $camion = $transportOrder->vehicle_registration;
+        $chauffeur = $transportOrder->driver_id;
+
+        $transportOrder->update([
+            'status' => 'PENDING',
+            'vehicle_registration' => null,
+            'driver_id' => null,
+            'assigned_at' => null,
+            'suivi_direct' => false,
+        ]);
+
+        ActivityLog::record(
+            'order.unassigned',
+            'Ordre '.$transportOrder->tracking_number.' désaffecté : '.$donnees['motif'],
+            $transportOrder,
+            [
+                'motif' => $donnees['motif'],
+                'camion' => $camion,
+                'chauffeur_id' => $chauffeur,
+                'statut' => 'IN_PROGRESS → PENDING',
+            ],
+        );
+
+        return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' remis en attente d\'affectation.');
+    }
 }
