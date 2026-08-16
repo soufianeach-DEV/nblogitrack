@@ -3,8 +3,8 @@
 use App\Http\Middleware\AuthentifierCleApi;
 use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
-use App\Http\Middleware\VerifierCompteActif;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\VerifierCompteActif;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;

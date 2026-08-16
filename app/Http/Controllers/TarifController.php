@@ -8,7 +8,6 @@ use App\Support\Pays;
 use App\Support\Tarificateur;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 

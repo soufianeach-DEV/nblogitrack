@@ -33,7 +33,7 @@ class PurgerJournaux extends Command
         $nombre = $requete->count();
 
         if ($this->option('essai')) {
-            $this->line("  $nombre entrée(s) antérieures au ".$limite->format('d/m/Y')." seraient effacées.");
+            $this->line("  $nombre entrée(s) antérieures au ".$limite->format('d/m/Y').' seraient effacées.');
             $this->line('  Total actuel : '.ActivityLog::count());
 
             return self::SUCCESS;
