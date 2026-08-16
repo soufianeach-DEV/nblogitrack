@@ -145,11 +145,12 @@ export default function AuthenticatedLayout({ header, children }) {
                         {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
-                {! canPlan && (
-                    <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
-                        {t('nav.suivi', 'Suivre un envoi')}
-                    </LienMenu>
-                )}
+                {/* Le suivi sert aussi au personnel : un superviseur qui veut
+                    voir ou en est une expedition n'a pas a passer par la liste
+                    des ordres pour l'ouvrir une par une. */}
+                <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
+                    {t('nav.suivi', 'Suivre un envoi')}
+                </LienMenu>
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
                         {t('nav.devis_demandes', 'Demandes de devis')}
