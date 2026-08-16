@@ -109,7 +109,19 @@ class GeoController extends Controller
 
     private function interrogerOverpass(string $rue, float $lat, float $lng): array
     {
-        $motif = preg_replace('/["\\\\]/', ' ', $rue);
+        // Le nom de rue ne sert pas de texte a comparer : il devient une
+        // expression reguliere chez Overpass. Retirer les guillemets et
+        // l'antislash empeche de sortir de la chaine, mais laisse passer
+        // tout le reste du langage. Mesure faite : « .*.*.*.*.*.*x »
+        // occupe le service tiers pendant vingt secondes et remonte
+        // n'importe quelle rue.
+        //
+        // D'ou une liste blanche plutot qu'une liste noire. Un nom de rue
+        // s'ecrit avec des lettres, des chiffres, des espaces, des traits
+        // d'union et des apostrophes ; rien d'autre n'a de raison d'y
+        // figurer, et ce qui reste ne signifie plus rien pour un moteur
+        // d'expressions regulieres.
+        $motif = preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
         $requete = '[out:json][timeout:10];('
             .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
