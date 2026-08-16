@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthentifierCleApi;
 use App\Http\Middleware\DefinirLangue;
+use App\Http\Middleware\VerifierCompteActif;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,7 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // DefinirLangue passe avant Inertia : le partage des traductions
         // lit la langue deja choisie.
+        // VerifierCompteActif passe en premier : inutile de traduire une
+        // page et de partager un dictionnaire pour quelqu'un qu'on va
+        // renvoyer a l'ecran de connexion.
         $middleware->web(append: [
+            VerifierCompteActif::class,
             DefinirLangue::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
