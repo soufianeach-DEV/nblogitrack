@@ -22,6 +22,9 @@ class TransportOrderController extends Controller
 {
     public function index(Request $request): Response
     {
+        // Le chauffeur a ses missions, pas le carnet de commandes du client.
+        abort_if($request->user()->isDriver(), 403);
+
         $query = TransportOrder::with('client:id,company_name')->orderBy('id', 'desc');
 
         if ($request->user()->cannot('view-all-orders')) {
@@ -130,8 +133,12 @@ class TransportOrderController extends Controller
         return ['pickup' => $points['pickup'][0], 'delivery' => $points['delivery'][0]];
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        // Deposer une commande, c'est signer en son nom : seul un compte
+        // client porte une ligne dans « clients », que la commande reference.
+        abort_unless($request->user()->isClient(), 403);
+
         return Inertia::render('TransportOrders/Create', [
             'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'adr_coefficient', 'delivery_days', 'service_level']),
             'pricing' => config('pricing'),
@@ -140,6 +147,8 @@ class TransportOrderController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()->isClient(), 403);
+
         $data = $request->validate([
             'pickup_address' => 'required|string|max:255',
             'delivery_address' => 'required|string|max:255',
