@@ -30,7 +30,11 @@ class ProcessingRecordSeeder extends Seeder
     /** @return array<int, array<string, string>> */
     private function traitements(): array
     {
-        $securite = 'Accès nominatif par rôle, mots de passe hachés, journalisation des actions sensibles, sauvegardes chiffrées dans l\'Union européenne.';
+        // La sauvegarde n'est pas decrite ici comme une mesure en place :
+        // elle depend du contrat d'hebergement, qui n'est pas conclu. Une
+        // mesure annoncee dans un registre et absente du systeme est pire
+        // qu'une mesure manquante, parce qu'elle se controle.
+        $securite = 'Accès nominatif par rôle, mots de passe hachés, journalisation des actions sensibles, transport chiffré. La sauvegarde et la restauration relèvent du contrat d\'hébergement, à conclure avant mise en production.';
         $aucunTransfert = 'Aucun transfert hors de l\'Union européenne.';
 
         return [

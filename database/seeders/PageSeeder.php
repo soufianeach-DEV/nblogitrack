@@ -417,7 +417,9 @@ Les données sont traitées au sein de l'Union européenne. Un transfert vers un
 - Compte client : la durée de la relation commerciale, puis les délais de prescription applicables.
 
 ## Sécurité
-L'accès à l'application est nominatif et limité par le rôle de chacun. Les mots de passe ne sont jamais conservés en clair. Les actions sensibles sont journalisées. Les sauvegardes sont chiffrées et conservées au sein de l'Union européenne.
+L'accès à l'application est nominatif et limité par le rôle de chacun. Les mots de passe ne sont jamais conservés en clair. Les échanges avec le serveur sont chiffrés. Les actions sensibles sont journalisées, et ces journaux sont effacés automatiquement passé leur durée de conservation.
+
+La sauvegarde et la restauration des données relèvent du contrat d'hébergement. Elles seront arrêtées avec l'hébergeur avant toute mise en production, et cette page sera mise à jour à ce moment-là. Nous préférons l'indiquer plutôt que d'annoncer une mesure qui n'est pas encore en place.
 
 ## Décision automatisée
 Aucune décision produisant des effets juridiques n'est prise sur le seul fondement d'un traitement automatisé. Le calcul tarifaire et les propositions d'affectation d'un véhicule ou d'un conducteur sont des aides à la décision : un planificateur valide.
@@ -518,7 +520,9 @@ Gegevens worden binnen de Europese Unie verwerkt. Doorgifte naar een derde land 
 - Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen.
 
 ## Beveiliging
-De toegang tot de toepassing is persoonsgebonden en beperkt tot de rol van elkeen. Wachtwoorden worden nooit in leesbare vorm bewaard. Gevoelige handelingen worden gelogd. Back-ups zijn versleuteld en worden binnen de Europese Unie bewaard.
+De toegang tot de toepassing is persoonsgebonden en beperkt tot de rol van elkeen. Wachtwoorden worden nooit in leesbare vorm bewaard. Het verkeer met de server is versleuteld. Gevoelige handelingen worden gelogd, en die logboeken worden automatisch gewist na hun bewaartermijn.
+
+Back-up en herstel van de gegevens vallen onder de hostingovereenkomst. Zij worden met de hostingpartij vastgelegd vóór elke ingebruikname, en deze pagina wordt op dat ogenblik bijgewerkt. Wij vermelden dit liever dan een maatregel aan te kondigen die nog niet bestaat.
 
 ## Geautomatiseerde besluitvorming
 Er wordt geen besluit met rechtsgevolgen genomen op de enkele grondslag van een geautomatiseerde verwerking. De tariefberekening en de voorstellen tot toewijzing van een voertuig of chauffeur zijn hulpmiddelen: een planner beslist.
@@ -619,7 +623,9 @@ Data is processed within the European Union. Transfer to a third country occurs 
 - Customer account: the duration of the commercial relationship, then the applicable limitation periods.
 
 ## Security
-Access to the application is personal and limited by each person's role. Passwords are never stored in readable form. Sensitive actions are logged. Backups are encrypted and kept within the European Union.
+Access to the application is personal and limited by each person's role. Passwords are never stored in readable form. Traffic with the server is encrypted. Sensitive actions are logged, and those logs are erased automatically once their retention period expires.
+
+Backup and restoration of data fall under the hosting contract. They will be settled with the hosting provider before any production use, and this page will be updated at that point. We prefer to say so rather than announce a measure that is not yet in place.
 
 ## Automated decision-making
 No decision producing legal effects is taken on the sole basis of automated processing. Rate calculation and vehicle or driver assignment suggestions are decision aids: a planner validates them.

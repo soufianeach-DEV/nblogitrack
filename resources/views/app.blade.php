@@ -29,8 +29,11 @@
         <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 
+        {{-- Ziggy pose ici le seul script en ligne de l'application. Le
+             nonce vient du middleware des en-tetes de securite : c'est ce
+             qui permet d'interdire tous les autres. --}}
         <!-- Scripts -->
-        @routes
+        @routes(nonce: Illuminate\Support\Facades\Vite::cspNonce())
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
         @inertiaHead

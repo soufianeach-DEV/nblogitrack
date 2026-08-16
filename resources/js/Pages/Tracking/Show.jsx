@@ -293,6 +293,33 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
     const [itineraire, setItineraire] = useState(null);
     const [peages, setPeages] = useState([]);
 
+    /*
+     * La position se rafraichit sans recharger la page.
+     *
+     * Elle n'est pas relevee en continu : le serveur n'enregistre un point
+     * que toutes les cinq minutes, et cette limite ne bouge pas. Ce qui
+     * change ici, c'est seulement l'affichage — sans cela, le marqueur
+     * resterait fige jusqu'a ce que le lecteur pense a recharger, et le
+     * suivi n'aurait aucun interet.
+     *
+     * On redemande donc toutes les soixante secondes, et la seule prop
+     * position : le reste de la page ne bouge pas, la carte ne clignote
+     * pas, et l'appel ne coute qu'une requete legere.
+     *
+     * Le rafraichissement s'arrete des qu'il n'y a plus rien a suivre.
+     */
+    const suit = position !== null && order?.status === 'IN_PROGRESS';
+
+    useEffect(() => {
+        if (! suit) return undefined;
+
+        const minuteur = setInterval(() => {
+            router.reload({ only: ['position'], preserveScroll: true, preserveState: true });
+        }, 60 * 1000);
+
+        return () => clearInterval(minuteur);
+    }, [suit, order?.id]);
+
     // Le trace routier et les peages arrivent apres la page, et chacun de son
     // cote : la recherche des peages demande une vingtaine de secondes la
     // premiere fois, le trace ne doit pas l'attendre.

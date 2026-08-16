@@ -186,6 +186,10 @@ class StaffController extends Controller
 
         $user->update(['is_active' => ! $user->is_active]);
 
+        if (! $user->is_active) {
+            $this->couperLesAcces($user);
+        }
+
         ActivityLog::record(
             $user->is_active ? 'staff.enabled' : 'staff.disabled',
             'Compte de '.trim($user->first_name.' '.$user->last_name).($user->is_active ? ' réactivé' : ' désactivé'),
@@ -194,6 +198,28 @@ class StaffController extends Controller
         );
 
         return back()->with('success', $user->is_active ? 'Compte réactivé.' : 'Compte désactivé.');
+    }
+
+    /**
+     * Coupe ce qui pourrait rouvrir la porte apres une desactivation.
+     *
+     * Le middleware ferme la session en cours, mais deux choses lui
+     * survivent : le jeton « se souvenir de moi », qui reconnecterait au
+     * prochain passage, et les sessions ouvertes sur d'autres appareils,
+     * qui dorment en base jusqu'a leur prochaine requete. On les retire
+     * ici, au moment ou la decision est prise.
+     */
+    private function couperLesAcces(User $user): void
+    {
+        $user->forceFill(['remember_token' => null])->save();
+
+        // Les sessions vivent en base : celles de cet utilisateur
+        // s'effacent, les autres ne bougent pas.
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $user->id)
+                ->delete();
+        }
     }
 
     /** Renvoyer le lien quand le premier a expire ou s'est perdu. */
