@@ -135,6 +135,61 @@ function BoutonAvancement({ mission }) {
 }
 
 /**
+ * La note d'information, presentee avant tout releve de position.
+ *
+ * Le bouton dit « j'ai pris connaissance » et jamais « j'accepte ».
+ * Dans une relation de travail, le consentement n'est pas librement
+ * donne : le presenter comme un choix serait faux, et fonderait la
+ * conformite sur une base que le RGPD n'admet pas ici.
+ *
+ * La fenetre n'a pas de bouton de fermeture. Le conducteur peut lire
+ * ses missions derriere, mais tant qu'il n'a pas accuse, le serveur
+ * refuse tout point de position : l'information precede le traitement.
+ */
+function NoteInformation({ note }) {
+    const t = useTraduction();
+    const [envoi, setEnvoi] = useState(false);
+
+    if (! note) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-marine-deep/60 p-4 sm:items-center">
+            <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-7">
+                <h2 className="text-xl font-bold text-marine">{note.titre}</h2>
+                <p className="mt-1 text-xs text-slate-600">
+                    {t('note.version', 'Version du :date', { date: note.mise_a_jour })}
+                </p>
+
+                <div className="mt-4 whitespace-pre-line border-t border-slate-100 pt-4 text-sm leading-relaxed text-slate-700">
+                    {note.corps}
+                </div>
+
+                <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-xs text-slate-600">
+                    {t('note.portee', 'Cette déclaration atteste que vous avez été informé. Elle ne vous demande pas votre accord : le traitement repose sur l\'exécution de votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, pas sur votre consentement.')}
+                </p>
+
+                <button
+                    type="button"
+                    disabled={envoi}
+                    onClick={() => {
+                        setEnvoi(true);
+                        router.post(route('missions.notice'), {}, {
+                            preserveScroll: true,
+                            onFinish: () => setEnvoi(false),
+                        });
+                    }}
+                    className="mt-5 w-full rounded-xl bg-marine px-6 py-3.5 text-base font-bold text-white shadow-lg transition hover:bg-marine-deep disabled:opacity-60"
+                >
+                    {envoi
+                        ? t('action.enregistrement', 'Enregistrement…')
+                        : t('note.accuser', 'J\'ai pris connaissance')}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
  * Le partage de position pendant une mission en cours.
  *
  * Il ne demarre que si le planificateur l'a ouvert pour cette
@@ -346,7 +401,7 @@ function Fiche({ mission, onRetour }) {
     );
 }
 
-export default function Missions({ missions = [], mission = null, introuvable = false }) {
+export default function Missions({ missions = [], mission = null, introuvable = false, note = null }) {
     const t = useTraduction();
     const locale = useLocale();
     const actives = missions.filter((m) => m.statut === 'IN_PROGRESS' || m.statut === 'PENDING').length;
@@ -366,6 +421,8 @@ export default function Missions({ missions = [], mission = null, introuvable = 
     return (
         <ChauffeurLayout>
             <Head title={t('mission.mes_missions', 'Mes missions')} />
+
+            <NoteInformation note={note} />
 
             <div className="lg:flex lg:gap-4">
                 <div className={`lg:w-[360px] lg:shrink-0 ${mission ? 'hidden lg:block' : ''}`}>

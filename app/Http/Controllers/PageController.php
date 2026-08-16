@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NoteInformation;
 use App\Models\ActivityLog;
+use App\Models\DriverAcknowledgement;
 use App\Models\Page;
 use App\Models\PageDocument;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -117,6 +121,40 @@ class PageController extends Controller
         );
 
         return back()->with('success', $publiee ? 'Page publiée.' : 'Page retirée du site.');
+    }
+
+    /**
+     * Adresse la note d'information a tous les conducteurs actifs.
+     *
+     * Le courriel remet le texte, il ne remplace pas l'accuse : l'envoi
+     * prouve la remise, pas la lecture. C'est la fenetre de l'ecran des
+     * missions qui recueille la prise de connaissance, et c'est elle qui
+     * conditionne le releve de position.
+     *
+     * Chaque conducteur recoit la note dans sa propre langue.
+     */
+    public function envoyerNote(Page $page): RedirectResponse
+    {
+        if ($page->slug !== DriverAcknowledgement::NOTE) {
+            return back()->with('error', 'Seule la note aux conducteurs peut être envoyée.');
+        }
+
+        $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
+
+        foreach ($conducteurs as $conducteur) {
+            Mail::to($conducteur->email)->send(
+                new NoteInformation($page, $conducteur, $conducteur->locale ?? 'fr'),
+            );
+        }
+
+        ActivityLog::record(
+            'driver.notice_sent',
+            'Note d\'information adressée à '.$conducteurs->count().' conducteur(s)',
+            $page,
+            ['version' => $page->updated_at?->toIso8601String()],
+        );
+
+        return back()->with('success', $conducteurs->count().' conducteur(s) ont reçu la note.');
     }
 
     public function destroy(Page $page): RedirectResponse

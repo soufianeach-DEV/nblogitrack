@@ -29,13 +29,20 @@ class PageSeeder extends Seeder
         $auteur = User::where('role', 'ADMIN')->first();
 
         foreach ($this->pages() as $rang => $page) {
+            // Les pages legales vont au pied du site. La note aux
+            // conducteurs est un document interne : elle vit dans la meme
+            // table, pour etre modifiable sans developpeur, mais elle
+            // n'est pas publiee et repond donc 404 a un visiteur.
+            $interne = $page['interne'] ?? false;
+            unset($page['interne']);
+
             Page::updateOrCreate(
                 ['slug' => $page['slug']],
                 [
                     ...$page,
-                    'publiee' => true,
-                    'publiee_le' => now(),
-                    'au_pied' => true,
+                    'publiee' => ! $interne,
+                    'publiee_le' => $interne ? null : now(),
+                    'au_pied' => ! $interne,
                     'rang' => $rang,
                     'updated_by' => $auteur?->id,
                 ],
@@ -74,7 +81,107 @@ class PageSeeder extends Seeder
                 'corps_nl' => $this->conditionsNl(),
                 'corps_en' => $this->conditionsEn(),
             ],
+            [
+                'slug' => 'information-chauffeurs',
+                'interne' => true,
+                'titre_fr' => 'Note d\'information aux conducteurs',
+                'titre_nl' => 'Informatienota voor chauffeurs',
+                'titre_en' => 'Information notice for drivers',
+                'corps_fr' => $this->noteFr(),
+                'corps_nl' => $this->noteNl(),
+                'corps_en' => $this->noteEn(),
+            ],
         ];
+    }
+
+    private function noteFr(): string
+    {
+        return <<<'TXT'
+Cette note vous informe du traitement de vos données dans NBLogiTrack. Elle vous est remise avant tout relevé de position, comme la loi l'exige.
+
+Ce qui est relevé
+Quand vous déclarez la prise en charge puis la livraison d'un envoi, votre position est enregistrée à cet instant. Deux points par mission. Ils accompagnent le dossier de transport, au même titre qu'une mention sur une lettre de voiture.
+
+Pour certaines missions seulement, un planificateur peut ouvrir un suivi de position pendant le trajet. Dans ce cas, et dans ce cas uniquement, votre position est relevée toutes les cinq minutes au plus. Un bandeau visible sur votre écran vous l'indique pendant toute la durée du partage.
+
+Ce qui n'est pas relevé
+Votre position n'est jamais relevée en dehors d'une mission en cours. Aucun boîtier n'est installé dans les véhicules. Votre vitesse n'est pas mesurée. Votre carte de conducteur n'est pas lue. Vos déplacements privés ne concernent pas l'entreprise et ne sont pas enregistrés.
+
+À quoi cela sert
+À informer le client de l'avancement de son envoi, à retrouver un véhicule en cas de vol ou d'accident, et à replanifier une tournée quand un retard compromet la suite.
+
+Ce à quoi cela ne sert pas
+Ces données ne servent pas à vous évaluer, à vous sanctionner, à vous noter, ni à contrôler votre temps de travail. L'application ne comporte aucun écran permettant de consulter vos déplacements ou de reconstituer une journée.
+
+Combien de temps
+Les positions relevées pendant un trajet sont effacées automatiquement dans les sept jours suivant la livraison. Les deux points de prise en charge et de livraison suivent le dossier de transport.
+
+Vos droits
+Vous pouvez demander l'accès aux données qui vous concernent, leur rectification ou leur effacement, et vous opposer au traitement. Écrivez à info@nblogitrack.be. Vous pouvez également introduire une réclamation auprès de l'Autorité de protection des données, Rue de la Presse 35, 1000 Bruxelles.
+
+Ce que vous déclarez
+En validant, vous attestez avoir pris connaissance de cette note. Vous ne donnez pas votre accord : le traitement repose sur l'exécution de votre contrat de travail et sur l'intérêt légitime de l'entreprise, non sur votre consentement. Votre refus de valider n'aurait donc aucun effet sur vos droits, mais aucun relevé de position ne serait effectué tant que vous n'auriez pas été informé.
+TXT;
+    }
+
+    private function noteNl(): string
+    {
+        return <<<'TXT'
+Deze nota informeert u over de verwerking van uw gegevens in NBLogiTrack. Zij wordt u overhandigd vóór elke positieopname, zoals de wet vereist.
+
+Wat wordt opgenomen
+Wanneer u de ophaling en vervolgens de levering van een zending aangeeft, wordt uw positie op dat ogenblik geregistreerd. Twee punten per opdracht. Zij horen bij het vervoersdossier, net als een vermelding op een vrachtbrief.
+
+Enkel voor bepaalde opdrachten kan een planner een positieopvolging openen tijdens de rit. In dat geval, en enkel dan, wordt uw positie hoogstens om de vijf minuten opgenomen. Een zichtbare banner op uw scherm meldt dit zolang het delen duurt.
+
+Wat niet wordt opgenomen
+Uw positie wordt nooit opgenomen buiten een lopende opdracht. Er wordt geen kastje in de voertuigen geplaatst. Uw snelheid wordt niet gemeten. Uw bestuurderskaart wordt niet uitgelezen. Uw privéverplaatsingen gaan de onderneming niet aan en worden niet geregistreerd.
+
+Waarvoor het dient
+Om de klant over de voortgang van zijn zending te informeren, om een voertuig terug te vinden bij diefstal of ongeval, en om een rit te herplannen wanneer vertraging het vervolg in het gedrang brengt.
+
+Waarvoor het niet dient
+Deze gegevens dienen niet om u te beoordelen, te sanctioneren, te quoteren, noch om uw arbeidstijd te controleren. De toepassing bevat geen enkel scherm waarmee uw verplaatsingen kunnen worden geraadpleegd of een werkdag kan worden gereconstrueerd.
+
+Hoelang
+Posities die tijdens een rit zijn opgenomen, worden automatisch gewist binnen de zeven dagen na de levering. De twee punten van ophaling en levering volgen het vervoersdossier.
+
+Uw rechten
+U kunt inzage vragen in de gegevens die u betreffen, hun verbetering of wissing, en bezwaar maken tegen de verwerking. Schrijf naar info@nblogitrack.be. U kunt ook klacht indienen bij de Gegevensbeschermingsautoriteit, Drukpersstraat 35, 1000 Brussel.
+
+Wat u verklaart
+Door te bevestigen verklaart u kennis te hebben genomen van deze nota. U geeft geen toestemming: de verwerking steunt op de uitvoering van uw arbeidsovereenkomst en op het gerechtvaardigd belang van de onderneming, niet op uw toestemming. Uw weigering te bevestigen zou dus geen gevolgen hebben voor uw rechten, maar er zou geen enkele positieopname gebeuren zolang u niet geïnformeerd bent.
+TXT;
+    }
+
+    private function noteEn(): string
+    {
+        return <<<'TXT'
+This notice informs you about the processing of your data in NBLogiTrack. It is given to you before any position is recorded, as the law requires.
+
+What is recorded
+When you declare the pickup and then the delivery of a consignment, your position is recorded at that moment. Two points per mission. They accompany the transport file, just like an entry on a consignment note.
+
+For certain missions only, a planner may open position tracking during the journey. In that case, and only then, your position is recorded every five minutes at most. A visible banner on your screen tells you so for as long as sharing lasts.
+
+What is not recorded
+Your position is never recorded outside a mission in progress. No unit is fitted in the vehicles. Your speed is not measured. Your driver card is not read. Your private journeys are no concern of the company and are not recorded.
+
+What it is for
+To inform the customer of the progress of their consignment, to locate a vehicle in the event of theft or accident, and to replan a round when a delay jeopardises what follows.
+
+What it is not for
+This data is not used to assess you, sanction you, rate you, or monitor your working time. The application has no screen allowing your movements to be consulted or a working day to be reconstructed.
+
+For how long
+Positions recorded during a journey are erased automatically within seven days of delivery. The two pickup and delivery points follow the transport file.
+
+Your rights
+You may request access to the data concerning you, its rectification or erasure, and object to the processing. Write to info@nblogitrack.be. You may also lodge a complaint with the Belgian Data Protection Authority, Rue de la Presse 35, 1000 Brussels.
+
+What you are declaring
+By confirming, you certify that you have read this notice. You are not giving your consent: the processing rests on the performance of your employment contract and on the company's legitimate interest, not on your consent. Refusing to confirm would therefore have no effect on your rights, but no position would be recorded for as long as you had not been informed.
+TXT;
     }
 
     private function mentionsFr(): string
@@ -279,7 +386,9 @@ Localiser un véhicule revient à localiser son conducteur : c'est une donnée r
 - ces positions ne servent jamais à évaluer, sanctionner ou noter un conducteur ;
 - elles sont effacées automatiquement dans les sept jours suivant la livraison, par une tâche planifiée et non par une intervention manuelle.
 
-Les conducteurs sont informés de ce dispositif préalablement et individuellement.
+Les conducteurs sont informés de ce dispositif préalablement et individuellement, par une note qui leur est adressée et dont ils accusent réception dans l'application. Cette prise de connaissance conditionne le relevé : tant qu'elle n'est pas donnée, aucune position n'est enregistrée, quand bien même le suivi aurait été ouvert pour la mission. Une note réécrite doit être reprise.
+
+Cet accusé n'est pas un consentement. Dans une relation de travail, le consentement n'est pas librement donné et ne peut fonder le traitement ; ce qui est prouvé ici est l'information préalable, non un accord.
 
 ## Ce que l'application ne fait pas
 Le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller. Aucun historique de déplacement n'est conservé au-delà du délai indiqué ci-dessus.
@@ -378,7 +487,9 @@ Een voertuig lokaliseren komt neer op het lokaliseren van de chauffeur: dat is e
 - die posities dienen nooit om een chauffeur te beoordelen, te sanctioneren of te quoteren;
 - zij worden automatisch gewist binnen de zeven dagen na de levering, door een geplande taak en niet door een manuele ingreep.
 
-De chauffeurs worden vooraf en individueel over dit systeem geïnformeerd.
+De chauffeurs worden vooraf en individueel over dit systeem geïnformeerd, via een nota die hun wordt toegestuurd en waarvan zij in de toepassing kennisname bevestigen. Die kennisname is een voorwaarde voor de opname: zolang zij niet gegeven is, wordt geen enkele positie geregistreerd, ook al zou de opvolging voor de opdracht geopend zijn. Een herschreven nota moet opnieuw worden gelezen.
+
+Die bevestiging is geen toestemming. In een arbeidsrelatie is toestemming niet vrij gegeven en kan zij de verwerking niet gronden; wat hier bewezen wordt is de voorafgaande informatie, niet een akkoord.
 
 ## Wat de toepassing niet doet
 De tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden. Er wordt geen verplaatsingsgeschiedenis bewaard buiten de hierboven vermelde termijn.
@@ -477,7 +588,9 @@ Locating a vehicle amounts to locating its driver: that is data about a worker. 
 - these positions are never used to assess, sanction or rate a driver;
 - they are erased automatically within seven days of delivery, by a scheduled task and not by a manual step.
 
-Drivers are informed of this arrangement beforehand and individually.
+Drivers are informed of this arrangement beforehand and individually, through a notice sent to them and acknowledged in the application. That acknowledgement is a condition of recording: until it is given, no position is stored, even where tracking has been opened for the mission. A rewritten notice must be read again.
+
+This acknowledgement is not consent. In an employment relationship consent is not freely given and cannot found the processing; what is proven here is prior information, not agreement.
 
 ## What the application does not do
 The tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor. No movement history is kept beyond the period stated above.

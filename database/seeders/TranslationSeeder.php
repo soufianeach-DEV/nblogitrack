@@ -62,6 +62,7 @@ class TranslationSeeder extends Seeder
             'traductions' => ['Traductions', 'Vertalingen', 'Translations'],
             'pages' => ['Pages du site', 'Pagina\'s van de site', 'Site pages'],
             'api' => ['API REST', 'REST-API', 'REST API'],
+            'registre' => ['Registre RGPD', 'AVG-register', 'GDPR register'],
             'admin_centrale' => ['Administration centrale', 'Centraal beheer', 'Central administration'],
             'logistique' => ['Logistique B2B', 'B2B-logistiek', 'B2B logistics'],
             'chercher_entreprise' => ['Rechercher une entreprise…', 'Een onderneming zoeken…', 'Search for a company…'],
@@ -1914,6 +1915,59 @@ class TranslationSeeder extends Seeder
                 'Le partage s\'arrête automatiquement à la livraison.',
                 'Het delen stopt automatisch bij de levering.',
                 'Sharing stops automatically on delivery.',
+            ],
+        ],
+
+        /*
+         * La note d'information aux conducteurs. Le vocabulaire est
+         * choisi : on prend connaissance, on ne consent pas.
+         */
+        'note' => [
+            'version' => ['Version du :date', 'Versie van :date', 'Version of :date'],
+            'accuser' => [
+                'J\'ai pris connaissance',
+                'Ik heb kennis genomen',
+                'I have read this notice',
+            ],
+            'portee' => [
+                'Cette déclaration atteste que vous avez été informé. Elle ne vous demande pas votre accord : le traitement repose sur l\'exécution de votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, pas sur votre consentement.',
+                'Deze verklaring bevestigt dat u geïnformeerd bent. Zij vraagt niet uw toestemming: de verwerking steunt op de uitvoering van uw arbeidsovereenkomst en op het gerechtvaardigd belang van de onderneming, niet op uw toestemming.',
+                'This declaration confirms that you have been informed. It does not ask for your agreement: the processing rests on the performance of your employment contract and on the company\'s legitimate interest, not on your consent.',
+            ],
+        ],
+
+        'registre' => [
+            'titre' => ['Registre des traitements', 'Register van de verwerkingen', 'Record of processing activities'],
+            'sous_titre' => [
+                'Article 30 du RGPD — le document que l\'Autorité demande en premier.',
+                'Artikel 30 AVG — het document dat de Autoriteit als eerste opvraagt.',
+                'Article 30 GDPR — the first document the Authority asks for.',
+            ],
+            'imprimer' => ['Imprimer', 'Afdrukken', 'Print'],
+            'responsable' => ['Responsable du traitement', 'Verwerkingsverantwoordelijke', 'Data controller'],
+            'finalite' => ['Finalité', 'Doeleinde', 'Purpose'],
+            'base' => ['Base légale', 'Rechtsgrond', 'Legal basis'],
+            'personnes' => ['Personnes concernées', 'Betrokkenen', 'Data subjects'],
+            'donnees' => ['Catégories de données', 'Categorieën gegevens', 'Categories of data'],
+            'destinataires' => ['Destinataires', 'Ontvangers', 'Recipients'],
+            'transferts' => ['Transferts hors UE', 'Doorgifte buiten de EU', 'Transfers outside the EU'],
+            'conservation' => ['Durée de conservation', 'Bewaartermijn', 'Retention period'],
+            'mesures' => ['Mesures de sécurité', 'Beveiligingsmaatregelen', 'Security measures'],
+            'information' => ['Information des conducteurs', 'Informatie aan de chauffeurs', 'Driver information'],
+            'informes' => [
+                'ont pris connaissance de la version du :date',
+                'hebben kennis genomen van de versie van :date',
+                'have read the version of :date',
+            ],
+            'non_informes_aide' => [
+                'Aucune position n\'est relevée pour les conducteurs qui n\'ont pas encore pris connaissance de la note.',
+                'Er wordt geen positie opgenomen voor chauffeurs die de nota nog niet hebben gelezen.',
+                'No position is recorded for drivers who have not yet read the notice.',
+            ],
+            'sans_note' => [
+                'Aucune note d\'information n\'est rédigée : le suivi de position ne peut pas fonctionner.',
+                'Er is geen informatienota opgesteld: de positieopvolging kan niet werken.',
+                'No information notice has been written: position tracking cannot operate.',
             ],
         ],
 

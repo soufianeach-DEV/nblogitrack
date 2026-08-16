@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
@@ -56,10 +57,23 @@ class MissionController extends Controller
             ? $missions->firstWhere('tracking_number', $numero)
             : null;
 
+        // La note d'information ne s'affiche que si l'administration en a
+        // redige une et que ce conducteur n'a pas encore accuse la
+        // version en cours.
+        $note = DriverAcknowledgement::note();
+        $aInformer = $note !== null && ! DriverAcknowledgement::aJour($chauffeur->id, $note);
+        $langue = app()->getLocale();
+
         return Inertia::render('Chauffeur/Missions', [
             'missions' => $missions->map(fn (TransportOrder $ordre) => $this->carte($ordre))->all(),
             'mission' => $ouverte ? $this->fiche($ouverte) : null,
             'introuvable' => $numero !== '' && $ouverte === null,
+            'note' => $aInformer ? [
+                'titre' => $note->titre($langue),
+                'corps' => $note->corps($langue),
+                'version' => $note->updated_at?->toIso8601String(),
+                'mise_a_jour' => $note->updated_at?->format('d/m/Y'),
+            ] : null,
         ]);
     }
 
@@ -125,6 +139,37 @@ class MissionController extends Controller
     }
 
     /**
+     * Le conducteur declare avoir pris connaissance de la note.
+     *
+     * Le mot est choisi : prise de connaissance, pas consentement. Dans
+     * une relation de travail, le consentement n'est pas librement donne
+     * et ne fonde rien. Ce qui s'enregistre ici prouve l'information
+     * prealable, laquelle conditionne le releve de position.
+     */
+    public function accuser(Request $request): RedirectResponse
+    {
+        $note = DriverAcknowledgement::note();
+
+        if ($note === null) {
+            return back();
+        }
+
+        DriverAcknowledgement::firstOrCreate(
+            ['user_id' => $request->user()->id, 'version' => $note->updated_at],
+            ['acknowledged_at' => now(), 'ip_address' => $request->ip()],
+        );
+
+        ActivityLog::record(
+            'driver.notice_acknowledged',
+            'Prise de connaissance de la note d\'information par '.$request->user()->email,
+            $note,
+            ['version' => $note->updated_at?->toIso8601String()],
+        );
+
+        return back()->with('success', 'Prise de connaissance enregistrée.');
+    }
+
+    /**
      * Le point de route envoye periodiquement par l'ecran du chauffeur.
      *
      * Trois verrous, verifies ici et non dans le navigateur : la mission
@@ -141,6 +186,13 @@ class MissionController extends Controller
 
         if ($transportOrder->status !== 'IN_PROGRESS' || ! $transportOrder->suivi_direct) {
             return response()->json(['suivi' => false]);
+        }
+
+        // L'information prealable n'est pas une promesse, c'est une
+        // condition : tant que le conducteur n'a pas pris connaissance de
+        // la note en vigueur, aucune position n'est relevee.
+        if (! DriverAcknowledgement::aJour($request->user()->id)) {
+            return response()->json(['suivi' => false, 'motif' => 'information_manquante']);
         }
 
         $donnees = $request->validate([

@@ -12,6 +12,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\PagePubliqueController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanningController;
+use App\Http\Controllers\ProcessingRecordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\QuoteController;
@@ -87,6 +88,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/missions/{transportOrder}/position', [MissionController::class, 'position'])
             ->middleware('throttle:30,1')
             ->name('missions.position');
+
+        // La prise de connaissance de la note d'information. Elle
+        // conditionne le releve de position, elle ne le remplace pas.
+        Route::post('/missions/note', [MissionController::class, 'accuser'])->name('missions.notice');
     });
 
     Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');
@@ -156,9 +161,19 @@ Route::middleware('auth')->group(function () {
         Route::patch('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::patch('/pages/{page}/publication', [PageController::class, 'publier'])->name('pages.publish');
         Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
+        // La note aux conducteurs se remet par courriel ; l'accuse se
+        // donne dans l'application.
+        Route::post('/pages/{page}/envoi', [PageController::class, 'envoyerNote'])->name('pages.notice.send');
+
         Route::post('/pages/documents', [PageController::class, 'televerser'])->name('pages.documents.store');
         Route::delete('/pages/documents/{pageDocument}', [PageController::class, 'supprimerDocument'])
             ->name('pages.documents.destroy');
+
+        // Le registre de l'article 30. Il vit dans l'application, au meme
+        // endroit que ce qu'il decrit.
+        Route::get('/registre', [ProcessingRecordController::class, 'index'])->name('registre.index');
+        Route::patch('/registre/{processingRecord}', [ProcessingRecordController::class, 'update'])
+            ->name('registre.update');
     });
 
     Route::get('/journal', [ActivityLogController::class, 'index'])

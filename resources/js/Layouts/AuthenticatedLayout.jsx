@@ -158,6 +158,9 @@ export default function AuthenticatedLayout({ header, children }) {
                             <LienMenu href={route('api-keys.index')} active={route().current('api-keys.index')} icone="journal" onClick={fermer}>
                                 {t('nav.api', 'API REST')}
                             </LienMenu>
+                            <LienMenu href={route('registre.index')} active={route().current('registre.index')} icone="valide" onClick={fermer}>
+                                {t('nav.registre', 'Registre RGPD')}
+                            </LienMenu>
                         </>
                     )}
                 </Groupe>
