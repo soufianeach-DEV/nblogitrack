@@ -1,24 +1,29 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
 const STATUS = {
-    PENDING: { label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
-    IN_PROGRESS: { label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
-    DELIVERED: { label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
-    CANCELLED: { label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
+    PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
+    IN_PROGRESS: { cle: 'statut.en_cours', label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
+    DELIVERED: { cle: 'statut.livre', label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
+    CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
 };
 
 function StatusBadge({ status }) {
-    const s = STATUS[status] ?? { label: status, cls: 'bg-slate-100 text-slate-600' };
+    const t = useTraduction();
+    const s = STATUS[status];
+
     return (
-        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${s.cls}`}>
-            {s.label}
+        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${s?.cls ?? 'bg-slate-100 text-slate-600'}`}>
+            {s ? t(s.cle, s.label) : status}
         </span>
     );
 }
 
 export default function Index({ orders, filters }) {
+    const t = useTraduction();
+    const v = useVocabulaire();
     const [search, setSearch] = useState({
         tracking: filters.tracking ?? '',
         client: filters.client ?? '',
@@ -48,39 +53,41 @@ export default function Index({ orders, filters }) {
              header={
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-marine">Ordres de transport</h1>
-                        <p className="text-sm text-slate-600">{orders.total} résultat(s)</p>
+                        <h1 className="text-2xl font-bold text-marine">{t('nav.ordres', 'Ordres de transport')}</h1>
+                        <p className="text-sm text-slate-600">
+                            {orders.total} {orders.total > 1 ? t('ordres.resultats', 'résultats') : t('ordres.resultat', 'résultat')}
+                        </p>
                     </div>
                     <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
-                        + Nouvelle expédition
+                        + {t('commande.titre', 'Nouvelle expédition')}
                     </Link>
                 </div>
             }
         >
-            <Head title="Ordres de transport" />
+            <Head title={t('nav.ordres', 'Ordres de transport')} />
 
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wider text-slate-600">
-                                <th className="px-6 py-4 font-semibold">Référence</th>
-                                <th className="px-6 py-4 font-semibold">Client</th>
-                                <th className="px-6 py-4 font-semibold">Destination</th>
-                                <th className="px-6 py-4 font-semibold">Statut</th>
-                                <th className="px-6 py-4 text-right font-semibold">Coût est.</th>
+                                <th className="px-6 py-4 font-semibold">{t('commun.reference', 'Référence')}</th>
+                                <th className="px-6 py-4 font-semibold">{t('ordres.client', 'Client')}</th>
+                                <th className="px-6 py-4 font-semibold">{t('suivi.destination', 'Destination')}</th>
+                                <th className="px-6 py-4 font-semibold">{t('commun.statut', 'Statut')}</th>
+                                <th className="px-6 py-4 text-right font-semibold">{t('ordres.cout', 'Coût est.')}</th>
                             </tr>
                             <tr className="border-b border-slate-100">
                                 <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} placeholder="TRK-…" className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} placeholder="Entreprise…" className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} placeholder="Ville, adresse…" className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} placeholder={t('ordres.filtre_entreprise', 'Entreprise…')} className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} placeholder={t('ordres.filtre_ville', 'Ville, adresse…')} className={inputCls} /></th>
                                 <th className="px-6 py-2">
                                     <select value={search.status} onChange={(e) => update('status', e.target.value)} className={inputCls}>
-                                        <option value="">Tous</option>
-                                        <option value="PENDING">En attente</option>
-                                        <option value="IN_PROGRESS">En cours</option>
-                                        <option value="DELIVERED">Livré</option>
-                                        <option value="CANCELLED">Annulé</option>
+                                        <option value="">{t('ordres.tous', 'Tous')}</option>
+                                        <option value="PENDING">{t('statut.en_attente', 'En attente')}</option>
+                                        <option value="IN_PROGRESS">{t('statut.en_cours', 'En cours')}</option>
+                                        <option value="DELIVERED">{t('statut.livre', 'Livré')}</option>
+                                        <option value="CANCELLED">{t('statut.annule', 'Annulé')}</option>
                                     </select>
                                 </th>
                                 <th></th>
@@ -101,7 +108,7 @@ export default function Index({ orders, filters }) {
                                         >
                                             {order.tracking_number}
                                         </Link>
-                                        <div className="text-xs text-slate-600">{order.goods_type ?? '—'}</div>
+                                        <div className="text-xs text-slate-600">{v('marchandise', order.goods_type) ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
                                     <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
@@ -112,7 +119,7 @@ export default function Index({ orders, filters }) {
                                 </tr>
                             ))}
                             {orders.data.length === 0 && (
-                                <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-600">Aucun ordre ne correspond à ta recherche.</td></tr>
+                                <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-600">{t('ordres.aucun', 'Aucun ordre ne correspond à votre recherche.')}</td></tr>
                             )}
                         </tbody>
                     </table>

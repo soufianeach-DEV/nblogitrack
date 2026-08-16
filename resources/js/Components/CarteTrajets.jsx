@@ -39,6 +39,16 @@ const ICONE_PEAGE = L.divIcon({
     html: '<span style="display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:9999px;background:#F59E0B;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);font:700 12px/1 system-ui,sans-serif;color:#3B2600">€</span>',
 });
 
+// La position en cours pulse : elle se distingue ainsi des deux jalons,
+// qui sont des faits acquis, alors qu'elle est une mesure du moment.
+const ICONE_POSITION = L.divIcon({
+    className: '',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    html: '<span style="display:block;width:26px;height:26px;border-radius:9999px;background:rgba(37,99,235,.25);border:2px solid #2563EB">'
+        + '<span style="display:block;width:10px;height:10px;margin:6px;border-radius:9999px;background:#2563EB"></span></span>',
+});
+
 /**
  * Carte des expeditions.
  *
@@ -52,6 +62,10 @@ export default function CarteTrajets({
     selection = null,
     onSelection,
     peages = [],
+    // Les deux jalons de l'expedition consultee, et sa derniere position
+    // connue si le suivi a ete ouvert pour elle.
+    jalons = [],
+    position = null,
     className = '',
 }) {
     const conteneur = useRef(null);
@@ -182,13 +196,41 @@ export default function CarteTrajets({
                 .addTo(couche.current);
         });
 
+        // Les jalons sont des faits acquis : ils restent affiches meme une
+        // fois l'expedition livree.
+        jalons.forEach((jalon) => {
+            L.circleMarker(jalon.coordonnees, {
+                radius: 7,
+                color: HALO,
+                weight: 2,
+                fillColor: jalon.evenement === 'DELIVERED' ? '#15803D' : '#2563EB',
+                fillOpacity: 1,
+            })
+                .bindTooltip(`<strong>${jalon.libelle}</strong><br>${jalon.localite} — ${jalon.horodatage}`)
+                .addTo(couche.current);
+
+            cadre.push(jalon.coordonnees);
+        });
+
+        if (position) {
+            L.marker(position.coordonnees, { icon: ICONE_POSITION, zIndexOffset: 800 })
+                .bindTooltip(`<strong>En route</strong><br>${position.horodatage}`)
+                .addTo(couche.current);
+
+            cadre.push(position.coordonnees);
+        }
+
         if (cadre.length > 0) {
             c.fitBounds(L.latLngBounds(cadre), {
                 padding: [40, 40],
                 maxZoom: choisi ? 12 : 8,
             });
         }
-    }, [trajets, selection, peages]);
+    }, [trajets, selection, peages, jalons, position]);
 
-    return <div ref={conteneur} className={className} />;
+    // isolate cree un contexte d'empilement autour de la carte. Leaflet place
+    // ses calques a un z-index de 400 et ses commandes a 1000 : sans cette
+    // barriere, ils passent au-dessus de l'en-tete et cachent le menu du
+    // compte, qui n'est qu'a 20.
+    return <div ref={conteneur} className={`isolate ${className ?? ''}`} />;
 }

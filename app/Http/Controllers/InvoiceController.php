@@ -23,7 +23,11 @@ class InvoiceController extends Controller
 
         $requete = Invoice::with('client:id,company_name');
 
-        if ($utilisateur->cannot('view-all-orders')) {
+        // Le client regle ses propres factures ; le personnel n'a pas a payer
+        // a sa place.
+        $estClient = $utilisateur->cannot('view-all-orders');
+
+        if ($estClient) {
             $requete->where('client_id', $utilisateur->id);
         }
 
@@ -43,6 +47,7 @@ class InvoiceController extends Controller
                     'autoliquidation' => (bool) $facture->reverse_charge,
                     'etat' => $facture->estEnRetard() ? 'OVERDUE' : $facture->status,
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
+                    'peut_payer' => $estClient && $facture->status === 'SENT',
                 ])
                 ->all(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
@@ -94,6 +99,11 @@ class InvoiceController extends Controller
                 ])->all(),
             ],
             'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
+            // Le client regle sa propre facture ; le personnel n'a pas a
+            // payer a sa place.
+            'peutPayerEnLigne' => $invoice->status === 'SENT'
+                && $utilisateur->cannot('view-all-orders')
+                && $invoice->client_id === $utilisateur->id,
         ]);
     }
 

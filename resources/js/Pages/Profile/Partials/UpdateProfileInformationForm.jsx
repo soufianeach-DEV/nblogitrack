@@ -2,6 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import { useTraduction } from '@/traduire';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 
@@ -11,6 +12,7 @@ export default function UpdateProfileInformation({
     className = '',
 }) {
     const user = usePage().props.auth.user;
+    const t = useTraduction();
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({
@@ -29,17 +31,17 @@ export default function UpdateProfileInformation({
         <section className={className}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900">
-                    Informations personnelles
+                    {t('profil.infos_titre', 'Informations personnelles')}
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Modifiez votre nom et l'adresse électronique de votre compte.
+                    {t('profil.infos_texte', 'Modifiez votre nom et l\'adresse électronique de votre compte.')}
                 </p>
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
                 <div>
-    <InputLabel htmlFor="first_name" value="Prénom" />
+    <InputLabel htmlFor="first_name" value={t('auth.prenom', 'Prénom')} />
 
     <TextInput
         id="first_name"
@@ -55,7 +57,7 @@ export default function UpdateProfileInformation({
 </div>
 
 <div>
-    <InputLabel htmlFor="last_name" value="Nom" />
+    <InputLabel htmlFor="last_name" value={t('auth.nom', 'Nom')} />
 
     <TextInput
         id="last_name"
@@ -70,7 +72,7 @@ export default function UpdateProfileInformation({
 </div>
 
                 <div>
-                    <InputLabel htmlFor="email" value="Adresse électronique" />
+                    <InputLabel htmlFor="email" value={t('auth.adresse_email', 'Adresse électronique')} />
 
                     <TextInput
                         id="email"
@@ -88,28 +90,27 @@ export default function UpdateProfileInformation({
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>
                         <p className="mt-2 text-sm text-gray-800">
-                            Votre adresse électronique n'est pas confirmée.
+                            {t('profil.email_non_confirme', 'Votre adresse électronique n\'est pas confirmée.')}
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
                                 className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                             >
-                                Renvoyer le lien de confirmation.
+                                {t('profil.renvoyer_confirmation', 'Renvoyer le lien de confirmation.')}
                             </Link>
                         </p>
 
                         {status === 'verification-link-sent' && (
                             <div className="mt-2 text-sm font-medium text-green-600">
-                                Un nouveau lien de confirmation vient d'être
-                                envoyé à votre adresse.
+                                {t('profil.confirmation_envoyee', 'Un nouveau lien de confirmation vient d\'être envoyé à votre adresse.')}
                             </div>
                         )}
                     </div>
                 )}
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Enregistrer</PrimaryButton>
+                    <PrimaryButton disabled={processing}>{t('action.enregistrer', 'Enregistrer')}</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -119,7 +120,7 @@ export default function UpdateProfileInformation({
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600">
-                            Enregistré.
+                            {t('action.enregistre', 'Enregistré.')}
                         </p>
                     </Transition>
                 </div>

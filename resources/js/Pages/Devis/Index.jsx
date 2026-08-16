@@ -1,5 +1,6 @@
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -12,6 +13,9 @@ const COULEUR = {
 
 export default function Index({ demandes, statut, recherche, statuts, compteurs }) {
     const flash = usePage().props.flash ?? {};
+    const t = useTraduction();
+    const v = useVocabulaire();
+    const locale = useLocale();
     const [champ, setChamp] = useState(recherche ?? '');
     const [traitement, setTraitement] = useState(null);
     const minuteur = useRef(null);
@@ -49,7 +53,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
     };
 
     const date = (valeur) => valeur
-        ? new Date(valeur).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '—';
 
     const ligne = (libelle, valeur) => (
@@ -79,8 +83,8 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
     );
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Demandes de devis</h1>}>
-            <Head title="Demandes de devis" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.devis_demandes', 'Demandes de devis')}</h1>}>
+            <Head title={t('nav.devis_demandes', 'Demandes de devis')} />
 
             {flash.success && (
                 <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
@@ -90,14 +94,14 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(statuts).map(([cle, libelle]) => onglet(cle, libelle))}
-                {onglet('tout', 'Toutes')}
+                {onglet('tout', t('planif.toutes', 'Toutes'))}
             </div>
 
             <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm">
                 <input
                     value={champ}
                     onChange={(e) => chercher(e.target.value)}
-                    placeholder="Référence, entreprise, contact, e-mail ou numéro de TVA"
+                    placeholder={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')}
                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine sm:max-w-lg"
                 />
             </div>
@@ -105,7 +109,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
             <div className="space-y-3">
                 {demandes.data.length === 0 && (
                     <p className="rounded-2xl bg-white p-8 text-center text-sm text-slate-600">
-                        Aucune demande dans cette catégorie.
+                        {t('demandes.aucune', 'Aucune demande dans cette catégorie.')}
                     </p>
                 )}
 
@@ -121,7 +125,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                 </div>
                                 <h2 className="mt-1 text-lg font-bold text-marine">{d.company_name}</h2>
                                 <p className="text-xs text-slate-600">
-                                    Reçue le {date(d.created_at)} · {d.customer_type}
+                                    {t('demandes.recue_le', 'Reçue le')} {date(d.created_at)} · {d.customer_type}
                                 </p>
                             </div>
 
@@ -132,7 +136,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                         onClick={() => ouvrir(d, 'PROCESSING')}
                                         className="rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
                                     >
-                                        Prendre en charge
+                                        {t('demandes.prendre_en_charge', 'Prendre en charge')}
                                     </button>
                                 )}
                                 {(d.status === 'PENDING' || d.status === 'PROCESSING') && (
@@ -142,14 +146,14 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                             onClick={() => ouvrir(d, 'QUOTED')}
                                             className="rounded-lg bg-status-delivered px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
                                         >
-                                            Devis transmis
+                                            {t('demandes.devis_transmis', 'Devis transmis')}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => ouvrir(d, 'CLOSED')}
                                             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-surface"
                                         >
-                                            Sans suite
+                                            {t('demandes.sans_suite', 'Sans suite')}
                                         </button>
                                     </>
                                 )}
@@ -157,23 +161,23 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                         </div>
 
                         <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-                            {ligne('Contact', d.contact_name)}
-                            {ligne('E-mail', d.email)}
-                            {ligne('Téléphone', d.phone)}
-                            {ligne('Numéro de TVA', d.vat_number)}
-                            {ligne('Enlèvement', d.pickup_address)}
-                            {ligne('Livraison', d.delivery_address)}
-                            {ligne('Date souhaitée', date(d.pickup_date) + ' · ' + d.date_flexibility)}
-                            {ligne('Trajet', d.trip_type + ' · ' + d.frequency)}
-                            {ligne('Marchandise', d.goods_type + (d.weight ? ' · ' + Number(d.weight).toLocaleString('fr-FR') + ' kg' : ''))}
-                            {ligne('Volume', d.volume)}
-                            {ligne('Véhicule souhaité', d.vehicle_type)}
-                            {ligne('Assurance', d.insurance_value)}
+                            {ligne(t('nav.contact', 'Contact'), d.contact_name)}
+                            {ligne(t('devis.email', 'Adresse e-mail'), d.email)}
+                            {ligne(t('auth.telephone', 'Téléphone'), d.phone)}
+                            {ligne(t('compte.numero_tva', 'Numéro de TVA'), d.vat_number)}
+                            {ligne(t('demandes.enlevement', 'Enlèvement'), d.pickup_address)}
+                            {ligne(t('demandes.livraison', 'Livraison'), d.delivery_address)}
+                            {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + d.date_flexibility)}
+                            {ligne(t('devis.trajet', 'Trajet'), d.trip_type + ' · ' + d.frequency)}
+                            {ligne(t('devis.marchandise', 'Marchandise'), v('marchandise', d.goods_type) + (d.weight ? ' · ' + Number(d.weight).toLocaleString(locale) + ' kg' : ''))}
+                            {ligne(t('commande.volume', 'Volume'), d.volume)}
+                            {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), d.vehicle_type)}
+                            {ligne(t('demandes.assurance', 'Assurance'), d.insurance_value)}
                         </dl>
 
                         {(d.needs_tail_lift || d.is_hazardous || d.needs_express || d.needs_ecmr) && (
                             <p className="mt-3 flex flex-wrap gap-2">
-                                {d.needs_tail_lift && <span className="rounded-full bg-action/10 px-3 py-1 text-xs font-medium text-action-dark">Hayon élévateur</span>}
+                                {d.needs_tail_lift && <span className="rounded-full bg-action/10 px-3 py-1 text-xs font-medium text-action-dark">{t('devis.hayon', 'Hayon élévateur')}</span>}
                                 {d.is_hazardous && <span className="rounded-full bg-status-incident/10 px-3 py-1 text-xs font-medium text-status-incident">ADR</span>}
                                 {d.needs_express && <span className="rounded-full bg-status-progress/10 px-3 py-1 text-xs font-medium text-status-progress">Express</span>}
                                 {d.needs_ecmr && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">e-CMR</span>}
@@ -182,14 +186,14 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
 
                         {d.special_instructions && (
                             <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-xs text-slate-600">
-                                Consignes : {d.special_instructions}
+                                {t('demandes.consignes', 'Consignes :')} {d.special_instructions}
                             </p>
                         )}
 
                         {d.internal_note && (
                             <p className="mt-3 rounded-lg bg-brand-blue/5 px-3 py-2 text-xs text-brand-blue">
-                                Note interne : {d.internal_note}
-                                {d.handler && ` — ${d.handler.first_name} ${d.handler.last_name}, le ${date(d.handled_at)}`}
+                                {t('demandes.note_interne', 'Note interne :')} {d.internal_note}
+                                {d.handler && ` — ${d.handler.first_name} ${d.handler.last_name}, ${t('entreprises.le', 'le')} ${date(d.handled_at)}`}
                             </p>
                         )}
                     </article>
@@ -219,24 +223,24 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                         {statuts[data.status]} — {traitement?.reference}
                     </h2>
                     <p className="mt-1 text-sm text-slate-600">
-                        {traitement?.company_name}. La note reste interne, elle n'est jamais envoyée au demandeur.
+                        {traitement?.company_name}. {t('demandes.note_privee', 'La note reste interne, elle n\'est jamais envoyée au demandeur.')}
                     </p>
 
                     <textarea
                         value={data.internal_note}
                         onChange={(e) => setData('internal_note', e.target.value)}
                         rows="3"
-                        placeholder="Ex : client rappelé, chiffrage en cours sur base d'un semi-remorque."
+                        placeholder={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')}
                         className="mt-4 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                     />
                     {errors.internal_note && <p className="mt-1 text-sm text-status-incident">{errors.internal_note}</p>}
 
                     <div className="mt-4 flex justify-end gap-2">
                         <button type="button" onClick={() => setTraitement(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:text-marine">
-                            Annuler
+                            {t('action.annuler', 'Annuler')}
                         </button>
                         <button disabled={processing} className="rounded-lg bg-marine px-4 py-2 text-sm font-semibold text-white transition hover:bg-marine-deep disabled:opacity-50">
-                            Enregistrer
+                            {t('action.enregistrer', 'Enregistrer')}
                         </button>
                     </div>
                 </form>

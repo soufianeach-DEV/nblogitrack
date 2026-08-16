@@ -1,5 +1,7 @@
+import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
 import Icone from '@/Components/Icone';
+import { useTraduction } from '@/traduire';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -17,7 +19,10 @@ function LienMenu({ href, active, icone, onClick, children }) {
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             className={
-                'flex items-center gap-3 border-l-[3px] px-4 py-2 text-sm transition ' +
+                // py-1.5 plutot que py-2 : quatorze entrees en profil
+                // administrateur, quatre pixels chacune font cinquante-six
+                // pixels, soit une entree et demie regagnee.
+                'flex items-center gap-3 border-l-[3px] px-4 py-1.5 text-sm transition ' +
                 (active
                     ? 'border-action bg-white/5 font-semibold text-action'
                     : 'border-transparent font-medium text-slate-300 hover:bg-white/5 hover:text-white')
@@ -31,8 +36,8 @@ function LienMenu({ href, active, icone, onClick, children }) {
 
 function Groupe({ titre, children }) {
     return (
-        <div className="mt-4">
-            <p className="px-4 pb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+        <div className="mt-3">
+            <p className="px-4 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                 {titre}
             </p>
             <div>{children}</div>
@@ -40,8 +45,47 @@ function Groupe({ titre, children }) {
     );
 }
 
+/**
+ * Un groupe qui se replie.
+ *
+ * Reserve aux ecrans qu'on ouvre quelques fois par mois : journaux,
+ * traductions, pages, cles d'API, registre. Les garder deplies en
+ * permanence coute cinq entrees a un menu qui en porte quatorze, pour
+ * des pages qu'on ne consulte pas dans la journee.
+ *
+ * Le groupe s'ouvre de lui-meme quand on est deja sur l'un de ses
+ * ecrans : un menu qui se referme sur la page ou l'on se trouve fait
+ * perdre ses reperes.
+ */
+function GroupeRepliable({ titre, ouvertParDefaut = false, children }) {
+    const [ouvert, setOuvert] = useState(ouvertParDefaut);
+
+    return (
+        <div className="mt-3">
+            <button
+                type="button"
+                onClick={() => setOuvert(! ouvert)}
+                aria-expanded={ouvert}
+                className="flex w-full items-center gap-1.5 px-4 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 transition hover:text-slate-200"
+            >
+                {titre}
+                <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className={'h-3 w-3 shrink-0 transition-transform ' + (ouvert ? 'rotate-90' : '')}
+                >
+                    <path d="M7.5 5.5 12 10l-4.5 4.5V5.5Z" />
+                </svg>
+            </button>
+            {ouvert && <div>{children}</div>}
+        </div>
+    );
+}
+
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
     const [recherche, setRecherche] = useState('');
 
@@ -67,92 +111,120 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const marque = (
         <div className="px-4">
-            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[132px]" />
+            <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="mx-auto w-full max-w-[112px]" />
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                {estAdmin ? 'Administration centrale' : 'Logistique B2B'}
+                {estAdmin ? t('nav.admin_centrale', 'Administration centrale') : t('nav.logistique', 'Logistique B2B')}
             </p>
         </div>
     );
 
     const nouvelleExpedition = (
-        <div className="mt-4 px-4">
+        <div className="mt-3 px-4">
             <Link
                 href={route('transport-orders.create')}
                 onClick={fermer}
-                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
+                className="flex items-center justify-center gap-2 rounded-lg bg-action px-4 py-2 text-xs font-bold uppercase tracking-wide text-marine-deep transition hover:bg-action-dark"
             >
                 <Icone nom="plus" className="h-4 w-4" />
-                Nouvelle expédition
+                {t('commande.titre', 'Nouvelle expédition')}
             </Link>
         </div>
     );
 
     const navigation = (
         <>
-            <Groupe titre="Opérations">
+            <Groupe titre={t('nav.operations', 'Opérations')}>
                 <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
-                    Tableau de bord
+                    {t('nav.tableau_de_bord', 'Tableau de bord')}
                 </LienMenu>
                 <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
-                    Ordres de transport
+                    {canPlan ? t('nav.ordres', 'Ordres de transport') : t('nav.mes_expeditions', 'Mes expéditions')}
                 </LienMenu>
                 {canPlan && (
                     <LienMenu href={route('planning.index')} active={route().current('planning.index')} icone="planning" onClick={fermer}>
-                        Planification
+                        {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
                 {! canPlan && (
                     <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
-                        Suivi
+                        {t('nav.suivi', 'Suivre un envoi')}
                     </LienMenu>
                 )}
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
-                        Demandes de devis
+                        {t('nav.devis_demandes', 'Demandes de devis')}
                     </LienMenu>
                 )}
                 {canValidateClients && (
                     <LienMenu href={route('clients.index')} active={route().current('clients.index')} icone="valide" onClick={fermer}>
-                        Entreprises
+                        {t('nav.entreprises', 'Entreprises')}
+                    </LienMenu>
+                )}
+                {canManageUsers && (
+                    <LienMenu href={route('staff.index')} active={route().current('staff.index')} icone="profil" onClick={fermer}>
+                        {t('nav.personnel', 'Personnel')}
                     </LienMenu>
                 )}
                 {canViewFleet && (
                     <>
                         <LienMenu href={route('drivers.index')} active={route().current('drivers.index')} icone="profil" onClick={fermer}>
-                            Chauffeurs
+                            {t('nav.chauffeurs', 'Chauffeurs')}
                         </LienMenu>
                         <LienMenu href={route('vehicles.index')} active={route().current('vehicles.index')} icone="camion" onClick={fermer}>
-                            Véhicules
+                            {t('nav.vehicules', 'Véhicules')}
                         </LienMenu>
                     </>
                 )}
             </Groupe>
 
-            <Groupe titre="Finance &amp; data">
+            <Groupe titre={t('nav.finance', 'Finance & data')}>
                 <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
-                    Facturation
+                    {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
                 </LienMenu>
             </Groupe>
 
             {canViewLogs && (
-                <Groupe titre="Système">
+                <GroupeRepliable
+                    titre={t('nav.systeme', 'Système')}
+                    ouvertParDefaut={route().current('activity-logs.*')
+                        || route().current('translations.*')
+                        || route().current('pages.*')
+                        || route().current('api-keys.*')
+                        || route().current('registre.*')}
+                >
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
-                        Journaux
+                        {t('nav.journaux', 'Journaux')}
                     </LienMenu>
-                </Groupe>
+                    {canManageUsers && (
+                        <>
+                            <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
+                                {t('nav.traductions', 'Traductions')}
+                            </LienMenu>
+                            <LienMenu href={route('pages.index')} active={route().current('pages.index')} icone="journal" onClick={fermer}>
+                                {t('nav.pages', 'Pages du site')}
+                            </LienMenu>
+                            <LienMenu href={route('api-keys.index')} active={route().current('api-keys.index')} icone="journal" onClick={fermer}>
+                                {t('nav.api', 'API REST')}
+                            </LienMenu>
+                            <LienMenu href={route('registre.index')} active={route().current('registre.index')} icone="valide" onClick={fermer}>
+                                {t('nav.registre', 'Registre RGPD')}
+                            </LienMenu>
+                        </>
+                    )}
+                </GroupeRepliable>
             )}
         </>
     );
 
     const pied = (
-        <div className="mt-4 border-t border-white/10 px-1 pt-2">
+        <div className="mt-3 border-t border-white/10 px-1 pt-1.5">
             <Link
                 href={route('profile.edit')}
                 onClick={fermer}
                 className="flex items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="aide" className="h-5 w-5 shrink-0" />
-                Mon profil
+                {t('nav.profil', 'Mon profil')}
             </Link>
             <Link
                 href={route('logout')}
@@ -161,8 +233,12 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex w-full items-center gap-3 px-4 py-1.5 text-sm font-medium text-slate-300 transition hover:text-white"
             >
                 <Icone nom="sortie" className="h-5 w-5 shrink-0" />
-                Déconnexion
+                {t('nav.deconnexion', 'Déconnexion')}
             </Link>
+            <div className="flex items-center gap-2 px-4 pb-1 pt-2">
+                <span className="text-xs text-slate-500">{t('nav.langue', 'Langue')}</span>
+                <ChoixLangue sombre />
+            </div>
         </div>
     );
 
@@ -177,14 +253,14 @@ export default function AuthenticatedLayout({ header, children }) {
 
     return (
         <div className="min-h-screen bg-surface">
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-4 md:flex">
+            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto bg-marine-deep py-3 md:flex">
                 {panneau}
             </aside>
 
             {menuOuvert && (
                 <div className="fixed inset-0 z-40 md:hidden">
                     <div className="absolute inset-0 bg-marine-deep/70" onClick={fermer} aria-hidden="true" />
-                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-4 shadow-xl">
+                    <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-3 shadow-xl">
                         <button
                             type="button"
                             onClick={fermer}
@@ -199,7 +275,10 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <div className="md:pl-64">
-                <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
+                {/* Au-dessus de tout ce qu'une page peut afficher : le menu du
+                    compte doit rester atteignable, y compris par-dessus une
+                    carte qui empile ses propres calques. */}
+                <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
                     <button
                         type="button"
                         onClick={() => setMenuOuvert(true)}
@@ -217,8 +296,8 @@ export default function AuthenticatedLayout({ header, children }) {
                         <input
                             value={recherche}
                             onChange={(e) => setRecherche(e.target.value)}
-                            placeholder={estAdmin ? 'Rechercher une entreprise…' : 'Rechercher une expédition…'}
-                            aria-label={estAdmin ? 'Rechercher une entreprise' : 'Rechercher une expédition'}
+                            placeholder={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
+                            aria-label={estAdmin ? t('nav.chercher_entreprise', 'Rechercher une entreprise…') : t('nav.chercher_expedition', 'Rechercher une expédition…')}
                             className="w-full rounded-lg border-slate-200 bg-surface py-2 pl-10 text-sm shadow-sm focus:border-marine focus:ring-marine"
                         />
                     </form>
@@ -235,15 +314,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                             {user.first_name} {user.last_name}
                                         </span>
                                         <span className="block text-[11px] uppercase tracking-wider text-slate-600">
-                                            {ROLES[user.role] ?? user.role}
+                                            {t('roles.' + user.role.toLowerCase(), ROLES[user.role] ?? user.role)}
                                         </span>
                                     </span>
                                 </button>
                             </Dropdown.Trigger>
                             <Dropdown.Content>
-                                <Dropdown.Link href={route('profile.edit')}>Profil</Dropdown.Link>
+                                <Dropdown.Link href={route('profile.edit')}>{t('nav.profil_court', 'Profil')}</Dropdown.Link>
                                 <Dropdown.Link href={route('logout')} method="post" as="button">
-                                    Déconnexion
+                                    {t('nav.deconnexion', 'Déconnexion')}
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>

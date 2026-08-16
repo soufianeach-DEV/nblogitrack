@@ -1,4 +1,9 @@
+import ChoixLangue from '@/Components/ChoixLangue';
+import { useTraduction } from '@/traduire';
+
 export default function GuestLayout({ children, large = false }) {
+    const t = useTraduction();
+
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-3">
             {/* Image de fond, sur toute la page */}
@@ -15,25 +20,31 @@ export default function GuestLayout({ children, large = false }) {
                     <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="w-full" />
                     <div>
                         <h2 className="text-3xl font-bold leading-tight">
-                            Optimisez votre logistique B2B en toute confiance.
+                            {t('vitrine.baseline', 'Optimisez votre logistique B2B en toute confiance.')}
                         </h2>
                         <p className="mt-4 text-slate-300">
-                            La plateforme de référence pour le suivi d'expéditions et la gestion de flotte en Belgique.
+                            {t('vitrine.sous_titre', 'La plateforme de référence pour le suivi d\'expéditions et la gestion de flotte en Belgique.')}
                         </p>
                     </div>
                     <div className="flex gap-10">
                         <div>
                             <div className="text-2xl font-bold text-action">1.2M+</div>
-                            <div className="text-sm text-slate-300">Expéditions / an</div>
+                            <div className="text-sm text-slate-300">{t('vitrine.expeditions_an', 'Expéditions / an')}</div>
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-action">99.9%</div>
-                            <div className="text-sm text-slate-300">Fiabilité</div>
+                            <div className="text-sm text-slate-300">{t('vitrine.fiabilite', 'Fiabilité')}</div>
                         </div>
                     </div>
                 </div>
 
-                <div className={large ? 'w-full p-5 md:w-3/5 md:px-9 md:py-5' : 'w-full p-8 md:w-1/2 md:p-10'}>{children}</div>
+                <div className={large ? 'w-full p-5 md:w-3/5 md:px-9 md:py-5' : 'w-full p-8 md:w-1/2 md:p-10'}>
+                    {/* Le prospect choisit sa langue des l'ecran de connexion. */}
+                    <div className="flex justify-end">
+                        <ChoixLangue />
+                    </div>
+                    {children}
+                </div>
             </div>
         </div>
     );

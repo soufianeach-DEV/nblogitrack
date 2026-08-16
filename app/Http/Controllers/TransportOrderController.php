@@ -7,12 +7,12 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Support\JoursFeries;
 use App\Support\Tarificateur;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -125,6 +125,22 @@ class TransportOrderController extends Controller
             return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
         }
 
+        // Le quai ne charge ni le dimanche ni un jour ferie legal. Le samedi
+        // reste ouvre : le transport y travaille, et la Belgique n'interdit
+        // pas la circulation des poids lourds le week-end.
+        if (! empty($data['pickup_date'])) {
+            $enlevement = Carbon::parse($data['pickup_date']);
+
+            if (JoursFeries::chome($enlevement)) {
+                return back()->withErrors([
+                    'pickup_date' => 'Aucun enlèvement le '
+                        .($enlevement->isSunday() ? 'dimanche' : strtolower(JoursFeries::nom($enlevement)))
+                        .'. Le premier jour ouvrable est le '
+                        .JoursFeries::prochainJourOuvrable($enlevement)->format('d/m/Y').'.',
+                ]);
+            }
+        }
+
         if (! empty($data['requested_delivery_date'])) {
             $depart = ! empty($data['pickup_date']) ? Carbon::parse($data['pickup_date'])->startOfDay() : now()->startOfDay();
             $delai = $depart->diffInDays(Carbon::parse($data['requested_delivery_date'])->startOfDay(), false);
@@ -140,8 +156,6 @@ class TransportOrderController extends Controller
 
         $distanceKm = Tarificateur::distanceRoutiere($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
         $hazardous = $request->boolean('is_hazardous');
-
-        $nextId = TransportOrder::max('id') + 1;
 
         $order = TransportOrder::create([
             'client_id' => $request->user()->id,
@@ -164,8 +178,8 @@ class TransportOrderController extends Controller
             'created_date' => now(),
             'distance_km' => (int) round($distanceKm),
             'estimated_cost' => Tarificateur::cout($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
-            'tracking_code' => strtoupper(Str::random(12)),
-            'tracking_number' => 'TRK-'.now()->year.'-'.str_pad($nextId, 5, '0', STR_PAD_LEFT),
+            'tracking_code' => TransportOrder::prochainCode(),
+            'tracking_number' => TransportOrder::prochainNumero(),
         ]);
 
         ActivityLog::record(

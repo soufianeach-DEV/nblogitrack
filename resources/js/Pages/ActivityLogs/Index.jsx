@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -17,6 +18,8 @@ const COULEUR_ACTION = {
 };
 
 export default function Index({ logs, actions, filtres, stats }) {
+    const t = useTraduction();
+    const locale = useLocale();
     const [champs, setChamps] = useState({
         utilisateur: filtres.utilisateur ?? '',
         action: filtres.action ?? '',
@@ -47,26 +50,26 @@ export default function Index({ logs, actions, filtres, stats }) {
 
     const champCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
-    const horodatage = (valeur) => new Date(valeur).toLocaleString('fr-FR', {
+    const horodatage = (valeur) => new Date(valeur).toLocaleString(locale, {
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
 
     return (
-        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">Journal d'activité</h1>}>
-            <Head title="Journal d'activité" />
+        <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('journal.titre', 'Journal d\'activité')}</h1>}>
+            <Head title={t('journal.titre', 'Journal d\'activité')} />
 
             <div className="mb-5 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">Entrées enregistrées</p>
-                    <p className="mt-1 text-2xl font-bold text-marine">{stats.total.toLocaleString('fr-FR')}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('journal.entrees', 'Entrées enregistrées')}</p>
+                    <p className="mt-1 text-2xl font-bold text-marine">{stats.total.toLocaleString(locale)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">Aujourd'hui</p>
-                    <p className="mt-1 text-2xl font-bold text-marine">{stats.aujourdhui.toLocaleString('fr-FR')}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('journal.aujourdhui', 'Aujourd\'hui')}</p>
+                    <p className="mt-1 text-2xl font-bold text-marine">{stats.aujourdhui.toLocaleString(locale)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-600">Échecs de connexion</p>
-                    <p className="mt-1 text-2xl font-bold text-status-incident">{stats.echecs.toLocaleString('fr-FR')}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-600">{t('journal.echecs', 'Échecs de connexion')}</p>
+                    <p className="mt-1 text-2xl font-bold text-status-incident">{stats.echecs.toLocaleString(locale)}</p>
                 </div>
             </div>
 
@@ -75,11 +78,11 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <input
                         value={champs.utilisateur}
                         onChange={(e) => filtrer('utilisateur', e.target.value)}
-                        placeholder="Utilisateur ou e-mail"
+                        placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
                         className={champCls}
                     />
                     <select value={champs.action} onChange={(e) => filtrer('action', e.target.value)} className={champCls}>
-                        <option value="">Toutes les actions</option>
+                        <option value="">{t('journal.toutes_actions', 'Toutes les actions')}</option>
                         {Object.entries(actions).map(([cle, libelle]) => (
                             <option key={cle} value={cle}>{libelle}</option>
                         ))}
@@ -87,14 +90,14 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <input
                         value={champs.ip}
                         onChange={(e) => filtrer('ip', e.target.value)}
-                        placeholder="Adresse IP"
+                        placeholder={t('journal.ip', 'Adresse IP')}
                         className={champCls}
                     />
                     <input type="date" value={champs.du} onChange={(e) => filtrer('du', e.target.value)} className={champCls} />
                     <input type="date" value={champs.au} onChange={(e) => filtrer('au', e.target.value)} className={champCls} />
                 </div>
                 <button type="button" onClick={reinitialiser} className="mt-3 text-xs text-brand-blue hover:underline">
-                    Réinitialiser les filtres
+                    {t('journal.reinitialiser', 'Réinitialiser les filtres')}
                 </button>
             </div>
 
@@ -102,18 +105,18 @@ export default function Index({ logs, actions, filtres, stats }) {
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                     <thead className="bg-surface">
                         <tr className="text-left text-xs uppercase tracking-wide text-slate-600">
-                            <th className="px-5 py-3">Date</th>
-                            <th className="px-5 py-3">Utilisateur</th>
-                            <th className="px-5 py-3">Action</th>
-                            <th className="px-5 py-3">Description</th>
-                            <th className="px-5 py-3">Adresse IP</th>
+                            <th className="px-5 py-3">{t('journal.date', 'Date')}</th>
+                            <th className="px-5 py-3">{t('journal.utilisateur', 'Utilisateur')}</th>
+                            <th className="px-5 py-3">{t('tdb.action', 'Action')}</th>
+                            <th className="px-5 py-3">{t('journal.description', 'Description')}</th>
+                            <th className="px-5 py-3">{t('journal.ip', 'Adresse IP')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {logs.data.length === 0 && (
                             <tr>
                                 <td colSpan="5" className="px-5 py-10 text-center text-slate-600">
-                                    Aucune entrée ne correspond aux filtres.
+                                    {t('journal.aucune', 'Aucune entrée ne correspond aux filtres.')}
                                 </td>
                             </tr>
                         )}
@@ -124,7 +127,9 @@ export default function Index({ logs, actions, filtres, stats }) {
                                     {log.user ? (
                                         <>
                                             <span className="font-medium text-marine">{log.user.first_name} {log.user.last_name}</span>
-                                            <span className="block text-xs text-slate-600">{log.user.role}</span>
+                                            <span className="block text-xs text-slate-600">
+                                                {t('roles.' + String(log.user.role).toLowerCase(), log.user.role)}
+                                            </span>
                                         </>
                                     ) : (
                                         <span className="text-xs text-slate-600">—</span>

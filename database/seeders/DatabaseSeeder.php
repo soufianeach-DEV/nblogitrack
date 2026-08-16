@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             TransportOrderSeeder::class,
             InvoiceSeeder::class,
             PurchaseInvoiceSeeder::class,
+            TranslationSeeder::class,
         ]);
 
         foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders', 'purchase_invoices'] as $t) {

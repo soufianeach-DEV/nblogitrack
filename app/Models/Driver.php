@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Traductions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,27 +66,32 @@ class Driver extends Model
         $aujourdhui = now()->startOfDay();
 
         if ($this->left_on !== null && $this->left_on->lte($aujourdhui)) {
-            $motifs[] = 'a quitté l\'entreprise le '.$this->left_on->format('d/m/Y');
+            $motifs[] = Traductions::t('empechement.sortie', 'a quitté l\'entreprise le :date',
+                ['date' => $this->left_on->format('d/m/Y')]);
         }
 
         if ($this->license_expiry !== null && $this->license_expiry->lt($aujourdhui)) {
-            $motifs[] = 'permis expiré le '.$this->license_expiry->format('d/m/Y');
+            $motifs[] = Traductions::t('empechement.permis', 'permis expiré le :date',
+                ['date' => $this->license_expiry->format('d/m/Y')]);
         }
 
         // L'entreprise exige une visite medicale par an, plus stricte que le
         // minimum legal : c'est elle qui repond en cas d'accident.
         if ($this->medical_exam_date === null) {
-            $motifs[] = 'aucune visite médicale enregistrée';
+            $motifs[] = Traductions::t('empechement.sans_visite', 'aucune visite médicale enregistrée');
         } elseif ($this->medical_exam_date->lt($aujourdhui->copy()->subYear())) {
-            $motifs[] = 'visite médicale du '.$this->medical_exam_date->format('d/m/Y').' à renouveler';
+            $motifs[] = Traductions::t('empechement.visite', 'visite médicale du :date à renouveler',
+                ['date' => $this->medical_exam_date->format('d/m/Y')]);
         }
 
         if ($this->cpc_expiry !== null && $this->cpc_expiry->lt($aujourdhui)) {
-            $motifs[] = 'qualification code 95 expirée le '.$this->cpc_expiry->format('d/m/Y');
+            $motifs[] = Traductions::t('empechement.code95', 'qualification code 95 expirée le :date',
+                ['date' => $this->cpc_expiry->format('d/m/Y')]);
         }
 
         if ($this->tacho_card_expiry !== null && $this->tacho_card_expiry->lt($aujourdhui)) {
-            $motifs[] = 'carte tachygraphe expirée le '.$this->tacho_card_expiry->format('d/m/Y');
+            $motifs[] = Traductions::t('empechement.tachygraphe', 'carte tachygraphe expirée le :date',
+                ['date' => $this->tacho_card_expiry->format('d/m/Y')]);
         }
 
         return $motifs;

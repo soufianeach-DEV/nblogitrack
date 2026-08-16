@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\QuoteRequest;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -166,7 +167,14 @@ class QuoteController extends Controller
             'demandes' => $requete->paginate(10)->withQueryString(),
             'statut' => $statut,
             'recherche' => $recherche,
-            'statuts' => QuoteRequest::STATUTS,
+            // La constante porte le francais : elle est evaluee au
+            // chargement de la classe, avant que la langue soit connue.
+            'statuts' => collect(QuoteRequest::STATUTS)
+                ->map(fn (string $libelle, string $cle) => Traductions::t(
+                    'demandes.statut_'.strtolower($cle),
+                    $libelle,
+                ))
+                ->all(),
             'compteurs' => QuoteRequest::selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),

@@ -8,6 +8,23 @@
 
         <meta name="theme-color" content="#14324F">
 
+        {{-- Sans ces balises, les trois versions d'une page se font
+             concurrence dans l'index : le moteur en retient une et ignore
+             les autres. hreflang declare qu'elles sont equivalentes et
+             designe celle qui convient a chaque langue. --}}
+        @php
+            $chemin = trim(request()->path(), '/');
+            $segments = $chemin === '' ? [] : explode('/', $chemin);
+            $reste = (isset($segments[0]) && in_array($segments[0], ['fr', 'nl', 'en'], true))
+                ? implode('/', array_slice($segments, 1))
+                : $chemin;
+        @endphp
+        @foreach (['fr', 'nl', 'en'] as $code)
+            <link rel="alternate" hreflang="{{ $code }}-BE" href="{{ url($code.($reste === '' ? '' : '/'.$reste)) }}">
+        @endforeach
+        <link rel="alternate" hreflang="x-default" href="{{ url('fr'.($reste === '' ? '' : '/'.$reste)) }}">
+        <link rel="canonical" href="{{ url(app()->getLocale().($reste === '' ? '' : '/'.$reste)) }}">
+
         {{-- Les polices sont servies par l'application, aucune dependance externe. --}}
         <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>

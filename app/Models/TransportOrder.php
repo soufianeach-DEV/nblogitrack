@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class TransportOrder extends Model
 {
@@ -53,7 +54,7 @@ class TransportOrder extends Model
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
-        'vehicle_registration', 'driver_id', 'assigned_at',
+        'vehicle_registration', 'driver_id', 'assigned_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
     ];
 
@@ -62,6 +63,7 @@ class TransportOrder extends Model
         return [
             'is_hazardous' => 'boolean',
             'needs_tail_lift' => 'boolean',
+            'suivi_direct' => 'boolean',
             'created_date' => 'date',
             'requested_delivery_date' => 'date',
             'actual_delivery_date' => 'date',
@@ -69,6 +71,24 @@ class TransportOrder extends Model
             'assigned_at' => 'datetime',
             'distance_km' => 'integer',
         ];
+    }
+
+    /**
+     * Le numero de suivi lisible : TRK-2026-00042.
+     *
+     * Le formulaire et l'API deposent des ordres par des chemins
+     * differents mais dans la meme numerotation : elle vit ici pour
+     * qu'aucun des deux ne puisse en inventer une autre.
+     */
+    public static function prochainNumero(): string
+    {
+        return 'TRK-'.now()->year.'-'.str_pad((string) (self::max('id') + 1), 5, '0', STR_PAD_LEFT);
+    }
+
+    /** Le code que le client donne pour suivre son colis sans compte. */
+    public static function prochainCode(): string
+    {
+        return strtoupper(Str::random(12));
     }
 
     public function client(): BelongsTo

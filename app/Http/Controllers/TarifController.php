@@ -91,7 +91,9 @@ class TarifController extends Controller
         return response()->json([
             'depart' => $depart->ville,
             'arrivee' => $arrivee->ville,
-            'pays' => Pays::nom($donnees['pays']) ?? $donnees['pays'],
+            // Les localites sont la saisie du visiteur, renvoyee telle
+            // quelle. Le pays vient d'un code : il se dit dans sa langue.
+            'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
             'distance' => (int) round($km),
             'poids' => (float) $donnees['poids'],
             'adr' => $adr,
@@ -107,17 +109,22 @@ class TarifController extends Controller
      */
     private function destinations(): array
     {
-        return TariffGrid::where('is_active', true)
+        $pays = TariffGrid::where('is_active', true)
             ->distinct()
             ->orderBy('zone')
             ->pluck('zone')
             ->map(fn (string $code) => [
                 'code' => $code,
-                'nom' => Pays::nom($code) ?? $code,
+                'nom' => Pays::libelle($code) ?? $code,
             ])
-            ->sortBy('nom')
-            ->values()
             ->all();
+
+        // Le tri suit la langue lue, pas l'ordre des octets : « Zweden »
+        // precede « Zwitserland », et les accents se rangent a leur place.
+        $collateur = new \Collator(app()->getLocale());
+        usort($pays, fn (array $a, array $b) => $collateur->compare($a['nom'], $b['nom']));
+
+        return $pays;
     }
 
     /**

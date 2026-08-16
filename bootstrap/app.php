@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\AuthentifierCleApi;
+use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -11,16 +13,34 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // A12 : l'API des partenaires, sans session ni cookie. Elle est
+        // servie sous /api, hors du prefixe de langue : une machine
+        // n'a pas de langue d'interface.
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // DefinirLangue passe avant Inertia : le partage des traductions
+        // lit la langue deja choisie.
         $middleware->web(append: [
+            DefinirLangue::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Stripe notifie le paiement depuis ses serveurs : aucune session,
+        // donc aucun jeton de formulaire a presenter. L'appel est authentifie
+        // par la signature de son en-tete, verifiee dans le controleur.
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
+
+        // A12 : le controle des cles, declare par son alias pour que la
+        // permission exigee se lise sur la route (cle.api:ecriture).
+        $middleware->alias([
+            'cle.api' => AuthentifierCleApi::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Une session dure deux heures. Passe ce delai, le jeton du

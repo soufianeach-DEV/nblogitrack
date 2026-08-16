@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
+use App\Support\TempsDeConduite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -32,6 +33,16 @@ class PlanningController extends Controller
             $priorite = null;
         }
 
+        // Une mission dangereuse sur quarante-deux en attente se trouvait au
+        // vingt-cinquieme rang, donc en page deux : le badge ne servait que
+        // si le planificateur tombait dessus.
+        $contrainte = $request->query('contrainte');
+        if (! in_array($contrainte, ['adr', 'hayon'], true)) {
+            $contrainte = null;
+        }
+
+        $colonneContrainte = ['adr' => 'is_hazardous', 'hayon' => 'needs_tail_lift'];
+
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle:registration,brand,model,capacity_tonnes',
@@ -39,22 +50,47 @@ class PlanningController extends Controller
         ])
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
             ->paginate(15)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function (TransportOrder $o) {
+                $o->setAttribute('conduite', TempsDeConduite::resume($o->distance_km));
+                $o->setAttribute('conduite_heures', TempsDeConduite::heuresDeConduite($o->distance_km));
+
+                return $o;
+            });
 
         // Le compte par priorite porte sur le statut affiche : un
         // planificateur veut savoir combien d'urgences restent a traiter
-        // dans la colonne ou il travaille, pas dans toute la base.
+        // dans la colonne ou il travaille, pas dans toute la base. Chaque
+        // facette compte sous l'autre filtre, pour ne jamais proposer un
+        // bouton qui ne ramene rien.
         $parPriorite = TransportOrder::where('status', $statut)
+            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
             ->selectRaw('priority, count(*) AS total')
             ->groupBy('priority')
             ->pluck('total', 'priority');
 
+        $parContrainte = TransportOrder::where('status', $statut)
+            ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
+            ->first();
+
         $vehicles = Vehicle::where('is_available', true)
             ->orderBy('registration')
             ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift']);
+
+        // La conduite deja engagee cette semaine, en une seule requete. Le
+        // plafond reel depend de la semaine de l'enlevement, donc le serveur
+        // tranche a l'affectation : ce chiffre-ci informe, il ne decide pas.
+        $conduiteSemaine = TransportOrder::whereNotNull('driver_id')
+            ->where('status', '!=', 'CANCELLED')
+            ->whereBetween('pickup_date', [now()->startOfWeek(), now()->endOfWeek()])
+            ->selectRaw('driver_id, sum(distance_km) AS km')
+            ->groupBy('driver_id')
+            ->pluck('km', 'driver_id');
 
         // Les chauffeurs inaptes restent dans la liste, grises et motives :
         // les faire disparaitre laisserait le planificateur chercher un nom
@@ -68,6 +104,7 @@ class PlanningController extends Controller
                 'license_type' => $d->license_type,
                 'adr_certified' => $d->adr_certified,
                 'empechements' => $d->empechements(),
+                'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
             ])
             ->sortBy('nom')
             ->values();
@@ -78,9 +115,14 @@ class PlanningController extends Controller
             'drivers' => $drivers,
             'statut' => $statut,
             'priorite' => $priorite,
+            'contrainte' => $contrainte,
             'priorites' => collect(TransportOrder::PRIORITES)
                 ->map(fn (string $p) => ['valeur' => $p, 'nombre' => (int) ($parPriorite[$p] ?? 0)])
                 ->all(),
+            'contraintes' => [
+                ['valeur' => 'adr', 'nombre' => (int) $parContrainte->adr],
+                ['valeur' => 'hayon', 'nombre' => (int) $parContrainte->hayon],
+            ],
             'compteurs' => TransportOrder::selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
@@ -133,6 +175,48 @@ class PlanningController extends Controller
             return back()->withErrors(['driver_id' => 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.']);
         }
 
+        $jour = $transportOrder->pickup_date->toDateString();
+
+        $conflitChauffeur = TransportOrder::where('driver_id', $driver->id)
+            ->where('status', 'IN_PROGRESS')
+            ->whereDate('pickup_date', $jour)
+            ->where('vehicle_registration', '!=', $vehicle->registration)
+            ->exists();
+
+        if ($conflitChauffeur) {
+            return back()->withErrors([
+                'driver_id' => 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.',
+            ]);
+        }
+
+        $conflitCamion = TransportOrder::where('vehicle_registration', $vehicle->registration)
+            ->where('status', 'IN_PROGRESS')
+            ->whereDate('pickup_date', $jour)
+            ->where('driver_id', '!=', $driver->id)
+            ->exists();
+
+        if ($conflitCamion) {
+            return back()->withErrors([
+                'vehicle_registration' => 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.',
+            ]);
+        }
+
+        // Le temps de conduite se refuse comme le reste : c'est un plafond
+        // legal, pas un conseil. Le calcul porte sur les missions connues,
+        // sans carte tachygraphe, et le refus le dit.
+        $conduite = TempsDeConduite::empechements(
+            $driver->id,
+            $transportOrder->distance_km,
+            $transportOrder->pickup_date,
+            $transportOrder->id,
+        );
+
+        if ($conduite !== []) {
+            return back()->withErrors([
+                'driver_id' => 'Temps de conduite : '.implode(' ; ', $conduite).'.',
+            ]);
+        }
+
         $transportOrder->update([
             'vehicle_registration' => $vehicle->registration,
             'driver_id' => $driver->id,
@@ -152,6 +236,36 @@ class PlanningController extends Controller
         );
 
         return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' affecté au véhicule '.$vehicle->registration.'.');
+    }
+
+    /**
+     * Ouvre ou ferme le suivi de position pour une mission.
+     *
+     * C'est une decision, pas un reglage : elle se prend mission par
+     * mission, elle se journalise, et elle laisse une trace nominative.
+     * Le jour ou un chauffeur demande qui a decide de suivre sa tournee
+     * du 15 aout, le journal repond.
+     *
+     * La fermeture n'efface pas les points deja releves : c'est la purge
+     * qui s'en charge, apres la livraison.
+     */
+    public function suiviDirect(TransportOrder $transportOrder): RedirectResponse
+    {
+        $ouvert = ! $transportOrder->suivi_direct;
+
+        $transportOrder->update(['suivi_direct' => $ouvert]);
+
+        ActivityLog::record(
+            $ouvert ? 'order.tracking_opened' : 'order.tracking_closed',
+            ($ouvert ? 'Suivi de position ouvert' : 'Suivi de position fermé')
+                .' pour '.$transportOrder->tracking_number,
+            $transportOrder,
+            ['chauffeur_id' => $transportOrder->driver_id],
+        );
+
+        return back()->with('success', $ouvert
+            ? 'Suivi de position activé pour cette mission. Le chauffeur en est averti sur son écran.'
+            : 'Suivi de position désactivé.');
     }
 
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse

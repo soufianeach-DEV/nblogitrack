@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
+use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -87,10 +89,75 @@ class TrackingController extends Controller
                 'trajets' => TransportOrder::where('driver_id', $ordre->driver_id)->count(),
             ] : null,
             'etapes' => $ordre ? $this->etapes($ordre) : null,
+            'jalons' => $ordre ? $this->jalons($ordre) : null,
+            'position' => $ordre ? $this->positionActuelle($ordre) : null,
             'historique' => $ordre && $utilisateur->can('view-all-orders')
                 ? $this->historique($ordre)
                 : null,
         ]);
+    }
+
+    /**
+     * Ou la marchandise a ete prise en charge, ou elle a ete livree.
+     *
+     * Deux points au plus, horodates, releves au moment ou le chauffeur
+     * a declare l'etape. Ce sont des faits de gestion : ils restent
+     * attaches a l'expedition comme une mention de lettre de voiture.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function jalons(TransportOrder $ordre): array
+    {
+        return ShipmentPosition::where('transport_order_id', $ordre->id)
+            ->where('type', ShipmentPosition::JALON)
+            ->orderBy('recorded_at')
+            ->get()
+            ->map(fn (ShipmentPosition $p) => [
+                'evenement' => $p->evenement,
+                'libelle' => $p->evenement === 'DELIVERED'
+                    ? Traductions::t('suivi.jalon_livraison', 'Livraison')
+                    : Traductions::t('suivi.jalon_enlevement', 'Prise en charge'),
+                'localite' => Traductions::vocabulaire('ville', Adresse::localite(
+                    $p->evenement === 'DELIVERED' ? $ordre->delivery_address : $ordre->pickup_address,
+                )),
+                'coordonnees' => [$p->lat, $p->lng],
+                'horodatage' => $p->recorded_at->format('d/m/Y H:i'),
+                'precision_m' => $p->precision_m,
+            ])
+            ->all();
+    }
+
+    /**
+     * La derniere position connue, si le suivi a ete ouvert.
+     *
+     * Un seul point est rendu, jamais la trace complete du trajet : le
+     * client veut savoir ou en est sa marchandise, pas reconstituer la
+     * journee d'un conducteur. La difference n'est pas cosmetique, elle
+     * est la raison pour laquelle ce traitement reste proportionne.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function positionActuelle(TransportOrder $ordre): ?array
+    {
+        if (! $ordre->suivi_direct || $ordre->status !== 'IN_PROGRESS') {
+            return null;
+        }
+
+        $point = ShipmentPosition::where('transport_order_id', $ordre->id)
+            ->where('type', ShipmentPosition::ROUTE)
+            ->latest('recorded_at')
+            ->first();
+
+        if ($point === null) {
+            return null;
+        }
+
+        return [
+            'coordonnees' => [$point->lat, $point->lng],
+            'horodatage' => $point->recorded_at->format('H:i'),
+            'minutes' => (int) $point->recorded_at->diffInMinutes(now()),
+            'precision_m' => $point->precision_m,
+        ];
     }
 
     /**
@@ -381,8 +448,10 @@ class TrackingController extends Controller
             'statut' => $ordre->status,
             'priorite' => $ordre->priority,
             'client' => $ordre->client?->company_name,
-            'depart' => Adresse::localite($ordre->pickup_address),
-            'arrivee' => Adresse::localite($ordre->delivery_address),
+            // Etiquette de carte, comme au tableau de bord : elle situe
+            // le trajet du regard, elle ne conduit personne a une porte.
+            'depart' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
+            'arrivee' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
             'marchandise' => $ordre->goods_type,
             'adr' => (bool) $ordre->is_hazardous,
             'livraison' => $ordre->requested_delivery_date?->format('d/m/Y'),

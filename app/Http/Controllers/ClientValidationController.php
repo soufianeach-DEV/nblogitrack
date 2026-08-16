@@ -7,6 +7,8 @@ use App\Mail\InscriptionRefusee;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\Pays;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -48,12 +50,14 @@ class ClientValidationController extends Controller
             });
         }
 
+        // L'ecran propose les libelles traduits, la base ne connait que le
+        // francais : on repasse par lui avant d'interroger la colonne.
         if ($filtres['pays'] !== '') {
-            $query->where('country', $filtres['pays']);
+            $query->where('country', Pays::nomFrancais($filtres['pays']));
         }
 
         if ($filtres['secteur'] !== '') {
-            $query->where('business_sector', $filtres['secteur']);
+            $query->where('business_sector', Traductions::vocabulaireEnFrancais('secteur', $filtres['secteur']));
         }
 
         return Inertia::render('Clients/Index', [
@@ -62,8 +66,10 @@ class ClientValidationController extends Controller
             'filtres' => $filtres,
             'suggestions' => [
                 'entreprises' => Client::orderBy('company_name')->distinct()->limit(300)->pluck('company_name'),
-                'pays' => Client::whereNotNull('country')->distinct()->orderBy('country')->pluck('country'),
-                'secteurs' => Client::whereNotNull('business_sector')->distinct()->orderBy('business_sector')->pluck('business_sector'),
+                'pays' => Client::whereNotNull('country')->distinct()->orderBy('country')
+                    ->pluck('country')->map(fn (string $p) => Pays::localise($p))->sort()->values(),
+                'secteurs' => Client::whereNotNull('business_sector')->distinct()->orderBy('business_sector')
+                    ->pluck('business_sector')->map(fn (string $s) => Traductions::vocabulaire('secteur', $s))->sort()->values(),
             ],
             'compteurs' => [
                 'tout' => Client::count(),

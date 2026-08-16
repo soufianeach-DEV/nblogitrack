@@ -5,9 +5,11 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useTraduction } from '@/traduire';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
+    const t = useTraduction();
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -21,18 +23,18 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Connexion" />
+            <Head title={t('auth.connexion', 'Connexion')} />
 
-            <div className="mb-8 flex gap-8 border-b border-slate-200 text-sm font-semibold">
-                <span className="border-b-2 border-action pb-3 text-marine">CONNEXION</span>
+            <div className="mb-8 flex gap-8 border-b border-slate-200 text-sm font-semibold uppercase">
+                <span className="border-b-2 border-action pb-3 text-marine">{t('auth.connexion', 'Connexion')}</span>
                 <Link href={route('register')} className="pb-3 text-slate-600 hover:text-marine">
-                    INSCRIPTION
+                    {t('auth.inscription', 'Inscription')}
                 </Link>
             </div>
 
-            <h1 className="text-2xl font-bold text-marine">Bon retour parmi nous</h1>
+            <h1 className="text-2xl font-bold text-marine">{t('compte.bon_retour', 'Bon retour parmi nous')}</h1>
             <p className="mt-1 text-sm text-slate-600">
-                Veuillez entrer vos identifiants pour accéder à votre tableau de bord.
+                {t('auth.identifiants', 'Veuillez entrer vos identifiants pour accéder à votre tableau de bord.')}
             </p>
 
             {status && (
@@ -41,7 +43,7 @@ export default function Login({ status, canResetPassword }) {
 
             <form onSubmit={submit} className="mt-6">
                 <div>
-                    <InputLabel htmlFor="email" value="E-mail professionnel" />
+                    <InputLabel htmlFor="email" value={t('compte.email', 'E-mail professionnel')} />
                     <TextInput
                         id="email"
                         type="email"
@@ -58,10 +60,10 @@ export default function Login({ status, canResetPassword }) {
 
                 <div className="mt-4">
                     <div className="flex items-center justify-between">
-                        <InputLabel htmlFor="password" value="Mot de passe" />
+                        <InputLabel htmlFor="password" value={t('compte.mot_de_passe', 'Mot de passe')} />
                         {canResetPassword && (
                             <Link href={route('password.request')} className="text-sm text-brand-blue hover:underline">
-                                Oublié ?
+                                {t('compte.oublie', 'Oublié ?')}
                             </Link>
                         )}
                     </div>
@@ -82,17 +84,17 @@ export default function Login({ status, canResetPassword }) {
                         checked={data.remember}
                         onChange={(e) => setData('remember', e.target.checked)}
                     />
-                    <span className="ms-2 text-sm text-slate-600">Se souvenir de moi</span>
+                    <span className="ms-2 text-sm text-slate-600">{t('compte.se_souvenir', 'Se souvenir de moi')}</span>
                 </label>
 
                 <PrimaryButton className="mt-6 w-full" disabled={processing}>
-                    Se connecter
+                    {t('nav.connexion', 'Se connecter')}
                 </PrimaryButton>
             </form>
 
             <div className="mt-8 flex justify-between text-xs text-slate-600">
                 <span>© 2024 NBLogiTrack Belgium</span>
-                <span>Aide · Confidentialité</span>
+                <span>{t('auth.aide', 'Aide · Confidentialité')}</span>
             </div>
         </GuestLayout>
     );
