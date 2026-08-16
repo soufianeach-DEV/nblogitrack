@@ -175,6 +175,32 @@ class PlanningController extends Controller
             return back()->withErrors(['driver_id' => 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.']);
         }
 
+        $jour = $transportOrder->pickup_date->toDateString();
+
+        $conflitChauffeur = TransportOrder::where('driver_id', $driver->id)
+            ->where('status', 'IN_PROGRESS')
+            ->whereDate('pickup_date', $jour)
+            ->where('vehicle_registration', '!=', $vehicle->registration)
+            ->exists();
+
+        if ($conflitChauffeur) {
+            return back()->withErrors([
+                'driver_id' => 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.',
+            ]);
+        }
+
+        $conflitCamion = TransportOrder::where('vehicle_registration', $vehicle->registration)
+            ->where('status', 'IN_PROGRESS')
+            ->whereDate('pickup_date', $jour)
+            ->where('driver_id', '!=', $driver->id)
+            ->exists();
+
+        if ($conflitCamion) {
+            return back()->withErrors([
+                'vehicle_registration' => 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.',
+            ]);
+        }
+
         // Le temps de conduite se refuse comme le reste : c'est un plafond
         // legal, pas un conseil. Le calcul porte sur les missions connues,
         // sans carte tachygraphe, et le refus le dit.
