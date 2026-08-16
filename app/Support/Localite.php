@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\DB;
+
 class Localite
 {
     /**
@@ -46,6 +48,26 @@ class Localite
     public static function locale(string $ville): string
     {
         return self::EQUIVALENTS[mb_strtolower(trim($ville))] ?? trim($ville);
+    }
+
+    /**
+     * Les coordonnees d'une localite, moyennees sur ses codes postaux.
+     *
+     * Six cent dix mille codes sont importes localement : la recherche ne
+     * sort pas de l'application et ne depend d'aucun service exterieur.
+     *
+     * Le point rendu est le centre approximatif de la localite, pas une
+     * adresse. C'est suffisant pour tarifer, puisque le prix depend de la
+     * distance entre deux villes et non du numero dans la rue.
+     */
+    public static function coordonnees(string $ville, string $pays): ?object
+    {
+        return DB::table('postal_codes')
+            ->selectRaw('MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
+            ->where('country_code', strtoupper(trim($pays)))
+            ->where('city', 'ilike', self::locale($ville))
+            ->groupBy('city')
+            ->first();
     }
 
     /**

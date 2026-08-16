@@ -128,16 +128,13 @@ class TarifController extends Controller
     }
 
     /**
-     * La localite dans la table des codes postaux, moyenne de ses coordonnees.
-     * Six cent dix mille codes importes localement : aucun appel exterieur.
+     * La localite dans la table des codes postaux.
+     *
+     * Le calcul vit dans Localite : le formulaire de commande en a besoin
+     * du meme, et deux copies finiraient par diverger.
      */
     private function localiser(string $ville, string $pays): ?object
     {
-        return DB::table('postal_codes')
-            ->selectRaw('MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
-            ->where('country_code', $pays)
-            ->where('city', 'ilike', Localite::locale($ville))
-            ->groupBy('city')
-            ->first();
+        return Localite::coordonnees($ville, $pays);
     }
 }

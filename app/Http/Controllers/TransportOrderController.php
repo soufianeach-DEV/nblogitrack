@@ -7,7 +7,9 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Support\Adresse;
 use App\Support\JoursFeries;
+use App\Support\Localite;
 use App\Support\Tarificateur;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -82,6 +84,52 @@ class TransportOrderController extends Controller
         ]);
     }
 
+    /**
+     * Relocalise les deux adresses au serveur et verifie que le
+     * navigateur n'a pas raconte autre chose.
+     *
+     * L'enlevement part de Belgique, la livraison du pays choisi dans le
+     * formulaire — celui-la meme qui determine la grille tarifaire, si
+     * bien qu'on ne peut pas annoncer la France et se faire tarifer la
+     * Belgique.
+     *
+     * L'ecart tolere est large a dessein : le point rendu est le centre
+     * d'une localite, pas une adresse, et une commune etendue place
+     * facilement son centre a quelques kilometres d'une rue. Au-dela, ce
+     * n'est plus une imprecision, c'est une autre ville.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{pickup: object, delivery: object}|string
+     */
+    private function verifierLesPoints(array $data): array|string
+    {
+        $ecartMax = 30;
+
+        $points = [
+            'pickup' => [Localite::coordonnees(Adresse::localite($data['pickup_address']), 'BE'), 'd\'enlèvement'],
+            'delivery' => [Localite::coordonnees(Adresse::localite($data['delivery_address']), $data['delivery_country']), 'de livraison'],
+        ];
+
+        foreach ($points as $cle => [$point, $quoi]) {
+            if ($point === null) {
+                return 'L\'adresse '.$quoi.' ne correspond à aucune localité connue. Choisissez-la dans la liste de suggestions.';
+            }
+
+            $ecart = Tarificateur::distanceVol(
+                (float) $point->lat,
+                (float) $point->lng,
+                (float) $data[$cle.'_lat'],
+                (float) $data[$cle.'_lng'],
+            );
+
+            if ($ecart > $ecartMax) {
+                return 'L\'adresse '.$quoi.' ne correspond pas au point transmis. Resélectionnez-la dans la liste de suggestions.';
+            }
+        }
+
+        return ['pickup' => $points['pickup'][0], 'delivery' => $points['delivery'][0]];
+    }
+
     public function create(): Response
     {
         return Inertia::render('TransportOrders/Create', [
@@ -154,7 +202,27 @@ class TransportOrderController extends Controller
             }
         }
 
-        $distanceKm = Tarificateur::distanceRoutiere($data['pickup_lat'], $data['pickup_lng'], $data['delivery_lat'], $data['delivery_lng']);
+        // Le prix ne se calcule pas sur des coordonnees venues du
+        // navigateur. Elles sont pratiques pour poser un point sur une
+        // carte, mais quiconque sait ouvrir les outils de developpement
+        // peut les remplacer : un Bruxelles-Marseille se paierait alors
+        // au tarif d'une course intra-urbaine.
+        //
+        // Les deux localites sont donc relocalisees ici, dans la table
+        // des codes postaux, et c'est cette distance-la qui tarife. Le
+        // simulateur public procede ainsi depuis le debut.
+        $reference = $this->verifierLesPoints($data);
+
+        if (is_string($reference)) {
+            return back()->withErrors(['delivery_address' => $reference])->withInput();
+        }
+
+        $distanceKm = Tarificateur::distanceRoutiere(
+            $reference['pickup']->lat,
+            $reference['pickup']->lng,
+            $reference['delivery']->lat,
+            $reference['delivery']->lng,
+        );
         $hazardous = $request->boolean('is_hazardous');
 
         $order = TransportOrder::create([

@@ -62,10 +62,24 @@ class Tarificateur
             // Service indisponible : on bascule sur l'approximation.
         }
 
+        return self::distanceVol($lat1, $lng1, $lat2, $lng2) * 1.3;
+    }
+
+    /**
+     * La distance a vol d'oiseau, en kilometres.
+     *
+     * Elle sert de repli quand le service d'itineraire ne repond pas,
+     * mais aussi a mesurer un ecart : verifier qu'un point transmis par
+     * un navigateur tombe bien sur la localite annoncee n'a pas besoin
+     * d'un itineraire routier, et n'a surtout pas a payer un appel
+     * reseau pour cela.
+     */
+    public static function distanceVol(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
         $dLat = deg2rad($lat2 - $lat1);
         $dLng = deg2rad($lng2 - $lng1);
         $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
 
-        return 6371 * 2 * asin(sqrt($a)) * 1.3;
+        return 6371 * 2 * asin(sqrt($a));
     }
 }
