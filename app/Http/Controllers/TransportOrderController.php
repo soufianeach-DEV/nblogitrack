@@ -234,7 +234,7 @@ class TransportOrderController extends Controller
         );
         $hazardous = $request->boolean('is_hazardous');
 
-        $order = TransportOrder::create([
+        $order = TransportOrder::deposer([
             'client_id' => $request->user()->id,
             'pickup_address' => $data['pickup_address'],
             'delivery_address' => $data['delivery_address'],
@@ -256,7 +256,6 @@ class TransportOrderController extends Controller
             'distance_km' => (int) round($distanceKm),
             'estimated_cost' => Tarificateur::cout($grid, $distanceKm, (float) $data['weight'], $data['delivery_country'], $hazardous),
             'tracking_code' => TransportOrder::prochainCode(),
-            'tracking_number' => TransportOrder::prochainNumero(),
         ]);
 
         ActivityLog::record(

@@ -86,7 +86,7 @@ class ExpeditionController extends Controller
             'instructions' => 'nullable|string|max:500',
         ]);
 
-        $expedition = TransportOrder::create([
+        $expedition = TransportOrder::deposer([
             'client_id' => $cle->client_id,
             'created_date' => now()->toDateString(),
             'pickup_address' => $donnees['enlevement'],
@@ -100,7 +100,6 @@ class ExpeditionController extends Controller
             'special_instructions' => $donnees['instructions'] ?? null,
             'status' => 'PENDING',
             'priority' => 'NORMAL',
-            'tracking_number' => TransportOrder::prochainNumero(),
         ]);
 
         // Un ordre depose par une machine se trace comme un ordre depose
