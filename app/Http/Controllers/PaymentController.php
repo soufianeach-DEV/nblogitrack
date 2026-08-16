@@ -114,6 +114,23 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Sans effet.']);
         }
 
+        // La signature prouve que Stripe parle, elle ne dit pas ce qu'il
+        // annonce. Trois choses restent a verifier avant de solder une
+        // creance sur cette seule foi.
+        if ($ecart = $this->discordance($evenement, $session, $invoice)) {
+            // On repond 200 : une erreur ferait recommencer Stripe
+            // indefiniment alors que le probleme ne vient pas de lui. Mais
+            // la facture n'est pas soldee, et l'ecart se voit au journal.
+            ActivityLog::record(
+                'invoice.payment_rejected',
+                'Notification de paiement refusée pour '.$invoice->reference.' : '.$ecart,
+                $invoice,
+                ['session_stripe' => $session->id, 'motif' => $ecart],
+            );
+
+            return response()->json(['message' => 'Notification incohérente, sans effet.']);
+        }
+
         // Stripe peut renvoyer la meme notification plusieurs fois : une
         // facture deja payee ne se repaie pas.
         if ($invoice->status === 'PAID') {
@@ -133,6 +150,44 @@ class PaymentController extends Controller
         );
 
         return response()->json(['message' => 'Enregistré.']);
+    }
+
+    /**
+     * Ce qui, dans la notification, ne correspond pas a la facture.
+     *
+     * Rend le motif du refus, ou null si tout concorde.
+     *
+     * Le mode d'abord. Si l'application tourne avec des cles de test et
+     * qu'une notification arrive en mode reel — ou l'inverse — c'est
+     * qu'un environnement se trompe de destinataire. Un paiement de
+     * cinquante centimes en test solderait alors une facture reelle.
+     *
+     * Le montant ensuite, au centime. Stripe compte en centimes, comme a
+     * la creation de la session ; les deux nombres doivent se retrouver.
+     *
+     * La devise enfin : trois mille euros et trois mille couronnes ne
+     * sont pas le meme paiement.
+     */
+    private function discordance(object $evenement, object $session, Invoice $invoice): ?string
+    {
+        $reel = str_starts_with((string) config('services.stripe.secret'), 'sk_live_');
+
+        if ((bool) $evenement->livemode !== $reel) {
+            return 'mode '.($evenement->livemode ? 'réel' : 'test')
+                .' alors que l\'application est en '.($reel ? 'réel' : 'test');
+        }
+
+        $attendu = (int) round((float) $invoice->amount_incl_tax * 100);
+
+        if ((int) $session->amount_total !== $attendu) {
+            return 'montant reçu '.$session->amount_total.' contre '.$attendu.' attendu';
+        }
+
+        if (strtolower((string) $session->currency) !== 'eur') {
+            return 'devise '.$session->currency.' au lieu de eur';
+        }
+
+        return null;
     }
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void
