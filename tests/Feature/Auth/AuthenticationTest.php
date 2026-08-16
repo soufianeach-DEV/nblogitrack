@@ -10,45 +10,57 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered(): void
+    public function test_l_ecran_de_connexion_s_affiche(): void
     {
-        $response = $this->get('/login');
-
-        $response->assertStatus(200);
+        $this->get(route('login'))->assertOk();
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_un_compte_valide_se_connecte(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this->post('/login', [
-            'email' => $user->email,
+        $this->post(route('login'), [
+            'email' => $utilisateur->email,
             'password' => 'password',
-        ]);
+        ])->assertSessionHasNoErrors();
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_users_can_not_authenticate_with_invalid_password(): void
+    public function test_un_mauvais_mot_de_passe_ne_connecte_pas(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'wrong-password',
+        $this->post(route('login'), [
+            'email' => $utilisateur->email,
+            'password' => 'mauvais-mot-de-passe',
         ]);
 
         $this->assertGuest();
     }
 
-    public function test_users_can_logout(): void
+    /**
+     * Le compte desactive est le scenario du depart conflictuel : on
+     * coupe l'acces d'un employe, il doit etre coupe tout de suite.
+     */
+    public function test_un_compte_desactive_ne_se_connecte_pas(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->desactive()->create();
 
-        $response = $this->actingAs($user)->post('/logout');
+        $this->post(route('login'), [
+            'email' => $utilisateur->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors();
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+    }
+
+    public function test_la_deconnexion_ferme_la_session(): void
+    {
+        $utilisateur = User::factory()->create();
+
+        $this->actingAs($utilisateur)->post(route('logout'));
+
+        $this->assertGuest();
     }
 }

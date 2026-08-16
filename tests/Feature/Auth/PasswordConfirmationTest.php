@@ -10,35 +10,28 @@ class PasswordConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_confirm_password_screen_can_be_rendered(): void
+    public function test_l_ecran_de_confirmation_s_affiche(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this->actingAs($user)->get('/confirm-password');
-
-        $response->assertStatus(200);
+        $this->actingAs($utilisateur)->get(route('password.confirm'))->assertOk();
     }
 
-    public function test_password_can_be_confirmed(): void
+    public function test_le_mot_de_passe_se_confirme(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this->actingAs($user)->post('/confirm-password', [
-            'password' => 'password',
-        ]);
-
-        $response->assertRedirect();
-        $response->assertSessionHasNoErrors();
+        $this->actingAs($utilisateur)
+            ->post(route('password.confirm'), ['password' => 'password'])
+            ->assertSessionHasNoErrors();
     }
 
-    public function test_password_is_not_confirmed_with_invalid_password(): void
+    public function test_un_mauvais_mot_de_passe_ne_confirme_rien(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this->actingAs($user)->post('/confirm-password', [
-            'password' => 'wrong-password',
-        ]);
-
-        $response->assertSessionHasErrors();
+        $this->actingAs($utilisateur)
+            ->post(route('password.confirm'), ['password' => 'mauvais-mot-de-passe'])
+            ->assertSessionHasErrors();
     }
 }

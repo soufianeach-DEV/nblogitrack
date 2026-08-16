@@ -11,41 +11,37 @@ class PasswordUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_password_can_be_updated(): void
+    public function test_le_mot_de_passe_se_change(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->put('/password', [
+        $this->actingAs($utilisateur)
+            ->from(route('profile.edit'))
+            ->put(route('password.update'), [
                 'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
-            ]);
-
-        $response
+                'password' => 'nouveau-mot-de-passe',
+                'password_confirmation' => 'nouveau-mot-de-passe',
+            ])
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $this->assertTrue(Hash::check('nouveau-mot-de-passe', $utilisateur->refresh()->password));
     }
 
-    public function test_correct_password_must_be_provided_to_update_password(): void
+    public function test_l_ancien_mot_de_passe_doit_etre_juste(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->put('/password', [
-                'current_password' => 'wrong-password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
-            ]);
-
-        $response
+        $this->actingAs($utilisateur)
+            ->from(route('profile.edit'))
+            ->put(route('password.update'), [
+                'current_password' => 'mauvais-mot-de-passe',
+                'password' => 'nouveau-mot-de-passe',
+                'password_confirmation' => 'nouveau-mot-de-passe',
+            ])
             ->assertSessionHasErrors('current_password')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertTrue(Hash::check('password', $utilisateur->refresh()->password));
     }
 }
