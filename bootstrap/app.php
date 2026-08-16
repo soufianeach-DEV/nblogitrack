@@ -48,6 +48,35 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'cle.api' => AuthentifierCleApi::class,
         ]);
+
+        /*
+         * Derriere un proxy, l'adresse vue par l'application est celle du
+         * proxy et non celle du visiteur. Six choses en dependent : la
+         * liste blanche d'adresses des cles d'API, le journal d'acces a
+         * l'API, le journal d'activite, l'accuse de prise de connaissance
+         * du conducteur, la limite du suivi anonyme et celle des essais de
+         * connexion. Toutes deviendraient fausses, et la liste blanche
+         * carrement inoperante.
+         *
+         * L'hebergeur n'est pas choisi : la liste se declare a la mise en
+         * production plutot que d'etre devinee ici. Tant qu'elle est vide,
+         * on ne fait confiance a personne, ce qui est le bon defaut quand
+         * l'application repond directement.
+         *
+         * Faire confiance a X-Forwarded-Proto retablit aussi
+         * $request->secure(), dont depend l'en-tete HSTS.
+         */
+        $proxies = trim((string) env('TRUSTED_PROXIES', ''));
+
+        if ($proxies !== '') {
+            $middleware->trustProxies(
+                at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))),
+                headers: Request::HEADER_X_FORWARDED_FOR
+                    | Request::HEADER_X_FORWARDED_HOST
+                    | Request::HEADER_X_FORWARDED_PORT
+                    | Request::HEADER_X_FORWARDED_PROTO,
+            );
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Une session dure deux heures. Passe ce delai, le jeton du
