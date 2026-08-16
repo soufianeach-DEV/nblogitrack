@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
+use App\Support\Adresse;
 use App\Support\TempsDeConduite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,17 @@ class PlanningController extends Controller
 
         $colonneContrainte = ['adr' => 'is_hazardous', 'hayon' => 'needs_tail_lift'];
 
+        // Les facettes reduisent par categorie, elles ne retrouvent pas une
+        // mission precise. Trente-cinq cartes en attente se parcourent a
+        // l'oeil ; cent quarante-six livrees, non.
+        $q = trim((string) $request->query('q', ''));
+
+        $recherche = fn ($requete) => $requete->where(fn ($w) => $w
+            ->where('tracking_number', 'ilike', '%'.$q.'%')
+            ->orWhere('pickup_address', 'ilike', '%'.$q.'%')
+            ->orWhere('delivery_address', 'ilike', '%'.$q.'%')
+            ->orWhereHas('client', fn ($c) => $c->where('company_name', 'ilike', '%'.$q.'%')));
+
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle:registration,brand,model,capacity_tonnes',
@@ -51,6 +63,7 @@ class PlanningController extends Controller
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
             ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($q !== '', $recherche)
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
             ->paginate(15)
@@ -69,12 +82,14 @@ class PlanningController extends Controller
         // bouton qui ne ramene rien.
         $parPriorite = TransportOrder::where('status', $statut)
             ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($q !== '', $recherche)
             ->selectRaw('priority, count(*) AS total')
             ->groupBy('priority')
             ->pluck('total', 'priority');
 
         $parContrainte = TransportOrder::where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->when($q !== '', $recherche)
             ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
             ->first();
 
@@ -123,10 +138,77 @@ class PlanningController extends Controller
                 ['valeur' => 'adr', 'nombre' => (int) $parContrainte->adr],
                 ['valeur' => 'hayon', 'nombre' => (int) $parContrainte->hayon],
             ],
-            'compteurs' => TransportOrder::selectRaw('status, count(*) as total')
+            // Les onglets comptent sous la recherche : chercher « Anvers »
+            // doit dire combien d'Anvers attendent et combien roulent, sinon
+            // le planificateur cherche dans le mauvais onglet sans le savoir.
+            'compteurs' => TransportOrder::when($q !== '', $recherche)
+                ->selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
+            'q' => $q,
+            'suggestions' => $this->suggestions($q, $statut),
         ]);
+    }
+
+    /**
+     * Ce que le champ propose pendant la frappe.
+     *
+     * Numeros de suivi et raisons sociales, pris dans le statut affiche :
+     * proposer une expedition livree alors qu'on travaille sur les
+     * missions en attente ferait cliquer dans le vide.
+     *
+     * La liste ne sort qu'a partir de deux caracteres, et s'arrete a
+     * douze entrees : au-dela ce n'est plus une aide, c'est une seconde
+     * liste a lire.
+     *
+     * @return array<int, string>
+     */
+    private function suggestions(string $q, string $statut): array
+    {
+        if (mb_strlen($q) < 2) {
+            return [];
+        }
+
+        $filtre = '%'.$q.'%';
+
+        $numeros = TransportOrder::where('status', $statut)
+            ->where('tracking_number', 'ilike', $filtre)
+            ->orderBy('tracking_number')
+            ->limit(8)
+            ->pluck('tracking_number');
+
+        // On part des expeditions et non des entreprises : seules celles
+        // qui ont une mission dans ce statut ont un sens ici.
+        $entreprises = TransportOrder::where('status', $statut)
+            ->whereHas('client', fn ($c) => $c->where('company_name', 'ilike', $filtre))
+            ->with('client:id,company_name')
+            ->limit(40)
+            ->get()
+            ->pluck('client.company_name')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->take(6);
+
+        // Le champ annonce « ville de depart ou d'arrivee » : il doit donc
+        // aussi les proposer. La localite s'extrait de l'adresse plutot que
+        // de proposer une rue entiere, qu'on ne retape jamais.
+        $villes = TransportOrder::where('status', $statut)
+            ->where(fn ($w) => $w
+                ->where('pickup_address', 'ilike', $filtre)
+                ->orWhere('delivery_address', 'ilike', $filtre))
+            ->limit(60)
+            ->get(['pickup_address', 'delivery_address'])
+            ->flatMap(fn (TransportOrder $o) => [
+                Adresse::localite($o->pickup_address),
+                Adresse::localite($o->delivery_address),
+            ])
+            ->filter(fn (string $ville) => mb_stripos($ville, $q) !== false)
+            ->unique()
+            ->sort()
+            ->take(6);
+
+        return $numeros->merge($entreprises)->merge($villes)->unique()->take(12)->values()->all();
     }
 
     public function assign(Request $request, TransportOrder $transportOrder): RedirectResponse

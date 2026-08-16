@@ -591,6 +591,12 @@ class TranslationSeeder extends Seeder
         'planif' => [
             'besoins' => ['Besoins', 'Vereisten', 'Requirements'],
 
+            'chercher' => [
+                'Numéro, entreprise, ville de départ ou d\'arrivée…',
+                'Nummer, onderneming, vertrek- of aankomststad…',
+                'Number, company, departure or arrival city…',
+            ],
+
             // L'ouverture du suivi de position, mission par mission.
             'suivi_actif' => ['Suivi de position activé', 'Positieopvolging actief', 'Position tracking on'],
             'suivi_inactif' => ['Activer le suivi de position', 'Positieopvolging activeren', 'Turn on position tracking'],
