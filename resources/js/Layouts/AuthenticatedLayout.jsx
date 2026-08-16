@@ -53,6 +53,9 @@ export default function AuthenticatedLayout({ header, children }) {
     const [menuOuvert, setMenuOuvert] = useState(false);
 
     const estAdmin = canValidateClients;
+    // Seul un compte client peut deposer une commande en son nom : inutile
+    // de proposer le bouton au personnel, il tomberait sur un refus.
+    const estClient = user.role === 'CLIENT';
 
     useEffect(() => {
         const echap = (e) => e.key === 'Escape' && setMenuOuvert(false);
@@ -202,7 +205,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const panneau = (
         <>
             {marque}
-            {nouvelleExpedition}
+            {estClient && nouvelleExpedition}
             <nav className="mt-1 flex-1">{navigation}</nav>
             {pied}
         </>

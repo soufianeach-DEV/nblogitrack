@@ -235,11 +235,22 @@ Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
         ->name('tracking.peages');
 });
 
+// Ces deux-la ne consultent que la table des codes postaux, en local :
+// une centaine d'appels par minute ne coute rien.
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
-    Route::get('/geo/numeros', [GeoController::class, 'numeros'])->name('geo.numeros');
 });
+
+// Les numeros de rue sortent chez Overpass. Mesure faite depuis cette
+// machine : entre six et vingt-trois secondes selon l'hote qui repond,
+// et le processus PHP reste occupe pendant tout ce temps. Au rythme
+// precedent, une seule adresse pouvait retenir deux mille secondes de
+// serveur par minute. Un formulaire d'adresse rempli a la main n'a
+// jamais besoin de plus de quinze recherches dans la meme minute.
+Route::get('/geo/numeros', [GeoController::class, 'numeros'])
+    ->middleware('throttle:15,1')
+    ->name('geo.numeros');
 
 // Stripe appelle cette adresse depuis ses serveurs : pas de session, donc
 // pas de jeton CSRF. L'exception est declaree dans bootstrap/app.php et

@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Stripe\Exception\ExceptionInterface as ErreurStripe;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -64,9 +65,7 @@ class PaymentController extends Controller
         $regle = $invoice->status === 'PAID';
 
         if (! $regle && $request->filled('session_id')) {
-            $stripe = new StripeClient(config('services.stripe.secret'));
-            $session = $stripe->checkout->sessions->retrieve($request->query('session_id'));
-            $regle = $session->payment_status === 'paid';
+            $regle = $this->sessionAcquittee((string) $request->query('session_id'), $invoice);
         }
 
         return Inertia::render('Factures/Paiement', [
@@ -76,6 +75,35 @@ class PaymentController extends Controller
             'regle' => $regle,
             'enregistre' => $invoice->status === 'PAID',
         ]);
+    }
+
+    /**
+     * Cette session de paiement acquitte-t-elle bien CETTE facture ?
+     *
+     * L'identifiant arrive par l'adresse, donc de l'exterieur. Rien
+     * n'empeche de recopier celui d'une facture deja reglee sur le
+     * retour d'une autre, encore impayee : l'ecran annoncerait alors un
+     * paiement qui n'a jamais eu lieu.
+     *
+     * Stripe porte le numero de la facture dans « client_reference_id »
+     * depuis la creation de la session. C'est lui qui tranche.
+     *
+     * Un identifiant inconnu, mal forme, ou Stripe injoignable : les trois
+     * levent une exception. Aucune n'a a remonter en 500 sur un ecran qui
+     * ne fait qu'informer, et le doute vaut « pas encore regle ». D'ou
+     * l'interface commune plutot qu'une classe : elle les couvre toutes.
+     */
+    private function sessionAcquittee(string $identifiant, Invoice $invoice): bool
+    {
+        try {
+            $session = (new StripeClient(config('services.stripe.secret')))
+                ->checkout->sessions->retrieve($identifiant);
+        } catch (ErreurStripe) {
+            return false;
+        }
+
+        return $session->payment_status === 'paid'
+            && (string) $session->client_reference_id === (string) $invoice->id;
     }
 
     /**

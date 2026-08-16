@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTraduction, useVocabulaire } from '@/traduire';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
 const STATUS = {
@@ -24,6 +24,7 @@ function StatusBadge({ status }) {
 export default function Index({ orders, filters }) {
     const t = useTraduction();
     const v = useVocabulaire();
+    const estClient = usePage().props.auth.user.role === 'CLIENT';
     const [search, setSearch] = useState({
         tracking: filters.tracking ?? '',
         client: filters.client ?? '',
@@ -58,9 +59,11 @@ export default function Index({ orders, filters }) {
                             {orders.total} {orders.total > 1 ? t('ordres.resultats', 'résultats') : t('ordres.resultat', 'résultat')}
                         </p>
                     </div>
-                    <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
-                        + {t('commande.titre', 'Nouvelle expédition')}
-                    </Link>
+                    {estClient && (
+                        <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
+                            + {t('commande.titre', 'Nouvelle expédition')}
+                        </Link>
+                    )}
                 </div>
             }
         >

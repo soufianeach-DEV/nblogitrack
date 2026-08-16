@@ -21,22 +21,23 @@ class InvoiceController extends Controller
 
         abort_if($utilisateur->isDriver(), 403);
 
-        $requete = Invoice::with('client:id,company_name');
-
         // Le client regle ses propres factures ; le personnel n'a pas a payer
         // a sa place.
         $estClient = $utilisateur->cannot('view-all-orders');
 
-        if ($estClient) {
-            $requete->where('client_id', $utilisateur->id);
-        }
+        // Le perimetre se redemande a chaque usage : un constructeur Eloquent
+        // garde ses conditions, le reutiliser cumulerait les filtres.
+        $perimetre = fn () => Invoice::query()
+            ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->id));
 
         return Inertia::render('Factures/Index', [
-            'factures' => $requete
+            'factures' => $perimetre()
+                ->with('client:id,company_name')
                 ->orderByDesc('issued_on')
                 ->orderByDesc('id')
-                ->get()
-                ->map(fn (Invoice $facture) => [
+                ->paginate(20)
+                ->withQueryString()
+                ->through(fn (Invoice $facture) => [
                     'id' => $facture->id,
                     'reference' => $facture->reference,
                     'client' => $facture->client?->company_name,
@@ -48,8 +49,19 @@ class InvoiceController extends Controller
                     'etat' => $facture->estEnRetard() ? 'OVERDUE' : $facture->status,
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
                     'peut_payer' => $estClient && $facture->status === 'SENT',
-                ])
-                ->all(),
+                ]),
+            // Les trois cartes resument toutes les factures, pas la page
+            // affichee : elles se calculent en base. La regle du retard est
+            // celle de Invoice::estEnRetard(), sinon le total contredirait
+            // les etiquettes des lignes.
+            'cartes' => [
+                'du' => (float) $perimetre()->where('status', '!=', 'PAID')->sum('amount_incl_tax'),
+                'paye' => (float) $perimetre()->where('status', 'PAID')->sum('amount_incl_tax'),
+                'en_retard' => $perimetre()->where('status', '!=', 'PAID')->where('due_on', '<', now())->count(),
+            ],
+            // Le personnel ne paie jamais : la colonne se decide sur
+            // l'ensemble, pour qu'elle ne clignote pas d'une page a l'autre.
+            'colonnePaiement' => $estClient && $perimetre()->where('status', 'SENT')->exists(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
         ]);
     }

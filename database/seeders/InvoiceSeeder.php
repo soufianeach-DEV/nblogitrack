@@ -72,7 +72,7 @@ class InvoiceSeeder extends Seeder
                 'amount_incl_tax' => round($horsTva + $tva, 2),
                 'reverse_charge' => $autoliquidation,
                 'status' => $payee ? 'PAID' : 'SENT',
-                'paid_on' => $payee ? $echeance->copy()->subDays(3) : null,
+                'paid_on' => $payee ? $this->reglement($emission, $echeance) : null,
                 'payment_reference' => $this->communicationStructuree((int) $annee, $serie[$annee], $client->id),
             ]);
 
@@ -90,11 +90,15 @@ class InvoiceSeeder extends Seeder
 
     /**
      * L'echeance decoule du delai convenu avec le client.
+     *
+     * Il n'y a plus de condition « Comptant ». Payer sans delai n'est pas
+     * une echeance imposee mais un choix du client, recompense par un
+     * escompte de 2 % s'il regle sous huit jours ; la facture reste due
+     * a trente jours dans tous les cas.
      */
     private function echeance(Carbon $emission, ?string $delai): Carbon
     {
         return match (trim((string) $delai)) {
-            'Comptant' => $emission->copy(),
             '30 jours' => $emission->copy()->addDays(30),
             '45 jours' => $emission->copy()->addDays(45),
             '60 jours' => $emission->copy()->addDays(60),
@@ -102,6 +106,20 @@ class InvoiceSeeder extends Seeder
 
             default => $emission->copy()->addDays(30),
         };
+    }
+
+    /**
+     * Le jour du reglement : trois jours avant l'echeance, jamais avant
+     * que la facture existe.
+     *
+     * Sans ce plancher, un delai nul produisait des factures reglees
+     * trois jours avant leur propre emission. Personne ne paie ce qui
+     * n'a pas encore ete envoye, et un jeu de donnees qui l'affiche
+     * decredibilise tout ce qu'il montre par ailleurs.
+     */
+    private function reglement(Carbon $emission, Carbon $echeance): Carbon
+    {
+        return $echeance->copy()->subDays(3)->max($emission);
     }
 
     private function communicationStructuree(int $annee, int $numero, int $clientId): string

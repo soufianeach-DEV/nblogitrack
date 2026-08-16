@@ -5,8 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\ApiKey;
+use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\Localite;
+use App\Support\Pays;
+use App\Support\Tarificateur;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -84,23 +89,58 @@ class ExpeditionController extends Controller
             'matieres_dangereuses' => 'boolean',
             'hayon' => 'boolean',
             'instructions' => 'nullable|string|max:500',
+            // Deux ajouts retrocompatibles : un appelant qui les ignore
+            // garde exactement le comportement precedent, en mieux.
+            'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
+            'formule' => ['nullable', Rule::in(['ECO', 'STANDARD', 'EXPRESS'])],
         ]);
 
-        $expedition = TransportOrder::create([
+        $pays = strtoupper($donnees['pays_livraison'] ?? '')
+            ?: (Pays::depuisNom(Adresse::pays($donnees['livraison'])) ?? 'BE');
+
+        $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+
+        if (is_string($points)) {
+            return response()->json(['message' => $points], 422);
+        }
+
+        $grille = $this->grille($pays, $donnees['formule'] ?? null,
+            $donnees['date_enlevement'], $donnees['date_livraison']);
+
+        if ($grille === null) {
+            return response()->json([
+                'message' => 'Aucune formule ne permet de livrer en '.$pays.' à la date demandée.',
+            ], 422);
+        }
+
+        $km = Tarificateur::distanceRoutiere(
+            (float) $points['enlevement']->lat, (float) $points['enlevement']->lng,
+            (float) $points['livraison']->lat, (float) $points['livraison']->lng,
+        );
+        $adr = $request->boolean('matieres_dangereuses');
+
+        $expedition = TransportOrder::deposer([
             'client_id' => $cle->client_id,
             'created_date' => now()->toDateString(),
             'pickup_address' => $donnees['enlevement'],
             'delivery_address' => $donnees['livraison'],
+            'pickup_lat' => $points['enlevement']->lat,
+            'pickup_lng' => $points['enlevement']->lng,
+            'delivery_lat' => $points['livraison']->lat,
+            'delivery_lng' => $points['livraison']->lng,
             'weight' => $donnees['poids'],
             'goods_type' => $donnees['marchandise'],
-            'is_hazardous' => $request->boolean('matieres_dangereuses'),
+            'is_hazardous' => $adr,
             'needs_tail_lift' => $request->boolean('hayon'),
             'pickup_date' => $donnees['date_enlevement'],
             'requested_delivery_date' => $donnees['date_livraison'],
             'special_instructions' => $donnees['instructions'] ?? null,
             'status' => 'PENDING',
             'priority' => 'NORMAL',
-            'tracking_number' => TransportOrder::prochainNumero(),
+            'tariff_grid_id' => $grille->id,
+            'distance_km' => (int) round($km),
+            'estimated_cost' => Tarificateur::cout($grille, $km, (float) $donnees['poids'], $pays, $adr),
+            'tracking_code' => TransportOrder::prochainCode(),
         ]);
 
         // Un ordre depose par une machine se trace comme un ordre depose
@@ -115,6 +155,60 @@ class ExpeditionController extends Controller
         );
 
         return response()->json(['data' => $this->format($expedition, true)], 201);
+    }
+
+    /**
+     * Place les deux adresses sur la carte, au serveur.
+     *
+     * Un ordre depose par une machine arrivait sans coordonnees, sans
+     * distance, sans prix et sans code de suivi : il echappait donc a la
+     * carte, au suivi public et a la facturation, qui somme les prix
+     * estimes. Une expedition a moitie nee dans la base est pire qu'une
+     * expedition refusee, parce que personne ne s'en apercoit.
+     *
+     * L'enlevement part de Belgique, comme dans le formulaire web.
+     *
+     * @return array{enlevement: object, livraison: object}|string
+     */
+    private function situer(string $enlevement, string $livraison, string $pays): array|string
+    {
+        $depart = Localite::coordonnees(Adresse::localite($enlevement), 'BE');
+
+        if ($depart === null) {
+            return 'L\'adresse d\'enlèvement ne correspond à aucune localité belge connue.';
+        }
+
+        $arrivee = Localite::coordonnees(Adresse::localite($livraison), $pays);
+
+        if ($arrivee === null) {
+            return 'L\'adresse de livraison ne correspond à aucune localité connue en '.$pays.'.';
+        }
+
+        return ['enlevement' => $depart, 'livraison' => $arrivee];
+    }
+
+    /**
+     * La grille qui tarifera l'expedition.
+     *
+     * L'appelant peut nommer sa formule. S'il se tait, on prend la moins
+     * chere qui tienne le delai qu'il demande lui-meme : entre son
+     * enlevement et sa livraison souhaitee. Choisir l'express par defaut
+     * ferait payer un client presse a un client qui ne l'est pas.
+     */
+    private function grille(string $pays, ?string $formule, string $enlevement, string $livraison): ?TariffGrid
+    {
+        $requete = TariffGrid::where('zone', $pays)->where('is_active', true);
+
+        if ($formule !== null) {
+            return $requete->where('service_level', $formule)->first();
+        }
+
+        $jours = Carbon::parse($enlevement)->startOfDay()
+            ->diffInDays(Carbon::parse($livraison)->startOfDay(), false);
+
+        return $requete->where('delivery_days', '<=', $jours)
+            ->orderByDesc('delivery_days')
+            ->first();
     }
 
     /**
