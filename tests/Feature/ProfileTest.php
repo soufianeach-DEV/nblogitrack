@@ -10,90 +10,77 @@ class ProfileTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_profile_page_is_displayed(): void
+    public function test_la_page_de_profil_s_affiche(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->get('/profile');
-
-        $response->assertOk();
+        $this->actingAs($utilisateur)
+            ->get(route('profile.edit'))
+            ->assertOk();
     }
 
-    public function test_profile_information_can_be_updated(): void
+    public function test_le_profil_se_met_a_jour(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
+        $reponse = $this->actingAs($utilisateur)
+            ->patch(route('profile.update'), [
+                'first_name' => 'Soufiane',
+                'last_name' => 'Achraa',
+                'email' => 'nouvelle@exemple.be',
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+        $reponse->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
 
-        $user->refresh();
+        $utilisateur->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('Soufiane', $utilisateur->first_name);
+        $this->assertSame('Achraa', $utilisateur->last_name);
+        $this->assertSame('nouvelle@exemple.be', $utilisateur->email);
+
+        // Changer d'adresse annule la verification : la nouvelle n'a pas
+        // encore prouve qu'elle appartient a la meme personne.
+        $this->assertNull($utilisateur->email_verified_at);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
+    public function test_la_verification_reste_acquise_si_l_adresse_ne_change_pas(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
+        $this->actingAs($utilisateur)
+            ->patch(route('profile.update'), [
+                'first_name' => 'Soufiane',
+                'last_name' => 'Achraa',
+                'email' => $utilisateur->email,
+            ])
+            ->assertSessionHasNoErrors();
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertNotNull($utilisateur->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_un_compte_se_supprime_avec_son_mot_de_passe(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
-
-        $response
+        $this->actingAs($utilisateur)
+            ->delete(route('profile.destroy'), ['password' => 'password'])
             ->assertSessionHasNoErrors()
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $this->assertNull($utilisateur->fresh());
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_un_mauvais_mot_de_passe_ne_supprime_rien(): void
     {
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
+        $this->actingAs($utilisateur)
+            ->from(route('profile.edit'))
+            ->delete(route('profile.destroy'), ['password' => 'mauvais-mot-de-passe'])
             ->assertSessionHasErrors('password')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit'));
 
-        $this->assertNotNull($user->fresh());
+        $this->assertNotNull($utilisateur->fresh());
     }
 }

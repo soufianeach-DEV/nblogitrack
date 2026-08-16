@@ -12,60 +12,52 @@ class PasswordResetTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_reset_password_link_screen_can_be_rendered(): void
+    public function test_l_ecran_de_mot_de_passe_oublie_s_affiche(): void
     {
-        $response = $this->get('/forgot-password');
-
-        $response->assertStatus(200);
+        $this->get(route('password.request'))->assertOk();
     }
 
-    public function test_reset_password_link_can_be_requested(): void
+    public function test_un_lien_de_reinitialisation_part_par_courriel(): void
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        $this->post(route('password.email'), ['email' => $utilisateur->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($utilisateur, ResetPassword::class);
     }
 
-    public function test_reset_password_screen_can_be_rendered(): void
+    public function test_l_ecran_de_reinitialisation_s_affiche_avec_le_jeton(): void
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        $this->post(route('password.email'), ['email' => $utilisateur->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get('/reset-password/'.$notification->token);
-
-            $response->assertStatus(200);
+        Notification::assertSentTo($utilisateur, ResetPassword::class, function (object $notification) {
+            $this->get(route('password.reset', ['token' => $notification->token]))->assertOk();
 
             return true;
         });
     }
 
-    public function test_password_can_be_reset_with_valid_token(): void
+    public function test_le_mot_de_passe_se_reinitialise_avec_le_jeton(): void
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        $utilisateur = User::factory()->create();
 
-        $this->post('/forgot-password', ['email' => $user->email]);
+        $this->post(route('password.email'), ['email' => $utilisateur->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = $this->post('/reset-password', [
+        Notification::assertSentTo($utilisateur, ResetPassword::class, function (object $notification) use ($utilisateur) {
+            $this->post(route('password.store'), [
                 'token' => $notification->token,
-                'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
-            ]);
-
-            $response
-                ->assertSessionHasNoErrors()
-                ->assertRedirect(route('login'));
+                'email' => $utilisateur->email,
+                'password' => 'nouveau-mot-de-passe',
+                'password_confirmation' => 'nouveau-mot-de-passe',
+            ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
 
             return true;
         });

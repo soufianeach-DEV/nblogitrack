@@ -23,9 +23,35 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <!--
+            Les tests tournent sur PostgreSQL, pas sur SQLite.
+
+            Le squelette livre par le cadriciel proposait une base SQLite
+            en memoire, plus rapide a demarrer. Elle ne convient pas ici :
+            le code ecrit du SQL propre a PostgreSQL, « ilike », « filter
+            (where ...) », « to_char » et un verrou consultatif pour la
+            numerotation des expeditions. Une suite qui passerait sur
+            SQLite ne prouverait rien de ce qui tourne en production.
+
+            Le nom se termine par « _test » et le garde-fou de
+            tests/TestCase.php refuse de demarrer autrement : chaque
+            classe de test vide la base, et la base de travail contient
+            trois cents expeditions.
+        -->
+        <!--
+            « force » n'est pas un detail. Sans lui, une variable
+            d'environnement deja posee dans le terminal l'emporte sur ce
+            fichier : quelqu'un qui aurait exporte DB_DATABASE pour une
+            autre raison ferait tourner la suite sur sa base de travail,
+            et la premiere classe de test l'effacerait.
+        -->
+        <env name="DB_CONNECTION" value="pgsql" force="true"/>
+        <env name="DB_DATABASE" value="nblogitrack_test" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1" force="true"/>
+        <env name="DB_PORT" value="5432" force="true"/>
+        <env name="DB_USERNAME" value="postgres" force="true"/>
+        <env name="DB_PASSWORD" value="postgres" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
