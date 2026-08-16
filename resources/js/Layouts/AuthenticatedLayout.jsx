@@ -45,43 +45,6 @@ function Groupe({ titre, children }) {
     );
 }
 
-/**
- * Un groupe qui se replie.
- *
- * Reserve aux ecrans qu'on ouvre quelques fois par mois : journaux,
- * traductions, pages, cles d'API, registre. Les garder deplies en
- * permanence coute cinq entrees a un menu qui en porte quatorze, pour
- * des pages qu'on ne consulte pas dans la journee.
- *
- * Le groupe s'ouvre de lui-meme quand on est deja sur l'un de ses
- * ecrans : un menu qui se referme sur la page ou l'on se trouve fait
- * perdre ses reperes.
- */
-function GroupeRepliable({ titre, ouvertParDefaut = false, children }) {
-    const [ouvert, setOuvert] = useState(ouvertParDefaut);
-
-    return (
-        <div className="mt-3">
-            <button
-                type="button"
-                onClick={() => setOuvert(! ouvert)}
-                aria-expanded={ouvert}
-                className="flex w-full items-center gap-1.5 px-4 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 transition hover:text-slate-200"
-            >
-                {titre}
-                <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                    className={'h-3 w-3 shrink-0 transition-transform ' + (ouvert ? 'rotate-90' : '')}
-                >
-                    <path d="M7.5 5.5 12 10l-4.5 4.5V5.5Z" />
-                </svg>
-            </button>
-            {ouvert && <div>{children}</div>}
-        </div>
-    );
-}
 
 export default function AuthenticatedLayout({ header, children }) {
     const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
@@ -185,14 +148,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </Groupe>
 
             {canViewLogs && (
-                <GroupeRepliable
-                    titre={t('nav.systeme', 'Système')}
-                    ouvertParDefaut={route().current('activity-logs.*')
-                        || route().current('translations.*')
-                        || route().current('pages.*')
-                        || route().current('api-keys.*')
-                        || route().current('registre.*')}
-                >
+                <Groupe titre={t('nav.systeme', 'Système')}>
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
                         {t('nav.journaux', 'Journaux')}
                     </LienMenu>
@@ -212,7 +168,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </LienMenu>
                         </>
                     )}
-                </GroupeRepliable>
+                </Groupe>
             )}
         </>
     );
