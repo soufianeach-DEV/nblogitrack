@@ -319,6 +319,19 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                 if (res.length === 0) {
                     res = await photon(v, `&layer=street${centre}`, pays, 30);
                 }
+                // En Flandre comme ailleurs, une rue ne porte que son nom
+                // local : « rue Rubens » ne matche rien à Antwerpen. On
+                // retente donc avec le seul mot distinctif — Photon retrouve
+                // Rubenslei ou Statiestraat à partir de « rubens » ou « statie ».
+                const distinctif = v
+                    .replace(/^(rue|avenue|place|chauss[ée]e|boulevard|impasse|quai|all[ée]e|chemin|square|cour|passage|galerie|dr[èe]ve)\s+(de\s+la\s+|de\s+l'|du\s+|des\s+|de\s+|d'|la\s+|le\s+|les\s+)?/i, '')
+                    .trim();
+                if (res.length === 0 && distinctif.length >= 2 && distinctif !== v) {
+                    res = await photon(`${distinctif} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                    if (res.length === 0) {
+                        res = await photon(distinctif, `&layer=street${centre}`, pays, 30);
+                    }
+                }
                 if (villeCoords) {
                     res = res.filter((f) => {
                         const [flng, flat] = f.geometry.coordinates;
@@ -644,7 +657,11 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         </div>
                     </div>
                     {aucuneRue && rue.length >= 2 && (
-                        <p className="mt-1 text-xs text-status-incident">Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</p>
+                        <p className="mt-1 text-xs text-status-incident">
+                            {pays === 'BE'
+                                ? <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).</>
+                                : <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</>}
+                        </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
                         <p className="mt-1 text-xs text-slate-600">Choisis la rue dans la liste de suggestions.</p>
