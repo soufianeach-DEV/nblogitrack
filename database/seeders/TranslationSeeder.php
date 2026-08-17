@@ -5,16 +5,6 @@ namespace Database\Seeders;
 use App\Models\Translation;
 use Illuminate\Database\Seeder;
 
-/**
- * Le dictionnaire de depart.
- *
- * Il couvre le parcours du client, pas le back-office. Un donneur
- * d'ordre neerlandophone doit lire l'accueil, les tarifs, la commande,
- * le suivi et ses factures dans sa langue. Le personnel de NBLogiTrack
- * est francophone et travaille en francais : traduire ses ecrans
- * couterait des centaines de cles pour personne. Ce choix est assume et
- * justifie dans le document de defense.
- */
 class TranslationSeeder extends Seeder
 {
     public function run(): void
@@ -310,6 +300,7 @@ class TranslationSeeder extends Seeder
             'envoyee' => ['Envoyée', 'Verzonden', 'Sent'],
             'echue' => ['Échue', 'Vervallen', 'Overdue'],
             'en_retard' => ['En retard', 'Te laat', 'Overdue'],
+            'attente_paiement' => ['En attente de paiement', 'Wacht op betaling', 'Awaiting payment'],
         ],
 
         'roles' => [
@@ -409,9 +400,6 @@ class TranslationSeeder extends Seeder
             'regle' => ['Réglé', 'Betaald', 'Settled'],
             'reste_du' => ['Reste dû', 'Nog verschuldigd', 'Outstanding'],
             'dont' => ['dont', 'waarvan', 'of which'],
-            // Un seul mot pour cet etat dans toute l'application : le
-            // tableau dit deja « en retard », « echue » ferait un second
-            // vocabulaire a traduire pour la meme notion.
             'facture_retard' => ['facture en retard', 'achterstallige factuur', 'overdue invoice'],
             'factures_retard' => ['factures en retard', 'achterstallige facturen', 'overdue invoices'],
             'dernieres_factures' => ['Dernières factures', 'Laatste facturen', 'Latest invoices'],
@@ -440,8 +428,6 @@ class TranslationSeeder extends Seeder
             'aucun_ordre' => ['Aucun ordre pour l\'instant.', 'Voorlopig geen opdrachten.', 'No orders yet.'],
         ],
 
-        // Le pluriel ne se forme pas de la meme facon d'une langue a
-        // l'autre : chaque forme porte sa cle plutot qu'un « s » colle.
         'alerte' => [
             'retard_un' => [':n expédition en retard', ':n zending te laat', ':n shipment overdue'],
             'retard_n' => [':n expéditions en retard', ':n zendingen te laat', ':n shipments overdue'],
@@ -597,7 +583,6 @@ class TranslationSeeder extends Seeder
                 'Number, company, departure or arrival city…',
             ],
 
-            // L'ouverture du suivi de position, mission par mission.
             'suivi_actif' => ['Suivi de position activé', 'Positieopvolging actief', 'Position tracking on'],
             'suivi_inactif' => ['Activer le suivi de position', 'Positieopvolging activeren', 'Turn on position tracking'],
             'suivi_aide' => [
@@ -934,18 +919,6 @@ class TranslationSeeder extends Seeder
             'suivant' => ['Suivant', 'Volgende', 'Next'],
         ],
 
-        /*
-         * Vocabulaires enregistres en base. La cle derive de la valeur
-         * francaise : « Chargé de clientèle » donne charge_de_clientele.
-         * Une saisie hors liste retombe sur le texte enregistre.
-         *
-         * Les adresses n'y figurent pas et n'y figureront pas : un nom de
-         * rue est un identifiant postal. Traduire « Nijverheidsstraat »
-         * donnerait une adresse absente du registre, en desaccord avec
-         * l'etiquette, la lettre de voiture et le navigateur du chauffeur.
-         * Seule Bruxelles-Capitale a des noms de voirie officiels dans les
-         * deux langues.
-         */
         'vocab.fonction' => [
             'directeur_logistique' => ['Directeur logistique', 'Logistiek directeur', 'Logistics director'],
             'assistant_administratif' => ['Assistant administratif', 'Administratief medewerker', 'Administrative assistant'],
@@ -995,8 +968,6 @@ class TranslationSeeder extends Seeder
 
         'vocab.achat' => [
             'carburant' => ['Carburant', 'Brandstof', 'Fuel'],
-            // La constante du modele porte le libelle complet : la cle se
-            // derive de cette valeur-la, pas d'un raccourci.
             'peages_et_taxe_kilometrique' => [
                 'Péages et taxe kilométrique',
                 'Tol en kilometerheffing',
@@ -1009,21 +980,6 @@ class TranslationSeeder extends Seeder
             'leasing' => ['Leasing', 'Leasing', 'Leasing'],
         ],
 
-        /*
-         * Les communes belges qui portent un nom officiel dans plusieurs
-         * langues. Ce ne sont pas des traductions libres : « Bergen » est
-         * le nom neerlandais legal de Mons, pas une tentative de rendre
-         * le mot francais.
-         *
-         * Ces libelles servent d'etiquette sur la carte et dans le suivi,
-         * jamais dans une adresse. La difference tient a l'usage : une
-         * etiquette situe un trajet du regard, une adresse conduit un
-         * camion a une porte. La fiche de mission garde donc l'adresse
-         * complete telle qu'elle est enregistree.
-         *
-         * Une commune absente de cette liste s'affiche telle quelle : la
-         * plupart n'ont qu'une seule forme officielle.
-         */
         'vocab.ville' => [
             'bruxelles' => ['Bruxelles', 'Brussel', 'Brussels'],
             'anvers' => ['Anvers', 'Antwerpen', 'Antwerp'],
@@ -1583,7 +1539,6 @@ class TranslationSeeder extends Seeder
             'titre' => ['Suivre un envoi', 'Een zending volgen', 'Track a shipment'],
             'reference' => ['Numéro de suivi', 'Volgnummer', 'Tracking number'],
 
-            // Les reperes geolocalises de l'envoi.
             'reperes' => ['Repères', 'Ijkpunten', 'Waypoints'],
             'jalon_enlevement' => ['Prise en charge', 'Ophaling', 'Pickup'],
             'jalon_livraison' => ['Livraison', 'Levering', 'Delivery'],
@@ -1760,7 +1715,6 @@ class TranslationSeeder extends Seeder
             ],
             'en_retard' => ['Factures en retard', 'Achterstallige facturen', 'Overdue invoices'],
 
-            // F6 : le reglement en ligne.
             'paiement' => ['Paiement', 'Betaling', 'Payment'],
             'payer' => ['Payer', 'Betalen', 'Pay'],
             'payer_en_ligne' => ['Payer en ligne', 'Online betalen', 'Pay online'],
@@ -1810,9 +1764,6 @@ class TranslationSeeder extends Seeder
             'supprimer' => ['Supprimer', 'Verwijderen', 'Delete'],
         ],
 
-        /*
-         * A12 : l'administration des cles de l'API.
-         */
         'api' => [
             'titre' => ['API REST', 'REST-API', 'REST API'],
             'sous_titre' => [
@@ -1907,10 +1858,6 @@ class TranslationSeeder extends Seeder
             'duree' => ['Durée', 'Duur', 'Duration'],
         ],
 
-        /*
-         * Le bandeau du chauffeur pendant un partage de position. Un
-         * partage silencieux serait precisement ce qu'on refuse.
-         */
         'suivi_direct' => [
             'actif' => [
                 'Votre position est partagée pour cette mission',
@@ -1935,10 +1882,6 @@ class TranslationSeeder extends Seeder
             ],
         ],
 
-        /*
-         * La note d'information aux conducteurs. Le vocabulaire est
-         * choisi : on prend connaissance, on ne consent pas.
-         */
         'note' => [
             'version' => ['Version du :date', 'Versie van :date', 'Version of :date'],
             'accuser' => [
@@ -2002,9 +1945,6 @@ class TranslationSeeder extends Seeder
             'permission_absente' => ['Permission absente', 'Recht ontbreekt', 'Missing permission'],
         ],
 
-        /*
-         * A13 : le contenu des pages publiques.
-         */
         'pages' => [
             'sous_titre' => [
                 'Le contenu public, modifiable sans livraison de code.',
