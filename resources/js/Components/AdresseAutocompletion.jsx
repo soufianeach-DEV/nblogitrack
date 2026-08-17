@@ -118,11 +118,6 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         return (json.features || []).filter((f) => (f.properties.countrycode || '').toUpperCase() === paysCode);
     };
 
-    // Registres officiels en surcouche de Photon : la France (BAN) et les
-    // Pays-Bas (PDOK) publient une API d'adresses nationale, gratuite et
-    // sans clé. Les réponses sont remises au format Photon pour que le
-    // reste du composant ne voie aucune différence, et Photon reste le
-    // filet si le registre ne rend rien ou tombe.
     const banRues = async (q, limit = 30) => {
         const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
         const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&type=street&limit=${limit}${centre}`;
@@ -383,10 +378,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                 if (res.length === 0) {
                     res = await photon(v, `&layer=street${centre}`, pays, 30);
                 }
-                // En Flandre comme ailleurs, une rue ne porte que son nom
-                // local : « rue Rubens » ne matche rien à Antwerpen. On
-                // retente donc avec le seul mot distinctif — Photon retrouve
-                // Rubenslei ou Statiestraat à partir de « rubens » ou « statie ».
+
                 const distinctif = v
                     .replace(/^(rue|avenue|place|chauss[ée]e|boulevard|impasse|quai|all[ée]e|chemin|square|cour|passage|galerie|dr[èe]ve)\s+(de\s+la\s+|de\s+l'|du\s+|des\s+|de\s+|d'|la\s+|le\s+|les\s+)?/i, '')
                     .trim();

@@ -40,8 +40,6 @@ class DriverController extends Controller
         $permisLimite = now()->addDays(60)->toDateString();
         $aujourdhui = now()->toDateString();
 
-        // Meme definition que Driver::empechements(), traduite en SQL pour
-        // filtrer sans charger les 110 lignes.
         $inapte = fn ($q) => $q
             ->whereNotNull('left_on')
             ->orWhere('license_expiry', '<', $aujourdhui)
@@ -80,8 +78,6 @@ class DriverController extends Controller
                 'telephone' => $d->user?->phone,
                 'actif' => (bool) ($d->user?->is_active ?? false),
                 'permis' => $d->license_type,
-                // Le numero de permis est une donnee personnelle : il reste
-                // dans l'application, il ne part pas vers un client.
                 'numero_permis' => $d->license_number,
                 'permis_echeance' => $d->license_expiry?->format('d/m/Y'),
                 'permis_bientot' => $d->license_expiry !== null
@@ -151,8 +147,6 @@ class DriverController extends Controller
             'birth_date.before' => 'La date de naissance doit être dans le passé.',
         ]);
 
-        // Une sortie se motive : sans motif, l'historique ne dit pas si le
-        // chauffeur est parti a la retraite ou s'il a perdu son permis.
         if (! empty($donnees['left_on']) && empty($donnees['departure_reason'])) {
             return back()->withErrors([
                 'departure_reason' => 'Indiquez le motif du départ.',
@@ -170,22 +164,14 @@ class DriverController extends Controller
                 ]);
             }
 
-            // Le compte est ferme, la ligne reste : les missions passees
-            // doivent continuer a porter un nom.
             $donnees['is_available'] = false;
             $driver->user?->update(['is_active' => false]);
         }
 
-        // Un chauffeur engage sur une expedition ne se retire pas du service,
-        // et retirer sa certification ADR alors qu'il transporte une matiere
-        // dangereuse laisserait une affectation que l'application refuse.
         if ($donnees['is_available'] === false || $donnees['adr_certified'] === false) {
             $encours = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
                 ->where('driver_id', $driver->id);
 
-            // Un refus qui part en message flash ne s'affiche pas dans la
-            // fiche : il ressemble a une acceptation. Il porte donc sur le
-            // champ concerne.
             if ($donnees['is_available'] === false && empty($donnees['left_on']) && (clone $encours)->exists()) {
                 return back()->withErrors([
                     'is_available' => 'Ce chauffeur porte une mission en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.',

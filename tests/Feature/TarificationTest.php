@@ -10,19 +10,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Le prix ne se calcule pas sur ce que dit le navigateur.
- *
- * C'etait la faille la plus couteuse des dix-huit que mon audit a
- * trouvees. Le formulaire envoyait les coordonnees des deux points et
- * le serveur tarifait dessus : en modifiant deux champs caches depuis
- * la console, un Bruxelles-Marseille se payait au prix d'une course
- * intra-urbaine. Sur une application de transport, le devis engage
- * l'entreprise.
- *
- * Le serveur relocalise desormais les deux localites lui-meme, dans la
- * table des codes postaux, et c'est cette distance-la qui tarife.
- */
 class TarificationTest extends TestCase
 {
     use RefreshDatabase;
@@ -31,9 +18,6 @@ class TarificationTest extends TestCase
     {
         parent::setUp();
 
-        // Les quelques localites dont ces tests ont besoin. La table
-        // complete vient de GeoNames et compte six cent mille lignes :
-        // la charger ici couterait des minutes pour rien.
         DB::table('postal_codes')->insert([
             ['country_code' => 'BE', 'code' => '3500', 'city' => 'Hasselt', 'lat' => 50.9311, 'lng' => 5.3378],
             ['country_code' => 'BE', 'code' => '1000', 'city' => 'Bruxelles', 'lat' => 50.8504, 'lng' => 4.3488],
@@ -81,11 +65,6 @@ class TarificationTest extends TestCase
         $this->assertNotNull($ordre->tracking_code);
     }
 
-    /**
-     * Le coeur du correctif : des coordonnees qui ne correspondent pas a
-     * l'adresse ecrite font refuser le depot. Ici on annonce Hasselt et
-     * on transmet le point de Paris.
-     */
     public function test_des_coordonnees_qui_mentent_font_refuser_le_depot(): void
     {
         $client = Client::factory()->create();
@@ -102,11 +81,6 @@ class TarificationTest extends TestCase
         $this->assertSame(0, TransportOrder::count());
     }
 
-    /**
-     * Le trajet raccourci : on garde les adresses mais on rapproche les
-     * deux points pour payer moins. Le serveur retrouve les vraies
-     * localites et voit l'ecart.
-     */
     public function test_un_trajet_raccourci_est_refuse(): void
     {
         $client = Client::factory()->create();
@@ -123,17 +97,10 @@ class TarificationTest extends TestCase
         $this->assertSame(0, TransportOrder::count());
     }
 
-    /**
-     * On ne peut pas annoncer la France et se faire tarifer la Belgique :
-     * le pays de destination determine la grille.
-     */
     public function test_la_grille_doit_correspondre_au_pays_de_destination(): void
     {
         $client = Client::factory()->create();
 
-        // Les deux zones existent : sans la grille belge, la validation
-        // refuserait le pays lui-meme et l'on ne verifierait pas la
-        // correspondance, qui est le sujet du test.
         $this->grilleBelge();
         $grilleFrancaise = TariffGrid::factory()->zone('FR', 'France')->create();
 
@@ -147,7 +114,6 @@ class TarificationTest extends TestCase
         $this->assertSame(0, TransportOrder::count());
     }
 
-    /** Une localite qui n'existe pas ne se tarife pas. */
     public function test_une_localite_inconnue_est_refusee(): void
     {
         $client = Client::factory()->create();
@@ -163,10 +129,6 @@ class TarificationTest extends TestCase
         $this->assertSame(0, TransportOrder::count());
     }
 
-    /**
-     * Le prix vient de la base, pas du formulaire : un champ « prix »
-     * ajoute a la requete ne doit rien changer.
-     */
     public function test_un_prix_transmis_par_le_formulaire_est_ignore(): void
     {
         $client = Client::factory()->create();

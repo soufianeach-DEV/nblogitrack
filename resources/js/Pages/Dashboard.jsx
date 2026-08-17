@@ -39,16 +39,10 @@ function StatCard({ label, value, unite, detail, icone, accent, lien }) {
     return <div className="rounded-2xl bg-white p-6 shadow-sm">{contenu}</div>;
 }
 
-/**
- * Histogramme dessine en CSS. Une bibliotheque de graphiques pour sept
- * barres ajouterait une dependance de plusieurs centaines de kilo-octets
- * pour ce que deux div font tres bien.
- */
 function VolumeMensuel({ volume }) {
     const t = useTraduction();
     const locale = useLocale();
-    // L'echelle tient compte des deux annees, sinon la barre de reference
-    // deborderait des qu'un mois de l'an dernier a fait mieux.
+
     const maximum = Math.max(...volume.flatMap((m) => [m.nombre, m.nombre_n1]), 1);
     const total = volume.reduce((somme, m) => somme + m.nombre, 0);
     const totalN1 = volume.reduce((somme, m) => somme + m.nombre_n1, 0);
@@ -57,9 +51,6 @@ function VolumeMensuel({ volume }) {
     const annee = volume[volume.length - 1]?.annee;
     const anneeN1 = String(Number(annee) - 1);
 
-    // Une variation ne se calcule pas sur une base nulle : l'an dernier sans
-    // activite ne fait pas une croissance infinie, il fait une absence de
-    // comparaison.
     const variation = totalN1 > 0 ? Math.round(((total - totalN1) / totalN1) * 100) : null;
 
     return (
@@ -141,11 +132,6 @@ function VolumeMensuel({ volume }) {
     );
 }
 
-/**
- * Le plan de charge du planificateur. Il ne se demande pas combien d'ordres
- * attendent, il se demande s'il peut accepter une livraison jeudi : chaque
- * jour confronte donc ce qui est promis a ce qui peut le tenir.
- */
 function PlanDeCharge({ calendrier }) {
     const t = useTraduction();
     const { jours, capacite, camions, conducteurs, a_affecter: aAffecter } = calendrier;
@@ -173,12 +159,7 @@ function PlanDeCharge({ calendrier }) {
                 </div>
             </div>
 
-            {/* Quatorze cases sur deux rangees de sept. Le planificateur lit
-                une quinzaine d'un coup d'oeil, comme un agenda.
-
-                content-start empeche les rangees de s'etirer sur toute la
-                hauteur : la carte reste alignee sur sa voisine, mais les
-                cases gardent la taille de leur contenu. */}
+            {}
             <div className="mt-5 grid flex-1 content-start grid-cols-7 gap-1.5">
                 {jours.map((j) => (
                     <Link
@@ -210,8 +191,7 @@ function PlanDeCharge({ calendrier }) {
                             </span>
                         </span>
 
-                        {/* Pas de truncate : a sept colonnes le mot depasse la
-                            case et se ferait couper. Il passe a la ligne. */}
+                        {}
                         {j.enlevements > 0 && (
                             <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
                                 j.sature ? 'bg-status-incident' : 'bg-marine'
@@ -226,9 +206,7 @@ function PlanDeCharge({ calendrier }) {
                             </span>
                         )}
 
-                        {/* La couverture plutot que le manque : afficher le
-                            nombre non affecte repetait le nombre d'enlevements
-                            tant que rien n'est attribue. */}
+                        {}
                         {j.enlevements > 0 && (
                             <span className={`truncate text-[10px] font-semibold ${
                                 j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
@@ -302,8 +280,7 @@ function FicheEntreprise({ entreprise, onFermer }) {
                 {ligne(t('ent.peppol', 'Identifiant Peppol'), entreprise.peppol, true)}
                 {ligne(t('ent.secteur', 'Secteur'), v('secteur', entreprise.secteur))}
                 {ligne(t('ent.adresse_fact', 'Adresse de facturation'), entreprise.adresse)}
-                {/* La localite est celle de l'adresse de facturation juste au-dessus :
-                    elle ne bouge pas. Le pays se dit dans la langue du lecteur. */}
+                {}
                 {ligne(t('ent.localite', 'Localité'), [entreprise.localite, p(entreprise.pays)].filter(Boolean).join(', '))}
                 {ligne(t('ent.delai', 'Délai de paiement'), entreprise.delai)}
                 {ligne(t('ent.plafond', 'Plafond de crédit'), euros(entreprise.plafond))}
@@ -407,17 +384,11 @@ const NIVEAUX = {
     info: 'border-brand-blue/30 bg-brand-blue/5 text-brand-blue',
 };
 
-/**
- * Les alertes sortent des donnees et disparaissent quand le probleme est
- * regle. Le prototype en montre deux ecrites en dur, qui resteraient
- * affichees quoi qu'il arrive.
- */
 function Alertes({ alertes }) {
     const t = useTraduction();
 
     return (
-        // Dernier bloc de sa colonne : il s'etire jusqu'au bas de la rangee,
-        // sinon la liste des ordres, plus haute, laisse un vide a droite.
+
         <section className="flex flex-1 flex-col rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 font-semibold text-marine">{t('tdb.alertes', 'Alertes')}</h2>
 
@@ -462,9 +433,6 @@ function CarteEnCirculation({ carte, total }) {
     const t = useTraduction();
     const [traces, setTraces] = useState({});
 
-    // Les itineraires arrivent un par un, apres la page. Les demander tous en
-    // meme temps saturerait le service, et la liaison directe tient la place
-    // en attendant chacun d'eux.
     useEffect(() => {
         let vivant = true;
 
@@ -485,7 +453,7 @@ function CarteEnCirculation({ carte, total }) {
                         setTraces((precedentes) => ({ ...precedentes, [trajet.id]: donnees.geometrie }));
                     }
                 } catch (erreur) {
-                    // Un itineraire manquant laisse simplement la liaison directe.
+
                 }
             }
         })();
@@ -507,9 +475,7 @@ function CarteEnCirculation({ carte, total }) {
 
     return (
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
-            {/* Meme cloisonnement que sur le suivi : l'etiquette monte a 1100
-                pour couvrir les calques de Leaflet, elle ne doit pas pour
-                autant couvrir l'en-tete. */}
+            {}
             <div className="relative isolate h-56">
                 <CarteTrajets trajets={trajets} onSelection={ouvrir} className="h-full w-full" />
                 <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
@@ -579,8 +545,7 @@ function Facturation({ facturation }) {
                                 >
                                 <span className="font-mono text-xs text-brand-blue">{facture.reference}</span>
                                 <span className="ml-auto shrink-0 text-sm font-bold text-marine">{facture.montant}</span>
-                                {/* L'etat arrive du serveur en francais : il sert
-                                    de valeur de repli, la cle porte la traduction. */}
+                                {}
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                                     facture.etat === 'Payée' ? 'bg-status-delivered/10 text-status-delivered'
                                         : facture.etat === 'En retard' ? 'bg-status-incident/10 text-status-incident'
@@ -600,12 +565,6 @@ function Facturation({ facturation }) {
     );
 }
 
-/**
- * Ce qui n'est plus en regle chez les chauffeurs et les vehicules, nomme
- * plutot que compte : une
- * alerte qui annonce cinquante-trois visites a renouveler ne dit pas
- * lesquelles.
- */
 function Conformite({ conformite }) {
     const t = useTraduction();
 
@@ -630,8 +589,6 @@ function Conformite({ conformite }) {
         </div>
     );
 
-    // Tout ce qui figure ici roule encore : la pastille dit l'urgence, pas
-    // l'etat de service, qui serait le meme pour toute la liste.
     const pastille = () => (
         <span className="shrink-0 rounded-full bg-status-incident/10 px-2 py-0.5 text-[11px] font-semibold text-status-incident">
             {t('tdb.a_traiter', 'À traiter')}
@@ -840,19 +797,14 @@ export default function Dashboard({
                 </div>
             )}
 
-            {/* Le planificateur ouvre sur sa quinzaine. C'est ce qu'il
-                regarde en premier, avant meme les derniers ordres, donc le
-                plan de charge occupe toute la largeur en tete de page. */}
+            {}
             {calendrier && (
                 <div className="mt-6">
                     <PlanDeCharge calendrier={calendrier} />
                 </div>
             )}
 
-            {/* Chaque rangee aligne son bas : les derniers ordres finissent
-                avec les alertes, le volume commence avec la facturation. Les
-                positions sont explicites pour qu'un bloc absent ne fasse pas
-                glisser les autres. */}
+            {}
             <div className="mt-6 grid gap-4 lg:grid-cols-3">
                 <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
                     <section className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -921,8 +873,7 @@ export default function Dashboard({
                     <Alertes alertes={alertes} />
                 </div>
 
-                {/* Sept barres a zero ne racontent rien et donnent
-                    l'impression d'un graphique casse. */}
+                {}
                 {volume.some((mois) => mois.nombre > 0) && (
                     <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
                         <VolumeMensuel volume={volume} />
@@ -947,9 +898,7 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {/* Le journal n'est visible que de l'administrateur. Sans lui
-                    la rangee trois n'aurait que les validations a droite : la
-                    mise en conformite vient combler la gauche. */}
+                {}
                 {conformite && (
                     <div className={journal
                         ? 'lg:col-span-3 lg:col-start-1 lg:row-start-4'

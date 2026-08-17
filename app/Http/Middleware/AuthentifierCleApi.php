@@ -9,17 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * A12 : le controle d'acces a l'API REST.
- *
- * Quatre verrous, dans cet ordre : la cle existe, elle est encore
- * valable, elle vient d'une adresse autorisee, elle porte la permission
- * que la route exige. Chaque appel est journalise, refus compris — un
- * journal qui ne garde que les succes ne sert a rien le jour ou l'on
- * cherche qui a essaye d'entrer.
- *
- * La permission se declare sur la route : cle.api:lecture.
- */
 class AuthentifierCleApi
 {
     public function handle(Request $request, Closure $next, string $permission = 'lecture'): Response
@@ -34,8 +23,6 @@ class AuthentifierCleApi
         $cle = ApiKey::depuisJeton($jeton);
 
         if ($cle === null) {
-            // On ne dit pas si le prefixe existe : la reponse est la meme
-            // pour une cle inventee et pour un secret errone.
             return $this->refuser($request, null, 'cle_inconnue', 401, $depart);
         }
 
@@ -45,8 +32,6 @@ class AuthentifierCleApi
             return $this->refuser($request, $cle, $motif, $code, $depart);
         }
 
-        // La cle resolue accompagne la requete : les controleurs s'en
-        // servent pour restreindre les donnees au partenaire concerne.
         $request->attributes->set('cle_api', $cle);
 
         $reponse = $next($request);

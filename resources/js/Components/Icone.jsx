@@ -1,5 +1,5 @@
-// Icones dessinees dans l'application plutot que chargees depuis une police
-// distante : rien a telecharger, et l'interface reste complete hors ligne.
+
+
 const TRACES = {
     dashboard: 'M4 4h6v6H4zM14 4h6v4h-6zM14 12h6v8h-6zM4 14h6v6H4z',
     colis: 'M12 3 3 7v10l9 4 9-4V7zM3 7l9 4 9-4M12 11v10',

@@ -3,21 +3,6 @@ import { useTraduction } from '@/traduire';
 import { router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 
-/**
- * La barre de recherche du bandeau, avec suggestions.
- *
- * Elle envoyait la saisie telle quelle et rechargeait une liste
- * filtree : il fallait connaitre le debut exact d'un nom d'entreprise
- * ou le numero complet d'une expedition pour trouver quelque chose.
- *
- * Elle propose maintenant pendant la frappe et mene directement a la
- * fiche. La touche Entree sans selection garde l'ancien comportement :
- * quelqu'un qui tape vite et valide retombe sur la liste filtree plutot
- * que sur rien.
- *
- * Ce qui est propose depend du role, mais c'est le serveur qui en
- * decide : ce composant affiche ce qu'on lui rend, il ne filtre rien.
- */
 export default function RechercheGlobale({ placeholder, onValider }) {
     const t = useTraduction();
     const [terme, setTerme] = useState('');
@@ -30,8 +15,6 @@ export default function RechercheGlobale({ placeholder, onValider }) {
     const minuteur = useRef(null);
     const dernier = useRef(0);
 
-    // Un clic ailleurs referme la liste : sans cela elle resterait
-    // ouverte par-dessus la page qu'on vient d'atteindre.
     useEffect(() => {
         const dehors = (e) => {
             if (conteneur.current && ! conteneur.current.contains(e.target)) {
@@ -56,8 +39,6 @@ export default function RechercheGlobale({ placeholder, onValider }) {
             return;
         }
 
-        // Un appel par frappe saturerait le serveur pour rien : on attend
-        // que la saisie se pose.
         minuteur.current = setTimeout(async () => {
             const appel = ++dernier.current;
             setCherche(true);
@@ -68,8 +49,6 @@ export default function RechercheGlobale({ placeholder, onValider }) {
                 });
                 const json = await r.json();
 
-                // Une reponse arrivee apres une plus recente ne doit pas
-                // ecraser celle qu'on affiche deja.
                 if (appel !== dernier.current) return;
 
                 setSuggestions(json.suggestions ?? []);

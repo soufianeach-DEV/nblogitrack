@@ -7,15 +7,6 @@ use Illuminate\Support\Facades\Http;
 
 class Tarificateur
 {
-    /**
-     * Le prix d'un transport.
-     *
-     * Deux modeles selon la formule. L'express affrete un vehicule dedie :
-     * son prix suit les couts reels du trajet — carburant, peages du pays
-     * traverse, chauffeur, vehicule — majores de la marge. Les autres
-     * formules groupent la marchandise avec celle d'autres clients : leur
-     * prix suit le poids et la distance, sans qu'un camion soit reserve.
-     */
     public static function cout(TariffGrid $grille, float $km, float $poids, string $pays, bool $adr): float
     {
         if ($grille->service_level === 'EXPRESS') {
@@ -39,14 +30,6 @@ class Tarificateur
         return round($cout, 2);
     }
 
-    /**
-     * La distance par la route entre deux points.
-     *
-     * Si le service d'itineraire ne repond pas, la distance a vol d'oiseau
-     * majoree de trente pour cent prend le relais : c'est le detour moyen
-     * qu'impose un reseau routier, et un prix approche vaut mieux qu'une
-     * page en erreur.
-     */
     public static function distanceRoutiere(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         try {
@@ -59,21 +42,11 @@ class Tarificateur
                 return $reponse->json()['routes'][0]['distance'] / 1000;
             }
         } catch (\Throwable $e) {
-            // Service indisponible : on bascule sur l'approximation.
         }
 
         return self::distanceVol($lat1, $lng1, $lat2, $lng2) * 1.3;
     }
 
-    /**
-     * La distance a vol d'oiseau, en kilometres.
-     *
-     * Elle sert de repli quand le service d'itineraire ne repond pas,
-     * mais aussi a mesurer un ecart : verifier qu'un point transmis par
-     * un navigateur tombe bien sur la localite annoncee n'a pas besoin
-     * d'un itineraire routier, et n'a surtout pas a payer un appel
-     * reseau pour cela.
-     */
     public static function distanceVol(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $dLat = deg2rad($lat2 - $lat1);

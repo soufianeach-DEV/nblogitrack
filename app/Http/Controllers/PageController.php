@@ -16,13 +16,6 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * A13 : l'administrateur redige les pages publiques et met des fichiers
- * a disposition.
- *
- * Les conditions generales changent pour des raisons juridiques, pas
- * techniques : elles ne doivent pas demander une livraison de code.
- */
 class PageController extends Controller
 {
     public function index(): Response
@@ -98,13 +91,6 @@ class PageController extends Controller
         return back()->with('success', 'Page enregistrée.');
     }
 
-    /**
-     * Publier, ou remettre au brouillon.
-     *
-     * Une page depubliee n'est pas supprimee : son texte reste, seul le
-     * visiteur cesse de la voir. C'est ce qu'on veut le jour ou des
-     * conditions generales doivent etre retirees en urgence.
-     */
     public function publier(Page $page): RedirectResponse
     {
         $publiee = ! $page->publiee;
@@ -123,16 +109,6 @@ class PageController extends Controller
         return back()->with('success', $publiee ? 'Page publiée.' : 'Page retirée du site.');
     }
 
-    /**
-     * Adresse la note d'information a tous les conducteurs actifs.
-     *
-     * Le courriel remet le texte, il ne remplace pas l'accuse : l'envoi
-     * prouve la remise, pas la lecture. C'est la fenetre de l'ecran des
-     * missions qui recueille la prise de connaissance, et c'est elle qui
-     * conditionne le releve de position.
-     *
-     * Chaque conducteur recoit la note dans sa propre langue.
-     */
     public function envoyerNote(Page $page): RedirectResponse
     {
         if ($page->slug !== DriverAcknowledgement::NOTE) {
@@ -171,8 +147,6 @@ class PageController extends Controller
     {
         $request->validate([
             'titre' => 'required|string|max:120',
-            // Le type est verifie sur le contenu du fichier, pas sur son
-            // extension : renommer un script en .pdf ne trompe personne.
             'fichier' => 'required|file|max:10240|mimetypes:'.implode(',', array_keys(PageDocument::TYPES)),
         ], [
             'fichier.mimetypes' => 'Seuls les PDF et les images (JPEG, PNG, WebP) sont acceptés.',
@@ -181,8 +155,6 @@ class PageController extends Controller
 
         $fichier = $request->file('fichier');
 
-        // Le nom d'origine est affiche mais ne sert jamais de chemin : un
-        // nom venu du navigateur peut contenir n'importe quoi.
         $chemin = $fichier->store('documents', 'local');
 
         $document = PageDocument::create([
@@ -216,8 +188,6 @@ class PageController extends Controller
         return $request->validate([
             'slug' => 'required|string|max:80|regex:/^[a-z0-9\-]+$/|unique:pages,slug'
                 .($page ? ','.$page->id : ''),
-            // Le francais fait foi, comme pour les traductions : il sert de
-            // repli quand une langue n'a pas encore sa version.
             'titre_fr' => 'required|string|max:150',
             'titre_nl' => 'nullable|string|max:150',
             'titre_en' => 'nullable|string|max:150',

@@ -78,7 +78,6 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
 
     const champCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
-    // L'etat reel de chaque entreprise, independamment de l'onglet consulte.
     const statut = (client) => {
         if (client.is_validated) {
             return 'validee';
@@ -196,9 +195,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                         )}
                                     </div>
                                     <p className="text-xs text-slate-600">
-                                        {/* La rue et la localite restent telles qu'enregistrees :
-                                            elles identifient un point de livraison. Le pays, lui,
-                                            a une forme officielle par langue. */}
+                                        {}
                                         {client.billing_address} · {client.postal_code} {client.city} · {p(client.country)}
                                     </p>
                                 </div>

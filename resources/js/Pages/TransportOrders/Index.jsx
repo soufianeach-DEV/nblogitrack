@@ -10,9 +10,15 @@ const STATUS = {
     CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
 };
 
-function StatusBadge({ status }) {
+const ATTENTE_PAIEMENT = {
+    cle: 'statut.attente_paiement',
+    label: 'En attente de paiement',
+    cls: 'bg-status-pending/10 text-status-pending',
+};
+
+function StatusBadge({ status, enAttenteDePaiement = false }) {
     const t = useTraduction();
-    const s = STATUS[status];
+    const s = enAttenteDePaiement ? ATTENTE_PAIEMENT : STATUS[status];
 
     return (
         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${s?.cls ?? 'bg-slate-100 text-slate-600'}`}>
@@ -115,7 +121,9 @@ export default function Index({ orders, filters }) {
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
                                     <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
+                                    <td className="px-6 py-4">
+                                        <StatusBadge status={order.status} enAttenteDePaiement={order.en_attente_de_paiement} />
+                                    </td>
                                     <td className="px-6 py-4 text-right font-medium text-marine">
                                         {order.estimated_cost ? `${order.estimated_cost} €` : '—'}
                                     </td>

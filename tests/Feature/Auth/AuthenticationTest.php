@@ -39,10 +39,6 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * Le compte desactive est le scenario du depart conflictuel : on
-     * coupe l'acces d'un employe, il doit etre coupe tout de suite.
-     */
     public function test_un_compte_desactive_ne_se_connecte_pas(): void
     {
         $utilisateur = User::factory()->desactive()->create();

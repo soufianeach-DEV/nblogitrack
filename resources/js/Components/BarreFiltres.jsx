@@ -2,11 +2,6 @@ import Icone from '@/Components/Icone';
 import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
-/**
- * Recherche et filtres d'une liste. La frappe attend trois dixiemes de
- * seconde avant d'interroger le serveur : sans cela, chaque lettre
- * declencherait une requete.
- */
 export default function BarreFiltres({ adresse, filtres, placeholder, listes = [], compteurs = [] }) {
     const [saisie, setSaisie] = useState(filtres.q ?? '');
 

@@ -38,8 +38,6 @@ class ProfileTest extends TestCase
         $this->assertSame('Achraa', $utilisateur->last_name);
         $this->assertSame('nouvelle@exemple.be', $utilisateur->email);
 
-        // Changer d'adresse annule la verification : la nouvelle n'a pas
-        // encore prouve qu'elle appartient a la meme personne.
         $this->assertNull($utilisateur->email_verified_at);
     }
 

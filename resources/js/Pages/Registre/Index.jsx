@@ -45,8 +45,7 @@ export default function Index({ traitements, bases, responsable, information }) 
                             {t('registre.sous_titre', 'Article 30 du RGPD — le document que l\'Autorité demande en premier.')}
                         </p>
                     </div>
-                    {/* Le registre se présente à l'Autorité : il doit pouvoir
-                        sortir sur papier sans passer par une exportation. */}
+                    {}
                     <button
                         type="button"
                         onClick={() => window.print()}
@@ -76,8 +75,7 @@ export default function Index({ traitements, bases, responsable, information }) 
                 </p>
             </section>
 
-            {/* L'information des conducteurs conditionne le relevé de position :
-                son état a sa place dans le registre, pas dans un autre écran. */}
+            {}
             <section className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     {t('registre.information', 'Information des conducteurs')}

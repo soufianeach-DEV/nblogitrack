@@ -8,10 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends Factory<Client>
- *
- * L'heritage est par table jointe : une entreprise et son compte
- * partagent le meme identifiant. La fabrique cree donc les deux, sinon
- * la cle etrangere refuse la ligne.
  */
 class ClientFactory extends Factory
 {
@@ -41,7 +37,6 @@ class ClientFactory extends Factory
         ];
     }
 
-    /** Une entreprise inscrite mais pas encore validee par un administrateur. */
     public function enAttente(): static
     {
         return $this->state(fn (array $attributs) => [

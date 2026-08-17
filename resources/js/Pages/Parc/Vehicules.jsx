@@ -20,8 +20,6 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
         mileage: vehicule.kilometrage,
     });
 
-    // Un nouveau passage au controle propose une validite d'un an, la regle
-    // generale ; elle reste modifiable pour les categories qui derogent.
     const passageControle = (valeur) => {
         const suggestion = valeur ? `${Number(valeur.slice(0, 4)) + 1}${valeur.slice(4)}` : '';
         setData((precedent) => ({

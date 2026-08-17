@@ -20,9 +20,6 @@ class GeoController extends Controller
             'q' => 'required|string|min:2|max:100',
         ]);
 
-        // La base ne connait que le nom local : taper Anvers doit malgre tout
-        // proposer Antwerpen, sans quoi un visiteur francophone ne trouve
-        // rien dans son propre pays.
         $noms = array_merge([$data['q']], Localite::suggestions($data['q']));
 
         $villes = DB::table('postal_codes')
@@ -60,8 +57,6 @@ class GeoController extends Controller
         $codes = DB::table('postal_codes')
             ->selectRaw('code, MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
             ->where('country_code', strtoupper($data['pays']))
-            // Chaque localite porte ses propres codes : Gilly a le 6060, Courcelles
-            // le 6180. Elargir a la zone geographique ferait remonter les communes voisines.
             ->where('city', 'ilike', $data['ville'])
             ->groupBy('code')
             ->orderBy('code')
@@ -94,9 +89,6 @@ class GeoController extends Controller
 
         if ($numeros === null) {
             $numeros = $this->interrogerOverpass($data['rue'], $lat, $lng);
-            // Le vide se met en cache aussi : beaucoup de pays n'ont pas
-            // leurs numeros dans OpenStreetMap, et sans cette entree chaque
-            // frappe du client repayait l'interrogation complete.
             Cache::put($cle, $numeros, $numeros === [] ? now()->addHours(6) : now()->addDays(7));
         }
 
@@ -112,24 +104,7 @@ class GeoController extends Controller
 
     private function interrogerOverpass(string $rue, float $lat, float $lng): array
     {
-        // Le nom de rue ne sert pas de texte a comparer : il devient une
-        // expression reguliere chez Overpass. Retirer les guillemets et
-        // l'antislash empeche de sortir de la chaine, mais laisse passer
-        // tout le reste du langage. Mesure faite : « .*.*.*.*.*.*x »
-        // occupe le service tiers pendant vingt secondes et remonte
-        // n'importe quelle rue.
-        //
-        // D'ou une liste blanche plutot qu'une liste noire. Un nom de rue
-        // s'ecrit avec des lettres, des chiffres, des espaces, des traits
-        // d'union et des apostrophes ; rien d'autre n'a de raison d'y
-        // figurer, et ce qui reste ne signifie plus rien pour un moteur
-        // d'expressions regulieres.
         $motif = preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
-        // Le service tiers a un budget, pas un cheque en blanc : quatre
-        // secondes cote Overpass, cinq cote client. Les deux miroirs sont
-        // interroges en parallele et le premier qui repond correctement
-        // l'emporte ; en serie, deux miroirs satures coutaient 24 secondes
-        // au formulaire.
         $requete = '[out:json][timeout:4];('
             .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'

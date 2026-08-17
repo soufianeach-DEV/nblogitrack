@@ -77,8 +77,6 @@ class PurchaseInvoiceController extends Controller
                 'a_payer_ttc' => (float) PurchaseInvoice::where('status', 'TO_PAY')->sum('amount_incl_tax'),
                 'deductible' => (float) PurchaseInvoice::where('vat_deductible', true)->sum('vat_amount'),
             ],
-            // La constante porte le francais : elle est evaluee au
-            // chargement de la classe, avant que la langue soit connue.
             'categories' => collect(PurchaseInvoice::CATEGORIES)
                 ->map(fn (string $libelle) => Traductions::vocabulaire('achat', $libelle))
                 ->all(),
@@ -120,7 +118,6 @@ class PurchaseInvoiceController extends Controller
             ]);
         }
 
-        // La TVA se calcule au serveur ; rien a deduire quand le taux est nul.
         $ht = round((float) $donnees['amount_excl_tax'], 2);
         $taux = (float) $donnees['vat_rate'];
         $tva = round($ht * $taux / 100, 2);
@@ -161,10 +158,6 @@ class PurchaseInvoiceController extends Controller
         return back()->with('success', 'Facture marquée payée.');
     }
 
-    /**
-     * TVA collectee sur les ventes moins TVA deductible sur les achats,
-     * mois par mois : la mecanique de la declaration periodique.
-     */
     public function tva(): Response
     {
         $ventes = DB::table('invoices')

@@ -7,10 +7,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends Factory<TariffGrid>
- *
- * Une grille par zone et par formule. Les valeurs restent proches de
- * celles du jeu de donnees pour que les prix calcules dans un test aient
- * un ordre de grandeur credible.
  */
 class TariffGridFactory extends Factory
 {
@@ -34,7 +30,6 @@ class TariffGridFactory extends Factory
         ];
     }
 
-    /** La formule la plus rapide, et la plus chere. */
     public function express(): static
     {
         return $this->state(fn (array $a) => [
@@ -44,7 +39,6 @@ class TariffGridFactory extends Factory
         ]);
     }
 
-    /** Une grille d'export : la zone determine le pays de destination. */
     public function zone(string $code, string $libelle): static
     {
         return $this->state(fn (array $a) => [

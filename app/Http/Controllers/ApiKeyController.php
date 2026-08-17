@@ -13,12 +13,6 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * A12 : l'administrateur tient les cles de l'API.
- *
- * Il en genere, leur donne des permissions, restreint les adresses d'ou
- * elles peuvent servir, les revoque, et lit ce qu'elles ont fait.
- */
 class ApiKeyController extends Controller
 {
     public function index(Request $request): Response
@@ -87,9 +81,6 @@ class ApiKeyController extends Controller
             'expire_le' => 'nullable|date|after:today',
         ]);
 
-        // Les adresses arrivent en une ligne : on les separe, on verifie
-        // chacune, et une saisie fautive est refusee plutot que silencieuse
-        // — une IP mal ecrite fermerait l'API sans que personne ne comprenne.
         $ips = collect(preg_split('/[\s,;]+/', (string) ($donnees['ips'] ?? '')))
             ->filter()->unique()->values();
 
@@ -121,8 +112,6 @@ class ApiKeyController extends Controller
             ],
         );
 
-        // La valeur en clair ne repassera plus : elle voyage une fois, en
-        // message flash, et n'est enregistree nulle part.
         return back()->with('cle_en_clair', [
             'valeur' => $enClair,
             'nom' => $cle->name,
@@ -148,10 +137,6 @@ class ApiKeyController extends Controller
     }
 
     /**
-     * Ce qu'un administrateur veut savoir d'un coup d'oeil : le volume,
-     * et surtout la part de refus. Un taux de refus qui grimpe signale
-     * soit une integration cassee, soit quelqu'un qui essaie.
-     *
      * @return array<string, mixed>
      */
     private function statistiques(): array
@@ -169,8 +154,6 @@ class ApiKeyController extends Controller
             'appels_7j' => (clone $semaine)->count(),
             'refus_7j' => (clone $semaine)->whereNotNull('refus')->count(),
             'duree_moyenne' => (int) round((float) (clone $semaine)->whereNull('refus')->avg('duration_ms')),
-            // Les motifs de refus les plus frequents, pour savoir ou
-            // regarder avant d'ouvrir le journal ligne a ligne.
             'motifs' => ApiRequest::whereNotNull('refus')
                 ->where('created_at', '>=', now()->subWeek())
                 ->select('refus', DB::raw('count(*) AS total'))

@@ -6,35 +6,20 @@ use App\Models\TransportOrder;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
-/**
- * Les limites du reglement (CE) 561/2006 appliquees a la planification.
- *
- * L'application ne lit aucune carte tachygraphe : elle ne sait donc pas
- * ce qu'un chauffeur a reellement conduit hier. Ce qui suit est une aide
- * a la planification calculee sur les missions enregistrees, pas une
- * preuve de conformite. La distinction est volontaire et assumee.
- */
 class TempsDeConduite
 {
-    /** Moyenne poids lourd, autoroute et acces urbains confondus. */
     public const VITESSE_MOYENNE = 65.0;
 
-    /** Conduite continue avant la pause obligatoire, en heures. */
     public const CONDUITE_CONTINUE_MAX = 4.5;
 
-    /** Duree de cette pause, en heures. */
     public const PAUSE = 0.75;
 
-    /** Conduite journaliere, extensible a 10 h deux fois par semaine. */
     public const CONDUITE_JOUR_MAX = 9.0;
 
-    /** Conduite hebdomadaire. */
     public const CONDUITE_SEMAINE_MAX = 56.0;
 
-    /** Journees d'affilee avant le repos hebdomadaire. */
     public const JOURS_CONSECUTIFS_MAX = 6;
 
-    /** Repos journalier normal, reductible a 9 h trois fois par semaine. */
     public const REPOS_JOURNALIER = 11.0;
 
     public static function heuresDeConduite(?int $km): float
@@ -42,11 +27,6 @@ class TempsDeConduite
         return $km === null ? 0.0 : round($km / self::VITESSE_MOYENNE, 2);
     }
 
-    /**
-     * Le nombre de pauses de 45 minutes qu'impose une duree de conduite.
-     * Une mission de 4 h 30 pile n'en impose aucune : la pause vient
-     * apres, pas pendant.
-     */
     public static function nombreDePauses(float $heures): int
     {
         return $heures <= self::CONDUITE_CONTINUE_MAX
@@ -54,7 +34,6 @@ class TempsDeConduite
             : (int) ceil($heures / self::CONDUITE_CONTINUE_MAX) - 1;
     }
 
-    /** Conduite plus pauses : le temps que la mission occupe reellement. */
     public static function dureeTotale(?int $km): float
     {
         $conduite = self::heuresDeConduite($km);
@@ -62,25 +41,17 @@ class TempsDeConduite
         return round($conduite + self::nombreDePauses($conduite) * self::PAUSE, 2);
     }
 
-    /**
-     * Le nombre de journees que la mission consomme. Au-dela de 9 h de
-     * conduite il faut un repos de 11 h, donc un deuxieme jour.
-     */
     public static function journees(?int $km): int
     {
         return max(1, (int) ceil(self::heuresDeConduite($km) / self::CONDUITE_JOUR_MAX));
     }
 
-    /** Une phrase lisible par le planificateur. */
     public static function resume(?int $km): string
     {
         if ($km === null) {
             return 'Distance inconnue';
         }
 
-        // Les adresses sont geocodees a la localite : deux points de la meme
-        // ville rendent zero kilometre. Annoncer "0 h de conduite" serait
-        // faux, la course existe et prend un temps que l'on ne sait pas.
         if ($km === 0) {
             return 'Course intra-urbaine';
         }
@@ -113,10 +84,6 @@ class TempsDeConduite
         return $min === 0 ? $h.' h' : $h.' h '.str_pad((string) $min, 2, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * La conduite deja engagee par un chauffeur sur la semaine civile qui
-     * contient la date donnee, missions annulees exclues.
-     */
     public static function conduiteDeLaSemaine(int $chauffeurId, CarbonInterface $date, ?int $ordreExclu = null): float
     {
         $km = TransportOrder::where('driver_id', $chauffeurId)
@@ -131,11 +98,6 @@ class TempsDeConduite
         return self::heuresDeConduite((int) $km);
     }
 
-    /**
-     * Le nombre de journees consecutives deja travaillees qui aboutissent
-     * a la veille de la date donnee. Sert a savoir si la mission ferait
-     * une septieme journee d'affilee.
-     */
     public static function joursConsecutifsAvant(int $chauffeurId, CarbonInterface $date): int
     {
         $journees = TransportOrder::where('driver_id', $chauffeurId)
@@ -160,9 +122,6 @@ class TempsDeConduite
     }
 
     /**
-     * Ce qui empeche d'affecter cette mission a ce chauffeur au regard du
-     * temps de conduite. Un tableau vide vaut feu vert.
-     *
      * @return list<string>
      */
     public static function empechements(int $chauffeurId, ?int $km, ?CarbonInterface $enlevement, ?int $ordreExclu = null): array

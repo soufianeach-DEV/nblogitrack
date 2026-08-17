@@ -96,8 +96,6 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Fusionne les valeurs déjà présentes en base avec le référentiel métier.
-     *
      * @param  array<int, string>  $metier
      * @return array<int, string>
      */
@@ -113,9 +111,6 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Une même dénomination reste possible tant que l'entreprise s'en distingue
-     * par son secteur d'activité, sa localité ou son pays.
-     *
      * @param  array<string, mixed>  $data
      */
     private function denominationDejaPrise(array $data): bool
@@ -133,10 +128,6 @@ class RegisteredUserController extends Controller
             ->exists();
     }
 
-    /**
-     * Une entreprise en faillite, en liquidation ou en réorganisation judiciaire
-     * ne peut pas ouvrir de compte : le contrôle est refait ici, hors du navigateur.
-     */
     private function situationInterdite(string $tva): ?string
     {
         $verification = app(VatController::class)->verifier(
@@ -150,8 +141,6 @@ class RegisteredUserController extends Controller
             return 'Ce numéro n\'est pas actif dans le registre européen.';
         }
 
-        // Sans réponse du registre, pas d'inscription : le contrôle serait sinon
-        // contournable en attendant, ou en provoquant, une saturation du service.
         if ($statut !== 'valide') {
             return 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.';
         }

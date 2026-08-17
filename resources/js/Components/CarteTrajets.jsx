@@ -10,14 +10,9 @@ const COULEUR = {
     CANCELLED: '#BA1A1A',
 };
 
-// Le trace de l'expedition consultee : un trait noir sur un fond gris
-// desature, comme les applications de course. Le fond ne raconte rien, la
-// route est le seul element qui ressort.
 const TRACE = '#111827';
 const HALO = '#FFFFFF';
 
-// Point de depart plein, arrivee carree : deux formes distinctes se lisent
-// plus vite que deux couleurs.
 const MARQUEUR_DEPART = L.divIcon({
     className: '',
     iconSize: [16, 16],
@@ -39,8 +34,6 @@ const ICONE_PEAGE = L.divIcon({
     html: '<span style="display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:9999px;background:#F59E0B;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);font:700 12px/1 system-ui,sans-serif;color:#3B2600">€</span>',
 });
 
-// La position en cours pulse : elle se distingue ainsi des deux jalons,
-// qui sont des faits acquis, alors qu'elle est une mesure du moment.
 const ICONE_POSITION = L.divIcon({
     className: '',
     iconSize: [26, 26],
@@ -49,21 +42,12 @@ const ICONE_POSITION = L.divIcon({
         + '<span style="display:block;width:10px;height:10px;margin:6px;border-radius:9999px;background:#2563EB"></span></span>',
 });
 
-/**
- * Carte des expeditions.
- *
- * Leaflet gere son propre DOM : React ne fournit que le conteneur, tout le
- * reste passe par les couches Leaflet. Les expeditions non consultees sont
- * reduites a une liaison directe entre leurs deux points ; celle qu'on
- * consulte recoit son itineraire routier reel et ses peages.
- */
 export default function CarteTrajets({
     trajets = [],
     selection = null,
     onSelection,
     peages = [],
-    // Les deux jalons de l'expedition consultee, et sa derniere position
-    // connue si le suivi a ete ouvert pour elle.
+
     jalons = [],
     position = null,
     className = '',
@@ -81,8 +65,6 @@ export default function CarteTrajets({
             zoomControl: true,
         }).setView([50.5, 4.5], 7);
 
-        // Fond desature : le rendu OpenStreetMap standard charge trop de
-        // couleurs pour qu'un trace ressorte.
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
@@ -92,8 +74,6 @@ export default function CarteTrajets({
         couche.current = L.layerGroup().addTo(c);
         carte.current = c;
 
-        // Le panneau de gauche fait varier la largeur disponible : sans ce
-        // recalcul, Leaflet garde l'ancienne taille et les tuiles se decalent.
         const observateur = new ResizeObserver(() => c.invalidateSize());
         observateur.observe(conteneur.current);
 
@@ -119,9 +99,6 @@ export default function CarteTrajets({
         trajets.forEach((trajet) => {
             const actif = trajet.id === selection;
 
-            // Des qu'une expedition est ouverte, les autres disparaissent.
-            // Leur liaison directe traversait la carte en diagonale et
-            // pouvait se lire comme une portion de l'itineraire affiche.
             if (choisi && ! actif) {
                 return;
             }
@@ -130,14 +107,11 @@ export default function CarteTrajets({
             const couleur = COULEUR[trajet.statut] ?? COULEUR.PENDING;
             const etiquette = `${trajet.numero} · ${trajet.depart} → ${trajet.arrivee}`;
 
-            // L'itineraire routier n'arrive qu'apres coup : tant qu'il manque,
-            // la liaison directe tient la place.
             const trace = trajet.trace?.length ? trajet.trace : [depart, arrivee];
             const routier = Boolean(trajet.trace?.length);
 
             if (routier) {
-                // Halo blanc sous le trait : il detache la route des voies
-                // grises du fond, qui ont parfois la meme epaisseur.
+
                 L.polyline(trace, {
                     color: HALO,
                     weight: actif ? 9 : 6,
@@ -168,9 +142,7 @@ export default function CarteTrajets({
                     .on('click', () => clic.current?.(trajet.id));
                 trace.forEach((point) => cadre.push(point));
             } else {
-                // Cercles plutot que les marqueurs par defaut : ceux-ci
-                // chargent leurs images par une URL relative que Vite ne
-                // resout pas.
+
                 [depart, arrivee].forEach((point, index) => {
                     L.circleMarker(point, {
                         radius: index === 0 ? 4 : 5,
@@ -196,8 +168,6 @@ export default function CarteTrajets({
                 .addTo(couche.current);
         });
 
-        // Les jalons sont des faits acquis : ils restent affiches meme une
-        // fois l'expedition livree.
         jalons.forEach((jalon) => {
             L.circleMarker(jalon.coordonnees, {
                 radius: 7,
@@ -228,9 +198,5 @@ export default function CarteTrajets({
         }
     }, [trajets, selection, peages, jalons, position]);
 
-    // isolate cree un contexte d'empilement autour de la carte. Leaflet place
-    // ses calques a un z-index de 400 et ses commandes a 1000 : sans cette
-    // barriere, ils passent au-dessus de l'en-tete et cachent le menu du
-    // compte, qui n'est qu'a 20.
     return <div ref={conteneur} className={`isolate ${className ?? ''}`} />;
 }

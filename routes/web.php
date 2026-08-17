@@ -30,15 +30,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-/*
- * Les pages portent la langue dans leur adresse : /fr/tarifs, /nl/tarifs.
- * Chaque version a ainsi sa propre URL, partageable et indexable, ce qu'un
- * choix garde en session ne permet pas.
- *
- * Les points d'entree JSON restent hors du prefixe, plus bas : une liste de
- * codes postaux n'a pas de version neerlandaise, et les prefixer obligerait
- * le JavaScript a connaitre la langue courante pour appeler le serveur.
- */
 Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function () {
 
     Route::get('/', function () {
@@ -62,8 +53,6 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::get('/transport-orders', [TransportOrderController::class, 'index'])
             ->name('transport-orders.index');
 
-        // Les suggestions de la barre du bandeau. Le cloisonnement se fait
-        // dans le controleur : un client n'y trouve que ses expeditions.
         Route::get('/recherche', [RechercheController::class, 'suggestions'])
             ->middleware('throttle:60,1')
             ->name('recherche.suggestions');
@@ -77,8 +66,6 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
             Route::post('/planification/{transportOrder}/desaffectation', [PlanningController::class, 'desaffecter'])->name('planning.desaffecter');
 
-            // Le suivi de position s'ouvre mission par mission, jamais pour toute
-            // la flotte : c'est ce qui le distingue d'une surveillance.
             Route::patch('/planification/{transportOrder}/suivi', [PlanningController::class, 'suiviDirect'])
                 ->name('planning.tracking');
         });
@@ -92,15 +79,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::get('/missions', [MissionController::class, 'index'])->name('missions.index');
             Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
 
-            // Le point de route, envoye pendant la mission quand le suivi
-            // direct est ouvert. La limite de debit borne ce que l'ecran peut
-            // deposer meme s'il est modifie.
             Route::post('/missions/{transportOrder}/position', [MissionController::class, 'position'])
                 ->middleware('throttle:30,1')
                 ->name('missions.position');
 
-            // La prise de connaissance de la note d'information. Elle
-            // conditionne le releve de position, elle ne le remplace pas.
             Route::post('/missions/note', [MissionController::class, 'accuser'])->name('missions.notice');
         });
 
@@ -118,8 +100,6 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->whereNumber('invoice')
             ->name('invoices.ubl');
 
-        // F6 : le client regle sa facture en ligne. Le retour du navigateur
-        // n'ecrit rien, il informe ; c'est le webhook qui fait foi.
         Route::post('/factures/{invoice}/payer', [PaymentController::class, 'payer'])
             ->whereNumber('invoice')
             ->name('payments.payer');
@@ -127,8 +107,6 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->whereNumber('invoice')
             ->name('payments.retour');
 
-        // Les achats sont la comptabilite interne : ils ne sortent pas du perimetre
-        // de l'administrateur, comme le controle des paiements.
         Route::middleware('can:control-payments')->group(function () {
             Route::get('/achats', [PurchaseInvoiceController::class, 'index'])->name('purchases.index');
             Route::post('/achats', [PurchaseInvoiceController::class, 'store'])->name('purchases.store');
@@ -147,40 +125,30 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::patch('/chauffeurs/{driver}', [DriverController::class, 'update'])->name('drivers.update');
         });
 
-        // A2 : les comptes du personnel. Le client s'inscrit lui-meme, le
-        // chauffeur, le planificateur et l'administrateur sont crees ici.
         Route::middleware('can:manage-users')->group(function () {
             Route::get('/personnel', [StaffController::class, 'index'])->name('staff.index');
             Route::post('/personnel', [StaffController::class, 'store'])->name('staff.store');
             Route::patch('/personnel/{user}/activation', [StaffController::class, 'toggle'])->name('staff.toggle');
             Route::post('/personnel/{user}/lien-mot-de-passe', [StaffController::class, 'resetLink'])->name('staff.reset-link');
 
-            // A11 : corriger un texte sans toucher au code ni redeployer.
             Route::get('/traductions', [TranslationController::class, 'index'])->name('translations.index');
             Route::patch('/traductions/{translation}', [TranslationController::class, 'update'])->name('translations.update');
 
-            // A12 : les cles de l'API. L'API elle-meme vit dans routes/api.php,
-            // ceci n'en est que l'administration.
             Route::get('/api', [ApiKeyController::class, 'index'])->name('api-keys.index');
             Route::post('/api', [ApiKeyController::class, 'store'])->name('api-keys.store');
             Route::patch('/api/{apiKey}/revocation', [ApiKeyController::class, 'revoke'])->name('api-keys.revoke');
 
-            // A13 : le contenu des pages publiques et les fichiers offerts.
             Route::get('/pages', [PageController::class, 'index'])->name('pages.index');
             Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
             Route::patch('/pages/{page}', [PageController::class, 'update'])->name('pages.update');
             Route::patch('/pages/{page}/publication', [PageController::class, 'publier'])->name('pages.publish');
             Route::delete('/pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
-            // La note aux conducteurs se remet par courriel ; l'accuse se
-            // donne dans l'application.
             Route::post('/pages/{page}/envoi', [PageController::class, 'envoyerNote'])->name('pages.notice.send');
 
             Route::post('/pages/documents', [PageController::class, 'televerser'])->name('pages.documents.store');
             Route::delete('/pages/documents/{pageDocument}', [PageController::class, 'supprimerDocument'])
                 ->name('pages.documents.destroy');
 
-            // Le registre de l'article 30. Il vit dans l'application, au meme
-            // endroit que ce qu'il decrit.
             Route::get('/registre', [ProcessingRecordController::class, 'index'])->name('registre.index');
             Route::patch('/registre/{processingRecord}', [ProcessingRecordController::class, 'update'])
                 ->name('registre.update');
@@ -197,8 +165,6 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         });
     });
 
-    // F3 : consulter les tarifs sans compte. Le calcul reste au serveur, la
-    // grille ne part jamais vers un visiteur anonyme.
     Route::get('/tarifs', [TarifController::class, 'index'])->name('tarifs.index');
     Route::post('/tarifs/simulation', [TarifController::class, 'simuler'])
         ->middleware('throttle:20,1')
@@ -214,20 +180,12 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         ->middleware('throttle:suivi')
         ->name('tracking.show');
 
-    // A13 : les pages redigees depuis l'administration. Elles sont sous le
-    // prefixe de langue comme le reste de la vitrine : /fr/p/a-propos.
     Route::get('/p/{page:slug}', [PagePubliqueController::class, 'show'])->name('pages.show');
 
     require __DIR__.'/auth.php';
 
-}); // fin du groupe prefixe par la langue
+});
 
-/*
- * Ce qui suit ne rend pas de page : ni prefixe, ni traduit.
- */
-
-// L'itineraire interroge deux services exterieurs : il reste derriere le
-// compte, et le controleur verifie en plus que l'expedition est consultable.
 Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
     Route::get('/suivi/{transportOrder}/itineraire', [TrackingController::class, 'itineraire'])
         ->name('tracking.itineraire');
@@ -235,26 +193,15 @@ Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
         ->name('tracking.peages');
 });
 
-// Ces deux-la ne consultent que la table des codes postaux, en local :
-// une centaine d'appels par minute ne coute rien.
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
 });
 
-// Les numeros de rue sortent chez Overpass. Mesure faite depuis cette
-// machine : entre six et vingt-trois secondes selon l'hote qui repond,
-// et le processus PHP reste occupe pendant tout ce temps. Au rythme
-// precedent, une seule adresse pouvait retenir deux mille secondes de
-// serveur par minute. Un formulaire d'adresse rempli a la main n'a
-// jamais besoin de plus de quinze recherches dans la meme minute.
 Route::get('/geo/numeros', [GeoController::class, 'numeros'])
     ->middleware('throttle:15,1')
     ->name('geo.numeros');
 
-// Stripe appelle cette adresse depuis ses serveurs : pas de session, donc
-// pas de jeton CSRF. L'exception est declaree dans bootstrap/app.php et
-// c'est la signature de l'en-tete qui authentifie l'appel.
 Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
     ->name('payments.webhook');
 
@@ -262,31 +209,17 @@ Route::get('/verification-tva', [VatController::class, 'verifier'])
     ->middleware('throttle:20,1')
     ->name('vat.verify');
 
-// A13 : les fichiers offerts aux visiteurs. Hors prefixe de langue — un
-// PDF n'a pas de langue d'interface — et servis par l'application, pas
-// depuis le dossier public.
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])
     ->whereNumber('pageDocument')
     ->name('pages.documents.show');
 
-// F11 : la bascule est ouverte au visiteur. Un client neerlandophone
-// doit pouvoir lire la page d'accueil dans sa langue avant de creer un
-// compte, pas apres.
-//
-// Le parametre s'appelle « vers » et non « langue » : URL::defaults pose
-// une valeur par defaut pour « langue », qui remplissait ce parametre
-// homonyme et renvoyait les trois boutons vers la langue courante.
 Route::get('/langue/{vers}', LangueController::class)->name('langue');
 
-// Une adresse sans prefixe rejoint la langue en cours plutot que de
-// renvoyer une erreur : les liens d'avant le prefixage continuent de
-// fonctionner, et l'on n'atterrit jamais sur une page morte.
 Route::get('/', fn () => redirect('/'.app()->getLocale()));
 
 Route::fallback(function (Request $requete) {
     $chemin = trim($requete->path(), '/');
 
-    // Deja prefixe : c'est une vraie page introuvable, pas un oubli.
     abort_if(Traductions::estServie(explode('/', $chemin)[0]), 404);
 
     return redirect('/'.app()->getLocale().'/'.$chemin.

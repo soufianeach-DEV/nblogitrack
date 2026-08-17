@@ -20,9 +20,7 @@ function LienMenu({ href, active, icone, onClick, children }) {
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             className={
-                // py-1.5 plutot que py-2 : quatorze entrees en profil
-                // administrateur, quatre pixels chacune font cinquante-six
-                // pixels, soit une entree et demie regagnee.
+
                 'flex items-center gap-3 border-l-[3px] px-4 py-1.5 text-sm transition ' +
                 (active
                     ? 'border-action bg-white/5 font-semibold text-action'
@@ -46,15 +44,13 @@ function Groupe({ titre, children }) {
     );
 }
 
-
 export default function AuthenticatedLayout({ header, children }) {
     const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
     const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
 
     const estAdmin = canValidateClients;
-    // Seul un compte client peut deposer une commande en son nom : inutile
-    // de proposer le bouton au personnel, il tomberait sur un refus.
+
     const estClient = user.role === 'CLIENT';
 
     useEffect(() => {
@@ -66,9 +62,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const fermer = () => setMenuOuvert(false);
 
-    // Le repli quand on valide sans avoir choisi de suggestion :
-    // l'administrateur retombe sur la liste des entreprises filtree, les
-    // autres sur celle des expeditions.
     const rechercher = (terme) => {
         estAdmin
             ? router.get(route('clients.index'), { etat: 'tout', q: terme })
@@ -111,9 +104,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
-                {/* Le suivi sert aussi au personnel : un superviseur qui veut
-                    voir ou en est une expedition n'a pas a passer par la liste
-                    des ordres pour l'ouvrir une par une. */}
+                {}
                 <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
                     {t('nav.suivi', 'Suivre un envoi')}
                 </LienMenu>
@@ -235,9 +226,7 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <div className="md:pl-64">
-                {/* Au-dessus de tout ce qu'une page peut afficher : le menu du
-                    compte doit rester atteignable, y compris par-dessus une
-                    carte qui empile ses propres calques. */}
+                {}
                 <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6">
                     <button
                         type="button"

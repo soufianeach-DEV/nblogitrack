@@ -3,7 +3,6 @@ import Icone from '@/Components/Icone';
 import { useTraduction } from '@/traduire';
 import { Head, Link, usePage } from '@inertiajs/react';
 
-// Trame de points, posee en fond des sections claires.
 const TRAME = {
     backgroundImage: 'radial-gradient(circle, rgb(20 50 79 / 0.07) 1px, transparent 1px)',
     backgroundSize: '22px 22px',
@@ -44,11 +43,6 @@ function Certification({ icone, texte }) {
     );
 }
 
-/**
- * Une colonne du pied. Un lien s'ecrit { libelle, href } et devient
- * cliquable ; une simple chaine reste du texte, comme la liste des
- * services qui ne mene nulle part.
- */
 function ColonnePied({ titre, liens }) {
     return (
         <div>
@@ -69,7 +63,7 @@ function ColonnePied({ titre, liens }) {
 export default function Welcome({ auth, canLogin, canRegister }) {
     const t = useTraduction();
     const { pages_pied: pagesPied = [] } = usePage().props;
-    // Le trait orange se deploie sous le lien au survol.
+
     const lienNav = 'group relative text-[15px] font-bold text-marine transition-colors duration-200 hover:text-brand-blue';
     const soulignement = 'absolute -bottom-1.5 left-0 h-0.5 w-0 bg-action transition-all duration-300 group-hover:w-full';
     const boutonAction = 'rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep shadow-sm transition-all duration-300 hover:bg-action-dark hover:shadow-lg hover:shadow-action/40 active:scale-95';
@@ -79,7 +73,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
             <Head title={t('accueil.titre_page', 'Transport et logistique B2B')} />
 
             <div className="min-h-screen bg-surface">
-                {/* Premier ecran : en-tete, heros et bandeau tiennent dans la hauteur de la fenetre. */}
+                {}
                 <div className="flex min-h-screen flex-col">
                 <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
                     <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-3 sm:px-6">
@@ -94,8 +88,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </nav>
 
                         <div className="ml-auto flex items-center gap-3">
-                            {/* Le visiteur choisit sa langue avant de creer un
-                                compte, pas apres. */}
+                            {}
                             <ChoixLangue />
 
                             {auth?.user ? (
@@ -119,7 +112,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 </header>
 
                 <section className="relative isolate flex flex-1 flex-col overflow-hidden">
-                    {/* Lent rapprochement de l'image : le heros n'est jamais tout a fait fige. */}
+                    {}
                     <img
                         src="/images/login-bg.jpg"
                         alt=""
@@ -130,7 +123,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     <div className="absolute -left-24 top-1/4 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
 
                     <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-12 sm:px-6">
-                        {/* self-start : sans lui, l'element flex s'etire sur toute la largeur. */}
+                        {}
                         <span className="self-start rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold text-white backdrop-blur">
                             {t('accueil.expertise', 'Expertise logistique belge')}
                         </span>
@@ -161,7 +154,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </div>
                     </div>
 
-                    {/* Le bandeau ferme le premier ecran, il reste toujours visible sans defiler. */}
+                    {}
                     <div className="relative bg-marine-deep">
                         <ul className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-3 px-4 py-5 sm:px-6">
                             <Certification icone="valide" texte={t('accueil.certif_cmr', 'e-CMR certifié')} />
@@ -173,7 +166,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 </div>
 
                 <section id="services" className="relative isolate overflow-hidden py-20" style={TRAME}>
-                    {/* Halos colores, tres dilues : ils donnent du relief sans distraire. */}
+                    {}
                     <div className="absolute -right-32 top-0 -z-10 h-[28rem] w-[28rem] rounded-full bg-brand-blue/10 blur-3xl" />
                     <div className="absolute -left-40 bottom-0 -z-10 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
 
@@ -302,9 +295,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                     t('accueil.pied_adr', 'Matières dangereuses'),
                                 ]}
                             />
-                            {/* A13 : les pages legales sont redigees depuis
-                                l'administration. Tant qu'aucune n'est
-                                publiee, le pied garde ses intitules. */}
+                            {}
                             <ColonnePied
                                 titre={t('accueil.pied_legal', 'Légal')}
                                 liens={pagesPied.length > 0 ? pagesPied : [

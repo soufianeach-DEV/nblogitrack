@@ -91,8 +91,7 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                 </div>
             )}
 
-            {/* La valeur en clair n'existe qu'ici, une fois. La reafficher
-                supposerait de l'avoir enregistree, ce qu'on refuse. */}
+            {}
             {nouvelleCle && (
                 <div className="mb-4 rounded-2xl border-2 border-action bg-action/5 p-5">
                     <p className="font-bold text-marine">

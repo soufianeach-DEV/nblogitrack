@@ -5,20 +5,8 @@ namespace App\Support;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
-// Traductions vit dans le meme espace de noms : aucun import a ajouter.
-
-/**
- * Les dix jours feries legaux belges.
- *
- * Sept sont a date fixe, trois se calent sur Paques : le lundi de
- * Paques, l'Ascension le jeudi quarante jours apres, et le lundi de
- * Pentecote cinquante jours apres. Paques se calcule par l'algorithme
- * de Meeus plutot que par easter_date(), qui exige l'extension
- * calendar et manquerait sur un hebergement mal servi.
- */
 class JoursFeries
 {
-    /** Chaque ferie porte sa cle de traduction et son libelle francais. */
     private const FIXES = [
         '01-01' => ['ferie.nouvel_an', 'Jour de l\'An'],
         '05-01' => ['ferie.travail', 'Fête du Travail'],
@@ -30,9 +18,6 @@ class JoursFeries
     ];
 
     /**
-     * Les feries d'une annee, indexes par date au format Y-m-d, nommes
-     * dans la langue de la requete.
-     *
      * @return array<string, string>
      */
     public static function pour(int $annee): array
@@ -64,16 +49,11 @@ class JoursFeries
         return self::nom($date) !== null;
     }
 
-    /**
-     * Un jour ou l'entreprise ne charge pas : dimanche ou ferie. Le samedi
-     * reste ouvre, le transport y travaille.
-     */
     public static function chome(CarbonInterface $date): bool
     {
         return $date->isSunday() || self::est($date);
     }
 
-    /** Le premier jour ouvrable a partir de la date donnee, elle comprise. */
     public static function prochainJourOuvrable(CarbonInterface $date): Carbon
     {
         $curseur = Carbon::parse($date)->startOfDay();
@@ -85,10 +65,6 @@ class JoursFeries
         return $curseur;
     }
 
-    /**
-     * Dimanche de Paques par l'algorithme de Meeus, Jones et Butcher,
-     * valable pour le calendrier gregorien.
-     */
     private static function paques(int $annee): Carbon
     {
         $a = $annee % 19;

@@ -6,15 +6,15 @@ export default function GuestLayout({ children, large = false }) {
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-3">
-            {/* Image de fond, sur toute la page */}
+            {}
             <div
                 className="absolute inset-0 scale-105 bg-cover bg-center blur-sm"
                 style={{ backgroundImage: "url('/images/login-bg.jpg')" }}
             />
-            {/* Le filtre, par-dessus le fond */}
+            {}
             <div className="absolute inset-0 bg-marine-deep/70" />
 
-            {/* La carte, au-dessus du fond */}
+            {}
             <div className={'relative z-10 flex w-full overflow-hidden rounded-2xl bg-white shadow-2xl ' + (large ? 'max-w-6xl' : 'max-w-4xl')}>
                 <div className={'hidden flex-col justify-between bg-gradient-to-br from-marine to-marine-deep p-10 text-white md:flex ' + (large ? 'w-2/5' : 'w-1/2')}>
                     <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="w-full" />
@@ -39,7 +39,7 @@ export default function GuestLayout({ children, large = false }) {
                 </div>
 
                 <div className={large ? 'w-full p-5 md:w-3/5 md:px-9 md:py-5' : 'w-full p-8 md:w-1/2 md:p-10'}>
-                    {/* Le prospect choisit sa langue des l'ecran de connexion. */}
+                    {}
                     <div className="flex justify-end">
                         <ChoixLangue />
                     </div>

@@ -8,24 +8,6 @@ use App\Models\TransportOrder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
-/**
- * Rejoue un trajet le long de son itineraire reel, pour une
- * demonstration.
- *
- * Un camion ne roule pas pendant une soutenance. Cette commande depose
- * donc des positions le long du trace que le service d'itineraire rend
- * pour cette expedition : le meme trace que celui deja dessine sur la
- * carte. Rien n'est invente, un trajet enregistre est rejoue.
- *
- * Elle vit dans les commandes et porte « demo » dans son nom : ce n'est
- * pas une fonctionnalite de l'application, et personne ne doit la
- * prendre pour telle.
- *
- * Elle ne contourne aucun garde-fou. Le suivi doit avoir ete ouvert
- * pour la mission, la mission doit etre en cours, et le conducteur doit
- * avoir pris connaissance de la note. La commande refuse comme le
- * serveur refuserait, et dit ce qui manque.
- */
 class RejouerTrajet extends Command
 {
     protected $signature = 'demo:trajet
@@ -81,9 +63,6 @@ class RejouerTrajet extends Command
         $barre->start();
 
         for ($i = 0; $i < $pas; $i++) {
-            // On avance regulierement le long du trace plutot que par
-            // point : un itineraire compte des milliers de points, tres
-            // serres dans les villes et espaces sur autoroute.
             $rang = (int) round($i * (count($trace) - 1) / ($pas - 1));
             [$lat, $lng] = $trace[$rang];
 
@@ -111,10 +90,6 @@ class RejouerTrajet extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Ce qui empeche la demonstration, dit dans les memes termes que le
-     * serveur refuserait a un vrai conducteur.
-     */
     private function cequiManque(TransportOrder $ordre): ?string
     {
         if ($ordre->status !== 'IN_PROGRESS') {
@@ -141,8 +116,6 @@ class RejouerTrajet extends Command
     }
 
     /**
-     * Le trace routier, demande au meme service que la carte de suivi.
-     *
      * @return array<int, array{0: float, 1: float}>
      */
     private function itineraire(TransportOrder $ordre): array
@@ -156,7 +129,6 @@ class RejouerTrajet extends Command
             $points = $reponse->ok() ? $reponse->json('routes.0.geometry.coordinates') : null;
 
             if (is_array($points) && $points !== []) {
-                // GeoJSON ordonne longitude puis latitude.
                 return array_map(fn (array $p) => [(float) $p[1], (float) $p[0]], $points);
             }
         } catch (\Throwable $e) {

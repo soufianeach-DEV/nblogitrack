@@ -10,12 +10,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * A11 : l'administrateur corrige les textes sans passer par le code.
- *
- * Une faute de neerlandais sur la page d'accueil se repare en trente
- * secondes depuis le navigateur, sans livraison ni redemarrage.
- */
 class TranslationController extends Controller
 {
     public function index(Request $request): Response
@@ -42,8 +36,6 @@ class TranslationController extends Controller
             'langues' => Translation::LANGUES,
             'recherche' => $recherche,
             'groupe' => $groupe,
-            // Ce qui reste a traduire : le chiffre qui dit si la bascule
-            // en neerlandais est presentable ou non.
             'manquantes' => [
                 'nl' => Translation::whereNull('nl')->orWhere('nl', '')->count(),
                 'en' => Translation::whereNull('en')->orWhere('en', '')->count(),
@@ -55,8 +47,6 @@ class TranslationController extends Controller
     public function update(Request $request, Translation $translation): RedirectResponse
     {
         $data = $request->validate([
-            // Le francais fait foi : il ne peut pas etre vide, sinon le
-            // repli n'a plus rien a servir.
             'fr' => 'required|string|max:2000',
             'nl' => 'nullable|string|max:2000',
             'en' => 'nullable|string|max:2000',
