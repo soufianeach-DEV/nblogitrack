@@ -275,3 +275,18 @@ INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_a
   (459, 'Lindqvist', 'Erik', 'test.se@nblogitrack-test.eu', '$2y$12$L51vvyMFAxfwDpzroz0nGOj8EvlnUAwxTs1f5D0Pq2kzEpMu4U5PK', '+46 8 4 11 25 60', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51'),
   (460, 'Kranjc', 'Matej', 'test.si@nblogitrack-test.eu', '$2y$12$UiO/g6K9E5/8cu3JjvXIhuRUaVgA75Tdj8Pw5//868Z5BGT8zl48G', '+386 1 4 25 33 71', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51'),
   (461, 'Horvath', 'Peter', 'test.sk@nblogitrack-test.eu', '$2y$12$3/QJaoqdBUMkk88LqLFcG.lPSmGwDOgK5UmUJ6UQlodl9G53D70zO', '+421 2 54 43 12 08', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51');
+
+
+-- Les deux derniers comptes clients, arrives par le formulaire
+-- d'inscription comme les vingt-sept precedents.
+INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
+  ('436', 'Peeters', 'Wim', 'test.be@nblogitrack-test.eu', '$2y$12$9KYjbTHr/uWct4YKB/84neSko67JLAkmuIMEJiXlOmR8.JPvQFeoO', '+32 2 217 48 12', 'CLIENT', TRUE, '2026-08-10 22:59:42', '2026-08-10 22:59:42');
+
+
+-- Les comptes nommes des demonstrations : l'administrateur et le
+-- planificateur avec lesquels on ouvre l'application devant quelqu'un.
+-- Ils manquaient au jeu de donnees, et l'un d'eux est celui qui a
+-- valide une partie des entreprises.
+INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
+  (432, 'Admin', 'Demo', 'admin@nblogitrack.be', '$2y$12$jBGO6bWKQsAfOmH1CGn4Mu0jZSokKGJQA0nnLFrFh3qAozVsT8JO.', '+32 2 000 00 00', 'ADMIN', TRUE, '2026-08-09 21:39:29', '2026-08-09 21:39:29'),
+  (433, 'Planificateur', 'Demo', 'planner@nblogitrack.be', '$2y$12$P/pygCYFJ2eVRPs2Gnaequ3cY7lLuYNgLoksgbSADPak9ozaiKfyC', '+32 2 000 00 01', 'PLANNER', TRUE, '2026-08-10 14:18:02', '2026-08-10 14:18:02');
