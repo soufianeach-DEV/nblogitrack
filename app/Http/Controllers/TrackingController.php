@@ -24,10 +24,6 @@ class TrackingController extends Controller
             : $this->pourVisiteur($request);
     }
 
-    /**
-     * Page accessible sans compte : numero et code exiges, et on n'expose
-     * que le strict necessaire au suivi.
-     */
     private function pourVisiteur(Request $request): Response
     {
         $cherche = $request->filled('tracking_number') && $request->filled('code');
@@ -48,10 +44,6 @@ class TrackingController extends Controller
         ]);
     }
 
-    /**
-     * Utilisateur identifie : le code n'a plus de sens, c'est le compte qui
-     * fait foi. Un client ne retrouve que ses propres expeditions.
-     */
     private function pourUtilisateur(Request $request, User $utilisateur): Response
     {
         $numero = trim((string) $request->query('tracking_number', ''));
@@ -81,8 +73,6 @@ class TrackingController extends Controller
                 'telephone' => $ordre->driver->user->phone,
                 'adr' => (bool) $ordre->driver->adr_certified,
                 'permis' => $ordre->driver->license_type,
-                // Le numero de permis est une donnee personnelle sans utilite
-                // pour un client : le personnel seul y a acces.
                 'numero_permis' => $utilisateur->can('view-all-orders')
                     ? $ordre->driver->license_number
                     : null,
@@ -98,12 +88,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Ou la marchandise a ete prise en charge, ou elle a ete livree.
-     *
-     * Deux points au plus, horodates, releves au moment ou le chauffeur
-     * a declare l'etape. Ce sont des faits de gestion : ils restent
-     * attaches a l'expedition comme une mention de lettre de voiture.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function jalons(TransportOrder $ordre): array
@@ -128,13 +112,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * La derniere position connue, si le suivi a ete ouvert.
-     *
-     * Un seul point est rendu, jamais la trace complete du trajet : le
-     * client veut savoir ou en est sa marchandise, pas reconstituer la
-     * journee d'un conducteur. La difference n'est pas cosmetique, elle
-     * est la raison pour laquelle ce traitement reste proportionne.
-     *
      * @return array<string, mixed>|null
      */
     private function positionActuelle(TransportOrder $ordre): ?array
@@ -160,13 +137,6 @@ class TrackingController extends Controller
         ];
     }
 
-    /**
-     * L'itineraire routier d'une expedition.
-     *
-     * Charge a la demande, pour la seule expedition consultee : tracer les
-     * cent cinq expeditions en cours ferait cent cinq appels au service
-     * d'itineraire a chaque affichage de la page.
-     */
     public function itineraire(Request $request, TransportOrder $transportOrder): JsonResponse
     {
         $this->autoriserSuivi($request, $transportOrder);
@@ -174,12 +144,6 @@ class TrackingController extends Controller
         return response()->json($this->trajet($transportOrder));
     }
 
-    /**
-     * Les peages traverses par cet itineraire.
-     *
-     * Adresse distincte du trace : la recherche des peages demande de vingt
-     * a quarante secondes la premiere fois, le trace ne doit pas attendre.
-     */
     public function peages(Request $request, TransportOrder $transportOrder): JsonResponse
     {
         $this->autoriserSuivi($request, $transportOrder);
@@ -197,14 +161,8 @@ class TrackingController extends Controller
         ));
     }
 
-    /**
-     * Le cloisonnement ne peut pas reposer sur la seule page : ces adresses
-     * sont appelables directement.
-     */
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
     {
-        // 404 et non 403 : un refus qui se distingue du neant laisserait
-        // enumerer les expeditions en faisant varier le numero.
         abort_if(
             $request->user()->cannot('view-all-orders') && $ordre->client_id !== $request->user()->id,
             404,
@@ -213,10 +171,6 @@ class TrackingController extends Controller
         abort_if($ordre->pickup_lat === null || $ordre->delivery_lat === null, 404);
     }
 
-    /**
-     * Deux expeditions qui relient les memes points partagent leur trace :
-     * la cle porte sur les coordonnees, pas sur le numero de l'expedition.
-     */
     private function cleTrajet(TransportOrder $ordre): string
     {
         return md5(implode(':', [
@@ -243,10 +197,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Le trace routier complet rendu par OSRM. Si le service ne repond pas,
-     * la liaison directe prend le relais : la carte reste utilisable, et
-     * l'interface annonce que le trace n'est pas l'itineraire reel.
-     *
      * @return array<string, mixed>
      */
     private function routeRoutiere(float $latDepart, float $lngDepart, float $latArrivee, float $lngArrivee): array
@@ -261,7 +211,6 @@ class TrackingController extends Controller
 
             if (isset($route['geometry']['coordinates'])) {
                 return [
-                    // GeoJSON ordonne longitude puis latitude, Leaflet l'inverse.
                     'geometrie' => array_map(
                         fn (array $point) => [round($point[1], 5), round($point[0], 5)],
                         $route['geometry']['coordinates'],
@@ -272,7 +221,6 @@ class TrackingController extends Controller
                 ];
             }
         } catch (\Throwable $e) {
-            // Service indisponible : on bascule sur la liaison directe.
         }
 
         return [
@@ -284,13 +232,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Les peages traverses, tires d'OpenStreetMap.
-     *
-     * On interroge le rectangle qui contient l'itineraire, puis on ne garde
-     * que les postes proches du trace : demander a Overpass de suivre une
-     * ligne de plusieurs milliers de points serait bien plus couteux que de
-     * filtrer nous-memes.
-     *
      * @param  array<int, array{0: float, 1: float}>  $geometrie
      * @return array<int, array<string, mixed>>
      */
@@ -329,9 +270,6 @@ class TrackingController extends Controller
 
         usort($peages, fn ($a, $b) => $a['rang'] <=> $b['rang']);
 
-        // Une barriere compte un noeud par voie : cinq pour Roye, quatre pour
-        // Senlis. On ne garde que le premier de chaque poste, reconnu a son
-        // nom et a sa position au kilometre pres.
         $vus = [];
         $retenus = [];
 
@@ -351,15 +289,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * La position du point le long du trace, ou null s'il en est trop loin.
-     *
-     * Le trace rendu par OSRM passe par les noeuds memes des voies
-     * empruntees : une barriere de pleine voie tombe a moins d'un metre du
-     * trace, alors qu'une barriere de sortie, posee sur une bretelle, s'en
-     * ecarte de plus de cent cinquante metres. Le seuil de cent metres
-     * separe les deux, et ne retient donc que les peages reellement
-     * franchis.
-     *
      * @param  array<int, array{0: float, 1: float}>  $geometrie
      */
     private function rangSurLeTrace(array $geometrie, float $lat, float $lng): ?int
@@ -367,8 +296,6 @@ class TrackingController extends Controller
         $seuil = 0.1;
         $meilleur = null;
         $rang = null;
-        // Un degre de longitude se resserre vers le nord : sans ce facteur,
-        // l'ecart est surestime de moitie sous nos latitudes.
         $facteur = cos(deg2rad($lat));
 
         foreach ($geometrie as $index => [$pointLat, $pointLng]) {
@@ -392,9 +319,6 @@ class TrackingController extends Controller
     {
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'] as $hote) {
             try {
-                // Overpass met couramment vingt a quarante secondes sur un
-                // rectangle a l'echelle d'un pays : un plafond court ne
-                // renverrait jamais que des listes vides.
                 $reponse = Http::timeout(90)
                     ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
                     ->asForm()
@@ -412,12 +336,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Les expeditions encore en circulation, celles que la carte affiche.
-     * Un client ne voit que les siennes, le personnel les voit toutes.
-     *
-     * L'expedition consultee s'ajoute a la liste si elle n'y figure pas
-     * deja : on peut chercher un numero livre, la carte doit le montrer.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function expeditionsEnCours(User $utilisateur, ?TransportOrder $consultee): array
@@ -448,8 +366,6 @@ class TrackingController extends Controller
             'statut' => $ordre->status,
             'priorite' => $ordre->priority,
             'client' => $ordre->client?->company_name,
-            // Etiquette de carte, comme au tableau de bord : elle situe
-            // le trajet du regard, elle ne conduit personne a une porte.
             'depart' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
             'arrivee' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
             'marchandise' => $ordre->goods_type,
@@ -463,8 +379,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Les trois jalons de la vie d'une expedition, horodates quand ils ont eu lieu.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function etapes(TransportOrder $ordre): array
@@ -498,8 +412,6 @@ class TrackingController extends Controller
     }
 
     /**
-     * Le detail horodate vient du journal d'activite, reserve au personnel.
-     *
      * @return array<int, array<string, string>>
      */
     private function historique(TransportOrder $ordre): array

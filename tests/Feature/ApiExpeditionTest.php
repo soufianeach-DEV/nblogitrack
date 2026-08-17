@@ -12,16 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-/**
- * L'API que consomment les systemes des partenaires (exigence A12).
- *
- * Mon audit avait trouve ici un defaut discret et couteux : un ordre
- * depose par une machine naissait sans coordonnees, sans distance, sans
- * prix et sans code de suivi. Il echappait donc a la carte, au suivi
- * public et a la facturation, qui somme les prix estimes. Une expedition
- * a moitie nee est pire qu'une expedition refusee, parce que personne ne
- * s'en apercoit.
- */
 class ApiExpeditionTest extends TestCase
 {
     use RefreshDatabase;
@@ -36,9 +26,6 @@ class ApiExpeditionTest extends TestCase
             ['country_code' => 'FR', 'code' => '75001', 'city' => 'Paris', 'lat' => 48.8534, 'lng' => 2.3488],
         ]);
 
-        // Le calcul d'itineraire sort chez OSRM. On le simule : la suite
-        // ne doit pas dependre de la disponibilite d'un service tiers,
-        // et le repli a vol d'oiseau brouillerait les distances.
         Http::fake([
             'router.project-osrm.org/*' => Http::response([
                 'code' => 'Ok',
@@ -77,10 +64,6 @@ class ApiExpeditionTest extends TestCase
         $this->getJson('/api/v1/expeditions')->assertUnauthorized();
     }
 
-    /**
-     * Une cle inventee et un secret errone recoivent la meme reponse :
-     * distinguer les deux dirait a un attaquant quel prefixe existe.
-     */
     public function test_un_jeton_invente_recoit_la_meme_reponse_qu_un_secret_errone(): void
     {
         [$cle, $jeton] = $this->cle(Client::factory()->create()->id);
@@ -112,11 +95,6 @@ class ApiExpeditionTest extends TestCase
         $this->assertSame(2, $reponse->json('meta.total') ?? count($reponse->json('data')));
     }
 
-    /**
-     * La cle interne voit tout : c'est un risque assume, elle sert
-     * l'entreprise elle-meme et non un partenaire. Le garde-fou est
-     * qu'elle ne peut rien deposer, faute de savoir au nom de qui.
-     */
     public function test_une_cle_interne_lit_tout_mais_ne_depose_rien(): void
     {
         TransportOrder::factory()->count(3)->create();
@@ -130,10 +108,6 @@ class ApiExpeditionTest extends TestCase
             ->assertStatus(422);
     }
 
-    /**
-     * Le correctif du constat 9 : l'ordre depose par une machine nait
-     * complet, comme celui depose par une personne.
-     */
     public function test_un_ordre_depose_par_l_api_nait_complet(): void
     {
         TariffGrid::factory()->create();
@@ -153,11 +127,6 @@ class ApiExpeditionTest extends TestCase
         $this->assertGreaterThan(0, $ordre->estimated_cost);
     }
 
-    /**
-     * Sans formule imposee, on prend la moins chere qui tienne le delai
-     * que l'appelant demande lui-meme. Choisir l'express par defaut
-     * ferait payer un client presse a un client qui ne l'est pas.
-     */
     public function test_sans_formule_l_api_prend_la_moins_chere_qui_tient_le_delai(): void
     {
         TariffGrid::factory()->create();

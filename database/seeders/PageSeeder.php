@@ -6,22 +6,6 @@ use App\Models\Page;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-/**
- * A13 : les pages que tout transporteur doit porter.
- *
- * Leur contenu est calque sur ce que publient les transporteurs belges
- * etablis (Van Mieghem, Jost, les membres Febetra) : cadre normatif
- * cite, limite de responsabilite chiffree, delais de reserve et de
- * prescription, temps d'attente, clause penale, droit de retention. Une
- * page legale de dix lignes ne protege personne.
- *
- * Le corps utilise deux marques seulement, « ## » pour une rubrique et
- * « - » pour une puce. Voir le rendu dans Pages/Show.jsx : rien n'est
- * interprete comme du HTML.
- *
- * Ces textes sont un point de depart credible pour une soutenance, pas
- * un avis juridique. Un transporteur reel les fait relire.
- */
 class PageSeeder extends Seeder
 {
     public function run(): void
@@ -29,10 +13,6 @@ class PageSeeder extends Seeder
         $auteur = User::where('role', 'ADMIN')->first();
 
         foreach ($this->pages() as $rang => $page) {
-            // Les pages legales vont au pied du site. La note aux
-            // conducteurs est un document interne : elle vit dans la meme
-            // table, pour etre modifiable sans developpeur, mais elle
-            // n'est pas publiee et repond donc 404 a un visiteur.
             $interne = $page['interne'] ?? false;
             unset($page['interne']);
 

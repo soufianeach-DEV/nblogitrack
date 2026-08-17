@@ -9,14 +9,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/**
- * Qui voit quoi, et qui peut quoi.
- *
- * Mon audit du 15 aout avait trouve ici le seul trou d'autorisation de
- * l'application : un chauffeur atteignait le carnet de commandes du
- * client en tapant l'adresse a la main. Ces tests fixent la frontiere
- * pour qu'elle ne se rouvre pas.
- */
 class CloisonnementTest extends TestCase
 {
     use RefreshDatabase;
@@ -45,12 +37,6 @@ class CloisonnementTest extends TestCase
         $this->assertTrue($vues->every(fn ($o) => $o['client_id'] === $sien->id));
     }
 
-    /**
-     * La reponse est « introuvable » et non « interdit » : les
-     * identifiants se suivent, et un refus distinct du neant permettrait
-     * de denombrer les expeditions des autres en changeant le numero
-     * dans l'adresse.
-     */
     public function test_l_expedition_d_un_autre_client_n_existe_pas(): void
     {
         $sien = $this->client();
@@ -73,10 +59,6 @@ class CloisonnementTest extends TestCase
         $this->assertCount(4, $reponse->viewData('page')['props']['orders']['data']);
     }
 
-    /**
-     * Le trou que l'audit avait trouve. Le chauffeur a ses missions,
-     * pas le carnet de commandes.
-     */
     public function test_un_chauffeur_n_atteint_pas_les_ecrans_du_client(): void
     {
         $chauffeur = User::factory()->chauffeur()->create();
@@ -86,12 +68,6 @@ class CloisonnementTest extends TestCase
         $this->actingAs($chauffeur)->get(route('invoices.index'))->assertForbidden();
     }
 
-    /**
-     * Deposer une commande, c'est signer en son nom. Seul un compte
-     * client porte une ligne dans « clients », que la commande
-     * reference : le personnel qui deposait declenchait une erreur
-     * serveur sur la cle etrangere.
-     */
     public function test_seul_un_client_depose_une_commande(): void
     {
         $this->actingAs(User::factory()->planificateur()->create())
@@ -129,7 +105,6 @@ class CloisonnementTest extends TestCase
         $this->assertSame(5, $reponse->viewData('page')['props']['factures']['total']);
     }
 
-    /** Quelques factures pour une entreprise, le minimum exigible. */
     private function factures(Client $client, int $combien): void
     {
         foreach (range(1, $combien) as $i) {

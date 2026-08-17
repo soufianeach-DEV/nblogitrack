@@ -38,8 +38,6 @@ class VehicleController extends Controller
             $requete->where('vehicle_type', $filtres['type']);
         }
 
-        // La question du planificateur n'est pas « combien porte ce camion »
-        // mais « lesquels portent au moins ce que je dois expedier ».
         if (! empty($filtres['charge'])) {
             $requete->where('capacity_tonnes', '>=', (float) $filtres['charge']);
         }
@@ -112,11 +110,6 @@ class VehicleController extends Controller
             'inspection_valid_until.after_or_equal' => 'La validité ne peut pas précéder le passage au contrôle.',
         ]);
 
-        // Retirer du service un camion qui porte une expedition en cours
-        // ferait perdre a la planification la trace de ce qui lui est confie.
-        // La base ne peut pas l'interdire : c'est une regle metier. Le refus
-        // part en erreur de champ, pas en flash : un refus que l'ecran
-        // n'affiche pas ressemble a une acceptation.
         if ($donnees['is_available'] === false) {
             $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
                 ->where('vehicle_registration', $vehicle->registration)
@@ -129,7 +122,6 @@ class VehicleController extends Controller
             }
         }
 
-        // Le kilometrage d'un camion ne diminue pas.
         if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < (float) $vehicle->mileage) {
             return back()->withErrors([
                 'mileage' => 'Le kilométrage ne peut pas descendre sous le relevé actuel ('

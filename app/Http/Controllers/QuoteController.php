@@ -14,7 +14,6 @@ use Inertia\Response;
 class QuoteController extends Controller
 {
     private const CHOIX = [
-        // Service entre entreprises : pas de particulier.
         'clients' => [
             'Client régulier / entreprise',
             'Nouvelle entreprise',
@@ -106,7 +105,6 @@ class QuoteController extends Controller
 
         $devis = QuoteRequest::create($data);
 
-        // La reference reprend le numero de la ligne, elle n'existe qu'apres l'insertion.
         $devis->update([
             'reference' => 'DEV-'.now()->year.'-'.str_pad($devis->id, 4, '0', STR_PAD_LEFT),
         ]);
@@ -140,9 +138,6 @@ class QuoteController extends Controller
         ]);
     }
 
-    /**
-     * Back-office : les demandes recues, filtrees par statut et par recherche.
-     */
     public function index(Request $request): Response
     {
         $statut = $request->query('statut', 'PENDING');
@@ -167,8 +162,6 @@ class QuoteController extends Controller
             'demandes' => $requete->paginate(10)->withQueryString(),
             'statut' => $statut,
             'recherche' => $recherche,
-            // La constante porte le francais : elle est evaluee au
-            // chargement de la classe, avant que la langue soit connue.
             'statuts' => collect(QuoteRequest::STATUTS)
                 ->map(fn (string $libelle, string $cle) => Traductions::t(
                     'demandes.statut_'.strtolower($cle),

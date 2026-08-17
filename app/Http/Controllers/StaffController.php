@@ -16,7 +16,6 @@ use Inertia\Response;
 
 class StaffController extends Controller
 {
-    /** Les comptes que cet ecran gere : le client s'inscrit lui-meme. */
     public const ROLES = [
         'DRIVER' => 'Chauffeur',
         'PLANNER' => 'Planificateur',
@@ -67,8 +66,6 @@ class StaffController extends Controller
                         'role_code' => $u->role,
                         'actif' => (bool) $u->is_active,
                         'confirme' => $u->email_verified_at !== null,
-                        // Se desactiver soi-meme fermerait la porte de
-                        // l'interieur : personne ne pourrait plus rouvrir.
                         'soi_meme' => $u->id === $request->user()->id,
                         'permis' => $chauffeur?->license_type,
                         'empechements' => $chauffeur?->empechements() ?? [],
@@ -108,9 +105,6 @@ class StaffController extends Controller
         ]);
 
         $utilisateur = DB::transaction(function () use ($donnees) {
-            // Aucun mot de passe n'est choisi ici : une valeur aleatoire
-            // inutilisable ouvre le compte, et l'interesse definit le sien
-            // par le lien de reinitialisation. Personne d'autre ne le connait.
             $utilisateur = User::create([
                 'first_name' => $donnees['first_name'],
                 'last_name' => $donnees['last_name'],
@@ -161,8 +155,6 @@ class StaffController extends Controller
             ]);
         }
 
-        // Un compte qui porte une mission en cours ne se ferme pas : le
-        // chauffeur ne pourrait plus la declarer livree.
         if ($user->is_active && $user->isDriver()) {
             $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
                 ->where('driver_id', $user->id)
@@ -175,8 +167,6 @@ class StaffController extends Controller
             }
         }
 
-        // Le dernier administrateur actif ne se desactive pas : plus personne
-        // ne pourrait rouvrir un compte ni en creer un.
         if ($user->is_active && $user->isAdmin()
             && User::where('role', 'ADMIN')->where('is_active', true)->count() <= 1) {
             return back()->withErrors([
@@ -200,21 +190,10 @@ class StaffController extends Controller
         return back()->with('success', $user->is_active ? 'Compte réactivé.' : 'Compte désactivé.');
     }
 
-    /**
-     * Coupe ce qui pourrait rouvrir la porte apres une desactivation.
-     *
-     * Le middleware ferme la session en cours, mais deux choses lui
-     * survivent : le jeton « se souvenir de moi », qui reconnecterait au
-     * prochain passage, et les sessions ouvertes sur d'autres appareils,
-     * qui dorment en base jusqu'a leur prochaine requete. On les retire
-     * ici, au moment ou la decision est prise.
-     */
     private function couperLesAcces(User $user): void
     {
         $user->forceFill(['remember_token' => null])->save();
 
-        // Les sessions vivent en base : celles de cet utilisateur
-        // s'effacent, les autres ne bougent pas.
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))
                 ->where('user_id', $user->id)
@@ -222,7 +201,6 @@ class StaffController extends Controller
         }
     }
 
-    /** Renvoyer le lien quand le premier a expire ou s'est perdu. */
     public function resetLink(User $user): RedirectResponse
     {
         abort_if(! array_key_exists($user->role, self::ROLES), 404);

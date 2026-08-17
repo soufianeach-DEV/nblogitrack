@@ -10,26 +10,8 @@ use Illuminate\Support\Facades\Http;
 
 class VatController extends Controller
 {
-    /**
-     * Le temps qu'on accorde à un registre extérieur avant d'abandonner.
-     *
-     * Une inscription enchaîne deux appels sortants, et le processus PHP
-     * reste occupé pendant toute leur durée. Mesure faite le 16/08/2026
-     * depuis cette machine, trois essais chacun : VIES répond entre 0,67
-     * et 0,78 s, la Banque-Carrefour entre 0,83 et 0,96 s, le registre
-     * français entre 0,61 et 0,90 s.
-     *
-     * Cinq secondes laissent donc plus de cinq fois la marge du pire cas
-     * observé. Les douze secondes précédentes immobilisaient un processus
-     * quinze fois plus longtemps que nécessaire : le pire cas d'une
-     * inscription tombe de trente-cinq secondes à une quinzaine.
-     */
     private const DELAI_REGISTRE = 5;
 
-    /**
-     * Vérifie un numéro de TVA auprès du service VIES de la Commission européenne
-     * et retourne les données officielles de l'entreprise.
-     */
     public function verifier(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -54,8 +36,6 @@ class VatController extends Controller
 
         $resultat = $this->interrogerVies($tva, $identifiant);
 
-        // Seules les réponses définitives sont mémorisées : une indisponibilité
-        // temporaire du registre ne doit pas être figée pendant 24 heures.
         if (in_array($resultat['statut'], ['valide', 'invalide'], true)) {
             Cache::put($cle, $resultat, now()->addDay());
         }
@@ -98,15 +78,11 @@ class VatController extends Controller
                 ];
             }
 
-            // Une panne du registre national ne doit pas être confondue avec un numéro inconnu.
             $pannes = ['SERVICE_UNAVAILABLE', 'MS_UNAVAILABLE', 'MS_MAX_CONCURRENT_REQ',
                 'GLOBAL_MAX_CONCURRENT_REQ', 'TIMEOUT', 'IP_BLOCKED', 'VAT_BLOCKED'];
 
             if (in_array($corps['userError'] ?? '', $pannes, true)) {
                 if ($tentative < 2) {
-                    // Assez pour laisser passer un hoquet du registre, pas
-                    // assez pour immobiliser le processus une seconde de
-                    // plus alors qu'il attend deja depuis cinq.
                     usleep(400_000);
 
                     return $this->interrogerVies($tva, $identifiant, $tentative + 1);
@@ -121,9 +97,6 @@ class VatController extends Controller
         }
     }
 
-    /**
-     * Secteur d'activité déduit de la division NACE, nomenclature commune à l'Union européenne.
-     */
     private const SECTEURS_NACE = [
         '01' => 'Agriculture', '02' => 'Agriculture', '03' => 'Agriculture',
         '10' => 'Agroalimentaire', '11' => 'Agroalimentaire', '12' => 'Agroalimentaire',
@@ -143,9 +116,6 @@ class VatController extends Controller
     ];
 
     /**
-     * Interroge le registre national des entreprises françaises (données publiques,
-     * sans authentification) pour le dirigeant et le secteur d'activité.
-     *
      * @return array{dirigeant: ?array{prenom: string, nom: string, fonction: string}, secteur: ?string}|null
      */
     private function registreFrancais(?string $identifiantNational): ?array
@@ -212,10 +182,6 @@ class VatController extends Controller
     }
 
     /**
-     * Consulte la fiche publique de la Banque-Carrefour des Entreprises.
-     * La BCE ne propose pas d'interface programmable ouverte : les informations
-     * sont lues sur la page de consultation publique, une requête par entreprise.
-     *
      * @return array{dirigeant: ?array{prenom: string, nom: string, fonction: string}, secteur: ?string}|null
      */
     private function registreBelge(?string $numeroEntreprise): ?array
@@ -256,9 +222,6 @@ class VatController extends Controller
         }
     }
 
-    /**
-     * Situations juridiques qui interdisent l'ouverture d'un compte client.
-     */
     private const SITUATIONS_BLOQUANTES = [
         'faillite', 'liquidation', 'dissolution', 'clôture', 'cloture',
         'cessation', 'cessé', 'cesse', 'réorganisation judiciaire', 'reorganisation judiciaire',
@@ -297,8 +260,6 @@ class VatController extends Controller
     }
 
     /**
-     * La BCE publie les mandats sous la forme « Fonction NOM , Prénom ».
-     *
      * @return array{prenom: string, nom: string, fonction: string}|null
      */
     private function dirigeantBelge(string $texte): ?array
@@ -326,9 +287,6 @@ class VatController extends Controller
     }
 
     /**
-     * Une entreprise déclare souvent plusieurs activités : on retient la première
-     * qui correspond à un secteur du référentiel.
-     *
      * @param  array<int, string>  $divisions
      */
     private function premierSecteurConnu(array $divisions): ?string
@@ -342,9 +300,6 @@ class VatController extends Controller
         return null;
     }
 
-    /**
-     * Les registres publient les noms en capitales : on rétablit une casse lisible.
-     */
     private function casseNom(string $valeur): string
     {
         $valeur = $this->nettoyer($valeur);
@@ -371,8 +326,6 @@ class VatController extends Controller
     }
 
     /**
-     * Sépare l'adresse VIES en rue, code postal et localité.
-     *
      * @return array{rue: string, code_postal: string, ville: string}
      */
     private function decomposerAdresse(string $brut): array

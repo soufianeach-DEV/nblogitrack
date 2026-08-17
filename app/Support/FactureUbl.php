@@ -125,7 +125,6 @@ class FactureUbl
     private static function reglement(XMLWriter $x, Invoice $facture): void
     {
         $x->startElement('cac:PaymentMeans');
-        // 30 : virement, la seule voie de reglement de l'entreprise.
         self::texte($x, 'cbc:PaymentMeansCode', '30');
         self::texte($x, 'cbc:PaymentID', $facture->payment_reference);
         $x->startElement('cac:PayeeFinancialAccount');
@@ -152,11 +151,6 @@ class FactureUbl
         $x->endElement();
     }
 
-    /**
-     * AE designe l'autoliquidation, S le taux normal. Le code d'exoneration
-     * VATEX-EU-AE est celui que la norme europeenne impose pour justifier un
-     * taux nul : sans lui, la facture est rejetee a la validation.
-     */
     private static function categorie(XMLWriter $x, Invoice $facture, bool $avecMotif): void
     {
         $x->startElement('cac:TaxCategory');
@@ -190,8 +184,6 @@ class FactureUbl
         self::texte($x, 'cbc:ID', (string) $rang);
 
         $x->startElement('cbc:InvoicedQuantity');
-        // C62 : l'unite sans dimension de la recommandation 20 des Nations
-        // unies. Une expedition se compte, elle ne se pese pas ici.
         $x->writeAttribute('unitCode', 'C62');
         $x->text('1');
         $x->endElement();
@@ -211,9 +203,6 @@ class FactureUbl
     }
 
     /**
-     * Un identifiant Peppol s'ecrit code d'organisme deux-points identifiant,
-     * par exemple 0208:0123456749 pour un numero d'entreprise belge.
-     *
      * @return array{0: string, 1: string}
      */
     private static function peppol(?string $peppol): array

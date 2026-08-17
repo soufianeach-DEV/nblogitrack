@@ -11,25 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Les correctifs de l'audit du 15 aout, et leur non-retour.
- *
- * Chacun de ces tests correspond a un defaut reel, mesure sur
- * l'application avant correction. Ils ne verifient pas une intention :
- * ils rejouent l'attaque.
- */
 class SecuriteTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Le premier des deux constats critiques.
-     *
-     * Le controle du compte ne se faisait qu'a la connexion. Un employe
-     * dont on coupait l'acces continuait a travailler jusqu'a ce qu'il
-     * se deconnecte de lui-meme : c'est le scenario du depart
-     * conflictuel, et la desactivation ne servait a rien.
-     */
     public function test_desactiver_un_compte_coupe_la_session_en_cours(): void
     {
         $planificateur = User::factory()->planificateur()->create();
@@ -56,16 +41,6 @@ class SecuriteTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * Deux depots simultanes lisaient le meme plus grand identifiant et
-     * fabriquaient le meme numero : le second s'ecrasait sur la
-     * contrainte d'unicite, et le client voyait une erreur serveur pour
-     * une commande pourtant valable.
-     *
-     * Le verrou consultatif serialise l'attribution. Un test ne peut pas
-     * jouer deux processus, mais il peut verifier que cent numeros
-     * d'affilee restent distincts et que la colonne les refuse en double.
-     */
     public function test_les_numeros_de_suivi_restent_uniques(): void
     {
         $client = Client::factory()->create();
@@ -100,13 +75,6 @@ class SecuriteTest extends TestCase
         ]);
     }
 
-    /**
-     * Le nom de rue part dans une expression reguliere chez Overpass.
-     * Retirer les guillemets empechait de sortir de la chaine mais
-     * laissait passer tout le reste du langage : mesure faite, le motif
-     * point-etoile repete six fois occupait le service tiers pendant
-     * dix-neuf secondes et remontait cent soixante-cinq rues.
-     */
     public function test_un_nom_de_rue_ne_devient_pas_une_expression_reguliere(): void
     {
         $filtre = fn (string $rue) => preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
@@ -121,10 +89,6 @@ class SecuriteTest extends TestCase
         }
     }
 
-    /**
-     * La recherche du bandeau cloisonne dans le serveur, pas dans
-     * l'affichage : un client n'y trouve que ses propres expeditions.
-     */
     public function test_la_recherche_ne_traverse_pas_les_entreprises(): void
     {
         $sien = Client::factory()->create();
@@ -150,10 +114,6 @@ class SecuriteTest extends TestCase
         $this->assertSame(1, substr_count($texte, 'TRK-'));
     }
 
-    /**
-     * Le journal doit repondre « qui a fait quoi, quand, depuis ou » :
-     * c'est l'exigence A10, et elle demande les quatre.
-     */
     public function test_le_journal_retient_les_quatre_informations(): void
     {
         $client = Client::factory()->create();

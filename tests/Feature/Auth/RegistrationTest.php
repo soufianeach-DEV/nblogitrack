@@ -8,12 +8,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-/**
- * L'inscription interroge le registre europeen des assujettis, puis le
- * registre national. Ces tests simulent les deux : appeler les vrais
- * services rendrait la suite dependante de leur disponibilite, et le
- * seize aout le noeud belge de VIES etait justement en panne.
- */
 class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
@@ -39,7 +33,6 @@ class RegistrationTest extends TestCase
         ], $remplace);
     }
 
-    /** Le registre repond que le numero est valide et l'entreprise saine. */
     private function registreRepond(array $corps = []): void
     {
         Http::fake([
@@ -72,10 +65,6 @@ class RegistrationTest extends TestCase
         $this->assertNotNull(Client::find($utilisateur->id));
     }
 
-    /**
-     * Le role ne se lit jamais dans le formulaire. Personne ne peut se
-     * declarer chauffeur en ajoutant un champ a sa requete.
-     */
     public function test_le_role_ne_se_choisit_pas_dans_le_formulaire(): void
     {
         $this->registreRepond();
@@ -85,11 +74,6 @@ class RegistrationTest extends TestCase
         $this->assertSame('CLIENT', User::where('email', 'contact@transports-essai.be')->value('role'));
     }
 
-    /**
-     * Le point que l'audit avait releve comme le mieux defendu : sans
-     * reponse du registre, pas d'inscription. Sinon le controle de
-     * faillite se contourne en attendant, ou en provoquant, une panne.
-     */
     public function test_pas_d_inscription_quand_le_registre_est_injoignable(): void
     {
         $this->registreRepond(['isValid' => false, 'userError' => 'MS_UNAVAILABLE']);

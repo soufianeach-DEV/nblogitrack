@@ -50,8 +50,6 @@ class ClientValidationController extends Controller
             });
         }
 
-        // L'ecran propose les libelles traduits, la base ne connait que le
-        // francais : on repasse par lui avant d'interroger la colonne.
         if ($filtres['pays'] !== '') {
             $query->where('country', Pays::nomFrancais($filtres['pays']));
         }

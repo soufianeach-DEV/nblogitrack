@@ -16,18 +16,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-/**
- * L'API que consomment les systemes des partenaires (A12).
- *
- * Elle sert le suivi d'expedition et la prise d'ordre, c'est-a-dire ce
- * qu'un client integre a son propre outil de gestion. Elle ne sert ni
- * les tarifs d'achat, ni la marge, ni le parc : une API ouverte n'expose
- * que ce que le partenaire a le droit de connaitre.
- *
- * Les reponses sont en anglais dans leurs cles et en francais dans leurs
- * valeurs libres : une cle de JSON est un identifiant technique, pas du
- * texte d'interface, et elle ne se traduit pas.
- */
 class ExpeditionController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -60,9 +48,6 @@ class ExpeditionController extends Controller
         $expedition = $this->perimetre($request)->where('tracking_number', $numero)->first();
 
         if ($expedition === null) {
-            // Le meme 404 pour une expedition inexistante et pour celle
-            // d'un autre partenaire : sinon la reponse revele qui est
-            // client de qui.
             return response()->json(['message' => 'Expédition introuvable.'], 404);
         }
 
@@ -89,8 +74,6 @@ class ExpeditionController extends Controller
             'matieres_dangereuses' => 'boolean',
             'hayon' => 'boolean',
             'instructions' => 'nullable|string|max:500',
-            // Deux ajouts retrocompatibles : un appelant qui les ignore
-            // garde exactement le comportement precedent, en mieux.
             'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
             'formule' => ['nullable', Rule::in(['ECO', 'STANDARD', 'EXPRESS'])],
         ]);
@@ -143,9 +126,6 @@ class ExpeditionController extends Controller
             'tracking_code' => TransportOrder::prochainCode(),
         ]);
 
-        // Un ordre depose par une machine se trace comme un ordre depose
-        // par une personne : le journal d'activite doit pouvoir repondre
-        // « qui a cree cette expedition ».
         ActivityLog::record(
             'order.created_api',
             'Expédition '.$expedition->tracking_number.' déposée par l\'API',
@@ -158,16 +138,6 @@ class ExpeditionController extends Controller
     }
 
     /**
-     * Place les deux adresses sur la carte, au serveur.
-     *
-     * Un ordre depose par une machine arrivait sans coordonnees, sans
-     * distance, sans prix et sans code de suivi : il echappait donc a la
-     * carte, au suivi public et a la facturation, qui somme les prix
-     * estimes. Une expedition a moitie nee dans la base est pire qu'une
-     * expedition refusee, parce que personne ne s'en apercoit.
-     *
-     * L'enlevement part de Belgique, comme dans le formulaire web.
-     *
      * @return array{enlevement: object, livraison: object}|string
      */
     private function situer(string $enlevement, string $livraison, string $pays): array|string
@@ -187,14 +157,6 @@ class ExpeditionController extends Controller
         return ['enlevement' => $depart, 'livraison' => $arrivee];
     }
 
-    /**
-     * La grille qui tarifera l'expedition.
-     *
-     * L'appelant peut nommer sa formule. S'il se tait, on prend la moins
-     * chere qui tienne le delai qu'il demande lui-meme : entre son
-     * enlevement et sa livraison souhaitee. Choisir l'express par defaut
-     * ferait payer un client presse a un client qui ne l'est pas.
-     */
     private function grille(string $pays, ?string $formule, string $enlevement, string $livraison): ?TariffGrid
     {
         $requete = TariffGrid::where('zone', $pays)->where('is_active', true);
@@ -211,10 +173,6 @@ class ExpeditionController extends Controller
             ->first();
     }
 
-    /**
-     * Ce qu'une cle a le droit de voir : les expeditions de l'entreprise
-     * a laquelle elle est rattachee, ou toutes si elle est interne.
-     */
     private function perimetre(Request $request)
     {
         $cle = $request->attributes->get('cle_api');

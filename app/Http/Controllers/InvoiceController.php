@@ -21,12 +21,8 @@ class InvoiceController extends Controller
 
         abort_if($utilisateur->isDriver(), 403);
 
-        // Le client regle ses propres factures ; le personnel n'a pas a payer
-        // a sa place.
         $estClient = $utilisateur->cannot('view-all-orders');
 
-        // Le perimetre se redemande a chaque usage : un constructeur Eloquent
-        // garde ses conditions, le reutiliser cumulerait les filtres.
         $perimetre = fn () => Invoice::query()
             ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->id));
 
@@ -50,17 +46,11 @@ class InvoiceController extends Controller
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
                     'peut_payer' => $estClient && $facture->status === 'SENT',
                 ]),
-            // Les trois cartes resument toutes les factures, pas la page
-            // affichee : elles se calculent en base. La regle du retard est
-            // celle de Invoice::estEnRetard(), sinon le total contredirait
-            // les etiquettes des lignes.
             'cartes' => [
                 'du' => (float) $perimetre()->where('status', '!=', 'PAID')->sum('amount_incl_tax'),
                 'paye' => (float) $perimetre()->where('status', 'PAID')->sum('amount_incl_tax'),
                 'en_retard' => $perimetre()->where('status', '!=', 'PAID')->where('due_on', '<', now())->count(),
             ],
-            // Le personnel ne paie jamais : la colonne se decide sur
-            // l'ensemble, pour qu'elle ne clignote pas d'une page a l'autre.
             'colonnePaiement' => $estClient && $perimetre()->where('status', 'SENT')->exists(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
         ]);
@@ -111,8 +101,6 @@ class InvoiceController extends Controller
                 ])->all(),
             ],
             'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
-            // Le client regle sa propre facture ; le personnel n'a pas a
-            // payer a sa place.
             'peutPayerEnLigne' => $invoice->status === 'SENT'
                 && $utilisateur->cannot('view-all-orders')
                 && $invoice->client_id === $utilisateur->id,

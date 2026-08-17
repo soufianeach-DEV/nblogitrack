@@ -54,10 +54,6 @@ class Driver extends Model
     }
 
     /**
-     * Ce qui empeche ce chauffeur de prendre la route aujourd'hui.
-     * Une liste vide signifie qu'il est en regle. Un seul endroit decide,
-     * l'affectation et les ecrans s'y referent.
-     *
      * @return list<string>
      */
     public function empechements(): array
@@ -75,8 +71,6 @@ class Driver extends Model
                 ['date' => $this->license_expiry->format('d/m/Y')]);
         }
 
-        // L'entreprise exige une visite medicale par an, plus stricte que le
-        // minimum legal : c'est elle qui repond en cas d'accident.
         if ($this->medical_exam_date === null) {
             $motifs[] = Traductions::t('empechement.sans_visite', 'aucune visite médicale enregistrée');
         } elseif ($this->medical_exam_date->lt($aujourdhui->copy()->subYear())) {

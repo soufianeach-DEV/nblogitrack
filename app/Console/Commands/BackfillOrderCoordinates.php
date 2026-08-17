@@ -12,10 +12,6 @@ class BackfillOrderCoordinates extends Command
 
     protected $description = 'Retrouve les coordonnées des expéditions anciennes à partir de leur code postal';
 
-    /**
-     * Les adresses du jeu de démonstration se terminent par le code postal et
-     * la localité ; celles saisies par le formulaire ajoutent le pays.
-     */
     private const PAYS = [
         'belgique' => 'BE', 'france' => 'FR', 'pays-bas' => 'NL', 'allemagne' => 'DE',
         'luxembourg' => 'LU', 'italie' => 'IT', 'espagne' => 'ES', 'portugal' => 'PT',
@@ -71,9 +67,6 @@ class BackfillOrderCoordinates extends Command
     }
 
     /**
-     * Le code postal suffit : il donne le centre de la localité, ce qui est
-     * assez précis pour tracer un trajet a l'échelle européenne.
-     *
      * @return array{lat: float, lng: float}|null
      */
     private function localiser(?string $adresse): ?array
@@ -95,8 +88,6 @@ class BackfillOrderCoordinates extends Command
             return null;
         }
 
-        // On essaie chaque nombre trouve, du dernier au premier : le code postal
-        // est apres la virgule, le numero de rue avant.
         foreach (array_reverse($trouves[1]) as $candidat) {
             $point = DB::table('postal_codes')
                 ->where('country_code', $pays)

@@ -9,10 +9,6 @@ class AccueilTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * La racine ne sert rien elle-meme : elle renvoie vers la langue du
-     * visiteur, parce que toutes les pages vivent sous un prefixe.
-     */
     public function test_la_racine_redirige_vers_une_langue(): void
     {
         $this->get('/')->assertRedirect();
@@ -30,22 +26,12 @@ class AccueilTest extends TestCase
         }
     }
 
-    /**
-     * Une adresse sans prefixe servi n'est pas une erreur : le repli la
-     * prefixe avec la langue en cours. Les liens d'avant le prefixage
-     * continuent donc de fonctionner, et l'on n'atterrit jamais sur une
-     * page morte.
-     */
     public function test_une_adresse_sans_prefixe_rejoint_la_langue_en_cours(): void
     {
         $this->get('/de')->assertRedirect('/fr/de');
         $this->get('/factures')->assertRedirect('/fr/factures');
     }
 
-    /**
-     * En revanche, quand le prefixe est deja une langue servie, c'est une
-     * vraie page introuvable et le repli ne boucle pas dessus.
-     */
     public function test_une_page_inexistante_sous_une_langue_servie_rend_404(): void
     {
         $this->get('/fr/cette-page-n-existe-pas')->assertNotFound();

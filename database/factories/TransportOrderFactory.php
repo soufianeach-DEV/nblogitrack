@@ -9,11 +9,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends Factory<TransportOrder>
- *
- * Une expedition en attente, complete : coordonnees, distance, prix et
- * code de suivi. Un ordre a moitie rempli passerait la cle etrangere
- * mais echapperait a la carte, au suivi public et a la facturation, et
- * un test bati dessus ne prouverait rien.
  */
 class TransportOrderFactory extends Factory
 {
@@ -52,7 +47,6 @@ class TransportOrderFactory extends Factory
         ];
     }
 
-    /** Une expedition partie, avec son equipage. */
     public function enRoute(): static
     {
         return $this->state(fn (array $a) => [
@@ -61,7 +55,6 @@ class TransportOrderFactory extends Factory
         ]);
     }
 
-    /** Une expedition arrivee. */
     public function livree(): static
     {
         return $this->state(fn (array $a) => [
@@ -71,13 +64,11 @@ class TransportOrderFactory extends Factory
         ]);
     }
 
-    /** Une matiere dangereuse : elle reclame un chauffeur certifie ADR. */
     public function dangereuse(): static
     {
         return $this->state(fn (array $a) => ['is_hazardous' => true]);
     }
 
-    /** Le client a demande le suivi de la position en direct. */
     public function suivie(): static
     {
         return $this->state(fn (array $a) => ['suivi_direct' => true]);

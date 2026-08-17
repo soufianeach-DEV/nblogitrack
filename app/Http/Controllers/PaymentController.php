@@ -26,8 +26,6 @@ class PaymentController extends Controller
 
         $stripe = new StripeClient(config('services.stripe.secret'));
 
-        // Le montant vient de la base et jamais du navigateur, comme le
-        // calcul du prix. Stripe compte en centimes.
         $session = $stripe->checkout->sessions->create([
             'mode' => 'payment',
             'client_reference_id' => (string) $invoice->id,
@@ -48,16 +46,9 @@ class PaymentController extends Controller
             'cancel_url' => route('invoices.show', $invoice),
         ]);
 
-        // Un XHR Inertia ne peut pas suivre une redirection vers un autre
-        // domaine : Inertia::location fait naviguer le navigateur lui-meme.
         return Inertia::location($session->url);
     }
 
-    /**
-     * Le retour du navigateur ne prouve rien : n'importe qui peut taper
-     * cette adresse. Elle informe l'utilisateur, elle ne change aucun
-     * etat. Seul le webhook signe marque la facture payee.
-     */
     public function retour(Request $request, Invoice $invoice): Response
     {
         $this->autoriserPaiement($request, $invoice);
@@ -77,22 +68,6 @@ class PaymentController extends Controller
         ]);
     }
 
-    /**
-     * Cette session de paiement acquitte-t-elle bien CETTE facture ?
-     *
-     * L'identifiant arrive par l'adresse, donc de l'exterieur. Rien
-     * n'empeche de recopier celui d'une facture deja reglee sur le
-     * retour d'une autre, encore impayee : l'ecran annoncerait alors un
-     * paiement qui n'a jamais eu lieu.
-     *
-     * Stripe porte le numero de la facture dans « client_reference_id »
-     * depuis la creation de la session. C'est lui qui tranche.
-     *
-     * Un identifiant inconnu, mal forme, ou Stripe injoignable : les trois
-     * levent une exception. Aucune n'a a remonter en 500 sur un ecran qui
-     * ne fait qu'informer, et le doute vaut « pas encore regle ». D'ou
-     * l'interface commune plutot qu'une classe : elle les couvre toutes.
-     */
     private function sessionAcquittee(string $identifiant, Invoice $invoice): bool
     {
         try {
@@ -106,11 +81,6 @@ class PaymentController extends Controller
             && (string) $session->client_reference_id === (string) $invoice->id;
     }
 
-    /**
-     * La seule source qui fait foi. Stripe signe chaque notification avec
-     * un secret partage : sans cette signature, n'importe qui pourrait
-     * annoncer un paiement en appelant cette adresse.
-     */
     public function webhook(Request $request): JsonResponse
     {
         $secret = config('services.stripe.webhook_secret');
@@ -130,8 +100,6 @@ class PaymentController extends Controller
         }
 
         if ($evenement->type !== 'checkout.session.completed') {
-            // Les autres evenements sont acceptes sans traitement : repondre
-            // une erreur ferait recommencer Stripe indefiniment.
             return response()->json(['message' => 'Ignoré.']);
         }
 
@@ -142,13 +110,7 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Sans effet.']);
         }
 
-        // La signature prouve que Stripe parle, elle ne dit pas ce qu'il
-        // annonce. Trois choses restent a verifier avant de solder une
-        // creance sur cette seule foi.
         if ($ecart = $this->discordance($evenement, $session, $invoice)) {
-            // On repond 200 : une erreur ferait recommencer Stripe
-            // indefiniment alors que le probleme ne vient pas de lui. Mais
-            // la facture n'est pas soldee, et l'ecart se voit au journal.
             ActivityLog::record(
                 'invoice.payment_rejected',
                 'Notification de paiement refusée pour '.$invoice->reference.' : '.$ecart,
@@ -159,8 +121,6 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Notification incohérente, sans effet.']);
         }
 
-        // Stripe peut renvoyer la meme notification plusieurs fois : une
-        // facture deja payee ne se repaie pas.
         if ($invoice->status === 'PAID') {
             return response()->json(['message' => 'Déjà enregistré.']);
         }
@@ -180,22 +140,6 @@ class PaymentController extends Controller
         return response()->json(['message' => 'Enregistré.']);
     }
 
-    /**
-     * Ce qui, dans la notification, ne correspond pas a la facture.
-     *
-     * Rend le motif du refus, ou null si tout concorde.
-     *
-     * Le mode d'abord. Si l'application tourne avec des cles de test et
-     * qu'une notification arrive en mode reel — ou l'inverse — c'est
-     * qu'un environnement se trompe de destinataire. Un paiement de
-     * cinquante centimes en test solderait alors une facture reelle.
-     *
-     * Le montant ensuite, au centime. Stripe compte en centimes, comme a
-     * la creation de la session ; les deux nombres doivent se retrouver.
-     *
-     * La devise enfin : trois mille euros et trois mille couronnes ne
-     * sont pas le meme paiement.
-     */
     private function discordance(object $evenement, object $session, Invoice $invoice): ?string
     {
         $reel = str_starts_with((string) config('services.stripe.secret'), 'sk_live_');
@@ -220,8 +164,6 @@ class PaymentController extends Controller
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void
     {
-        // Une facture qui n'est pas la sienne n'existe pas : les references
-        // sont sequentielles, un refus confirmerait son existence.
         abort_if($request->user()->cannot('view-all-orders')
             && $invoice->client_id !== $request->user()->id, 404);
     }

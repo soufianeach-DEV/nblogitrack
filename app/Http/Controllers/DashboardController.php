@@ -22,8 +22,6 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response|RedirectResponse
     {
-        // Un chauffeur n'est le client de personne : ce tableau de bord ne lui
-        // montrerait que des compteurs a zero. Sa page, ce sont ses missions.
         if ($request->user()->isDriver()) {
             return redirect()->route('missions.index');
         }
@@ -43,8 +41,6 @@ class DashboardController extends Controller
             'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
         ];
 
-        // Le cadre s'aligne sur la carte et les alertes : il faut treize
-        // lignes pour le remplir.
         $recent = (clone $query)
             ->with('client:id,company_name')
             ->latest('id')
@@ -60,8 +56,6 @@ class DashboardController extends Controller
             'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
             'alertes' => $this->alertes(clone $query, $personnel),
             'facturation' => $this->facturation($utilisateur, $personnel),
-            // Ces trois blocs relevent de l'exploitation, pas du dossier d'un
-            // client : ils ne partent que vers le personnel.
             'exploitation' => $personnel ? [
                 'entreprises_a_valider' => Client::where('is_validated', false)->whereNull('rejection_reason')->count(),
                 'chauffeurs_disponibles' => Driver::where('is_available', true)->count(),
@@ -77,9 +71,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Ce que la ponctualite raconte, calcule sur les expeditions reellement
-     * closes.
-     *
      * @param  array<string, int>  $stats
      * @return array<string, mixed>
      */
@@ -88,8 +79,6 @@ class DashboardController extends Controller
         $annulees = (clone $query)->where('status', 'CANCELLED')->count();
         $closes = $stats['delivered'] + $annulees;
 
-        // Le delai est celui qui separe la commande de la livraison reelle.
-        // PostgreSQL soustrait deux dates en jours, la moyenne suit.
         $delai = (clone $query)
             ->where('status', 'DELIVERED')
             ->whereNotNull('actual_delivery_date')
@@ -100,26 +89,17 @@ class DashboardController extends Controller
             'actives' => $stats['pending'] + $stats['in_progress'],
             'annulees' => $annulees,
             'delai_moyen' => $delai === null ? null : round((float) $delai, 1),
-            // Parmi les expeditions qui ont abouti d'une facon ou d'une autre,
-            // la part qui est arrivee a destination. Rapporter les livraisons
-            // au total gonflerait le taux avec des expeditions encore en
-            // route, qui n'ont rien prouve.
             'taux_livraison' => $closes === 0 ? null : round($stats['delivered'] / $closes * 100, 1),
         ];
     }
 
     /**
-     * Le volume des sept derniers mois, en nombre d'expeditions et en tonnes.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function volume(Builder $query): array
     {
         $debut = now()->startOfMonth()->subMonths(6);
 
-        // Une seule requete couvre les sept mois et les memes sept mois un an
-        // plus tot : deux requetes separees risquaient de perdre le
-        // cloisonnement au client en chemin.
         $releve = $query
             ->where('created_date', '>=', $debut->copy()->subYear()->toDateString())
             ->where('created_date', '<=', now()->endOfMonth()->toDateString())
@@ -131,8 +111,6 @@ class DashboardController extends Controller
 
         $mois = [];
 
-        // Un mois sans expedition doit apparaitre a zero, sinon l'histogramme
-        // rapproche deux mois qui ne se suivent pas.
         for ($i = 0; $i < 7; $i++) {
             $curseur = $debut->copy()->addMonths($i);
             $ligne = $releve[$curseur->format('Y-m')] ?? null;
@@ -153,11 +131,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Les expeditions en circulation, pour la carte du tableau de bord.
-     *
-     * Huit au plus : chacune demande son itineraire routier, et quarante
-     * traces superposees ne se liraient de toute facon pas.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function carte(Builder $query): array
@@ -174,9 +147,6 @@ class DashboardController extends Controller
                 'id' => $ordre->id,
                 'numero' => $ordre->tracking_number,
                 'statut' => $ordre->status,
-                // Etiquette de carte : « Bergen » situe le trajet pour un
-                // lecteur neerlandophone. L'adresse complete, elle, n'est
-                // pas traduite — voir la fiche de mission du chauffeur.
                 'depart' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
                 'arrivee' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
                 'coordonnees' => [
@@ -188,13 +158,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Les alertes du tableau de bord.
-     *
-     * Le prototype en montre deux, ecrites en dur : une congestion du canal
-     * de Suez et une route ferroviaire de substitution. Elles n'ont aucune
-     * source, et une alerte inventee ne sert a rien : celles-ci sortent des
-     * donnees, et disparaissent quand le probleme est regle.
-     *
      * @return array<int, array<string, mixed>>
      */
     private function alertes(Builder $query, bool $personnel): array
@@ -232,7 +195,6 @@ class DashboardController extends Controller
             return $alertes;
         }
 
-        // La suite releve de l'exploitation : elle ne concerne pas un client.
         $adr = TransportOrder::where('is_hazardous', true)
             ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
             ->whereNull('driver_id')
@@ -304,13 +266,6 @@ class DashboardController extends Controller
         return $alertes;
     }
 
-    /**
-     * Une phrase au singulier ou au pluriel, traduite.
-     *
-     * Concatener un Â« s Â» conditionnel ne se traduit pas : le pluriel ne
-     * se forme pas de la meme facon d'une langue a l'autre. Chaque forme
-     * porte donc sa propre cle.
-     */
     private static function phrase(int $nombre, string $cleUn, string $un, string $clePlusieurs, string $plusieurs): string
     {
         return $nombre > 1
@@ -319,9 +274,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Ce que le client a paye, ce qu'il doit encore, et ses dernieres
-     * factures. Le personnel voit les memes chiffres pour tout le monde.
-     *
      * @return array<string, mixed>|null
      */
     private function facturation(User $utilisateur, bool $personnel): ?array
@@ -358,24 +310,13 @@ class DashboardController extends Controller
     }
 
     /**
-     * Les entreprises qui attendent une decision.
-     *
      * @return array<int, array<string, mixed>>
      */
     /**
-     * Le plan de charge des quinze prochains jours.
-     *
-     * Le planificateur ne se demande pas combien d'ordres restent en attente,
-     * il se demande s'il peut accepter une livraison jeudi. La reponse tient
-     * dans la confrontation, jour par jour, de ce qui est promis et de ce qui
-     * est disponible pour le tenir.
-     *
      * @return array<string, mixed>
      */
     private function calendrier(): array
     {
-        // Quatorze jours et pas quinze : la grille se lit en deux semaines
-        // de sept, un jour de plus casserait l'alignement des colonnes.
         $debut = now()->startOfDay();
         $fin = $debut->copy()->addDays(13);
 
@@ -389,8 +330,6 @@ class DashboardController extends Controller
             ->selectRaw('requested_delivery_date AS jour, count(*) AS nombre')
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
 
-        // La capacite du jour n'est pas le parc entier : un camion deja parti
-        // et un chauffeur inapte n'y comptent pas.
         $camions = Vehicle::where('is_available', true)
             ->where(fn ($q) => $q->whereNull('inspection_valid_until')
                 ->orWhere('inspection_valid_until', '>=', $debut->toDateString()))
@@ -415,8 +354,6 @@ class DashboardController extends Controller
                 'mois' => $date->locale(app()->getLocale())->isoFormat('MMM'),
                 'weekend' => $date->isWeekend(),
                 'aujourdhui' => $date->isToday(),
-                // Un quai ferme n'est pas un jour creux : le planificateur
-                // doit voir pourquoi il ne peut rien y poser.
                 'ferie' => JoursFeries::nom($date),
                 'chome' => JoursFeries::chome($date),
                 'enlevements' => $enlevement,
@@ -463,13 +400,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Ce qui n'est plus en regle dans la flotte.
-     *
-     * Un chauffeur dont la visite medicale a plus d'un an ou dont le permis
-     * arrive a echeance ne devrait plus prendre la route, et un vehicule dont
-     * le controle technique est depasse non plus. Le tableau de bord les
-     * nomme au lieu de se contenter de les compter.
-     *
      * @return array<string, mixed>
      */
     private function conformite(): array
@@ -477,9 +407,6 @@ class DashboardController extends Controller
         $visite = now()->subYear()->toDateString();
         $echeance = now()->addDays(60)->toDateString();
 
-        // Seuls ceux qui roulent encore appellent une intervention. Un
-        // chauffeur deja retire du service ou parti n'est pas un risque :
-        // le melanger aux autres noie ce qui demande une action aujourd'hui.
         $chauffeursAlerte = fn ($q) => $q
             ->where('is_available', true)
             ->whereNull('left_on')
@@ -496,9 +423,6 @@ class DashboardController extends Controller
             ->take(5)
             ->get()
             ->map(function (Driver $chauffeur) use ($echeance) {
-                // Les empechements du modele disent deja pourquoi il ne peut
-                // pas rouler ; le permis qui approche s'y ajoute, parce qu'il
-                // se renouvelle avant d'expirer.
                 $motifs = $chauffeur->empechements();
 
                 if ($chauffeur->license_expiry !== null
@@ -517,9 +441,6 @@ class DashboardController extends Controller
             })
             ->all();
 
-        // Meme regle pour le parc : un camion hors service attend deja au
-        // garage, il n'y a rien a decider a son sujet. C'est l'echeance de
-        // validite qui tranche, pas la date du dernier passage.
         $vehiculesAlerte = fn ($q) => $q
             ->where('is_available', true)
             ->where('inspection_valid_until', '<', now()->toDateString());
@@ -546,8 +467,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Les dernieres traces du journal d'activite.
-     *
      * @return array<int, array<string, string>>
      */
     private function journal(): array

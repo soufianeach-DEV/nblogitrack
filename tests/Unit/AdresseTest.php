@@ -5,19 +5,8 @@ namespace Tests\Unit;
 use App\Support\Adresse;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Ces deux fonctions ne touchent ni la base ni le reseau : elles lisent
- * une chaine et rendent une chaine. C'est le seul endroit de
- * l'application ou un test unitaire au sens strict a du sens.
- */
 class AdresseTest extends TestCase
 {
-    /**
-     * Le jeu de donnees s'arrete a la localite, le formulaire ajoute le
-     * pays. Prendre le dernier segment rendait donc « Belgique » pour
-     * toutes les commandes passees en ligne, d'ou la recherche du
-     * segment qui porte le code postal.
-     */
     public function test_la_localite_se_lit_apres_le_code_postal(): void
     {
         $cas = [
@@ -45,10 +34,6 @@ class AdresseTest extends TestCase
         $this->assertSame('France', Adresse::pays('Rue de Rivoli 10, 75001 Paris, France'));
     }
 
-    /**
-     * Sans pays ecrit, on rend null : prendre la ville pour un pays
-     * ferait tarifer un Bruxelles-Paris comme un trajet national.
-     */
     public function test_le_pays_est_nul_quand_l_adresse_ne_le_porte_pas(): void
     {
         $this->assertNull(Adresse::pays('Rue Neuve 43, 3500 Hasselt'));

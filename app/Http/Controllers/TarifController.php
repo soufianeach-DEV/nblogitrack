@@ -27,22 +27,12 @@ class TarifController extends Controller
         ]);
     }
 
-    /**
-     * La simulation, calculee au serveur.
-     *
-     * Le formulaire de commande envoie la grille complete au navigateur pour
-     * afficher le detail au client identifie. Ici le visiteur est anonyme :
-     * lui livrer la grille, ce serait publier la marge, le cout chauffeur et
-     * la consommation a qui veut les lire. Seul le prix sort.
-     */
     public function simuler(Request $request): JsonResponse
     {
         $donnees = $request->validate([
             'depart' => 'required|string|max:120',
             'destination' => 'required|string|max:120',
             'pays' => 'required|string|size:2|exists:tariff_grids,zone',
-            // Quarante-quatre tonnes : la masse maximale autorisee d'un
-            // ensemble articule sur les routes belges.
             'poids' => 'required|numeric|min:1|max:44000',
             'adr' => 'boolean',
         ], [
@@ -90,8 +80,6 @@ class TarifController extends Controller
         return response()->json([
             'depart' => $depart->ville,
             'arrivee' => $arrivee->ville,
-            // Les localites sont la saisie du visiteur, renvoyee telle
-            // quelle. Le pays vient d'un code : il se dit dans sa langue.
             'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
             'distance' => (int) round($km),
             'poids' => (float) $donnees['poids'],
@@ -101,9 +89,6 @@ class TarifController extends Controller
     }
 
     /**
-     * Les pays desservis, tires des grilles actives : une destination sans
-     * grille n'est pas une destination.
-     *
      * @return array<int, array<string, string>>
      */
     private function destinations(): array
@@ -118,20 +103,12 @@ class TarifController extends Controller
             ])
             ->all();
 
-        // Le tri suit la langue lue, pas l'ordre des octets : « Zweden »
-        // precede « Zwitserland », et les accents se rangent a leur place.
         $collateur = new \Collator(app()->getLocale());
         usort($pays, fn (array $a, array $b) => $collateur->compare($a['nom'], $b['nom']));
 
         return $pays;
     }
 
-    /**
-     * La localite dans la table des codes postaux.
-     *
-     * Le calcul vit dans Localite : le formulaire de commande en a besoin
-     * du meme, et deux copies finiraient par diverger.
-     */
     private function localiser(string $ville, string $pays): ?object
     {
         return Localite::coordonnees($ville, $pays);

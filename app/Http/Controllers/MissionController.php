@@ -17,28 +17,13 @@ use Inertia\Response;
 
 class MissionController extends Controller
 {
-    /**
-     * Les seuls changements d'etat qu'un chauffeur peut provoquer, et depuis
-     * quel etat. Annuler une expedition reste une decision commerciale : elle
-     * n'apparait pas ici.
-     */
     private const TRANSITIONS = [
         'IN_PROGRESS' => 'PENDING',
         'DELIVERED' => 'IN_PROGRESS',
     ];
 
-    /**
-     * L'intervalle minimal entre deux points de route.
-     *
-     * Cinq minutes suffisent a montrer une progression sur une carte.
-     * Descendre plus bas n'apprendrait rien au client et rapprocherait le
-     * releve d'un suivi continu.
-     */
     private const CADENCE_SECONDES = 300;
 
-    /**
-     * Les missions du chauffeur connecte.
-     */
     public function index(Request $request): Response
     {
         $chauffeur = $request->user();
@@ -57,9 +42,6 @@ class MissionController extends Controller
             ? $missions->firstWhere('tracking_number', $numero)
             : null;
 
-        // La note d'information ne s'affiche que si l'administration en a
-        // redige une et que ce conducteur n'a pas encore accuse la
-        // version en cours.
         $note = DriverAcknowledgement::note();
         $aInformer = $note !== null && ! DriverAcknowledgement::aJour($chauffeur->id, $note);
         $langue = app()->getLocale();
@@ -77,21 +59,12 @@ class MissionController extends Controller
         ]);
     }
 
-    /**
-     * Le chauffeur fait avancer sa mission d'un cran.
-     */
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
-        // Une mission qui n'est pas la sienne n'existe pas pour lui.
         abort_if($transportOrder->driver_id !== $request->user()->id, 404);
 
         $donnees = $request->validate([
             'statut' => 'required|in:'.implode(',', array_keys(self::TRANSITIONS)),
-            // La position accompagne le changement d'etat quand le
-            // navigateur veut bien la donner. Elle est facultative a
-            // dessein : un refus, un sous-sol ou un telephone sans signal
-            // ne doivent jamais empecher un chauffeur de declarer une
-            // livraison.
             'lat' => 'nullable|numeric|between:-90,90',
             'lng' => 'nullable|numeric|between:-180,180',
             'precision_m' => 'nullable|integer|min:0|max:100000',
@@ -100,18 +73,12 @@ class MissionController extends Controller
         $vise = $donnees['statut'];
         $attendu = self::TRANSITIONS[$vise];
 
-        // Sans ce controle, deux appuis sur le meme bouton livreraient une
-        // expedition jamais chargee, et un rappel de la page rejouerait
-        // l'action.
         if ($transportOrder->status !== $attendu) {
             return back()->with('error', "Cette mission n'est plus dans l'état attendu, actualisez la page.");
         }
 
         $changements = ['status' => $vise];
 
-        // La date d'enlevement est celle qui etait prevue : l'ecraser
-        // ferait perdre le plan. L'heure reelle de prise en charge vit dans
-        // le journal, qui est horodate.
         if ($vise === 'DELIVERED') {
             $changements['actual_delivery_date'] = now();
         }
@@ -138,14 +105,6 @@ class MissionController extends Controller
             : 'Mission prise en charge.');
     }
 
-    /**
-     * Le conducteur declare avoir pris connaissance de la note.
-     *
-     * Le mot est choisi : prise de connaissance, pas consentement. Dans
-     * une relation de travail, le consentement n'est pas librement donne
-     * et ne fonde rien. Ce qui s'enregistre ici prouve l'information
-     * prealable, laquelle conditionne le releve de position.
-     */
     public function accuser(Request $request): RedirectResponse
     {
         $note = DriverAcknowledgement::note();
@@ -169,17 +128,6 @@ class MissionController extends Controller
         return back()->with('success', 'Prise de connaissance enregistrée.');
     }
 
-    /**
-     * Le point de route envoye periodiquement par l'ecran du chauffeur.
-     *
-     * Trois verrous, verifies ici et non dans le navigateur : la mission
-     * est bien la sienne, elle est en cours, et le suivi direct a ete
-     * ouvert pour elle. Le premier qui manque arrete l'envoi.
-     *
-     * La cadence est imposee au serveur. Un client qui enverrait un point
-     * par seconde n'obtiendrait rien de plus : c'est de la minimisation
-     * tenue par le code, pas par la bonne volonte de l'appelant.
-     */
     public function position(Request $request, TransportOrder $transportOrder): JsonResponse
     {
         abort_if($transportOrder->driver_id !== $request->user()->id, 404);
@@ -188,9 +136,6 @@ class MissionController extends Controller
             return response()->json(['suivi' => false]);
         }
 
-        // L'information prealable n'est pas une promesse, c'est une
-        // condition : tant que le conducteur n'a pas pris connaissance de
-        // la note en vigueur, aucune position n'est relevee.
         if (! DriverAcknowledgement::aJour($request->user()->id)) {
             return response()->json(['suivi' => false, 'motif' => 'information_manquante']);
         }
@@ -230,12 +175,6 @@ class MissionController extends Controller
         return response()->json(['suivi' => true, 'retenu' => true]);
     }
 
-    /**
-     * Enregistre ou la marchandise a ete prise en charge, ou livree.
-     *
-     * C'est un fait de gestion, au meme titre qu'une mention portee sur
-     * une lettre de voiture : deux points par mission, pas un suivi.
-     */
     private function poserJalon(TransportOrder $ordre, string $statut, array $donnees, int $chauffeur): void
     {
         $lat = isset($donnees['lat']) ? (float) $donnees['lat'] : null;
@@ -259,8 +198,6 @@ class MissionController extends Controller
     }
 
     /**
-     * Ce que montre une carte de la liste.
-     *
      * @return array<string, mixed>
      */
     private function carte(TransportOrder $ordre): array
@@ -281,9 +218,6 @@ class MissionController extends Controller
     }
 
     /**
-     * Ce que montre la mission ouverte : tout ce dont le chauffeur a besoin
-     * au volant, et rien du dossier commercial.
-     *
      * @return array<string, mixed>
      */
     private function fiche(TransportOrder $ordre): array
@@ -298,8 +232,6 @@ class MissionController extends Controller
             'volume' => $ordre->volume,
             'distance_km' => $ordre->distance_km,
             'consignes' => $ordre->special_instructions,
-            // Le chauffeur doit savoir si sa position part. L'ecran s'en
-            // sert pour afficher le bandeau et pour declencher l'envoi.
             'suivi_direct' => (bool) $ordre->suivi_direct,
             'client' => $ordre->client?->company_name,
             'vehicule' => $ordre->vehicle ? [
@@ -307,8 +239,6 @@ class MissionController extends Controller
                 'modele' => trim($ordre->vehicle->brand.' '.$ordre->vehicle->model),
                 'type' => $ordre->vehicle->vehicle_type,
             ] : null,
-            // Le bouton affiche depend de l'etat : un seul geste possible
-            // a la fois, pas de liste d'actions a trier.
             'action' => match ($ordre->status) {
                 'PENDING' => [
                     'statut' => 'IN_PROGRESS',

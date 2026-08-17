@@ -6,13 +6,6 @@ use App\Models\ProcessingRecord;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-/**
- * Le registre des traitements de l'article 30.
- *
- * Les entrees decrivent ce que l'application fait reellement. Un
- * registre qui enumere des traitements plausibles mais absents ne
- * protege personne : au premier controle, l'ecart se voit.
- */
 class ProcessingRecordSeeder extends Seeder
 {
     public function run(): void
@@ -30,10 +23,6 @@ class ProcessingRecordSeeder extends Seeder
     /** @return array<int, array<string, string>> */
     private function traitements(): array
     {
-        // La sauvegarde n'est pas decrite ici comme une mesure en place :
-        // elle depend du contrat d'hebergement, qui n'est pas conclu. Une
-        // mesure annoncee dans un registre et absente du systeme est pire
-        // qu'une mesure manquante, parce qu'elle se controle.
         $securite = 'Accès nominatif par rôle, mots de passe hachés, journalisation des actions sensibles, transport chiffré. La sauvegarde et la restauration relèvent du contrat d\'hébergement, à conclure avant mise en production.';
         $aucunTransfert = 'Aucun transfert hors de l\'Union européenne.';
 
