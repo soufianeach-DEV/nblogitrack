@@ -22,7 +22,6 @@ class TransportOrderController extends Controller
 {
     public function index(Request $request): Response
     {
-        // Le chauffeur a ses missions, pas le carnet de commandes du client.
         abort_if($request->user()->isDriver(), 403);
 
         $query = TransportOrder::with('client:id,company_name')->orderBy('id', 'desc');
@@ -44,18 +43,20 @@ class TransportOrderController extends Controller
             $query->whereHas('client', fn ($q) => $q->where('company_name', 'ilike', '%'.$request->client.'%'));
         }
 
+        $orders = $query->with('invoiceLine.invoice:id,status')
+            ->paginate(15)
+            ->withQueryString();
+
+        $orders->getCollection()->each->append('en_attente_de_paiement');
+
         return Inertia::render('TransportOrders/Index', [
-            'orders' => $query->paginate(15)->withQueryString(),
+            'orders' => $orders,
             'filters' => $request->only(['tracking', 'client', 'destination', 'status']),
         ]);
     }
 
     public function show(Request $request, TransportOrder $transportOrder): Response
     {
-        // Un client n'accede qu'a ses propres expeditions. La reponse est 404
-        // et non 403 : les identifiants se suivent, et un refus distinct du
-        // neant permettrait de deviner combien d'expeditions existent et
-        // lesquelles, en changeant simplement le numero dans l'adresse.
         abort_if(
             $request->user()->cannot('view-all-orders') && $transportOrder->client_id !== $request->user()->id,
             404,
@@ -88,19 +89,6 @@ class TransportOrderController extends Controller
     }
 
     /**
-     * Relocalise les deux adresses au serveur et verifie que le
-     * navigateur n'a pas raconte autre chose.
-     *
-     * L'enlevement part de Belgique, la livraison du pays choisi dans le
-     * formulaire — celui-la meme qui determine la grille tarifaire, si
-     * bien qu'on ne peut pas annoncer la France et se faire tarifer la
-     * Belgique.
-     *
-     * L'ecart tolere est large a dessein : le point rendu est le centre
-     * d'une localite, pas une adresse, et une commune etendue place
-     * facilement son centre a quelques kilometres d'une rue. Au-dela, ce
-     * n'est plus une imprecision, c'est une autre ville.
-     *
      * @param  array<string, mixed>  $data
      * @return array{pickup: object, delivery: object}|string
      */
@@ -135,8 +123,6 @@ class TransportOrderController extends Controller
 
     public function create(Request $request): Response
     {
-        // Deposer une commande, c'est signer en son nom : seul un compte
-        // client porte une ligne dans « clients », que la commande reference.
         abort_unless($request->user()->isClient(), 403);
 
         return Inertia::render('TransportOrders/Create', [
@@ -182,9 +168,6 @@ class TransportOrderController extends Controller
             return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
         }
 
-        // Le quai ne charge ni le dimanche ni un jour ferie legal. Le samedi
-        // reste ouvre : le transport y travaille, et la Belgique n'interdit
-        // pas la circulation des poids lourds le week-end.
         if (! empty($data['pickup_date'])) {
             $enlevement = Carbon::parse($data['pickup_date']);
 
@@ -211,15 +194,6 @@ class TransportOrderController extends Controller
             }
         }
 
-        // Le prix ne se calcule pas sur des coordonnees venues du
-        // navigateur. Elles sont pratiques pour poser un point sur une
-        // carte, mais quiconque sait ouvrir les outils de developpement
-        // peut les remplacer : un Bruxelles-Marseille se paierait alors
-        // au tarif d'une course intra-urbaine.
-        //
-        // Les deux localites sont donc relocalisees ici, dans la table
-        // des codes postaux, et c'est cette distance-la qui tarife. Le
-        // simulateur public procede ainsi depuis le debut.
         $reference = $this->verifierLesPoints($data);
 
         if (is_string($reference)) {
