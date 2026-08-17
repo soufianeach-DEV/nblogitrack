@@ -248,7 +248,7 @@ INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_a
 -- Ils etaient nes par le formulaire d'inscription et manquaient donc au
 -- jeu de donnees, que soixante-douze ordres referencaient sans lui.
 INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
-  (431, 'Client', 'Demo', 'client@nblogitrack.be', '$2y$12$hhw38buUaO0yQiMQanIzxe6s3HIXBadguWOIABwCKFWKNyzXylKcy', NULL, 'CLIENT', TRUE, '2026-08-08 21:06:16', '2026-08-08 21:12:08'),
+  (431, 'Client', 'Demo', 'client@nblogitrack.be', '$2y$12$aAzbqW2bPB/CflS3ArOw7eLb0dIchSX.HdJz0yV1kHD4i5clBk33i', NULL, 'CLIENT', TRUE, '2026-08-08 21:06:16', '2026-08-08 21:12:08'),
   (435, 'Gruber', 'Lukas', 'test.at@nblogitrack-test.eu', '$2y$12$/h4kux/X4siyNOQiCKj4GesO0bL2vU9FytHOhT.za5C6lbJk3m7xq', '+43 1 512 34 56', 'CLIENT', TRUE, '2026-08-10 22:59:41', '2026-08-10 22:59:41'),
   (437, 'Dimitrov', 'Georgi', 'test.bg@nblogitrack-test.eu', '$2y$12$HTxq6g97TKdyxZTHg5nCnOb3iCXTtnJAw.rijD0CbsCXl36r5o6du', '+359 2 987 65 43', 'CLIENT', TRUE, '2026-08-10 22:59:42', '2026-08-10 22:59:42'),
   (438, 'Georgiou', 'Andreas', 'test.cy@nblogitrack-test.eu', '$2y$12$trkL0XB2E4lVfPSsh9U3s.j9ObIOZiTQPH3h1NkX5qrje3Q1Ae7Me', '+357 22 45 67 89', 'CLIENT', TRUE, '2026-08-10 22:59:43', '2026-08-10 22:59:43'),
@@ -288,5 +288,5 @@ INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_a
 -- Ils manquaient au jeu de donnees, et l'un d'eux est celui qui a
 -- valide une partie des entreprises.
 INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
-  (432, 'Admin', 'Demo', 'admin@nblogitrack.be', '$2y$12$jBGO6bWKQsAfOmH1CGn4Mu0jZSokKGJQA0nnLFrFh3qAozVsT8JO.', '+32 2 000 00 00', 'ADMIN', TRUE, '2026-08-09 21:39:29', '2026-08-09 21:39:29'),
-  (433, 'Planificateur', 'Demo', 'planner@nblogitrack.be', '$2y$12$P/pygCYFJ2eVRPs2Gnaequ3cY7lLuYNgLoksgbSADPak9ozaiKfyC', '+32 2 000 00 01', 'PLANNER', TRUE, '2026-08-10 14:18:02', '2026-08-10 14:18:02');
+  (432, 'Admin', 'Demo', 'admin@nblogitrack.be', '$2y$12$EuoQtYpp5RubB6V56T7riOkMmjPhf925Bb8l2EPJWPJCGCr9LT8qK', '+32 2 000 00 00', 'ADMIN', TRUE, '2026-08-09 21:39:29', '2026-08-09 21:39:29'),
+  (433, 'Planificateur', 'Demo', 'planner@nblogitrack.be', '$2y$12$ufzeCK00rY6vYnsfC0Wu5OHpH04FS3Qd3e38wcDcbQBRennGUdffm', '+32 2 000 00 01', 'PLANNER', TRUE, '2026-08-10 14:18:02', '2026-08-10 14:18:02');

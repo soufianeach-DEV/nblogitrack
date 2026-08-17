@@ -8,6 +8,11 @@
 
         <meta name="theme-color" content="#14324F">
 
+        {{-- L'onglet porte la marque. En SVG plutot qu'en ICO : un seul
+             fichier d'un demi-kilo-octet reste net a toutes les tailles,
+             de l'onglet au raccourci d'ecran d'accueil. --}}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
         {{-- Sans ces balises, les trois versions d'une page se font
              concurrence dans l'index : le moteur en retient une et ignore
              les autres. hreflang declare qu'elles sont equivalentes et
