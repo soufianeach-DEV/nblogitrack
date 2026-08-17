@@ -8,6 +8,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    # La suite tourne sur PostgreSQL, pas sur SQLite : le code ecrit du
+    # SQL propre a ce moteur, « ilike », « filter (where ... ) », et un
+    # verrou consultatif pour la numerotation des expeditions. Une suite
+    # qui passerait ailleurs ne prouverait rien de ce qui tourne en
+    # production.
+    #
+    # Le nom se termine par « _test » : Tests\TestCase refuse de demarrer
+    # autrement, parce que chaque classe vide la base avant de commencer.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nblogitrack_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +46,14 @@ jobs:
 
       - name: Check code style (Pint)
         run: vendor/bin/pint --test
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run tests
+        run: php artisan test
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
