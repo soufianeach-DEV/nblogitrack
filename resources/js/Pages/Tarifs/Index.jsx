@@ -4,10 +4,6 @@ import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 
-/**
- * Champ de localite qui puise dans les codes postaux importes localement.
- * La frappe attend deux dixiemes de seconde avant d'interroger le serveur.
- */
 function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [minuteur, setMinuteur] = useState(null);

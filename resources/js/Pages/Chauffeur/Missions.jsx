@@ -66,11 +66,6 @@ function CarteMission({ mission, active, onClick }) {
     );
 }
 
-/**
- * Le bouton demande deux appuis. Au volant, un appui involontaire
- * declarerait une livraison qui n'a pas eu lieu, et rien dans l'application
- * ne permet a un chauffeur de revenir en arriere.
- */
 function BoutonAvancement({ mission }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
@@ -85,10 +80,6 @@ function BoutonAvancement({ mission }) {
 
         setProcessing(true);
 
-        // La position accompagne la declaration quand le navigateur veut
-        // bien la donner. On l'attend au plus huit secondes : au-dela, on
-        // envoie le changement d'etat sans elle plutot que de laisser le
-        // chauffeur devant un bouton qui tourne.
         const point = await positionActuelle();
 
         router.patch(route('missions.status', mission.id), {
@@ -134,18 +125,6 @@ function BoutonAvancement({ mission }) {
     );
 }
 
-/**
- * La note d'information, presentee avant tout releve de position.
- *
- * Le bouton dit « j'ai pris connaissance » et jamais « j'accepte ».
- * Dans une relation de travail, le consentement n'est pas librement
- * donne : le presenter comme un choix serait faux, et fonderait la
- * conformite sur une base que le RGPD n'admet pas ici.
- *
- * La fenetre n'a pas de bouton de fermeture. Le conducteur peut lire
- * ses missions derriere, mais tant qu'il n'a pas accuse, le serveur
- * refuse tout point de position : l'information precede le traitement.
- */
 function NoteInformation({ note }) {
     const t = useTraduction();
     const [envoi, setEnvoi] = useState(false);
@@ -189,18 +168,6 @@ function NoteInformation({ note }) {
     );
 }
 
-/**
- * Le partage de position pendant une mission en cours.
- *
- * Il ne demarre que si le planificateur l'a ouvert pour cette
- * mission-la, s'arrete des que la mission quitte l'etat « en cours », et
- * se voit : un chauffeur doit savoir a l'instant meme si sa position
- * part ou non. Un partage silencieux serait exactement ce que
- * l'Autorite de protection des donnees reproche.
- *
- * Le serveur refuse de toute facon les points hors mission et impose la
- * cadence : ce composant est une commodite, pas la garantie.
- */
 function SuiviDirect({ mission }) {
     const t = useTraduction();
     const locale = useLocale();
@@ -243,16 +210,13 @@ function SuiviDirect({ mission }) {
 
                 const resultat = await reponse.json();
 
-                // Le serveur a le dernier mot : s'il dit que le suivi est
-                // ferme, on cesse d'envoyer sans attendre un rechargement.
                 if (resultat.suivi === false) {
                     actif.current = false;
                 } else if (resultat.retenu) {
                     setDernier(new Date());
                 }
             } catch {
-                // Une coupure reseau n'a pas a remonter au chauffeur : le
-                // point suivant repartira.
+
             }
         };
 

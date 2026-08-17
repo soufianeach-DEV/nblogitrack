@@ -71,9 +71,6 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
     };
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
-    // Les exigences etaient affichees en tete de carte, les listes tout en
-    // bas : au moment de choisir le planificateur ne les avait plus sous les
-    // yeux. Elles sont rappelees ici, avec le nombre de candidats retenus.
     const camionsOk = vehicles.filter(vehiculeCompatible).length;
     const chauffeursOk = drivers.filter(chauffeurCompatible).length;
     const pastille = 'rounded-full px-2.5 py-0.5 font-medium';
@@ -230,8 +227,6 @@ export default function Index({
     const [champs, setChamps] = useState(q);
     const minuteur = useRef(null);
 
-    // La frappe est temporisee : sans cela chaque touche relancerait la
-    // requete, et les reponses arriveraient dans le desordre.
     const chercher = (valeur) => {
         setChamps(valeur);
         clearTimeout(minuteur.current);
@@ -264,9 +259,7 @@ export default function Index({
                 </div>
             )}
 
-            {/* Les facettes reduisent par categorie, elles ne retrouvent pas
-                une mission precise. Ce champ complete la liste au lieu de
-                la remplacer : les onglets et les compteurs le suivent. */}
+            {}
             <div className="mb-4">
                 <input
                     list="suggestions-planification"
@@ -440,9 +433,7 @@ export default function Index({
                                         </span>
                                     )}
 
-                                    {/* Le suivi de position s'ouvre mission par mission.
-                                        Il n'a de sens qu'en cours de route : une fois
-                                        livre, il n'y a plus rien a suivre. */}
+                                    {}
                                     {ordre.status === 'IN_PROGRESS' && (
                                         <button
                                             type="button"

@@ -20,13 +20,6 @@ function Onglet({ href, actif, icone, children }) {
     );
 }
 
-/**
- * L'ecran du chauffeur.
- *
- * Il travaille au telephone, la mise en page part donc du mobile : barre
- * d'onglets sous le pouce, cibles larges. Sur un ecran large, la meme barre
- * remonte dans l'en-tete plutot que de laisser une bande vide en bas.
- */
 export default function ChauffeurLayout({ children }) {
     const { auth } = usePage().props;
     const t = useTraduction();

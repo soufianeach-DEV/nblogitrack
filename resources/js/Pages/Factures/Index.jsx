@@ -16,18 +16,8 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
-    /**
-     * Toute la ligne ouvre la facture : viser un lien de huit caracteres
-     * dans une ligne de cinquante pixels de haut est inutilement penible.
-     *
-     * La reference reste un vrai lien : c'est lui qui porte l'acces
-     * clavier et ce qu'annonce un lecteur d'ecran. La ligne n'est qu'un
-     * raccourci a la souris, elle n'entre donc pas dans l'ordre de
-     * tabulation — sinon chaque facture y compterait deux fois.
-     */
     const ouvrir = (facture) => (e) => {
-        // Un clic qui vient de terminer une selection de texte ne navigue
-        // pas : on voulait copier un montant, pas changer de page.
+
         if (window.getSelection()?.toString()) return;
 
         router.get(route('invoices.show', facture.id));
@@ -60,8 +50,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                     <p className="text-2xl font-bold text-marine">{euros(cartes.du)}</p>
                 </div>
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
-                    {/* Le tableau dit deja « en retard » pour cet etat : deux
-                        mots pour une meme notion feraient deux traductions. */}
+                    {}
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('facture.en_retard', 'Factures en retard')}</p>
                     <p className={`text-2xl font-bold ${cartes.en_retard > 0 ? 'text-status-incident' : 'text-marine'}`}>
                         {cartes.en_retard}
@@ -97,9 +86,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                         <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold">
                                             <Link
                                                 href={route('invoices.show', facture.id)}
-                                                // Le lien mene deja la ou mene la ligne : sans
-                                                // cette coupure, un clic dessus declencherait
-                                                // deux visites vers la meme page.
+
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="text-brand-blue transition hover:text-marine"
                                             >
@@ -132,16 +119,14 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                                 {t(etat.cle, etat.libelle)}
                                             </span>
                                         </td>
-                                        {/* Colonne a part : les etats n'ont pas la meme largeur,
-                                            les boutons ne s'aligneraient pas derriere eux. */}
+                                        {}
                                         {colonnePaiement && (
                                             <td className="whitespace-nowrap px-4 py-3">
                                                 {facture.peut_payer && (
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
-                                                            // Payer n'est pas consulter : le clic
-                                                            // s'arrete ici et n'ouvre pas la fiche.
+
                                                             e.stopPropagation();
                                                             router.post(route('payments.payer', facture.id));
                                                         }}

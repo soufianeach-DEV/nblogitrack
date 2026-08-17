@@ -16,8 +16,6 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
     return 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.3;
 };
 
-// Meme vocabulaire que l'historique des expeditions, defini une seule fois
-// dans le modele TransportOrder.
 const MARCHANDISES = [
     'Boissons',
     'Colis express',
@@ -42,7 +40,7 @@ export default function Create({ tariffGrids, pricing }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
-    // Le nom du pays de destination s'affiche dans la langue de la page.
+
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
     const { data, setData, post, processing, errors } = useForm({
         pickup_address: '', delivery_address: '', delivery_country: '',
@@ -182,9 +180,7 @@ export default function Create({ tariffGrids, pricing }) {
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="goods_type" value={data.goods_type} onChange={(e) => setData('goods_type', e.target.value)} className={selectCls}>
                             <option value="">{t('commande.choisir', '— Choisir —')}</option>
-                            {/* La valeur envoyee reste le francais : c'est ce
-                                que le serveur valide et enregistre. Seul le
-                                libelle affiche suit la langue. */}
+                            {}
                             {MARCHANDISES.map((m) => (
                                 <option key={m} value={m}>{v('marchandise', m)}</option>
                             ))}

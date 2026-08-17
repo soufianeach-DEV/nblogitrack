@@ -8,8 +8,6 @@ export default function Tva({ lignes = [], totaux }) {
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
-    // Les mois arrivent tries du plus recent au plus ancien : le total d'un
-    // trimestre se pose sous son dernier mois affiche.
     const parTrimestre = lignes.reduce((groupes, ligne) => {
         (groupes[ligne.trimestre] = groupes[ligne.trimestre] ?? []).push(ligne);
         return groupes;

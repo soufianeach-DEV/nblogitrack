@@ -112,9 +112,7 @@ export default function Index({ pages, documents, types }) {
                                 </div>
                                 <p className="mt-1 font-mono text-xs text-brand-blue">/{p.slug}</p>
                                 <p className="mt-2 text-xs text-slate-600">
-                                    {/* Ce qui manque se dit, sinon une page part en
-                                        ligne avec deux langues sur trois sans que
-                                        personne ne s'en apercoive. */}
+                                    {}
                                     {['nl', 'en'].filter((l) => ! p.traduite[l]).length === 0
                                         ? t('pages.trois_langues', 'Rédigée dans les trois langues')
                                         : t('pages.manque', 'À traduire : :langues', {
@@ -144,10 +142,7 @@ export default function Index({ pages, documents, types }) {
                                 >
                                     {t('action.modifier', 'Modifier')}
                                 </button>
-                                {/* La note aux conducteurs se remet aussi par
-                                    courriel. L'accusé, lui, se donne dans
-                                    l'application : un envoi prouve la remise,
-                                    pas la lecture. */}
+                                {}
                                 {p.slug === 'information-chauffeurs' && (
                                     <button
                                         type="button"
@@ -300,9 +295,7 @@ export default function Index({ pages, documents, types }) {
                         {t('pages.au_pied_aide', 'Afficher dans le pied de page du site')}
                     </label>
 
-                    {/* Une langue a la fois : trois zones de texte cote a cote
-                        seraient illisibles, et on n'ecrit pas trois versions
-                        en meme temps. */}
+                    {}
                     <div className="mt-5 flex gap-1 border-b border-slate-100">
                         {['fr', 'nl', 'en'].map((l) => (
                             <button

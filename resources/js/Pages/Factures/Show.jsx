@@ -183,9 +183,7 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                                     className="rounded-lg bg-white p-1.5"
                                     title={t('facture.qr_aide', 'Virement SEPA au format EPC : votre application bancaire préremplit le compte, le montant et la communication.')}
                                 >
-                                    {/* 45 modules avec la marge : en dessous de
-                                        trois pixels par module, l'appareil
-                                        photo d'un telephone decroche. */}
+                                    {}
                                     <img
                                         src={facture.qr}
                                         alt={t('facture.qr_alt', 'QR de virement SEPA au format EPC, contenant le compte, le montant et la communication')}
@@ -200,10 +198,7 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                         )}
                     </div>
 
-                    {/* Le paiement en ligne rejoint les autres moyens de payer
-                        au lieu d'attendre en haut de page. Toutes les banques
-                        ne lisent pas le code : celle qui ne le lit pas laissait
-                        le client sans issue visible. */}
+                    {}
                     {peutPayerEnLigne && (
                         <div className="mt-4 border-t border-white/15 pt-4">
                             <BoutonPayerEnLigne facture={facture} pleineLargeur />

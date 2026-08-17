@@ -7,8 +7,6 @@ import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
-// Les libelles sortent des constantes : ils dependent de la langue de la
-// page. Ne restent ici que les classes et les valeurs de repli.
 const STATUTS = {
     PENDING: { cle: 'statut.en_attente', libelle: 'En attente', classe: 'bg-slate-100 text-slate-700' },
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', classe: 'bg-brand-blue/10 text-brand-blue' },
@@ -51,10 +49,6 @@ function Jalon({ libelle, detail, horodatage, fait, actif, dernier }) {
     );
 }
 
-/**
- * Le champ de recherche deroule les expeditions en circulation. Chercher a
- * l'aveugle supposerait de connaitre un numero par coeur.
- */
 function ChoixExpedition({ expeditions, onChoisir }) {
     const t = useTraduction();
     const [ouvert, setOuvert] = useState(false);
@@ -89,8 +83,7 @@ function ChoixExpedition({ expeditions, onChoisir }) {
                     setOuvert(true);
                 }}
                 onFocus={() => setOuvert(true)}
-                // Un clic sur une ligne passe par le survol : fermer aussitot
-                // annulerait la selection avant qu'elle ne se produise.
+
                 onBlur={() => setTimeout(() => setOuvert(false), 150)}
                 onKeyDown={(e) => e.key === 'Escape' && setOuvert(false)}
                 placeholder={t('suivi.choisir', 'Choisir une expédition en cours…')}
@@ -146,10 +139,6 @@ function ChoixExpedition({ expeditions, onChoisir }) {
     );
 }
 
-/**
- * Les jalons cote a cote plutot qu'empiles : la fiche tient alors dans la
- * hauteur de la page, sans defilement.
- */
 function Frise({ etapes }) {
     return (
         <ol className="flex items-start">
@@ -182,10 +171,6 @@ function Frise({ etapes }) {
     );
 }
 
-/**
- * Une expedition dans la liste de gauche. La carte et la liste partagent la
- * meme selection : cliquer ici ou sur le trait revient au meme.
- */
 function LigneExpedition({ expedition, active, onClick }) {
     const t = useTraduction();
     const v = useVocabulaire();
@@ -228,14 +213,6 @@ function LigneExpedition({ expedition, active, onClick }) {
     );
 }
 
-/**
- * Les reperes geolocalises d'une expedition.
- *
- * Deux jalons au plus, releves quand le chauffeur a declare l'etape, et
- * la derniere position connue si le suivi a ete ouvert pour cette
- * mission. Jamais la trace complete du trajet : le client sait ou en est
- * sa marchandise, il ne reconstitue pas une journee de travail.
- */
 function Reperes({ jalons = [], position = null }) {
     const t = useTraduction();
 
@@ -293,21 +270,6 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
     const [itineraire, setItineraire] = useState(null);
     const [peages, setPeages] = useState([]);
 
-    /*
-     * La position se rafraichit sans recharger la page.
-     *
-     * Elle n'est pas relevee en continu : le serveur n'enregistre un point
-     * que toutes les cinq minutes, et cette limite ne bouge pas. Ce qui
-     * change ici, c'est seulement l'affichage — sans cela, le marqueur
-     * resterait fige jusqu'a ce que le lecteur pense a recharger, et le
-     * suivi n'aurait aucun interet.
-     *
-     * On redemande donc toutes les soixante secondes, et la seule prop
-     * position : le reste de la page ne bouge pas, la carte ne clignote
-     * pas, et l'appel ne coute qu'une requete legere.
-     *
-     * Le rafraichissement s'arrete des qu'il n'y a plus rien a suivre.
-     */
     const suit = position !== null && order?.status === 'IN_PROGRESS';
 
     useEffect(() => {
@@ -320,9 +282,6 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
         return () => clearInterval(minuteur);
     }, [suit, order?.id]);
 
-    // Le trace routier et les peages arrivent apres la page, et chacun de son
-    // cote : la recherche des peages demande une vingtaine de secondes la
-    // premiere fois, le trace ne doit pas l'attendre.
     useEffect(() => {
         setItineraire(null);
         setPeages([]);
@@ -378,8 +337,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
         <AuthenticatedLayout>
             <Head title={t('suivi.titre_interne', 'Suivi d\'expédition')} />
 
-            {/* Le menu lateral marque deja Suivi : un grand titre repeterait
-                l'information et couterait la hauteur qui manque a la fiche. */}
+            {}
             <h1 className="sr-only">{t('suivi.titre_interne', 'Suivi d\'expédition')}</h1>
 
             <div className="flex flex-col gap-3 lg:h-[calc(100vh-8rem)] lg:flex-row">
@@ -480,8 +438,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                                                     <p className="font-mono text-[11px] leading-tight text-marine">
                                                         {order.vehicle.registration}
                                                     </p>
-                                                    {/* Un vehicule peut avoir des champs vides : on assemble ce qui
-                                                        existe, pour ne pas afficher de separateur orphelin. */}
+                                                    {}
                                                     {[
                                                         [order.vehicle.vehicle_type, order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
                                                         [order.vehicle.euro_standard, order.vehicle.fuel_type],
@@ -595,10 +552,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                     )}
                 </div>
 
-                {/* isolate enferme la carte et ses commandes dans leur propre
-                    contexte : le bouton d'agrandissement monte a 1100 pour
-                    passer devant les calques de Leaflet, et sans cette
-                    barriere il passait aussi devant l'en-tete. */}
+                {}
                 <div className={`relative isolate h-[420px] overflow-hidden rounded-2xl shadow-sm lg:h-auto ${agrandie ? 'lg:w-full' : 'lg:w-1/3'}`}>
                     <CarteTrajets
                         trajets={expeditions.map((expedition) => expedition.id === order?.id

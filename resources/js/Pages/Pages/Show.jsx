@@ -2,22 +2,6 @@ import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
 import { Head, Link, usePage } from '@inertiajs/react';
 
-/**
- * Le corps d'une page, decoupe en blocs.
- *
- * Une page legale fait plusieurs milliers de mots : rendue d'un seul
- * bloc, elle est illisible. Deux marques suffisent a la structurer, et
- * elles sont volontairement pauvres :
- *
- *   ## Titre de rubrique
- *   - element de liste
- *
- * Rien n'est interprete comme du HTML. Chaque bloc devient un element
- * React dont le contenu reste du texte : un « <script> » saisi dans
- * l'administration s'affiche, il ne s'execute pas. C'est la raison pour
- * laquelle on ne prend pas une bibliotheque Markdown complete, qui
- * accepterait le HTML brut et rouvrirait la porte.
- */
 function blocs(corps) {
     const sortie = [];
     let liste = null;
@@ -50,13 +34,6 @@ function blocs(corps) {
     return sortie;
 }
 
-/**
- * Une page redigee depuis l'administration (A13).
- *
- * L'en-tete est plus sobre que celui de l'accueil, qui porte des ancres
- * vers des sections inexistantes ici. Le duplique complet aurait donne
- * des liens morts.
- */
 export default function Show({ page }) {
     const t = useTraduction();
     const { auth, pages_pied: pagesPied = [] } = usePage().props;

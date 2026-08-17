@@ -1,7 +1,7 @@
 import BarreFiltres from '@/Components/BarreFiltres';
 import Modal from '@/Components/Modal';
 import OngletsFacturation from '@/Components/OngletsFacturation';
-// useLocale et useTraduction sont importes plus bas avec le layout.
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
@@ -46,8 +46,6 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
     const enregistrer = (e) => {
         e.preventDefault();
 
-        // La periode et l'echeance se deduisent du mois et de l'emission :
-        // trente jours, le delai legal par defaut.
         transform((donnees) => {
             const d = new Date(donnees.issued_on);
             d.setDate(d.getDate() + 30);
@@ -70,8 +68,7 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
         setData((precedent) => ({
             ...precedent,
             category: valeur,
-            // La taxe kilometrique belge est hors champ TVA ; le carburant
-            // d'un camion se deduit en entier.
+
             vat_rate: valeur === 'PEAGE' ? '0' : '21',
             vat_deductible: valeur !== 'PEAGE',
         }));

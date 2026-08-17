@@ -39,8 +39,6 @@ export default function Create({ choix }) {
     const [vies, setVies] = useState(null);
     const [verification, setVerification] = useState(false);
 
-    // Meme service que le formulaire d'inscription : VIES pour la validite et la
-    // raison sociale, les registres belge et francais pour le dirigeant.
     const verifierTva = async () => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
 
@@ -227,7 +225,7 @@ export default function Create({ choix }) {
                                     delivery_lat: lat,
                                     delivery_lng: lng,
                                     delivery_country: pays,
-                                    // Le type de trajet decoule du pays de destination.
+
                                     trip_type: pays === 'BE' ? choix.trajets[0] : choix.trajets[1],
                                 }))}
                                 error={errors.delivery_address || errors.delivery_lat || errors.delivery_country}

@@ -13,7 +13,7 @@ const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne:
 
 export default function Register({ secteurs, fonctions }) {
     const t = useTraduction();
-    // Le nom du pays s'affiche dans la langue de la page.
+
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
     const { data, setData, post, processing, errors, reset } = useForm({
         company_name: '', vat_number: '', billing_address: '', postal_code: '',

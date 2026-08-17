@@ -6,8 +6,7 @@ import { Head, Link } from '@inertiajs/react';
 
 export default function Paiement({ reference, facture_id: factureId, montant, regle, enregistre }) {
     const t = useTraduction();
-    // Le format suit la langue de la page : une constante de module serait
-    // evaluee au chargement, avant que cette langue soit connue.
+
     const locale = useLocale();
     const euros = (valeur) => Number(valeur).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
@@ -31,9 +30,7 @@ export default function Paiement({ reference, facture_id: factureId, montant, re
                         <h2 className="mt-4 text-xl font-bold text-marine">
                             {t('facture.paiement_accepte', 'Paiement accepté')}
                         </h2>
-                        {/* La phrase est traduite entiere, reference comprise :
-                            decoupee, elle imposerait un ordre de mots francais
-                            aux autres langues. */}
+                        {}
                         <p className="mt-2 text-slate-600">
                             {t('facture.regle_pour', ':montant pour la facture :reference.', {
                                 montant: euros(montant),
