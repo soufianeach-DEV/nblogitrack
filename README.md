@@ -51,16 +51,17 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés (KPI) + derniers ordres | ✅ alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
-| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (EN 16931) | ✅ alpha |
+| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (EN 16931) | ✅ beta |
 | **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
 | **Multilingue** | Français, néerlandais et anglais, avec écran d'administration des traductions | ✅ alpha |
-| **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ alpha |
-| **Devis** | Demande de devis publique, traitement par le personnel | ✅ alpha |
-| **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours | ✅ alpha |
-| **API REST** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ alpha |
-| **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ alpha |
-| **Conformité RGPD** | Registre des traitements, durées de conservation appliquées par tâches planifiées | ✅ alpha |
-| **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 beta |
+| **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
+| **Devis** | Demande de devis publique, traitement par le personnel | ✅ beta |
+| **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours | ✅ beta |
+| **API REST** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
+| **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
+| **Conformité RGPD** | Registre des traitements, durées de conservation appliquées par tâches planifiées | ✅ beta |
+| **Tests et intégration continue** | 87 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
 
