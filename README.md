@@ -3,7 +3,7 @@
 > Application web de gestion de transport développée dans le cadre de mon épreuve intégrée à TECHGEST ICCBXL.
 
 **Auteur :** Soufiane Achraa — Épreuve intégrée 2025-2026 — TECHGEST ICCBXL  
-**Version :** alpha (en développement)  
+**Version :** beta (en développement)  
 **Stack :** Laravel · React · Inertia · Vite · Tailwind CSS · PostgreSQL
 
 ---
@@ -50,11 +50,17 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Suivi public** | Consultation d'un envoi (numéro + code), état de livraison | ✅ alpha |
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés (KPI) + derniers ordres | ✅ alpha |
-| **Gestion de la flotte** | Interface véhicules et chauffeurs | 🔜 beta |
-| **Preuve de livraison** | Confirmation par le chauffeur depuis son espace | 🔜 beta |
-| **Facturation** | Factures + format électronique Peppol (EN 16931) | 🔜 beta |
-| **Paiement** | Règlement d'une facture en ligne (Stripe) | 🔜 beta |
-| **Multilingue** | Interface et gestion des traductions | 🔜 beta |
+| **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
+| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (EN 16931) | ✅ alpha |
+| **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
+| **Multilingue** | Français, néerlandais et anglais, avec écran d'administration des traductions | ✅ alpha |
+| **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ alpha |
+| **Devis** | Demande de devis publique, traitement par le personnel | ✅ alpha |
+| **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours | ✅ alpha |
+| **API REST** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ alpha |
+| **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ alpha |
+| **Conformité RGPD** | Registre des traitements, durées de conservation appliquées par tâches planifiées | ✅ alpha |
+| **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 beta |
 
 ---
 
@@ -85,6 +91,8 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Messagerie (développement) | Mailpit |
 | Paiement | Stripe |
 | Facturation électronique | Peppol — norme EN 16931 |
+| Tests | PHPUnit sur PostgreSQL |
+| Intégration continue | GitHub Actions — style, tests et compilation |
 
 ---
 
@@ -92,7 +100,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 
 ### Prérequis
 
-PHP 8.2+, Composer, Node.js 18+ et PostgreSQL 16.
+PHP 8.2+, Composer, Node.js 22+ et PostgreSQL 16.
 
 > **Certificats HTTPS.** Les registres européens sont interrogés en HTTPS. Si `curl.cainfo` et `openssl.cafile` ne sont pas renseignés dans votre `php.ini`, les appels échouent sans message explicite. Vérifiez avec `php -r "var_dump(ini_get('curl.cainfo'));"`.
 
@@ -139,25 +147,52 @@ mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
 
 L'application répond sur `http://127.0.0.1:8000`, la boîte de réception de développement sur `http://localhost:8025`.
 
+### Tâches planifiées
+
+Trois traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
+
+```bash
+* * * * * cd /chemin/vers/nblogitrack && php artisan schedule:run >> /dev/null 2>&1
+```
+
+| Quand | Commande | Rôle |
+|---|---|---|
+| Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture les transports livrés du mois écoulé |
+| Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route au-delà de sept jours |
+| Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
+
+Les trois restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout` et `--essai` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
+
 ### Comptes de démonstration
 
-Le jeu de données crée des comptes de test dont le mot de passe commun est `password`. Il ne s'exécute qu'en environnement `local` ou `testing` : lancé ailleurs, il refuse de vider les tables.
+Le jeu de données ne s'exécute qu'en environnement `local` ou `testing` : lancé ailleurs, il refuse de vider les tables.
 
-| Rôle | Adresse |
-|---|---|
-| Administrateur | `admin@nblogitrack.be` |
-| Planificateur | `planner@nblogitrack.be` |
-| Client | `client@nblogitrack.be` |
+| Rôle | Adresse | Mot de passe |
+|---|---|---|
+| Administrateur | `admin@nblogitrack.be` | `Nblogitrack2026@` |
+| Planificateur | `planner@nblogitrack.be` | `Nblogitrack2026@` |
+| Client | `client@nblogitrack.be` | `Nblogitrack2026@` |
+| Chauffeur | `wim.peeters121@nblogitrack.be` | `password` |
+
+Les deux cent soixante autres comptes du jeu de données utilisent `password`. Ces identifiants sont publics et ne valent que pour une base de démonstration.
 
 ---
 
 ## Qualité
 
+La suite de tests tourne sur PostgreSQL, sur une base dédiée dont le nom se termine par `_test` : chaque classe vide la base avant de commencer, et `Tests\TestCase` refuse de démarrer ailleurs.
+
+```bash
+php artisan test
+```
+
 ```bash
 vendor/bin/pint
 ```
 
-Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Quatre-vingt-sept tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur, l'interface de programmation et la facturation. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+
+L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 
 ---
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NBLogiTrack">
+    <title>NBLogiTrack</title>
+    <!--
+        La marque complete est illisible a seize pixels : on ne garde que
+        son geste, la fleche qui monte vers la droite en reprenant le
+        zigzag du N. Marine de la charte pour la tuile, ambre pour la
+        pointe, comme dans le logo.
+    -->
+    <rect width="64" height="64" rx="14" fill="#14324F"/>
+    <path d="M14 46 L26 32 L34 41 L42 25"
+          fill="none" stroke="#FFFFFF" stroke-width="7"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50 11 L50.4 31.6 L32.8 22.3 Z" fill="#F59E0B"/>
+</svg>
