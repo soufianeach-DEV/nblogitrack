@@ -47,6 +47,22 @@ jobs:
       - name: Check code style (Pint)
         run: vendor/bin/pint --test
 
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # La compilation vient avant les tests, et pas apres. Une page
+      # rendue par Inertia reclame le manifeste que Vite produit ici :
+      # sans lui, tout test qui affiche un ecran repond cinq cents,
+      # alors que ceux qui verifient une redirection ou un refus
+      # passent. La suite entiere se lisait de travers.
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+
       - name: Prepare environment
         run: |
           cp .env.example .env
@@ -54,14 +70,3 @@ jobs:
 
       - name: Run tests
         run: php artisan test
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Build frontend
-        run: |
-          npm ci
-          npm run build
