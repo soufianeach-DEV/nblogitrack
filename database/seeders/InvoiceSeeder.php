@@ -59,6 +59,13 @@ class InvoiceSeeder extends Seeder
             $echue = $echeance->isPast();
             $payee = $echue && $numero % 5 !== 0;
 
+            // Une facture dont la date d'emission n'est pas encore arrivee
+            // n'a pas ete envoyee : elle est en preparation. Le jeu de
+            // donnees couvre quatre mois devant nous, et sans cette
+            // distinction il montrait des factures « envoyees » portant
+            // une date du premier decembre.
+            $envoyee = ! $emission->isFuture();
+
             $facture = Invoice::create([
                 'client_id' => $client->id,
                 'reference' => sprintf('FAC-%s-%04d', $annee, $serie[$annee]),
@@ -71,7 +78,11 @@ class InvoiceSeeder extends Seeder
                 'vat_amount' => $tva,
                 'amount_incl_tax' => round($horsTva + $tva, 2),
                 'reverse_charge' => $autoliquidation,
-                'status' => $payee ? 'PAID' : 'SENT',
+                'status' => match (true) {
+                    $payee => 'PAID',
+                    $envoyee => 'SENT',
+                    default => 'DRAFT',
+                },
                 'paid_on' => $payee ? $this->reglement($emission, $echeance) : null,
                 'payment_reference' => $this->communicationStructuree((int) $annee, $serie[$annee], $client->id),
             ]);

@@ -244,3 +244,33 @@ INSERT INTO client_contacts (id, client_id, last_name, first_name, email, phone,
   (242, 119, 'Storme', 'Julie', 'julie.storme242@contact.be', '+32 479 34 10 21', 'Assistant administratif', TRUE, '2024-10-07 18:37:53'),
   (243, 120, 'Aerts', 'Sarah', 'sarah.aerts243@contact.be', '+32 493 33 23 45', 'Responsable achats', TRUE, '2024-08-05 06:53:54'),
   (244, 120, 'Verhoeven', 'Marie', 'marie.verhoeven244@contact.be', '+32 470 11 55 68', 'Chargé de clientèle', FALSE, '2025-12-09 17:38:45');
+
+
+-- Leur interlocuteur, quand ils en ont un.
+INSERT INTO client_contacts (id, client_id, last_name, first_name, email, phone, position, is_primary, created_at) VALUES
+  (246, 435, 'Gruber', 'Lukas', 'test.at@nblogitrack-test.eu', '+43 1 512 34 56', 'Directeur logistique', TRUE, '2026-08-11 00:59:41'),
+  (248, 437, 'Dimitrov', 'Georgi', 'test.bg@nblogitrack-test.eu', '+359 2 987 65 43', 'Directeur logistique', TRUE, '2026-08-11 00:59:42'),
+  (249, 438, 'Georgiou', 'Andreas', 'test.cy@nblogitrack-test.eu', '+357 22 45 67 89', 'Directeur logistique', TRUE, '2026-08-11 00:59:43'),
+  (250, 439, 'Novak', 'Petr', 'test.cz@nblogitrack-test.eu', '+420 2 24 91 05 33', 'Directeur logistique', TRUE, '2026-08-11 00:59:43'),
+  (251, 440, 'Bauer', 'Stefan', 'test.de@nblogitrack-test.eu', '+49 30 8 97 21 40', 'Directeur logistique', TRUE, '2026-08-11 00:59:44'),
+  (252, 441, 'Jensen', 'Mads', 'test.dk@nblogitrack-test.eu', '+45 33 12 45 60', 'Directeur logistique', TRUE, '2026-08-11 00:59:44'),
+  (253, 442, 'Tamm', 'Marek', 'test.ee@nblogitrack-test.eu', '+372 6 41 23 90', 'Directeur logistique', TRUE, '2026-08-11 00:59:45'),
+  (254, 443, 'Ruiz', 'Carmen', 'test.es@nblogitrack-test.eu', '+34 91 521 33 07', 'Directeur logistique', TRUE, '2026-08-11 00:59:45'),
+  (255, 444, 'Virtanen', 'Antti', 'test.fi@nblogitrack-test.eu', '+358 9 6 84 22 10', 'Directeur logistique', TRUE, '2026-08-11 00:59:46'),
+  (256, 445, 'Moreau', 'Camille', 'test.fr@nblogitrack-test.eu', '+33 1 44 78 21 05', 'Directeur logistique', TRUE, '2026-08-11 00:59:46'),
+  (257, 446, 'Papadakis', 'Nikos', 'test.gr@nblogitrack-test.eu', '+30 21 0 36 45 88', 'Directeur logistique', TRUE, '2026-08-11 00:59:46'),
+  (258, 447, 'Horvat', 'Ivan', 'test.hr@nblogitrack-test.eu', '+385 1 48 12 366', 'Directeur logistique', TRUE, '2026-08-11 00:59:47'),
+  (259, 448, 'Kovacs', 'Zoltan', 'test.hu@nblogitrack-test.eu', '+36 1 266 41 20', 'Directeur logistique', TRUE, '2026-08-11 00:59:47'),
+  (260, 449, 'Murphy', 'Aoife', 'test.ie@nblogitrack-test.eu', '+353 1 6 70 88 45', 'Directeur logistique', TRUE, '2026-08-11 00:59:47'),
+  (261, 450, 'Ferrari', 'Marco', 'test.it@nblogitrack-test.eu', '+39 02 7 20 03 41', 'Directeur logistique', TRUE, '2026-08-11 00:59:48'),
+  (262, 451, 'Kazlauskas', 'Tomas', 'test.lt@nblogitrack-test.eu', '+370 5 2 12 34 56', 'Directeur logistique', TRUE, '2026-08-11 00:59:48'),
+  (263, 452, 'Weber', 'Pierre', 'test.lu@nblogitrack-test.eu', '+352 26 20 31 44', 'Directeur logistique', TRUE, '2026-08-11 00:59:48'),
+  (264, 453, 'Berzins', 'Janis', 'test.lv@nblogitrack-test.eu', '+371 6 7 22 18 05', 'Directeur logistique', TRUE, '2026-08-11 00:59:49'),
+  (265, 454, 'Borg', 'Joseph', 'test.mt@nblogitrack-test.eu', '+356 21 23 45 67', 'Directeur logistique', TRUE, '2026-08-11 00:59:49'),
+  (266, 455, 'De Vries', 'Sanne', 'test.nl@nblogitrack-test.eu', '+31 20 6 25 41 30', 'Directeur logistique', TRUE, '2026-08-11 00:59:49'),
+  (267, 456, 'Nowak', 'Katarzyna', 'test.pl@nblogitrack-test.eu', '+48 22 826 14 77', 'Directeur logistique', TRUE, '2026-08-11 00:59:50'),
+  (268, 457, 'Silva', 'Ricardo', 'test.pt@nblogitrack-test.eu', '+351 21 342 55 18', 'Directeur logistique', TRUE, '2026-08-11 00:59:50'),
+  (269, 458, 'Popescu', 'Andrei', 'test.ro@nblogitrack-test.eu', '+40 21 314 22 09', 'Directeur logistique', TRUE, '2026-08-11 00:59:50'),
+  (270, 459, 'Lindqvist', 'Erik', 'test.se@nblogitrack-test.eu', '+46 8 4 11 25 60', 'Directeur logistique', TRUE, '2026-08-11 00:59:51'),
+  (271, 460, 'Kranjc', 'Matej', 'test.si@nblogitrack-test.eu', '+386 1 4 25 33 71', 'Directeur logistique', TRUE, '2026-08-11 00:59:51'),
+  (272, 461, 'Horvath', 'Peter', 'test.sk@nblogitrack-test.eu', '+421 2 54 43 12 08', 'Directeur logistique', TRUE, '2026-08-11 00:59:52');

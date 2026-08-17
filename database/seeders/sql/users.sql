@@ -240,3 +240,53 @@ INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_a
   (332, 'Dubois', 'Aurélie', 'aurelie.dubois332@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 472 34 40 92', 'ADMIN', TRUE, '2025-11-30 01:46:40', '2025-11-30 01:46:40'),
   (333, 'Vermeulen', 'Wim', 'wim.vermeulen333@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 490 75 61 19', 'ADMIN', TRUE, '2024-10-05 18:37:42', '2024-10-05 18:37:42'),
   (334, 'Aerts', 'Dries', 'dries.aerts334@nblogitrack.be', '$2y$10$FNv50KCFE6EsNIIj7BdzMOVxLb6l6HOxMd5rwh3z7bI2dl/jpf9M.', '+32 487 50 53 57', 'ADMIN', TRUE, '2025-10-03 22:09:22', '2025-10-03 22:09:22');
+
+
+-- Les vingt-sept comptes de la couverture europeenne. Chaque pays des
+-- grilles tarifaires a son entreprise, ce qui permet de faire circuler
+-- un ordre vers chacun des vingt-sept sans inventer de client au vol.
+-- Ils etaient nes par le formulaire d'inscription et manquaient donc au
+-- jeu de donnees, que soixante-douze ordres referencaient sans lui.
+INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
+  (431, 'Client', 'Demo', 'client@nblogitrack.be', '$2y$12$hhw38buUaO0yQiMQanIzxe6s3HIXBadguWOIABwCKFWKNyzXylKcy', NULL, 'CLIENT', TRUE, '2026-08-08 21:06:16', '2026-08-08 21:12:08'),
+  (435, 'Gruber', 'Lukas', 'test.at@nblogitrack-test.eu', '$2y$12$/h4kux/X4siyNOQiCKj4GesO0bL2vU9FytHOhT.za5C6lbJk3m7xq', '+43 1 512 34 56', 'CLIENT', TRUE, '2026-08-10 22:59:41', '2026-08-10 22:59:41'),
+  (437, 'Dimitrov', 'Georgi', 'test.bg@nblogitrack-test.eu', '$2y$12$HTxq6g97TKdyxZTHg5nCnOb3iCXTtnJAw.rijD0CbsCXl36r5o6du', '+359 2 987 65 43', 'CLIENT', TRUE, '2026-08-10 22:59:42', '2026-08-10 22:59:42'),
+  (438, 'Georgiou', 'Andreas', 'test.cy@nblogitrack-test.eu', '$2y$12$trkL0XB2E4lVfPSsh9U3s.j9ObIOZiTQPH3h1NkX5qrje3Q1Ae7Me', '+357 22 45 67 89', 'CLIENT', TRUE, '2026-08-10 22:59:43', '2026-08-10 22:59:43'),
+  (439, 'Novak', 'Petr', 'test.cz@nblogitrack-test.eu', '$2y$12$Q8KeW.S04Sy9lETXWG4Fcee7UIUAo63mI7/fo.PyRro9HbMwOZ2ve', '+420 2 24 91 05 33', 'CLIENT', TRUE, '2026-08-10 22:59:43', '2026-08-10 22:59:43'),
+  (440, 'Bauer', 'Stefan', 'test.de@nblogitrack-test.eu', '$2y$12$gd06nTTwo0fG2y3zqsZOV.tjx3Y/iWvpNQm8Y/DDQ91.sKnV5O8uq', '+49 30 8 97 21 40', 'CLIENT', TRUE, '2026-08-10 22:59:44', '2026-08-10 22:59:44'),
+  (441, 'Jensen', 'Mads', 'test.dk@nblogitrack-test.eu', '$2y$12$WzTvMEuwhAjv/QDYLQt/1uPu/6MS2gQQyyn3P./OH7rdVbofwu4um', '+45 33 12 45 60', 'CLIENT', TRUE, '2026-08-10 22:59:44', '2026-08-10 22:59:44'),
+  (442, 'Tamm', 'Marek', 'test.ee@nblogitrack-test.eu', '$2y$12$CNU36CjdbbYG7vT8/Y5FhOR4kxvPQIVIRsNDJbGw5NZovjJeG50s6', '+372 6 41 23 90', 'CLIENT', TRUE, '2026-08-10 22:59:45', '2026-08-10 22:59:45'),
+  (443, 'Ruiz', 'Carmen', 'test.es@nblogitrack-test.eu', '$2y$12$u6VhXQ7j57eXyr4VLK0dPOw4b9ChFpou0o28LKg2bf36atmx1GIwG', '+34 91 521 33 07', 'CLIENT', TRUE, '2026-08-10 22:59:45', '2026-08-10 22:59:45'),
+  (444, 'Virtanen', 'Antti', 'test.fi@nblogitrack-test.eu', '$2y$12$4x6rBBvGb0v2i1cHsqUlXOWu77ZcPGo2fvz8xJuKLCwIfKC9ruJFe', '+358 9 6 84 22 10', 'CLIENT', TRUE, '2026-08-10 22:59:45', '2026-08-10 22:59:45'),
+  (445, 'Moreau', 'Camille', 'test.fr@nblogitrack-test.eu', '$2y$12$SK2vwEaXb.ULLOK7wkxcvuhC2Km8lzf.PflBuh8PfO2pzNQ1MWmMm', '+33 1 44 78 21 05', 'CLIENT', TRUE, '2026-08-10 22:59:46', '2026-08-10 22:59:46'),
+  (446, 'Papadakis', 'Nikos', 'test.gr@nblogitrack-test.eu', '$2y$12$375ICzSTlRdvI4fG9oLU4OOdjX7P9sSD48Ic8vWGMb4fJIAcE9ZO.', '+30 21 0 36 45 88', 'CLIENT', TRUE, '2026-08-10 22:59:46', '2026-08-10 22:59:46'),
+  (447, 'Horvat', 'Ivan', 'test.hr@nblogitrack-test.eu', '$2y$12$1CWEX8T4uAhhNG2uMw1.aOdW/IIwqpztUASQ079g4/A1E5XfMh1Qm', '+385 1 48 12 366', 'CLIENT', TRUE, '2026-08-10 22:59:46', '2026-08-10 22:59:46'),
+  (448, 'Kovacs', 'Zoltan', 'test.hu@nblogitrack-test.eu', '$2y$12$hDPf0IceN7OdeAhI0qZxzep1HjuUA/TYCAtSRrUs.ZRTWbjphSVbK', '+36 1 266 41 20', 'CLIENT', TRUE, '2026-08-10 22:59:47', '2026-08-10 22:59:47'),
+  (449, 'Murphy', 'Aoife', 'test.ie@nblogitrack-test.eu', '$2y$12$FdsgKAyJ.V63CwU/aPBDIuk7L8a8Ba9DIUg.03yWBoNOXC.wAOen2', '+353 1 6 70 88 45', 'CLIENT', TRUE, '2026-08-10 22:59:47', '2026-08-10 22:59:47'),
+  (450, 'Ferrari', 'Marco', 'test.it@nblogitrack-test.eu', '$2y$12$IXcJsUjdF.ffWCX1Sh.UPebsjhhqUTRx1NSfytH0t0qgYTSwisQhi', '+39 02 7 20 03 41', 'CLIENT', TRUE, '2026-08-10 22:59:47', '2026-08-10 22:59:47'),
+  (451, 'Kazlauskas', 'Tomas', 'test.lt@nblogitrack-test.eu', '$2y$12$p0U3XiD6tkZcBFufSXkoIu9JQNRE6PxGCH7uGDG0Ux0RsRnbWRARG', '+370 5 2 12 34 56', 'CLIENT', TRUE, '2026-08-10 22:59:48', '2026-08-10 22:59:48'),
+  (452, 'Weber', 'Pierre', 'test.lu@nblogitrack-test.eu', '$2y$12$kb7UHjwpA4WDnxxatZYRLu8qLUJz61RJBXMHY8p2ll4T.QUAT/Foe', '+352 26 20 31 44', 'CLIENT', TRUE, '2026-08-10 22:59:48', '2026-08-10 22:59:48'),
+  (453, 'Berzins', 'Janis', 'test.lv@nblogitrack-test.eu', '$2y$12$.jlp69wEJCRItLlD9LfG/uYrkmIHQoixAoW/axEJL2aVehakyzHJS', '+371 6 7 22 18 05', 'CLIENT', TRUE, '2026-08-10 22:59:48', '2026-08-10 22:59:48'),
+  (454, 'Borg', 'Joseph', 'test.mt@nblogitrack-test.eu', '$2y$12$NferfoXVpJZSV5UbzpcL2.FypADpVuKCsOltKsxHlJ2XyyjOtHI8q', '+356 21 23 45 67', 'CLIENT', TRUE, '2026-08-10 22:59:49', '2026-08-10 22:59:49'),
+  (455, 'De Vries', 'Sanne', 'test.nl@nblogitrack-test.eu', '$2y$12$C/fpGAZgzD3kMqGMUsnXkuuJMyX9cr.nuh/qnjIBT2DDBPUVBU8Fe', '+31 20 6 25 41 30', 'CLIENT', TRUE, '2026-08-10 22:59:49', '2026-08-10 22:59:49'),
+  (456, 'Nowak', 'Katarzyna', 'test.pl@nblogitrack-test.eu', '$2y$12$zmyrqDsl1oTHIbPdrsnP1.lOBcl8MMfh9u3eJJEW6cwpoBeEnP5aG', '+48 22 826 14 77', 'CLIENT', TRUE, '2026-08-10 22:59:50', '2026-08-10 22:59:50'),
+  (457, 'Silva', 'Ricardo', 'test.pt@nblogitrack-test.eu', '$2y$12$n3zkE14GqtkQrsLiPYMBiuqcSh3bU0vkPn6L.L9n5rqTPWDgzUG8u', '+351 21 342 55 18', 'CLIENT', TRUE, '2026-08-10 22:59:50', '2026-08-10 22:59:50'),
+  (458, 'Popescu', 'Andrei', 'test.ro@nblogitrack-test.eu', '$2y$12$UmDsX8k3TtSCZIttVNrj3uulNIX9dg14GFFCQu4VMezTEAXq562Hu', '+40 21 314 22 09', 'CLIENT', TRUE, '2026-08-10 22:59:50', '2026-08-10 22:59:50'),
+  (459, 'Lindqvist', 'Erik', 'test.se@nblogitrack-test.eu', '$2y$12$L51vvyMFAxfwDpzroz0nGOj8EvlnUAwxTs1f5D0Pq2kzEpMu4U5PK', '+46 8 4 11 25 60', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51'),
+  (460, 'Kranjc', 'Matej', 'test.si@nblogitrack-test.eu', '$2y$12$UiO/g6K9E5/8cu3JjvXIhuRUaVgA75Tdj8Pw5//868Z5BGT8zl48G', '+386 1 4 25 33 71', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51'),
+  (461, 'Horvath', 'Peter', 'test.sk@nblogitrack-test.eu', '$2y$12$3/QJaoqdBUMkk88LqLFcG.lPSmGwDOgK5UmUJ6UQlodl9G53D70zO', '+421 2 54 43 12 08', 'CLIENT', TRUE, '2026-08-10 22:59:51', '2026-08-10 22:59:51');
+
+
+-- Les deux derniers comptes clients, arrives par le formulaire
+-- d'inscription comme les vingt-sept precedents.
+INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
+  ('436', 'Peeters', 'Wim', 'test.be@nblogitrack-test.eu', '$2y$12$9KYjbTHr/uWct4YKB/84neSko67JLAkmuIMEJiXlOmR8.JPvQFeoO', '+32 2 217 48 12', 'CLIENT', TRUE, '2026-08-10 22:59:42', '2026-08-10 22:59:42');
+
+
+-- Les comptes nommes des demonstrations : l'administrateur et le
+-- planificateur avec lesquels on ouvre l'application devant quelqu'un.
+-- Ils manquaient au jeu de donnees, et l'un d'eux est celui qui a
+-- valide une partie des entreprises.
+INSERT INTO users (id, last_name, first_name, email, password, phone, role, is_active, created_at, updated_at) VALUES
+  (432, 'Admin', 'Demo', 'admin@nblogitrack.be', '$2y$12$jBGO6bWKQsAfOmH1CGn4Mu0jZSokKGJQA0nnLFrFh3qAozVsT8JO.', '+32 2 000 00 00', 'ADMIN', TRUE, '2026-08-09 21:39:29', '2026-08-09 21:39:29'),
+  (433, 'Planificateur', 'Demo', 'planner@nblogitrack.be', '$2y$12$P/pygCYFJ2eVRPs2Gnaequ3cY7lLuYNgLoksgbSADPak9ozaiKfyC', '+32 2 000 00 01', 'PLANNER', TRUE, '2026-08-10 14:18:02', '2026-08-10 14:18:02');

@@ -33,6 +33,12 @@ class DatabaseSeeder extends Seeder
             InvoiceSeeder::class,
             PurchaseInvoiceSeeder::class,
             TranslationSeeder::class,
+            // Ces deux-la manquaient a l'appel. Une installation neuve
+            // sortait donc sans ses pages legales, que le pied de page
+            // publie, et sans son registre des traitements, que le
+            // reglement europeen impose de tenir.
+            PageSeeder::class,
+            ProcessingRecordSeeder::class,
         ]);
 
         foreach (['users', 'tariff_grids', 'client_contacts', 'transport_orders', 'purchase_invoices'] as $t) {
@@ -40,5 +46,14 @@ class DatabaseSeeder extends Seeder
         }
 
         DB::statement('UPDATE transport_orders SET tracking_code = upper(substr(md5(random()::text || id::text), 1, 12)) WHERE tracking_code IS NULL');
+
+        // Les codes postaux ne sont pas un jeu de demonstration : ce sont
+        // six cent mille lignes telechargees chez GeoNames, dont dependent
+        // le geocodage, le calcul des distances et donc tous les prix.
+        // Les embarquer dans ce fichier alourdirait le depot pour rien ;
+        // les oublier laisse une application qui ne sait plus tarifer.
+        if (DB::table('postal_codes')->doesntExist()) {
+            $this->command?->warn('Les codes postaux sont absents : lancez « php artisan geo:import-postal-codes ».');
+        }
     }
 }
