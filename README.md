@@ -1,8 +1,8 @@
-# NBLogiTrack — Gestion de transport (TMS)
+# NBLogiTrack — Gestion de transport (Transport Management System)
 
-> Application web de gestion de transport développée dans le cadre de mon épreuve intégrée à TECHGEST ICCBXL.
+> Application web de gestion de transport développée dans le cadre de mon épreuve intégrée à TECHGEST, Institut des Carrières Commerciales de Bruxelles.
 
-**Auteur :** Soufiane Achraa — Épreuve intégrée 2025-2026 — TECHGEST ICCBXL  
+**Auteur :** Soufiane Achraa — Épreuve intégrée 2025-2026 — TECHGEST, Institut des Carrières Commerciales de Bruxelles  
 **Version :** beta (en développement)  
 **Stack :** Laravel · React · Inertia · Vite · Tailwind CSS · PostgreSQL
 
@@ -42,24 +42,24 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | Domaine | Description | État |
 |---|---|---|
 | **Comptes & rôles** | Inscription, connexion, autorisations par rôle (Breeze + Gate) | ✅ alpha |
-| **Vérification des entreprises** | Contrôle du numéro de TVA auprès de VIES, lecture des registres belge et français, identifiant Peppol des 27 pays | ✅ alpha |
+| **Vérification des entreprises** | Contrôle du numéro de taxe sur la valeur ajoutée (TVA) auprès du service européen VIES, lecture des registres belge et français, identifiant sur le réseau Peppol des 27 pays | ✅ alpha |
 | **Validation des inscriptions** | Examen par l'administrateur, e-mails d'activation et de refus motivé | ✅ alpha |
 | **Création de commande** | Saisie guidée de l'adresse, distance routière réelle, estimation du prix en temps réel | ✅ alpha |
 | **Catalogue des ordres** | Liste, recherche par colonne, filtrage selon le rôle, fiche détaillée d'une expédition | ✅ alpha |
-| **Planification** | Affectation véhicule et chauffeur, contrôle de capacité et de certification ADR, transitions de statut | ✅ alpha |
+| **Planification** | Affectation véhicule et chauffeur, contrôle de capacité et de certification pour matières dangereuses (ADR), transitions de statut | ✅ alpha |
 | **Suivi public** | Consultation d'un envoi (numéro + code), état de livraison | ✅ alpha |
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
-| **Tableau de bord** | Indicateurs clés (KPI) + derniers ordres | ✅ alpha |
+| **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
-| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (EN 16931) | ✅ beta |
+| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (norme européenne EN 16931) | ✅ beta |
 | **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
 | **Multilingue** | Français, néerlandais et anglais, avec écran d'administration des traductions | ✅ alpha |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
 | **Devis** | Demande de devis publique, traitement par le personnel | ✅ beta |
 | **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours | ✅ beta |
-| **API REST** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
+| **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
-| **Conformité RGPD** | Registre des traitements, durées de conservation appliquées par tâches planifiées | ✅ beta |
+| **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
 | **Tests et intégration continue** | 87 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
@@ -71,12 +71,12 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 
 | Service | Usage |
 |---|---|
-| **VIES** (Commission européenne) | Validation du numéro de TVA, raison sociale et adresse du siège |
+| **VIES**, système d'échange d'informations sur la TVA (Commission européenne) | Validation du numéro de TVA, raison sociale et adresse du siège |
 | **Banque-Carrefour des Entreprises** (Belgique) | Dirigeant, secteur d'activité, situation juridique |
-| **Recherche d'entreprises** (France) | Dirigeant, code NACE, état administratif |
+| **Recherche d'entreprises** (France) | Dirigeant, code d'activité NACE, état administratif |
 | **GeoNames** | Villes et codes postaux des 27 États membres |
 | **Photon** et **Overpass** (OpenStreetMap) | Rues et numéros de police existants |
-| **OSRM** | Distance routière entre deux adresses |
+| **OSRM** (Open Source Routing Machine) | Distance routière entre deux adresses |
 
 ---
 
@@ -91,7 +91,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Authentification | Laravel Breeze (session) |
 | Messagerie (développement) | Mailpit |
 | Paiement | Stripe |
-| Facturation électronique | Peppol — norme EN 16931 |
+| Facturation électronique | Réseau Peppol — norme européenne EN 16931 |
 | Tests | PHPUnit sur PostgreSQL |
 | Intégration continue | GitHub Actions — style, tests et compilation |
 
