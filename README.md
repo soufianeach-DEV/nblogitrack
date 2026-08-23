@@ -199,7 +199,7 @@ L'intégration continue exécute les deux à chaque proposition de fusion, avec 
 
 ## État du projet
 
-Version **alpha** en cours de développement. Le suivi des tâches et des versions se fait via les *issues* et les *milestones* du dépôt.
+Version **beta** en cours de développement. Le suivi des tâches et des versions se fait via les *issues* et les *milestones* du dépôt.
 
 ---
 
