@@ -174,10 +174,12 @@ class RegisteredUserController extends Controller
             'email' => 'required|string|lowercase|email|max:150|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'marque_declaree' => 'accepted',
+            'conditions_acceptees' => 'accepted',
         ], [
             'vat_number.regex' => 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.',
             'billing_address.required' => 'Sélectionne l\'adresse du siège dans les listes proposées.',
             'marque_declaree.accepted' => 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.',
+            'conditions_acceptees.accepted' => 'Vous devez accepter les conditions générales et la politique de confidentialité.',
         ]);
 
         if ($this->denominationDejaPrise($data)) {

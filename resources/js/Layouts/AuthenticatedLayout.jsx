@@ -1,3 +1,4 @@
+import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
 import Icone from '@/Components/Icone';
@@ -277,6 +278,8 @@ export default function AuthenticatedLayout({ header, children }) {
                     {children}
                 </main>
             </div>
+
+            <BandeauTemoins />
         </div>
     );
 }

@@ -1,9 +1,11 @@
+import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function VitrineLayout({ children }) {
-    const utilisateur = usePage().props.auth?.user;
+    const { auth, pages_pied: pagesPied = [] } = usePage().props;
+    const utilisateur = auth?.user;
     const t = useTraduction();
     const lienNav = 'text-[15px] font-bold text-marine transition hover:text-brand-blue';
 
@@ -52,14 +54,24 @@ export default function VitrineLayout({ children }) {
 
             <footer className="bg-marine-deep">
                 <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                    <p>© {new Date().getFullYear()} NBLogiTrack. {t('accueil.expertise', 'Expertise logistique belge')}.</p>
-                    <p className="flex gap-6">
-                        <span>{t('accueil.pied_mentions', 'Mentions légales')}</span>
-                        <span>{t('accueil.pied_rgpd', 'Confidentialité (RGPD)')}</span>
-                        <span>{t('nav.contact', 'Contact')}</span>
-                    </p>
+                    <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.789 · {t('accueil.expertise', 'Expertise logistique belge')}.</p>
+                    <nav className="flex flex-wrap gap-4">
+                        {pagesPied.map((p) => (
+                            <Link key={p.href} href={p.href} className="transition-colors hover:text-action">
+                                {p.libelle}
+                            </Link>
+                        ))}
+                        <a href="mailto:info@nblogitrack.be" className="transition-colors hover:text-action">
+                            {t('nav.contact', 'Contact')}
+                        </a>
+                        <button type="button" onClick={ouvrirTemoins} className="transition-colors hover:text-action">
+                            {t('temoins.gerer', 'Gérer les cookies')}
+                        </button>
+                    </nav>
                 </div>
             </footer>
+
+            <BandeauTemoins />
         </div>
     );
 }

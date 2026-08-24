@@ -1,3 +1,4 @@
+import BandeauTemoins from '@/Components/BandeauTemoins';
 import BoutonRetour from '@/Components/BoutonRetour';
 import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
@@ -721,6 +722,8 @@ function SuiviVisiteur({ order, searched }) {
                 <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-600">
                     {t('suivi.pied', 'NBLogiTrack Belgium — suivi d\'expédition')}
                 </footer>
+
+                <BandeauTemoins />
             </div>
         </>
     );

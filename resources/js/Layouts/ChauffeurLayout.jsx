@@ -1,3 +1,4 @@
+import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import { useTraduction } from '@/traduire';
@@ -78,6 +79,8 @@ export default function ChauffeurLayout({ children }) {
                     {t('nav.profil', 'Mon profil')}
                 </Onglet>
             </nav>
+
+            <BandeauTemoins />
         </div>
     );
 }
