@@ -53,6 +53,15 @@ class PageSeeder extends Seeder
                 'corps_en' => $this->viePriveeEn(),
             ],
             [
+                'slug' => 'politique-cookies',
+                'titre_fr' => 'Politique de cookies',
+                'titre_nl' => 'Cookiebeleid',
+                'titre_en' => 'Cookie policy',
+                'corps_fr' => $this->cookiesFr(),
+                'corps_nl' => $this->cookiesNl(),
+                'corps_en' => $this->cookiesEn(),
+            ],
+            [
                 'slug' => 'conditions-generales',
                 'titre_fr' => 'Conditions générales de transport',
                 'titre_nl' => 'Algemene vervoersvoorwaarden',
@@ -623,6 +632,102 @@ You may lodge a complaint with the Belgian Data Protection Authority, Rue de la 
 
 ## Changes
 This policy may be amended. The date of the last update appears at the bottom of this page.
+TXT;
+    }
+
+    private function cookiesFr(): string
+    {
+        return <<<'TXT'
+## Ce qu'est un témoin de connexion
+Un témoin de connexion, ou cookie, est un petit fichier que le navigateur conserve pendant la visite d'un site. Il permet au serveur de reconnaître le navigateur d'une page à l'autre, par exemple pour maintenir une session ouverte après la connexion.
+
+## La règle que suit ce site
+La loi n'exige un consentement que pour les témoins qui ne sont pas indispensables au service demandé, comme les témoins publicitaires ou de mesure d'audience. Ce site n'en dépose aucun. Les témoins énumérés ci-dessous sont strictement nécessaires au fonctionnement et à la sécurité ; ils sont dispensés de consentement. Le bandeau affiché lors de la première visite permet d'accepter, de continuer sans accepter ou de personnaliser ; comme aucun témoin facultatif n'existe à ce jour, ce choix n'active ni ne désactive rien, il est simplement enregistré.
+
+## Les témoins déposés
+- nblogitrack_session — maintient la session d'une page à l'autre ; expire après cent vingt minutes d'inactivité.
+- XSRF-TOKEN — protège les formulaires contre les requêtes forgées depuis un autre site ; même durée que la session.
+- remember_web — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de quatre cents jours.
+- temoins_vus — enregistre le choix exprimé dans le bandeau ; conservé cent quatre-vingts jours.
+
+## Ce que ce site ne dépose pas
+Aucun témoin publicitaire. Aucun traceur de mesure d'audience. Aucun témoin de réseau social. Aucune donnée n'est transmise à un tiers par ce moyen.
+
+## Le paiement en ligne
+Le règlement d'une facture s'effectue sur la page de paiement hébergée par Stripe, sur le domaine de Stripe. Les témoins que Stripe y dépose relèvent de sa propre politique, consultable sur son site. Aucun témoin de Stripe n'est déposé sur le présent site.
+
+## Revenir sur son choix
+Le lien « Gérer les cookies », au pied des pages du site, rouvre le bandeau à tout moment. Revenir sur son choix est ainsi aussi simple que de l'exprimer.
+
+## Gérer les témoins dans le navigateur
+Chaque navigateur permet de consulter, de bloquer et de supprimer les témoins depuis ses paramètres de confidentialité. Bloquer les témoins essentiels empêche toutefois la connexion à l'espace client : sans témoin de session, le serveur ne peut pas reconnaître l'utilisateur.
+
+## Questions
+Toute question relative aux témoins peut être adressée à info@nblogitrack.be. La politique de confidentialité, accessible au pied de page, décrit l'ensemble des traitements de données.
+TXT;
+    }
+
+    private function cookiesNl(): string
+    {
+        return <<<'TXT'
+## Wat een cookie is
+Een cookie is een klein bestand dat de browser bewaart tijdens het bezoek aan een website. Het laat de server toe de browser van pagina tot pagina te herkennen, bijvoorbeeld om een sessie open te houden na het aanmelden.
+
+## De regel die deze website volgt
+De wet vereist enkel toestemming voor cookies die niet onmisbaar zijn voor de gevraagde dienst, zoals reclamecookies of cookies voor publieksmeting. Deze website plaatst er geen. De hieronder opgesomde cookies zijn strikt noodzakelijk voor de werking en de beveiliging; zij zijn vrijgesteld van toestemming. De banner bij het eerste bezoek laat toe te aanvaarden, door te gaan zonder te aanvaarden of aan te passen; aangezien er tot op heden geen enkele facultatieve cookie bestaat, schakelt die keuze niets in of uit, zij wordt enkel geregistreerd.
+
+## De geplaatste cookies
+- nblogitrack_session — houdt de sessie in stand van pagina tot pagina; vervalt na honderdtwintig minuten inactiviteit.
+- XSRF-TOKEN — beschermt de formulieren tegen vervalste verzoeken vanaf een andere website; zelfde duur als de sessie.
+- remember_web — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na vierhonderd dagen.
+- temoins_vus — registreert de keuze die in de banner werd gemaakt; honderdtachtig dagen bewaard.
+
+## Wat deze website niet plaatst
+Geen reclamecookies. Geen trackers voor publieksmeting. Geen cookies van sociale netwerken. Langs deze weg wordt geen enkel gegeven aan een derde doorgegeven.
+
+## De onlinebetaling
+De betaling van een factuur gebeurt op de betaalpagina die Stripe host, op het domein van Stripe. De cookies die Stripe daar plaatst, vallen onder zijn eigen beleid, raadpleegbaar op zijn website. Op deze website wordt geen enkele cookie van Stripe geplaatst.
+
+## Op een keuze terugkomen
+De link « Cookies beheren », onderaan de pagina's van de website, opent de banner op elk ogenblik opnieuw. Op een keuze terugkomen is zo even eenvoudig als ze uiten.
+
+## Cookies beheren in de browser
+Elke browser laat toe cookies te raadplegen, te blokkeren en te wissen via de privacyinstellingen. Het blokkeren van de essentiële cookies verhindert evenwel de aanmelding in de klantenzone: zonder sessiecookie kan de server de gebruiker niet herkennen.
+
+## Vragen
+Elke vraag over cookies kan worden gericht aan info@nblogitrack.be. Het privacybeleid, bereikbaar onderaan de pagina, beschrijft alle gegevensverwerkingen.
+TXT;
+    }
+
+    private function cookiesEn(): string
+    {
+        return <<<'TXT'
+## What a cookie is
+A cookie is a small file the browser keeps while visiting a website. It lets the server recognise the browser from one page to the next, for instance to keep a session open after signing in.
+
+## The rule this website follows
+The law requires consent only for cookies that are not essential to the requested service, such as advertising or audience measurement cookies. This website places none. The cookies listed below are strictly necessary for operation and security; they are exempt from consent. The banner shown on the first visit lets you accept, continue without accepting or customise; as no optional cookie exists to date, this choice enables and disables nothing, it is simply recorded.
+
+## Cookies placed
+- nblogitrack_session — keeps the session alive from page to page; expires after one hundred and twenty minutes of inactivity.
+- XSRF-TOKEN — protects forms against requests forged from another website; same lifetime as the session.
+- remember_web — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after four hundred days.
+- temoins_vus — records the choice made in the banner; kept for one hundred and eighty days.
+
+## What this website does not place
+No advertising cookies. No audience measurement trackers. No social network cookies. No data is passed to any third party by this means.
+
+## Online payment
+Invoices are paid on the payment page hosted by Stripe, on Stripe's domain. The cookies Stripe places there fall under its own policy, available on its website. No Stripe cookie is placed on this website.
+
+## Changing your mind
+The « Manage cookies » link, in the footer of the website's pages, reopens the banner at any time. Going back on a choice is as simple as making it.
+
+## Managing cookies in the browser
+Every browser allows cookies to be viewed, blocked and deleted from its privacy settings. Blocking the essential cookies however prevents signing in to the customer area: without a session cookie, the server cannot recognise the user.
+
+## Questions
+Any question about cookies may be sent to info@nblogitrack.be. The privacy policy, available in the page footer, describes all data processing.
 TXT;
     }
 

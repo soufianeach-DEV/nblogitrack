@@ -1,3 +1,4 @@
+import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
 import { Head, Link, usePage } from '@inertiajs/react';
@@ -113,9 +114,14 @@ export default function Show({ page }) {
                                 {p.libelle}
                             </Link>
                         ))}
+                        <button type="button" onClick={ouvrirTemoins} className="transition-colors hover:text-action">
+                            {t('temoins.gerer', 'Gérer les cookies')}
+                        </button>
                     </nav>
                 </div>
             </footer>
+
+            <BandeauTemoins />
         </div>
     );
 }

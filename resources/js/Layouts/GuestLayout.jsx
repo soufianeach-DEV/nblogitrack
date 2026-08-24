@@ -1,3 +1,4 @@
+import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
 
@@ -46,6 +47,8 @@ export default function GuestLayout({ children, large = false }) {
                     {children}
                 </div>
             </div>
+
+            <BandeauTemoins />
         </div>
     );
 }

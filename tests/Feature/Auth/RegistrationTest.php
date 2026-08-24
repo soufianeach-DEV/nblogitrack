@@ -30,6 +30,7 @@ class RegistrationTest extends TestCase
             'password' => 'mot-de-passe-solide',
             'password_confirmation' => 'mot-de-passe-solide',
             'marque_declaree' => true,
+            'conditions_acceptees' => true,
         ], $remplace);
     }
 
@@ -101,5 +102,15 @@ class RegistrationTest extends TestCase
 
         $this->post(route('register'), $this->formulaire(['marque_declaree' => false]))
             ->assertSessionHasErrors('marque_declaree');
+    }
+
+    public function test_l_acceptation_des_conditions_est_obligatoire(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register'), $this->formulaire(['conditions_acceptees' => false]))
+            ->assertSessionHasErrors('conditions_acceptees');
+
+        $this->assertDatabaseMissing('users', ['email' => 'contact@transports-essai.be']);
     }
 }

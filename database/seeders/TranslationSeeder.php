@@ -59,6 +59,40 @@ class TranslationSeeder extends Seeder
             'chercher_expedition' => ['Rechercher une expédition…', 'Een zending zoeken…', 'Search for a shipment…'],
         ],
 
+        'temoins' => [
+            'bandeau' => [
+                'Ce site ne dépose que des témoins (cookies) indispensables à son fonctionnement et à la sécurité de votre session. Aucun témoin publicitaire, aucune mesure d\'audience.',
+                'Deze website plaatst enkel cookies die onmisbaar zijn voor de werking en de beveiliging van uw sessie. Geen reclamecookies, geen publieksmeting.',
+                'This website only places cookies essential to its operation and to the security of your session. No advertising cookies, no audience measurement.',
+            ],
+            'savoir_plus' => ['En savoir plus', 'Meer informatie', 'Learn more'],
+            'tout_accepter' => ['Tout accepter', 'Alles aanvaarden', 'Accept all'],
+            'sans_accepter' => ['Continuer sans accepter', 'Doorgaan zonder te aanvaarden', 'Continue without accepting'],
+            'personnaliser' => ['Personnaliser', 'Aanpassen', 'Customise'],
+            'enregistrer' => ['Enregistrer mes choix', 'Mijn keuzes opslaan', 'Save my choices'],
+            'gerer' => ['Gérer les cookies', 'Cookies beheren', 'Manage cookies'],
+            'essentiels' => ['Témoins essentiels', 'Essentiële cookies', 'Essential cookies'],
+            'essentiels_detail' => [
+                'Session, sécurité des formulaires et mémorisation de votre choix. Sans eux, la connexion est impossible.',
+                'Sessie, beveiliging van de formulieren en het onthouden van uw keuze. Zonder deze cookies is aanmelden onmogelijk.',
+                'Session, form security and remembering your choice. Without them, signing in is impossible.',
+            ],
+            'audience' => ['Mesure d\'audience', 'Publieksmeting', 'Audience measurement'],
+            'audience_detail' => [
+                'Aucun outil de statistiques n\'est installé sur ce site.',
+                'Op deze website is geen enkel statistiekprogramma geïnstalleerd.',
+                'No analytics tool is installed on this website.',
+            ],
+            'publicite' => ['Publicité et réseaux sociaux', 'Reclame en sociale netwerken', 'Advertising and social networks'],
+            'publicite_detail' => [
+                'Aucun témoin de ce type n\'est déposé, aucune donnée n\'est partagée avec des tiers.',
+                'Er wordt geen enkele cookie van dit type geplaatst en er worden geen gegevens met derden gedeeld.',
+                'No such cookie is placed and no data is shared with third parties.',
+            ],
+            'toujours_actifs' => ['Toujours actifs', 'Altijd actief', 'Always active'],
+            'non_utilises' => ['Non utilisés', 'Niet gebruikt', 'Not used'],
+        ],
+
         'accueil' => [
             'expertise' => ['Expertise logistique belge', 'Belgische logistieke expertise', 'Belgian logistics expertise'],
             'titre' => ['Gérez vos transports', 'Beheer uw transporten', 'Manage your transport'],
@@ -288,6 +322,10 @@ class TranslationSeeder extends Seeder
                 'Ik verklaar dat deze handelsnaam geen inbreuk maakt op een gedeponeerd merk.',
                 'I certify that this company name does not infringe any registered trademark.',
             ],
+            'conditions_avant' => ['J\'accepte les ', 'Ik aanvaard de ', 'I accept the '],
+            'conditions_cgv' => ['conditions générales de transport', 'algemene vervoersvoorwaarden', 'general conditions of carriage'],
+            'conditions_entre' => [' et la ', ' en het ', ' and the '],
+            'conditions_vie_privee' => ['politique de confidentialité', 'privacybeleid', 'privacy policy'],
             'envoyer_demande' => ['Envoyer la demande', 'Aanvraag versturen', 'Submit the request'],
         ],
 

@@ -20,6 +20,7 @@ export default function Register({ secteurs, fonctions }) {
         city: '', country: '', business_sector: '',
         first_name: '', last_name: '', position: '', phone: '',
         email: '', password: '', password_confirmation: '', marque_declaree: false,
+        conditions_acceptees: false,
     });
 
     const [vies, setVies] = useState(null);
@@ -267,6 +268,37 @@ export default function Register({ secteurs, fonctions }) {
                     </span>
                 </label>
                 <InputError message={errors.marque_declaree} className="mt-1" />
+
+                <label className="mt-2 flex items-start gap-2">
+                    <input
+                        type="checkbox"
+                        checked={data.conditions_acceptees}
+                        onChange={(e) => setData('conditions_acceptees', e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-marine focus:ring-marine"
+                    />
+                    <span className="text-xs text-slate-600">
+                        {t('auth.conditions_avant', 'J\'accepte les ')}
+                        <a
+                            href={route('pages.show', 'conditions-generales')}
+                            target="_blank"
+                            rel="noopener"
+                            className="font-semibold text-marine underline underline-offset-2 hover:text-brand-blue"
+                        >
+                            {t('auth.conditions_cgv', 'conditions générales de transport')}
+                        </a>
+                        {t('auth.conditions_entre', ' et la ')}
+                        <a
+                            href={route('pages.show', 'confidentialite')}
+                            target="_blank"
+                            rel="noopener"
+                            className="font-semibold text-marine underline underline-offset-2 hover:text-brand-blue"
+                        >
+                            {t('auth.conditions_vie_privee', 'politique de confidentialité')}
+                        </a>
+                        .<span className="text-status-incident"> *</span>
+                    </span>
+                </label>
+                <InputError message={errors.conditions_acceptees} className="mt-1" />
 
                 <PrimaryButton className="mt-3 w-full" disabled={processing || situationBloquante}>
                     {t('auth.envoyer_demande', 'Envoyer la demande')}
