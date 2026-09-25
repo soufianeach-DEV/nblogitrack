@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
@@ -106,8 +107,8 @@ class VehicleController extends Controller
             'inspection_valid_until' => 'nullable|date|after_or_equal:inspection_date',
             'mileage' => 'nullable|numeric|min:0|max:9999999',
         ], [
-            'inspection_date.before_or_equal' => 'Un contrôle technique ne peut pas être daté dans le futur.',
-            'inspection_valid_until.after_or_equal' => 'La validité ne peut pas précéder le passage au contrôle.',
+            'inspection_date.before_or_equal' => Traductions::t('msg.controle_futur', 'Un contrôle technique ne peut pas être daté dans le futur.'),
+            'inspection_valid_until.after_or_equal' => Traductions::t('msg.validite_avant_controle', 'La validité ne peut pas précéder le passage au contrôle.'),
         ]);
 
         if ($donnees['is_available'] === false) {
@@ -117,15 +118,16 @@ class VehicleController extends Controller
 
             if ($engage) {
                 return back()->withErrors([
-                    'is_available' => 'Ce véhicule porte une expédition en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.',
+                    'is_available' => Traductions::t('msg.vehicule_engage_service', 'Ce véhicule porte une expédition en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
                 ]);
             }
         }
 
         if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < (float) $vehicle->mileage) {
             return back()->withErrors([
-                'mileage' => 'Le kilométrage ne peut pas descendre sous le relevé actuel ('
-                    .number_format((float) $vehicle->mileage, 0, ',', ' ').' km).',
+                'mileage' => Traductions::t('msg.kilometrage_inferieur', 'Le kilométrage ne peut pas descendre sous le relevé actuel (:km km).', [
+                    'km' => number_format((float) $vehicle->mileage, 0, ',', ' '),
+                ]),
             ]);
         }
 
@@ -138,6 +140,6 @@ class VehicleController extends Controller
             $donnees,
         );
 
-        return back()->with('success', 'Véhicule mis à jour.');
+        return back()->with('success', Traductions::t('msg.vehicule_mis_a_jour', 'Véhicule mis à jour.'));
     }
 }
