@@ -47,11 +47,20 @@ class TransportOrderFactory extends Factory
         ];
     }
 
+    public function affectee(): static
+    {
+        return $this->state(fn (array $a) => [
+            'status' => 'ASSIGNED',
+            'assigned_at' => now()->subHours(3),
+        ]);
+    }
+
     public function enRoute(): static
     {
         return $this->state(fn (array $a) => [
             'status' => 'IN_PROGRESS',
             'assigned_at' => now()->subDay(),
+            'picked_up_at' => now()->subHours(20),
         ]);
     }
 

@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 
 const LIBELLE_STATUT = {
     PENDING: ['statut.en_attente', 'En attente'],
+    ASSIGNED: ['statut.affecte', 'Affecté'],
     IN_PROGRESS: ['statut.en_cours', 'En cours'],
     DELIVERED: ['statut.livre', 'Livré'],
     CANCELLED: ['statut.annule', 'Annulé'],
@@ -12,6 +13,7 @@ const LIBELLE_STATUT = {
 
 const COULEUR_STATUT = {
     PENDING: 'bg-status-pending/10 text-status-pending',
+    ASSIGNED: 'bg-status-assigned/10 text-status-assigned',
     IN_PROGRESS: 'bg-status-progress/10 text-status-progress',
     DELIVERED: 'bg-status-delivered/10 text-status-delivered',
     CANCELLED: 'bg-status-incident/10 text-status-incident',
@@ -186,7 +188,7 @@ function BoutonsStatut({ ordre }) {
                     {t('planif.marquer_livre', 'Marquer livré')}
                 </button>
             )}
-            {ordre.status === 'IN_PROGRESS' && (
+            {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
                 <button
                     type="button"
                     onClick={desaffecter}
@@ -195,7 +197,7 @@ function BoutonsStatut({ ordre }) {
                     {t('planif.desaffecter', 'Désaffecter')}
                 </button>
             )}
-            {['PENDING', 'IN_PROGRESS'].includes(ordre.status) && (
+            {['PENDING', 'ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
                 <button
                     type="button"
                     onClick={() => changer('CANCELLED', t('planif.confirmer_annulation', 'Annuler définitivement cet ordre ?'))}
@@ -434,7 +436,7 @@ export default function Index({
                                     )}
 
                                     {}
-                                    {ordre.status === 'IN_PROGRESS' && (
+                                    {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
                                         <button
                                             type="button"
                                             onClick={() => router.patch(route('planning.tracking', ordre.id), {}, { preserveScroll: true })}

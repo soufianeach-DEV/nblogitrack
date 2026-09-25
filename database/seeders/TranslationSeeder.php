@@ -331,6 +331,7 @@ class TranslationSeeder extends Seeder
 
         'statut' => [
             'en_attente' => ['En attente', 'In afwachting', 'Pending'],
+            'affecte' => ['Affecté', 'Toegewezen', 'Assigned'],
             'en_cours' => ['En cours', 'Onderweg', 'In transit'],
             'livre' => ['Livré', 'Geleverd', 'Delivered'],
             'annule' => ['Annulé', 'Geannuleerd', 'Cancelled'],
@@ -1602,6 +1603,7 @@ class TranslationSeeder extends Seeder
             'urgent' => ['Urgent', 'Dringend', 'Urgent'],
             'prioritaire' => ['Prioritaire', 'Prioritair', 'Priority'],
             'detail_enregistree' => ['Commande enregistrée.', 'Bestelling geregistreerd.', 'Order registered.'],
+            'detail_affectee' => ['Camion et chauffeur réservés.', 'Vrachtwagen en chauffeur gereserveerd.', 'Truck and driver booked.'],
             'detail_transit' => ['Marchandise en transit.', 'Goederen onderweg.', 'Goods in transit.'],
             'detail_livree' => ['Livraison effectuée.', 'Levering uitgevoerd.', 'Delivery completed.'],
             'choisir' => [

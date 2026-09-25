@@ -64,7 +64,7 @@ class DriverController extends Controller
             ->groupBy('driver_id')
             ->pluck('nombre', 'driver_id');
 
-        $enCours = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $enCours = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereNotNull('driver_id')
             ->pluck('driver_id')
             ->unique()
@@ -154,7 +154,7 @@ class DriverController extends Controller
         }
 
         if (! empty($donnees['left_on'])) {
-            $encore = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            $encore = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('driver_id', $driver->id)
                 ->exists();
 
@@ -169,7 +169,7 @@ class DriverController extends Controller
         }
 
         if ($donnees['is_available'] === false || $donnees['adr_certified'] === false) {
-            $encours = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            $encours = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('driver_id', $driver->id);
 
             if ($donnees['is_available'] === false && empty($donnees['left_on']) && (clone $encours)->exists()) {

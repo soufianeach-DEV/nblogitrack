@@ -37,6 +37,7 @@ class DashboardController extends Controller
         $stats = [
             'total' => (clone $query)->count(),
             'pending' => (clone $query)->where('status', 'PENDING')->count(),
+            'assigned' => (clone $query)->where('status', 'ASSIGNED')->count(),
             'in_progress' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
             'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
         ];
@@ -86,7 +87,7 @@ class DashboardController extends Controller
             ->value('jours');
 
         return [
-            'actives' => $stats['pending'] + $stats['in_progress'],
+            'actives' => $stats['pending'] + $stats['assigned'] + $stats['in_progress'],
             'annulees' => $annulees,
             'delai_moyen' => $delai === null ? null : round((float) $delai, 1),
             'taux_livraison' => $closes === 0 ? null : round($stats['delivered'] / $closes * 100, 1),
@@ -166,7 +167,7 @@ class DashboardController extends Controller
         $aujourdhui = now()->toDateString();
 
         $retard = (clone $query)
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereIn('status', TransportOrder::ACTIFS)
             ->whereNotNull('requested_delivery_date')
             ->where('requested_delivery_date', '<', $aujourdhui)
             ->count();
@@ -196,7 +197,7 @@ class DashboardController extends Controller
         }
 
         $adr = TransportOrder::where('is_hazardous', true)
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereIn('status', TransportOrder::ACTIFS)
             ->whereNull('driver_id')
             ->count();
 
@@ -320,12 +321,12 @@ class DashboardController extends Controller
         $debut = now()->startOfDay();
         $fin = $debut->copy()->addDays(13);
 
-        $enlevements = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $enlevements = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereBetween('pickup_date', [$debut, $fin->copy()->endOfDay()])
             ->selectRaw('pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes')
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
 
-        $livraisons = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $livraisons = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereBetween('requested_delivery_date', [$debut->toDateString(), $fin->toDateString()])
             ->selectRaw('requested_delivery_date AS jour, count(*) AS nombre')
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);

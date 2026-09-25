@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 const COULEUR = {
     IN_PROGRESS: '#0B61A1',
     PENDING: '#8A9099',
+    ASSIGNED: '#B45309',
     DELIVERED: '#15803D',
     CANCELLED: '#BA1A1A',
 };

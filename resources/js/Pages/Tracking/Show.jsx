@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 const STATUTS = {
     PENDING: { cle: 'statut.en_attente', libelle: 'En attente', classe: 'bg-slate-100 text-slate-700' },
+    ASSIGNED: { cle: 'statut.affecte', libelle: 'Affecté', classe: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', classe: 'bg-brand-blue/10 text-brand-blue' },
     DELIVERED: { cle: 'statut.livre', libelle: 'Livré', classe: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', libelle: 'Annulé', classe: 'bg-status-incident/10 text-status-incident' },
@@ -22,6 +23,7 @@ const PRIORITES = {
 
 const ETAPES_PUBLIQUES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
+    { cle: 'ASSIGNED', libelle: ['statut.affecte', 'Affecté'], detail: ['suivi.detail_affectee', 'Camion et chauffeur réservés.'] },
     { cle: 'IN_PROGRESS', libelle: ['statut.en_cours', 'En cours'], detail: ['suivi.detail_transit', 'Marchandise en transit.'] },
     { cle: 'DELIVERED', libelle: ['statut.livre', 'Livré'], detail: ['suivi.detail_livree', 'Livraison effectuée.'] },
 ];
