@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\ApiRequest;
@@ -88,7 +89,7 @@ class ApiKeyController extends Controller
 
         if ($invalides->isNotEmpty()) {
             return back()->withErrors([
-                'ips' => 'Adresse IP invalide : '.$invalides->implode(', '),
+                'ips' => Traductions::t('msg.ip_invalide', 'Adresse IP invalide : :ips', ['ips' => $invalides->implode(', ')]),
             ])->withInput();
         }
 
@@ -121,7 +122,7 @@ class ApiKeyController extends Controller
     public function revoke(Request $request, ApiKey $apiKey): RedirectResponse
     {
         if ($apiKey->revoked_at !== null) {
-            return back()->with('error', 'Cette clé est déjà révoquée.');
+            return back()->with('error', Traductions::t('msg.cle_deja_revoquee', 'Cette clé est déjà révoquée.'));
         }
 
         $apiKey->update(['revoked_at' => now()]);
@@ -133,7 +134,7 @@ class ApiKeyController extends Controller
             ['appels_effectues' => $apiKey->requests_count],
         );
 
-        return back()->with('success', 'Clé « '.$apiKey->name.' » révoquée.');
+        return back()->with('success', Traductions::t('msg.cle_revoquee', 'Clé « :nom » révoquée.', ['nom' => $apiKey->name]));
     }
 
     /**

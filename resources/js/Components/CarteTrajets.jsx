@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
+import { useTraduction } from '@/traduire';
 
 const COULEUR = {
     IN_PROGRESS: '#0B61A1',
@@ -67,8 +68,17 @@ export default function CarteTrajets({
     const carte = useRef(null);
     const couche = useRef(null);
     const clic = useRef(onSelection);
+    const t = useTraduction();
 
     clic.current = onSelection;
+
+    // Les infobulles sont du HTML construit hors de React : les libelles
+    // se traduisent ici et figurent dans les dependances de l'effet.
+    const enlevement = t('demandes.enlevement', 'Enlèvement');
+    const livraison = t('demandes.livraison', 'Livraison');
+    const portique = t('carte.portique', 'Portique');
+    const libellePeage = t('carte.peage', 'Péage');
+    const enRoute = t('suivi.en_route', 'En route');
 
     useEffect(() => {
         const c = L.map(conteneur.current, {
@@ -144,11 +154,11 @@ export default function CarteTrajets({
 
             if (routier) {
                 L.marker(trace[0], { icon: MARQUEUR_DEPART })
-                    .bindTooltip(`Enlèvement · ${echapper(trajet.depart)}`)
+                    .bindTooltip(`${echapper(enlevement)} · ${echapper(trajet.depart)}`)
                     .addTo(couche.current)
                     .on('click', () => clic.current?.(trajet.id));
                 L.marker(trace[trace.length - 1], { icon: MARQUEUR_ARRIVEE })
-                    .bindTooltip(`Livraison · ${echapper(trajet.arrivee)}`)
+                    .bindTooltip(`${echapper(livraison)} · ${echapper(trajet.arrivee)}`)
                     .addTo(couche.current)
                     .on('click', () => clic.current?.(trajet.id));
                 trace.forEach((point) => cadre.push(point));
@@ -162,7 +172,7 @@ export default function CarteTrajets({
                         fillColor: index === 0 ? couleur : '#ffffff',
                         fillOpacity: 1,
                     })
-                        .bindTooltip(index === 0 ? `Enlèvement · ${echapper(trajet.depart)}` : `Livraison · ${echapper(trajet.arrivee)}`)
+                        .bindTooltip(index === 0 ? `${echapper(enlevement)} · ${echapper(trajet.depart)}` : `${echapper(livraison)} · ${echapper(trajet.arrivee)}`)
                         .addTo(couche.current)
                         .on('click', () => clic.current?.(trajet.id));
                 });
@@ -174,7 +184,7 @@ export default function CarteTrajets({
         peages.forEach((peage) => {
             L.marker([peage.lat, peage.lng], { icon: ICONE_PEAGE, zIndexOffset: 500 })
                 .bindTooltip(
-                    `<strong>${peage.portique ? 'Portique' : 'Péage'} ${echapper(peage.nom)}</strong>${peage.route ? '<br>' + echapper(peage.route) : ''}`,
+                    `<strong>${echapper(peage.portique ? portique : libellePeage)} ${echapper(peage.nom)}</strong>${peage.route ? '<br>' + echapper(peage.route) : ''}`,
                 )
                 .addTo(couche.current);
         });
@@ -195,7 +205,7 @@ export default function CarteTrajets({
 
         if (position) {
             L.marker(position.coordonnees, { icon: ICONE_POSITION, zIndexOffset: 800 })
-                .bindTooltip(`<strong>En route</strong><br>${echapper(position.horodatage)}`)
+                .bindTooltip(`<strong>${echapper(enRoute)}</strong><br>${echapper(position.horodatage)}`)
                 .addTo(couche.current);
 
             cadre.push(position.coordonnees);
@@ -207,7 +217,7 @@ export default function CarteTrajets({
                 maxZoom: choisi ? 12 : 8,
             });
         }
-    }, [trajets, selection, peages, jalons, position]);
+    }, [trajets, selection, peages, jalons, position, enlevement, livraison, portique, libellePeage, enRoute]);
 
     return <div ref={conteneur} className={`isolate ${className ?? ''}`} />;
 }

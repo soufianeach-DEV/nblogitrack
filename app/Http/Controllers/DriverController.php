@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
@@ -73,7 +74,7 @@ class DriverController extends Controller
         return Inertia::render('Parc/Chauffeurs', [
             'chauffeurs' => $requete->get()->map(fn (Driver $d) => [
                 'id' => $d->id,
-                'nom' => trim(($d->user?->first_name ?? '').' '.($d->user?->last_name ?? '')) ?: 'Compte supprimé',
+                'nom' => trim(($d->user?->first_name ?? '').' '.($d->user?->last_name ?? '')) ?: Traductions::t('msg.compte_supprime', 'Compte supprimé'),
                 'email' => $d->user?->email,
                 'telephone' => $d->user?->phone,
                 'actif' => (bool) ($d->user?->is_active ?? false),
@@ -91,7 +92,7 @@ class DriverController extends Controller
                 'code95_affiche' => $d->cpc_expiry?->format('d/m/Y'),
                 'tacho' => $d->tacho_card_expiry?->format('Y-m-d'),
                 'tacho_affiche' => $d->tacho_card_expiry?->format('d/m/Y'),
-                'statut' => Driver::STATUTS[$d->employment_status] ?? $d->employment_status,
+                'statut' => self::statuts()[$d->employment_status] ?? $d->employment_status,
                 'statut_code' => $d->employment_status,
                 'embauche' => $d->hired_on?->format('d/m/Y'),
                 'naissance' => $d->birth_date?->format('Y-m-d'),
@@ -101,7 +102,7 @@ class DriverController extends Controller
                 'retraite_affichee' => $d->retirement_planned_on?->format('d/m/Y'),
                 'sorti_le' => $d->left_on?->format('d/m/Y'),
                 'motif_sortie' => $d->departure_reason !== null
-                    ? (Driver::MOTIFS_SORTIE[$d->departure_reason] ?? $d->departure_reason)
+                    ? (self::motifsSortie()[$d->departure_reason] ?? $d->departure_reason)
                     : null,
                 'motif_sortie_code' => $d->departure_reason,
                 'empechements' => $d->empechements(),
@@ -111,8 +112,8 @@ class DriverController extends Controller
                 'engage' => $enCours->has($d->id),
             ])->sortBy('nom')->values()->all(),
             'permis' => Driver::distinct()->orderBy('license_type')->pluck('license_type'),
-            'statuts' => Driver::STATUTS,
-            'motifsSortie' => Driver::MOTIFS_SORTIE,
+            'statuts' => self::statuts(),
+            'motifsSortie' => self::motifsSortie(),
             'compteurs' => [
                 'total' => Driver::count(),
                 'disponibles' => Driver::where('is_available', true)->whereNot($inapte)->count(),
@@ -142,14 +143,14 @@ class DriverController extends Controller
             'left_on' => 'nullable|date',
             'departure_reason' => 'nullable|in:'.implode(',', array_keys(Driver::MOTIFS_SORTIE)),
         ], [
-            'medical_exam_date.before_or_equal' => 'La visite médicale ne peut pas être postérieure à aujourd\'hui.',
-            'hired_on.before_or_equal' => 'La date d\'entrée en service ne peut pas être dans le futur.',
-            'birth_date.before' => 'La date de naissance doit être dans le passé.',
+            'medical_exam_date.before_or_equal' => Traductions::t('msg.visite_future', 'La visite médicale ne peut pas être postérieure à aujourd\'hui.'),
+            'hired_on.before_or_equal' => Traductions::t('msg.entree_future', 'La date d\'entrée en service ne peut pas être dans le futur.'),
+            'birth_date.before' => Traductions::t('msg.naissance_future', 'La date de naissance doit être dans le passé.'),
         ]);
 
         if (! empty($donnees['left_on']) && empty($donnees['departure_reason'])) {
             return back()->withErrors([
-                'departure_reason' => 'Indiquez le motif du départ.',
+                'departure_reason' => Traductions::t('msg.motif_depart_requis', 'Indiquez le motif du départ.'),
             ]);
         }
 
@@ -160,7 +161,7 @@ class DriverController extends Controller
 
             if ($encore) {
                 return back()->withErrors([
-                    'left_on' => 'Ce chauffeur porte une mission en cours : réaffectez-la avant d\'enregistrer son départ.',
+                    'left_on' => Traductions::t('msg.chauffeur_engage_depart', 'Ce chauffeur porte une mission en cours : réaffectez-la avant d\'enregistrer son départ.'),
                 ]);
             }
 
@@ -174,13 +175,13 @@ class DriverController extends Controller
 
             if ($donnees['is_available'] === false && empty($donnees['left_on']) && (clone $encours)->exists()) {
                 return back()->withErrors([
-                    'is_available' => 'Ce chauffeur porte une mission en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.',
+                    'is_available' => Traductions::t('msg.chauffeur_engage_service', 'Ce chauffeur porte une mission en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
                 ]);
             }
 
             if ($donnees['adr_certified'] === false && (clone $encours)->where('is_hazardous', true)->exists()) {
                 return back()->withErrors([
-                    'adr_certified' => 'Ce chauffeur transporte une matière dangereuse : sa certification ADR ne peut pas être retirée maintenant.',
+                    'adr_certified' => Traductions::t('msg.chauffeur_engage_adr', 'Ce chauffeur transporte une matière dangereuse : sa certification ADR ne peut pas être retirée maintenant.'),
                 ]);
             }
         }
@@ -198,7 +199,31 @@ class DriverController extends Controller
         );
 
         return back()->with('success', ! empty($donnees['left_on'])
-            ? 'Départ enregistré. La fiche est conservée pour l\'historique.'
-            : 'Chauffeur mis à jour.');
+            ? Traductions::t('msg.depart_enregistre', 'Départ enregistré. La fiche est conservée pour l\'historique.')
+            : Traductions::t('msg.chauffeur_mis_a_jour', 'Chauffeur mis à jour.'));
+    }
+
+    /**
+     * Statuts d'emploi dans la langue de l'utilisateur.
+     *
+     * @return array<string, string>
+     */
+    public static function statuts(): array
+    {
+        return collect(Driver::STATUTS)
+            ->map(fn (string $libelle, string $code) => Traductions::t('chauffeurs.statut_'.strtolower($code), $libelle))
+            ->all();
+    }
+
+    /**
+     * Motifs de sortie dans la langue de l'utilisateur.
+     *
+     * @return array<string, string>
+     */
+    public static function motifsSortie(): array
+    {
+        return collect(Driver::MOTIFS_SORTIE)
+            ->map(fn (string $libelle, string $code) => Traductions::t('chauffeurs.sortie_'.strtolower($code), $libelle))
+            ->all();
     }
 }

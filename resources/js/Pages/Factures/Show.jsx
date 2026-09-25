@@ -242,7 +242,7 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                         <div className="mt-4 border-t border-white/15 pt-4">
                             <BoutonPayerEnLigne facture={facture} pleineLargeur />
                             <p className="mt-2 text-center text-[11px] leading-tight text-slate-300">
-                                Votre banque ne lit pas le code ? Réglez par carte en quelques secondes.
+                                {t('facture.banque_carte', 'Votre banque ne lit pas le code ? Réglez par carte en quelques secondes.')}
                             </p>
                         </div>
                     )}

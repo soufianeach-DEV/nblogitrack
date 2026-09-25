@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\User;
@@ -112,20 +113,23 @@ class InvoiceController extends Controller
     public function envoyer(Invoice $invoice): RedirectResponse
     {
         if ($invoice->status === 'DRAFT') {
-            return back()->with('error', 'Un brouillon ne s\'envoie pas.');
+            return back()->with('error', Traductions::t('msg.brouillon_non_envoyable', 'Un brouillon ne s\'envoie pas.'));
         }
 
         $destinataire = EnvoiFacture::envoyer($invoice);
 
         return $destinataire === null
-            ? back()->with('error', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.')
-            : back()->with('success', 'Facture '.$invoice->reference.' envoyée à '.$destinataire.'.');
+            ? back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'))
+            : back()->with('success', Traductions::t('msg.facture_envoyee', 'Facture :reference envoyée à :destinataire.', [
+                'reference' => $invoice->reference,
+                'destinataire' => $destinataire,
+            ]));
     }
 
     public function markPaid(Request $request, Invoice $invoice): RedirectResponse
     {
         if ($invoice->status !== 'SENT') {
-            return back()->with('error', "Cette facture n'est pas en attente de paiement.");
+            return back()->with('error', Traductions::t('msg.facture_pas_en_attente', 'Cette facture n\'est pas en attente de paiement.'));
         }
 
         $invoice->update([
@@ -143,7 +147,7 @@ class InvoiceController extends Controller
             ],
         );
 
-        return back()->with('success', 'Paiement enregistré.');
+        return back()->with('success', Traductions::t('msg.paiement_enregistre', 'Paiement enregistré.'));
     }
 
     public function pdf(Request $request, Invoice $invoice): \Illuminate\Http\Response

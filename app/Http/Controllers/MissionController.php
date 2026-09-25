@@ -74,7 +74,7 @@ class MissionController extends Controller
         $attendu = self::TRANSITIONS[$vise];
 
         if ($transportOrder->status !== $attendu) {
-            return back()->with('error', "Cette mission n'est plus dans l'état attendu, actualisez la page.");
+            return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
         }
 
         $changements = ['status' => $vise];
@@ -101,8 +101,8 @@ class MissionController extends Controller
         );
 
         return back()->with('success', $vise === 'DELIVERED'
-            ? 'Livraison enregistrée.'
-            : 'Mission prise en charge.');
+            ? Traductions::t('msg.mission_livree', 'Livraison enregistrée.')
+            : Traductions::t('msg.mission_prise', 'Mission prise en charge.'));
     }
 
     public function accuser(Request $request): RedirectResponse
@@ -125,7 +125,7 @@ class MissionController extends Controller
             ['version' => $note->updated_at?->toIso8601String()],
         );
 
-        return back()->with('success', 'Prise de connaissance enregistrée.');
+        return back()->with('success', Traductions::t('msg.note_accusee', 'Prise de connaissance enregistrée.'));
     }
 
     public function position(Request $request, TransportOrder $transportOrder): JsonResponse

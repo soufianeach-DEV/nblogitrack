@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\Traductions;
 use App\Models\Client;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -61,7 +62,7 @@ class LoginRequest extends FormRequest
             $this->session()->invalidate();
 
             throw ValidationException::withMessages([
-                'email' => 'Ce compte est désactivé. Contactez votre administrateur.',
+                'email' => Traductions::t('msg.compte_desactive', 'Ce compte est désactivé. Contactez votre administrateur.'),
             ]);
         }
 
@@ -70,7 +71,7 @@ class LoginRequest extends FormRequest
             $this->session()->invalidate();
 
             throw ValidationException::withMessages([
-                'email' => 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.',
+                'email' => Traductions::t('msg.entreprise_en_attente', 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.'),
             ]);
         }
     }

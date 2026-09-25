@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Mail\NoteInformation;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
@@ -73,7 +74,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.created', 'Page « '.$page->slug.' » créée', $page);
 
-        return back()->with('success', 'Page créée.');
+        return back()->with('success', Traductions::t('msg.page_creee', 'Page créée.'));
     }
 
     public function update(Request $request, Page $page): RedirectResponse
@@ -88,7 +89,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.updated', 'Page « '.$page->slug.' » modifiée', $page);
 
-        return back()->with('success', 'Page enregistrée.');
+        return back()->with('success', Traductions::t('msg.page_enregistree', 'Page enregistrée.'));
     }
 
     public function publier(Page $page): RedirectResponse
@@ -106,13 +107,15 @@ class PageController extends Controller
             $page,
         );
 
-        return back()->with('success', $publiee ? 'Page publiée.' : 'Page retirée du site.');
+        return back()->with('success', $publiee
+            ? Traductions::t('msg.page_publiee', 'Page publiée.')
+            : Traductions::t('msg.page_retiree', 'Page retirée du site.'));
     }
 
     public function envoyerNote(Page $page): RedirectResponse
     {
         if ($page->slug !== DriverAcknowledgement::NOTE) {
-            return back()->with('error', 'Seule la note aux conducteurs peut être envoyée.');
+            return back()->with('error', Traductions::t('msg.note_seule_envoyable', 'Seule la note aux conducteurs peut être envoyée.'));
         }
 
         $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
@@ -145,8 +148,12 @@ class PageController extends Controller
         );
 
         return $echecs === []
-            ? back()->with('success', $recus.' conducteur(s) ont reçu la note.')
-            : back()->with('error', $recus.' conducteur(s) ont reçu la note, '.count($echecs).' envoi(s) ont échoué : réessayez plus tard.');
+            ? back()->with('success', Traductions::t('msg.note_recue', ':n conducteur(s) ont reçu la note.', ['n' => $recus]))
+            : back()->with('error', Traductions::t(
+                'msg.note_echecs',
+                ':n conducteur(s) ont reçu la note, :echecs envoi(s) ont échoué : réessayez plus tard.',
+                ['n' => $recus, 'echecs' => count($echecs)],
+            ));
     }
 
     public function destroy(Page $page): RedirectResponse
@@ -156,7 +163,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.deleted', 'Page « '.$slug.' » supprimée');
 
-        return back()->with('success', 'Page supprimée.');
+        return back()->with('success', Traductions::t('msg.page_supprimee', 'Page supprimée.'));
     }
 
     public function televerser(Request $request): RedirectResponse
@@ -165,8 +172,8 @@ class PageController extends Controller
             'titre' => 'required|string|max:120',
             'fichier' => 'required|file|max:10240|mimetypes:'.implode(',', array_keys(PageDocument::TYPES)),
         ], [
-            'fichier.mimetypes' => 'Seuls les PDF et les images (JPEG, PNG, WebP) sont acceptés.',
-            'fichier.max' => 'Le fichier ne peut pas dépasser 10 Mo.',
+            'fichier.mimetypes' => Traductions::t('msg.document_types', 'Seuls les PDF et les images (JPEG, PNG, WebP) sont acceptés.'),
+            'fichier.max' => Traductions::t('msg.document_taille', 'Le fichier ne peut pas dépasser 10 Mo.'),
         ]);
 
         $fichier = $request->file('fichier');
@@ -184,7 +191,7 @@ class PageController extends Controller
 
         ActivityLog::record('document.uploaded', 'Document « '.$document->titre.' » déposé', $document);
 
-        return back()->with('success', 'Document déposé.');
+        return back()->with('success', Traductions::t('msg.document_depose', 'Document déposé.'));
     }
 
     public function supprimerDocument(PageDocument $pageDocument): RedirectResponse
@@ -195,7 +202,7 @@ class PageController extends Controller
 
         ActivityLog::record('document.deleted', 'Document « '.$titre.' » supprimé');
 
-        return back()->with('success', 'Document supprimé.');
+        return back()->with('success', Traductions::t('msg.document_supprime', 'Document supprimé.'));
     }
 
     /** @return array<string, mixed> */

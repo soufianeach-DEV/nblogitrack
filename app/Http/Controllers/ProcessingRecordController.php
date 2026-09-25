@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\ProcessingRecord;
@@ -77,6 +78,6 @@ class ProcessingRecordController extends Controller
             $processingRecord,
         );
 
-        return back()->with('success', 'Entrée du registre enregistrée.');
+        return back()->with('success', Traductions::t('msg.registre_enregistre', 'Entrée du registre enregistrée.'));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
@@ -21,6 +22,20 @@ class StaffController extends Controller
         'PLANNER' => 'Planificateur',
         'ADMIN' => 'Administrateur',
     ];
+
+    /**
+     * Roles dans la langue de l'utilisateur.
+     *
+     * @return array<string, string>
+     */
+    private static function roles(): array
+    {
+        return [
+            'DRIVER' => Traductions::t('roles.driver', self::ROLES['DRIVER']),
+            'PLANNER' => Traductions::t('roles.planner', self::ROLES['PLANNER']),
+            'ADMIN' => Traductions::t('roles.administrateur', self::ROLES['ADMIN']),
+        ];
+    }
 
     public function index(Request $request): Response
     {
@@ -62,7 +77,7 @@ class StaffController extends Controller
                         'nom' => trim($u->first_name.' '.$u->last_name),
                         'email' => $u->email,
                         'telephone' => $u->phone,
-                        'role' => self::ROLES[$u->role] ?? $u->role,
+                        'role' => self::roles()[$u->role] ?? $u->role,
                         'role_code' => $u->role,
                         'actif' => (bool) $u->is_active,
                         'confirme' => $u->email_verified_at !== null,
@@ -72,9 +87,9 @@ class StaffController extends Controller
                         'sorti_le' => $chauffeur?->left_on?->format('d/m/Y'),
                     ];
                 })->all(),
-            'roles' => self::ROLES,
+            'roles' => self::roles(),
             'permis' => ['C', 'CE', 'C1', 'C1E'],
-            'statuts' => Driver::STATUTS,
+            'statuts' => DriverController::statuts(),
             'compteurs' => [
                 'total' => User::whereIn('role', array_keys(self::ROLES))->count(),
                 'actifs' => User::whereIn('role', array_keys(self::ROLES))->where('is_active', true)->count(),
@@ -98,10 +113,10 @@ class StaffController extends Controller
             'employment_status' => 'required_if:role,DRIVER|nullable|in:'.implode(',', array_keys(Driver::STATUTS)),
             'hired_on' => 'nullable|date|before_or_equal:today',
         ], [
-            'email.unique' => 'Cette adresse est déjà utilisée par un compte.',
-            'license_number.unique' => 'Ce numéro de permis est déjà enregistré.',
-            'license_expiry.after' => 'Un permis déjà expiré ne permet pas de créer le compte.',
-            'required_if' => 'Ce champ est obligatoire pour un chauffeur.',
+            'email.unique' => Traductions::t('msg.email_deja_utilise', 'Cette adresse est déjà utilisée par un compte.'),
+            'license_number.unique' => Traductions::t('msg.permis_deja_enregistre', 'Ce numéro de permis est déjà enregistré.'),
+            'license_expiry.after' => Traductions::t('msg.permis_expire', 'Un permis déjà expiré ne permet pas de créer le compte.'),
+            'required_if' => Traductions::t('msg.champ_requis_chauffeur', 'Ce champ est obligatoire pour un chauffeur.'),
         ]);
 
         $utilisateur = DB::transaction(function () use ($donnees) {
@@ -145,10 +160,15 @@ class StaffController extends Controller
         );
 
         return $envoye
-            ? back()->with('success',
-                'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à '.$utilisateur->email.'.')
-            : back()->with('error',
-                'Compte créé, mais le courriel n\'a pas pu partir. Renvoyez le lien depuis la liste.');
+            ? back()->with('success', Traductions::t(
+                'msg.compte_cree',
+                'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à :email.',
+                ['email' => $utilisateur->email],
+            ))
+            : back()->with('error', Traductions::t(
+                'msg.compte_cree_sans_courriel',
+                'Compte créé, mais le courriel n\'a pas pu partir. Renvoyez le lien depuis la liste.',
+            ));
     }
 
     public function toggle(Request $request, User $user): RedirectResponse
@@ -157,7 +177,7 @@ class StaffController extends Controller
 
         if ($user->id === $request->user()->id) {
             return back()->withErrors([
-                'is_active' => 'Vous ne pouvez pas désactiver votre propre compte.',
+                'is_active' => Traductions::t('msg.desactiver_soi_meme', 'Vous ne pouvez pas désactiver votre propre compte.'),
             ]);
         }
 
@@ -168,7 +188,7 @@ class StaffController extends Controller
 
             if ($engage) {
                 return back()->withErrors([
-                    'is_active' => 'Ce chauffeur porte une mission en cours : réaffectez-la avant de fermer son compte.',
+                    'is_active' => Traductions::t('msg.chauffeur_engage_compte', 'Ce chauffeur porte une mission en cours : réaffectez-la avant de fermer son compte.'),
                 ]);
             }
         }
@@ -176,7 +196,7 @@ class StaffController extends Controller
         if ($user->is_active && $user->isAdmin()
             && User::where('role', 'ADMIN')->where('is_active', true)->count() <= 1) {
             return back()->withErrors([
-                'is_active' => 'C\'est le dernier administrateur actif : nommez-en un autre avant de fermer celui-ci.',
+                'is_active' => Traductions::t('msg.dernier_admin', 'C\'est le dernier administrateur actif : nommez-en un autre avant de fermer celui-ci.'),
             ]);
         }
 
@@ -193,7 +213,9 @@ class StaffController extends Controller
             ['role' => $user->role],
         );
 
-        return back()->with('success', $user->is_active ? 'Compte réactivé.' : 'Compte désactivé.');
+        return back()->with('success', $user->is_active
+            ? Traductions::t('msg.compte_reactive', 'Compte réactivé.')
+            : Traductions::t('msg.compte_ferme', 'Compte désactivé.'));
     }
 
     private function envoyerLien(User $user): bool
@@ -225,7 +247,7 @@ class StaffController extends Controller
         abort_if(! array_key_exists($user->role, self::ROLES), 404);
 
         if (! $this->envoyerLien($user)) {
-            return back()->with('error', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.');
+            return back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'));
         }
 
         ActivityLog::record(
@@ -234,6 +256,6 @@ class StaffController extends Controller
             $user,
         );
 
-        return back()->with('success', 'Lien envoyé à '.$user->email.'.');
+        return back()->with('success', Traductions::t('msg.lien_envoye', 'Lien envoyé à :email.', ['email' => $user->email]));
     }
 }

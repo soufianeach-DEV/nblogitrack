@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class PaymentController extends Controller
         $this->autoriserPaiement($request, $invoice);
 
         if ($invoice->status !== 'SENT') {
-            return back()->with('error', 'Cette facture ne peut pas être réglée en ligne.');
+            return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));
         }
 
         $stripe = new StripeClient(config('services.stripe.secret'));
@@ -36,9 +37,11 @@ class PaymentController extends Controller
                     'currency' => 'eur',
                     'unit_amount' => (int) round((float) $invoice->amount_incl_tax * 100),
                     'product_data' => [
-                        'name' => 'Facture '.$invoice->reference,
-                        'description' => 'Transport du '.$invoice->period_start->format('d/m/Y')
-                            .' au '.$invoice->period_end->format('d/m/Y'),
+                        'name' => Traductions::t('msg.stripe_facture', 'Facture :reference', ['reference' => $invoice->reference]),
+                        'description' => Traductions::t('msg.stripe_periode', 'Transport du :debut au :fin', [
+                            'debut' => $invoice->period_start->format('d/m/Y'),
+                            'fin' => $invoice->period_end->format('d/m/Y'),
+                        ]),
                     ],
                 ],
             ]],
