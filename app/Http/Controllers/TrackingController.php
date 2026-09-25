@@ -38,6 +38,11 @@ class TrackingController extends Controller
                 ])
             : null;
 
+        // client_id ne sert qu'a charger le nom de l'entreprise. Le visiteur
+        // n'a pas a connaitre les identifiants internes.
+        $ordre?->makeHidden('client_id');
+        $ordre?->client?->makeHidden('id');
+
         return Inertia::render('Tracking/Show', [
             'searched' => $cherche,
             'order' => $ordre,
