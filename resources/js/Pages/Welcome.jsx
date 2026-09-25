@@ -160,7 +160,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         <ul className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-3 px-4 py-5 sm:px-6">
                             <Certification icone="valide" texte={t('accueil.certif_cmr', 'e-CMR certifié')} />
                             <Certification icone="coche" texte="Viapass / OBU" />
-                            <Certification icone="camion" texte="ADR compliant" />
+                            <Certification icone="camion" texte={t('accueil.certif_adr', 'ADR compliant')} />
                         </ul>
                     </div>
                 </section>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Traductions;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +22,7 @@ class VerifierCompteActif
 
             return redirect()
                 ->route('login')
-                ->with('status', 'Ce compte est désactivé. Contactez votre administrateur.');
+                ->with('status', Traductions::t('msg.compte_desactive', 'Ce compte est désactivé. Contactez votre administrateur.'));
         }
 
         return $next($request);

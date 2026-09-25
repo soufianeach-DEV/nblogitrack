@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Client;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -17,12 +18,14 @@ class CompteActive extends Mailable
     public function __construct(
         public Client $client,
         public User $destinataire,
-    ) {}
+    ) {
+        $this->locale($destinataire->locale ?: 'fr');
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Votre compte NBLogiTrack est activé',
+            subject: Traductions::t('courriel.active_sujet', 'Votre compte NBLogiTrack est activé'),
         );
     }
 

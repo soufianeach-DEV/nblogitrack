@@ -32,7 +32,11 @@ const MARCHANDISES = [
     'Autre',
 ];
 
-const NOMS_OFFRE = { ECO: 'Éco', STANDARD: 'Standard', EXPRESS: 'Express' };
+const NOMS_OFFRE = {
+    ECO: ['commande.offre_eco', 'Éco'],
+    STANDARD: ['commande.offre_standard', 'Standard'],
+    EXPRESS: ['commande.offre_express', 'Express'],
+};
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
@@ -256,7 +260,7 @@ export default function Create({ tariffGrids, pricing }) {
                                         aria-pressed={actif}
                                         className={`rounded-xl border p-4 text-left transition ${actif ? 'border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue' : tropLent ? 'border-gray-200 bg-gray-50 opacity-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
                                     >
-                                        <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ?? g.label}</p>
+                                        <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ? t(...NOMS_OFFRE[g.service_level]) : g.label}</p>
                                         <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {g.delivery_days} {t('ordres.j', 'j')}</p>
                                         <p className="mt-2 text-lg font-bold text-action-dark">{p ? `${fr(p.total)} €` : '—'}</p>
                                         {tropLent && <p className="mt-1 text-xs text-gray-400">{t('commande.trop_lent', 'trop lent pour la date demandée')}</p>}

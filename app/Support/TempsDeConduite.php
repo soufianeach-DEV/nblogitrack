@@ -49,23 +49,25 @@ class TempsDeConduite
     public static function resume(?int $km): string
     {
         if ($km === null) {
-            return 'Distance inconnue';
+            return Traductions::t('planif.distance_inconnue', 'Distance inconnue');
         }
 
         if ($km === 0) {
-            return 'Course intra-urbaine';
+            return Traductions::t('planif.course_urbaine', 'Course intra-urbaine');
         }
 
         $conduite = self::heuresDeConduite($km);
         $pauses = self::nombreDePauses($conduite);
-        $texte = self::enHeures($conduite).' de conduite';
+        $texte = Traductions::t('planif.duree_conduite', ':duree de conduite', ['duree' => self::enHeures($conduite)]);
 
         if ($pauses > 0) {
-            $texte .= ' + '.$pauses.' pause'.($pauses > 1 ? 's' : '').' de 45 min';
+            $texte .= ' '.($pauses > 1
+                ? Traductions::t('planif.pauses', '+ :n pauses de 45 min', ['n' => $pauses])
+                : Traductions::t('planif.pause', '+ :n pause de 45 min', ['n' => $pauses]));
         }
 
         if (($jours = self::journees($km)) > 1) {
-            $texte .= ' sur '.$jours.' jours';
+            $texte .= ' '.Traductions::t('planif.sur_jours', 'sur :n jours', ['n' => $jours]);
         }
 
         return $texte;
@@ -136,16 +138,22 @@ class TempsDeConduite
         $semaine = self::conduiteDeLaSemaine($chauffeurId, $enlevement, $ordreExclu);
 
         if ($semaine + $conduite > self::CONDUITE_SEMAINE_MAX) {
-            $motifs[] = sprintf(
-                'plafond hebdomadaire depasse : %s deja engagees plus %s pour cette mission, maximum %s',
-                self::enHeures($semaine), self::enHeures($conduite), self::enHeures(self::CONDUITE_SEMAINE_MAX),
+            $motifs[] = Traductions::t(
+                'planif.plafond_hebdo',
+                'plafond hebdomadaire dépassé : :semaine déjà engagées plus :mission pour cette mission, maximum :max',
+                [
+                    'semaine' => self::enHeures($semaine),
+                    'mission' => self::enHeures($conduite),
+                    'max' => self::enHeures(self::CONDUITE_SEMAINE_MAX),
+                ],
             );
         }
 
         if (self::joursConsecutifsAvant($chauffeurId, $enlevement) >= self::JOURS_CONSECUTIFS_MAX) {
-            $motifs[] = sprintf(
-                'septieme journee d\'affilee : le repos hebdomadaire doit commencer apres %d jours',
-                self::JOURS_CONSECUTIFS_MAX,
+            $motifs[] = Traductions::t(
+                'planif.septieme_jour',
+                'septième journée d\'affilée : le repos hebdomadaire doit commencer après :n jours',
+                ['n' => self::JOURS_CONSECUTIFS_MAX],
             );
         }
 

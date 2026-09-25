@@ -10,6 +10,7 @@ use App\Models\ClientContact;
 use App\Models\User;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
+use App\Support\Traductions;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,8 +92,8 @@ class RegisteredUserController extends Controller
     public function create(): Response
     {
         return Inertia::render('Auth/Register', [
-            'secteurs' => $this->referentiel('clients', 'business_sector', self::SECTEURS_METIER),
-            'fonctions' => $this->referentiel('client_contacts', 'position', self::FONCTIONS_METIER),
+            'secteurs' => $this->referentiel('clients', 'business_sector', self::SECTEURS_METIER, 'secteur'),
+            'fonctions' => $this->referentiel('client_contacts', 'position', self::FONCTIONS_METIER, 'fonction'),
         ]);
     }
 
@@ -100,13 +101,18 @@ class RegisteredUserController extends Controller
      * @param  array<int, string>  $metier
      * @return array<int, string>
      */
-    private function referentiel(string $table, string $colonne, array $metier): array
+    private function referentiel(string $table, string $colonne, array $metier, string $vocabulaire): array
     {
         $enBase = DB::table($table)->whereNotNull($colonne)->distinct()->pluck($colonne)->all();
 
-        $valeurs = array_unique(array_merge($metier, $enBase));
+        // Les valeurs sont rangees en francais : la liste est montree
+        // dans la langue de l'interface.
+        $valeurs = array_unique(array_map(
+            fn (string $valeur) => (string) Traductions::vocabulaire($vocabulaire, $valeur),
+            array_merge($metier, $enBase),
+        ));
 
-        collator_sort(collator_create('fr_FR'), $valeurs);
+        collator_sort(collator_create(app()->getLocale()), $valeurs);
 
         return array_values($valeurs);
     }
@@ -139,17 +145,17 @@ class RegisteredUserController extends Controller
         $statut = $resultat['statut'] ?? '';
 
         if ($statut === 'invalide') {
-            return 'Ce numéro n\'est pas actif dans le registre européen.';
+            return Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.');
         }
 
         if ($statut !== 'valide') {
-            return 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.';
+            return Traductions::t('msg.tva_registre_injoignable', 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.');
         }
 
         $situation = $resultat['entreprise']['situation'] ?? null;
 
         if ($situation !== null && $situation['acceptable'] === false) {
-            return 'Situation juridique incompatible : '.$situation['libelle'].'. L\'inscription est refusée.';
+            return Traductions::t('msg.situation_incompatible', 'Situation juridique incompatible : :libelle. L\'inscription est refusée.', ['libelle' => $situation['libelle']]);
         }
 
         return null;
@@ -177,10 +183,10 @@ class RegisteredUserController extends Controller
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
         ], [
-            'vat_number.regex' => 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.',
-            'billing_address.required' => 'Sélectionne l\'adresse du siège dans les listes proposées.',
-            'marque_declaree.accepted' => 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.',
-            'conditions_acceptees.accepted' => 'Vous devez accepter les conditions générales et la politique de confidentialité.',
+            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.'),
+            'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionne l\'adresse du siège dans les listes proposées.'),
+            'marque_declaree.accepted' => Traductions::t('msg.marque_non_confirmee', 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.'),
+            'conditions_acceptees.accepted' => Traductions::t('msg.conditions_non_acceptees', 'Vous devez accepter les conditions générales et la politique de confidentialité.'),
         ]);
 
         // Le formulaire envoie le nom du pays dans la langue de
@@ -188,9 +194,17 @@ class RegisteredUserController extends Controller
         // facturation et les recherches connaissent.
         $data['country'] = Pays::nomFrancais(trim($data['country']));
 
+        // Meme principe pour le secteur et la fonction choisis dans les
+        // listes traduites.
+        foreach (['business_sector' => 'secteur', 'position' => 'fonction'] as $champ => $vocabulaire) {
+            if (! empty($data[$champ])) {
+                $data[$champ] = Traductions::vocabulaireEnFrancais($vocabulaire, trim($data[$champ]));
+            }
+        }
+
         if ($this->denominationDejaPrise($data)) {
             return back()->withInput()->withErrors([
-                'company_name' => 'Une entreprise portant ce nom est déjà enregistrée dans le même secteur et la même localité. Précisez la dénomination pour la distinguer.',
+                'company_name' => Traductions::t('msg.denomination_prise', 'Une entreprise portant ce nom est déjà enregistrée dans le même secteur et la même localité. Précisez la dénomination pour la distinguer.'),
             ]);
         }
 
@@ -198,7 +212,7 @@ class RegisteredUserController extends Controller
         $data['vat_number'] = $identifiants['tva'] ?? strtoupper($data['vat_number']);
 
         if (Client::where('vat_number', $data['vat_number'])->exists()) {
-            return back()->withInput()->withErrors(['vat_number' => 'Ce numéro de TVA est déjà enregistré.']);
+            return back()->withInput()->withErrors(['vat_number' => Traductions::t('msg.tva_deja_enregistree', 'Ce numéro de TVA est déjà enregistré.')]);
         }
 
         if ($message = $this->situationInterdite($data['vat_number'])) {
@@ -253,8 +267,9 @@ class RegisteredUserController extends Controller
             $user->id,
         );
 
-        return redirect()->route('login')->with('status',
-            'Votre demande est enregistrée. Un administrateur doit valider votre entreprise avant votre première connexion : vous recevrez un e-mail dès l\'activation.'
-        );
+        return redirect()->route('login')->with('status', Traductions::t(
+            'msg.inscription_enregistree',
+            'Votre demande est enregistrée. Un administrateur doit valider votre entreprise avant votre première connexion : vous recevrez un e-mail dès l\'activation.',
+        ));
     }
 }

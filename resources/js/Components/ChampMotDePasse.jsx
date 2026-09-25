@@ -1,8 +1,13 @@
 import TextInput from '@/Components/TextInput';
 import { useState } from 'react';
+import { useTraduction } from '@/traduire';
 
 export default function ChampMotDePasse({ className = '', ...props }) {
     const [visible, setVisible] = useState(false);
+    const t = useTraduction();
+    const libelle = visible
+        ? t('auth.masquer_mdp', 'Masquer le mot de passe')
+        : t('auth.afficher_mdp', 'Afficher le mot de passe');
 
     return (
         <div className="relative">
@@ -11,8 +16,8 @@ export default function ChampMotDePasse({ className = '', ...props }) {
                 type="button"
                 tabIndex={-1}
                 onClick={() => setVisible(! visible)}
-                aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-label={libelle}
+                title={libelle}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-600 transition hover:text-marine"
             >
                 {visible ? (

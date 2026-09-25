@@ -1,19 +1,18 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
+import { useLangue, useTraduction } from '@/traduire';
 
 const CODES_EUROPE = ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
 
+// L'adresse enregistree garde le nom francais du pays : le serveur et
+// usePays le retrouvent sous cette forme. Seul l'affichage suit la langue.
 const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
-
-const PAYS = CODES_EUROPE
-    .map((code) => ({ code, nom: nomRegion.of(code) }))
-    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 
 const CP_NUMERIQUE = { BE: 4, LU: 4, FR: 5, DE: 5, IT: 5, ES: 5, AT: 4, CH: 4, DK: 4, HU: 4, SI: 4, BG: 4, NO: 4, FI: 5, EE: 5, HR: 5, RO: 6, LT: 5 };
 
-const CP_EXEMPLE = { BE: 'ex. 1000', FR: 'ex. 75001', DE: 'ex. 10115', NL: 'ex. 1012 AB', GB: 'ex. SW1A 1AA', PL: 'ex. 00-950', PT: 'ex. 1000-001', CZ: 'ex. 110 00' };
+const CP_EXEMPLE = { BE: '1000', FR: '75001', DE: '10115', NL: '1012 AB', GB: 'SW1A 1AA', PL: '00-950', PT: '1000-001', CZ: '110 00' };
 
 const GRANDES_VILLES = {
     AT: [['Vienne', 48.2082, 16.3738], ['Graz', 47.0707, 15.4395], ['Linz', 48.3069, 14.2858], ['Salzbourg', 47.8095, 13.0550]],
@@ -54,6 +53,15 @@ const kmEntre = (lat1, lng1, lat2, lng2) => {
 };
 
 export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false }) {
+    const t = useTraduction();
+    const langue = useLangue();
+    const PAYS = useMemo(() => {
+        const noms = new Intl.DisplayNames([langue], { type: 'region' });
+
+        return CODES_EUROPE
+            .map((code) => ({ code, nom: noms.of(code) }))
+            .sort((a, b) => a.nom.localeCompare(b.nom, langue));
+    }, [langue]);
     const [pays, setPays] = useState('BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
@@ -82,7 +90,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
 
     const selectCls = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-marine focus:ring-marine';
     const sousLabel = 'mb-1 block text-xs font-medium text-slate-600';
-    const nomPays = nomRegion.of(pays);
+    const nomPays = PAYS.find((p) => p.code === pays)?.nom ?? pays;
 
     const publier = (etat = {}) => {
         const s = { pays, ville, cp, rue, numero, coords, ...etat };
@@ -535,7 +543,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <InputLabel>{label}{required && <span className="text-status-incident"> *</span>}</InputLabel>
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
-                    <span className={sousLabel}>Pays <span className="text-status-incident">*</span></span>
+                    <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
                     <select value={pays} onChange={(e) => changerPays(e.target.value)} className={selectCls}>
                         {PAYS.map((p) => (
                             <option key={p.code} value={p.code}>{p.nom}</option>
@@ -543,7 +551,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     </select>
                 </div>
                 <div>
-                    <span className={sousLabel}>Ville <span className="text-status-incident">*</span></span>
+                    <span className={sousLabel}>{t('adresse.ville', 'Ville')} <span className="text-status-incident">*</span></span>
                     <div className="relative">
                         <TextInput
                             value={ville}
@@ -551,7 +559,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             onFocus={afficherVilles}
                             onClick={afficherVilles}
                             onBlur={() => setTimeout(() => setSuggVilles([]), 150)}
-                            placeholder="ex. Bruxelles"
+                            placeholder={t('adresse.ville_ex', 'ex. Bruxelles')}
                             className="block w-full pr-9"
                             autoComplete="off"
                         />
@@ -582,14 +590,14 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         )}
                     </div>
                     {aucuneVille && ville.length >= 2 && (
-                        <p className="mt-1 text-xs text-status-incident">Aucune ville trouvée en {nomPays} — vérifie l'orthographe ou le pays.</p>
+                        <p className="mt-1 text-xs text-status-incident">{t('adresse.aucune_ville', 'Aucune ville trouvée en :pays — vérifie l\'orthographe ou le pays.', { pays: nomPays })}</p>
                     )}
                     {!aucuneVille && ville.length >= 2 && !villeCoords && suggVilles.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">Choisis la ville dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_ville', 'Choisis la ville dans la liste de suggestions.')}</p>
                     )}
                 </div>
                 <div>
-                    <span className={sousLabel}>Code postal <span className="text-status-incident">*</span></span>
+                    <span className={sousLabel}>{t('adresse.code_postal', 'Code postal')} <span className="text-status-incident">*</span></span>
                     <div className="relative">
                         <TextInput
                             value={cp}
@@ -597,7 +605,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             onFocus={afficherCps}
                             onClick={afficherCps}
                             onBlur={() => setTimeout(() => setSuggCps([]), 150)}
-                            placeholder={CP_EXEMPLE[pays] ?? 'ex. 1000'}
+                            placeholder={t('commun.exemple', 'ex. :valeur', { valeur: CP_EXEMPLE[pays] ?? '1000' })}
                             className="block w-full pr-9"
                             inputMode={CP_NUMERIQUE[pays] ? 'numeric' : 'text'}
                             autoComplete="off"
@@ -632,25 +640,25 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         )}
                     </div>
                     {aucunCp && (
-                        <p className="mt-1 text-xs text-status-incident">Code postal introuvable pour cette ville — choisis-en un dans la liste.</p>
+                        <p className="mt-1 text-xs text-status-incident">{t('adresse.cp_introuvable', 'Code postal introuvable pour cette ville — choisis-en un dans la liste.')}</p>
                     )}
                     {villeCoords && !cpsLibres && cp && !cpChoisi && !aucunCp && suggCps.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">Choisis un code postal dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_cp', 'Choisis un code postal dans la liste de suggestions.')}</p>
                     )}
                     {villeCoords && cpsLibres && (
-                        <p className="mt-1 text-xs text-slate-600">Codes postaux non référencés pour cette ville — saisie libre.</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.cp_libres', 'Codes postaux non référencés pour cette ville — saisie libre.')}</p>
                     )}
                 </div>
                 <div className={compact ? 'col-span-2' : ''}>
                     <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <span className={sousLabel}>Rue <span className="text-status-incident">*</span></span>
+                            <span className={sousLabel}>{t('adresse.rue', 'Rue')} <span className="text-status-incident">*</span></span>
                             <TextInput
                                 value={rue}
                                 onChange={(e) => chercherRues(e.target.value)}
                                 onFocus={() => { if (rue.length >= 2 && !rueChoisie) chercherRues(rue); }}
                                 onBlur={() => setTimeout(() => setSuggRues([]), 150)}
-                                placeholder="ex. Rue de la Loi"
+                                placeholder={t('adresse.rue_ex', 'ex. Rue de la Loi')}
                                 className="block w-full"
                                 autoComplete="off"
                                 disabled={!villeCoords}
@@ -668,7 +676,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             )}
                         </div>
                         <div className="w-28 shrink-0">
-                            <span className={sousLabel}>N° <span className="text-status-incident">*</span></span>
+                            <span className={sousLabel}>{t('adresse.numero', 'N°')} <span className="text-status-incident">*</span></span>
                             <div className="relative">
                             <TextInput
                                 value={numero}
@@ -676,7 +684,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                 onFocus={afficherNums}
                                 onClick={afficherNums}
                                 onBlur={() => setTimeout(() => setSuggNums([]), 150)}
-                                placeholder="ex. 16"
+                                placeholder={t('commun.exemple', 'ex. :valeur', { valeur: '16' })}
                                 className="block w-full pr-7"
                                 autoComplete="off"
                                 inputMode="numeric"
@@ -715,21 +723,21 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     {aucuneRue && rue.length >= 2 && (
                         <p className="mt-1 text-xs text-status-incident">
                             {pays === 'BE'
-                                ? <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).</>
-                                : <>Aucune rue trouvée à {cpLocalite || ville || nomPays} — écris le nom complet (ex. « champ de mars ») et vérifie l'orthographe.</>}
+                                ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cpLocalite || ville || nomPays })
+                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cpLocalite || ville || nomPays })}
                         </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">Choisis la rue dans la liste de suggestions.</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_rue', 'Choisis la rue dans la liste de suggestions.')}</p>
                     )}
                     {numsChargement && (
-                        <p className="mt-1 text-xs text-slate-600">Chargement des numéros de la rue…</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.chargement_numeros', 'Chargement des numéros de la rue…')}</p>
                     )}
                     {aucunNum && (
-                        <p className="mt-1 text-xs text-status-incident">Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.</p>
+                        <p className="mt-1 text-xs text-status-incident">{t('adresse.numero_introuvable', 'Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.')}</p>
                     )}
                     {! numeroLibre && rueChoisie && numero && !numChoisi && !aucunNum && !numsChargement && suggNums.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">Choisis le numéro dans la liste.</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_numero', 'Choisis le numéro dans la liste.')}</p>
                     )}
                 </div>
             </div>

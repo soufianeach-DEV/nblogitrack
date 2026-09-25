@@ -64,6 +64,6 @@ class TranslationController extends Controller
             ['avant' => $avant, 'apres' => $data],
         );
 
-        return back()->with('success', 'Traduction « '.$translation->cle.' » enregistrée.');
+        return back()->with('success', Traductions::t('msg.traduction_enregistree', 'Traduction « :cle » enregistrée.', ['cle' => $translation->cle]));
     }
 }

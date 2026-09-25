@@ -39,7 +39,11 @@ class EnvoiFacture
         ]);
 
         try {
-            Mail::to($adresse)->send(new FactureEmise($facture, $prenom));
+            // Le courriel et ses pieces jointes suivent la langue choisie
+            // par le compte de l'entreprise.
+            $langue = User::find($facture->client_id)?->locale ?: 'fr';
+
+            Mail::to($adresse)->send(new FactureEmise($facture, $prenom, $langue));
         } catch (\Throwable $e) {
             report($e);
 

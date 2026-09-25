@@ -53,7 +53,7 @@ class PurchaseInvoiceController extends Controller
                 'categorie' => Traductions::vocabulaire('achat', PurchaseInvoice::CATEGORIES[$a->category] ?? $a->category),
                 'vehicule' => $a->vehicle_registration,
                 'vehicule_detail' => trim(($a->vehicle?->brand ?? '').' '.($a->vehicle?->model ?? '')),
-                'periode' => $a->period_start->locale('fr')->isoFormat('MMMM YYYY'),
+                'periode' => $a->period_start->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
                 'echeance' => $a->due_on->format('d/m/Y'),
                 'ht' => (float) $a->amount_excl_tax,
                 'tva' => (float) $a->vat_amount,
@@ -104,8 +104,8 @@ class PurchaseInvoiceController extends Controller
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
-            'due_on.after_or_equal' => 'L\'échéance ne peut pas précéder l\'émission.',
-            'period_end.after_or_equal' => 'La fin de période ne peut pas précéder son début.',
+            'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
+            'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
         ]);
 
         $existe = PurchaseInvoice::where('supplier_name', $donnees['supplier_name'])
@@ -114,7 +114,7 @@ class PurchaseInvoiceController extends Controller
 
         if ($existe) {
             return back()->withErrors([
-                'reference' => 'Cette référence existe déjà pour ce fournisseur : la facture est probablement déjà encodée.',
+                'reference' => Traductions::t('msg.achat_doublon', 'Cette référence existe déjà pour ce fournisseur : la facture est probablement déjà encodée.'),
             ]);
         }
 
@@ -138,13 +138,13 @@ class PurchaseInvoiceController extends Controller
             ['vehicule' => $achat->vehicle_registration, 'ttc' => (float) $achat->amount_incl_tax],
         );
 
-        return back()->with('success', 'Facture fournisseur encodée.');
+        return back()->with('success', Traductions::t('msg.achat_encode', 'Facture fournisseur encodée.'));
     }
 
     public function markPaid(PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
         if ($purchaseInvoice->status !== 'TO_PAY') {
-            return back()->with('error', 'Cette facture est déjà payée.');
+            return back()->with('error', Traductions::t('msg.achat_deja_paye', 'Cette facture est déjà payée.'));
         }
 
         $purchaseInvoice->update(['status' => 'PAID', 'paid_on' => now()->toDateString()]);
@@ -155,7 +155,7 @@ class PurchaseInvoiceController extends Controller
             $purchaseInvoice,
         );
 
-        return back()->with('success', 'Facture marquée payée.');
+        return back()->with('success', Traductions::t('msg.achat_paye', 'Facture marquée payée.'));
     }
 
     public function tva(): Response
@@ -186,8 +186,8 @@ class PurchaseInvoiceController extends Controller
 
                 return [
                     'mois' => $mois,
-                    'libelle' => $date->locale('fr')->isoFormat('MMMM YYYY'),
-                    'trimestre' => 'T'.$date->quarter.' '.$date->year,
+                    'libelle' => $date->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
+                    'trimestre' => Traductions::t('msg.trimestre', 'T:n :annee', ['n' => $date->quarter, 'annee' => $date->year]),
                     'ventes_ht' => (float) ($ventes[$mois]->ht ?? 0),
                     'collectee' => $collectee,
                     'achats_ht' => (float) ($achats[$mois]->ht ?? 0),

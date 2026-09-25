@@ -54,13 +54,57 @@ class QuoteController extends Controller
         ],
     ];
 
+    private const CHAMPS_CHOIX = [
+        'customer_type' => 'clients',
+        'trip_type' => 'trajets',
+        'frequency' => 'frequences',
+        'date_flexibility' => 'flexibilites',
+        'vehicle_type' => 'vehicules',
+        'insurance_value' => 'assurances',
+    ];
+
+    private const OPTIONS = [
+        'Hayon élévateur' => 'devis.hayon',
+        'Marchandise dangereuse (ADR)' => 'devis.adr',
+        'Livraison express' => 'devis.express',
+        'Preuve de livraison (e-CMR)' => 'devis.ecmr',
+    ];
+
     public function create(): Response
     {
-        return Inertia::render('Devis/Create', ['choix' => self::CHOIX]);
+        return Inertia::render('Devis/Create', ['choix' => self::choixTraduits()]);
+    }
+
+    /**
+     * Les listes dans la langue de l'utilisateur. Les valeurs sont
+     * rangees en francais : store() fait le chemin inverse.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function choixTraduits(): array
+    {
+        return collect(self::CHOIX)
+            ->map(fn (array $valeurs, string $groupe) => array_map(
+                fn (string $valeur) => $groupe === 'marchandises'
+                    ? (string) Traductions::vocabulaire('marchandise', $valeur)
+                    : Traductions::t('devis.choix_'.Traductions::cleDepuis($valeur), $valeur),
+                $valeurs,
+            ))
+            ->all();
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $traduits = self::choixTraduits();
+
+        foreach (self::CHAMPS_CHOIX as $champ => $groupe) {
+            $rang = array_search($request->input($champ), $traduits[$groupe], true);
+
+            if ($rang !== false) {
+                $request->merge([$champ => self::CHOIX[$groupe][$rang]]);
+            }
+        }
+
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
             'contact_name' => 'required|string|max:150',
@@ -95,13 +139,15 @@ class QuoteController extends Controller
 
             'special_instructions' => 'nullable|string|max:2000',
         ], [
-            'pickup_address.required' => 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.',
-            'pickup_lat.required' => 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.',
-            'delivery_address.required' => 'Sélectionne l\'adresse de livraison dans les listes proposées.',
-            'delivery_lat.required' => 'Sélectionne l\'adresse de livraison dans les listes proposées.',
-            'pickup_date.after_or_equal' => 'La date d\'enlèvement ne peut pas être dans le passé.',
-            'weight.max' => 'Au-delà de 44 tonnes, contactez-nous par téléphone.',
+            'pickup_address.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.'),
+            'pickup_lat.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.'),
+            'delivery_address.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.'),
+            'delivery_lat.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.'),
+            'pickup_date.after_or_equal' => Traductions::t('msg.enlevement_passe', 'La date d\'enlèvement ne peut pas être dans le passé.'),
+            'weight.max' => Traductions::t('msg.poids_max_devis', 'Au-delà de 44 tonnes, contactez-nous par téléphone.'),
         ]);
+
+        $data['goods_type'] = Traductions::vocabulaireEnFrancais('marchandise', trim($data['goods_type']));
 
         $devis = QuoteRequest::create($data);
 
@@ -124,7 +170,7 @@ class QuoteController extends Controller
         $marchandise = array_filter([
             $devis->volume,
             $devis->weight ? number_format($devis->weight, 0, ',', ' ').' kg' : null,
-            $devis->goods_type,
+            Traductions::vocabulaire('marchandise', $devis->goods_type),
         ]);
 
         return Inertia::render('Devis/Confirmation', [
@@ -133,7 +179,10 @@ class QuoteController extends Controller
                 'trajet' => $devis->pickup_address.' → '.$devis->delivery_address,
                 'enlevement' => $devis->pickup_date->format('d/m/Y'),
                 'marchandise' => implode(' · ', $marchandise),
-                'options' => $devis->options(),
+                'options' => array_map(
+                    fn (string $option) => isset(self::OPTIONS[$option]) ? Traductions::t(self::OPTIONS[$option], $option) : $option,
+                    $devis->options(),
+                ),
             ],
         ]);
     }
@@ -195,6 +244,6 @@ class QuoteController extends Controller
             ['entreprise' => $quoteRequest->company_name, 'statut' => $data['status']],
         );
 
-        return back()->with('success', 'Demande '.$quoteRequest->reference.' mise à jour.');
+        return back()->with('success', Traductions::t('msg.devis_mis_a_jour', 'Demande :reference mise à jour.', ['reference' => $quoteRequest->reference]));
     }
 }

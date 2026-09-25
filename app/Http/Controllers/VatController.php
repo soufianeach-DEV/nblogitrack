@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\IdentifiantEntreprise;
+use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -23,7 +24,7 @@ class VatController extends Controller
         if ($identifiant['tva'] === null) {
             return response()->json([
                 'statut' => 'format',
-                'message' => 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.',
+                'message' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.'),
             ]);
         }
 
@@ -31,7 +32,7 @@ class VatController extends Controller
         $cle = 'vies:'.$tva;
 
         if ($cache = Cache::get($cle)) {
-            return response()->json($cache);
+            return response()->json($this->traduire($cache));
         }
 
         $resultat = $this->interrogerVies($tva, $identifiant);
@@ -40,7 +41,45 @@ class VatController extends Controller
             Cache::put($cle, $resultat, now()->addDay());
         }
 
-        return response()->json($resultat);
+        return response()->json($this->traduire($resultat));
+    }
+
+    /**
+     * Le resultat est mis en cache en francais : les textes affiches
+     * sont traduits a la sortie, dans la langue de l'utilisateur.
+     *
+     * @param  array<string, mixed>  $resultat
+     * @return array<string, mixed>
+     */
+    private function traduire(array $resultat): array
+    {
+        $message = match ($resultat['statut'] ?? null) {
+            'invalide' => Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.'),
+            'indisponible' => Traductions::t('msg.tva_registre_sature', 'Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.'),
+            default => null,
+        };
+
+        if ($message !== null) {
+            $resultat['message'] = $message;
+        }
+
+        $libelle = $resultat['entreprise']['situation']['libelle'] ?? null;
+
+        if ($libelle === 'Entreprise active') {
+            $resultat['entreprise']['situation']['libelle'] = Traductions::t('msg.entreprise_active', 'Entreprise active');
+        } elseif ($libelle === 'Entreprise cessée') {
+            $resultat['entreprise']['situation']['libelle'] = Traductions::t('msg.entreprise_cessee', 'Entreprise cessée');
+        }
+
+        if (isset($resultat['entreprise']['secteur'])) {
+            $resultat['entreprise']['secteur'] = Traductions::vocabulaire('secteur', $resultat['entreprise']['secteur']);
+        }
+
+        if (isset($resultat['entreprise']['dirigeant']['fonction'])) {
+            $resultat['entreprise']['dirigeant']['fonction'] = Traductions::vocabulaire('fonction', $resultat['entreprise']['dirigeant']['fonction']);
+        }
+
+        return $resultat;
     }
 
     /**

@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Listeners\JournaliserAuthentification;
 use App\Models\User;
+use App\Support\Traductions;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -22,6 +25,25 @@ class AppServiceProvider extends ServiceProvider
         Vite::prefetch(concurrency: 3);
 
         URL::defaults(['langue' => 'fr']);
+
+        // Le lien de mot de passe, qui sert aussi d'invitation au personnel,
+        // part dans la langue du destinataire et a la charte des autres
+        // courriels, plutot que dans le gabarit anglais du cadriciel.
+        ResetPassword::toMailUsing(function (User $destinataire, string $jeton) {
+            $langue = $destinataire->preferredLocale();
+
+            return (new MailMessage)
+                ->subject(Traductions::t('courriel.mdp_sujet', 'Choisissez votre mot de passe NBLogiTrack'))
+                ->view('emails.lien-mot-de-passe', [
+                    'destinataire' => $destinataire,
+                    'minutes' => config('auth.passwords.users.expire', 60),
+                    'lien' => route('password.reset', [
+                        'langue' => $langue,
+                        'token' => $jeton,
+                        'email' => $destinataire->email,
+                    ]),
+                ]);
+        });
 
         RateLimiter::for('suivi', fn (Request $r) => $r->user()
             ? Limit::perMinute(120)->by('u'.$r->user()->id)
