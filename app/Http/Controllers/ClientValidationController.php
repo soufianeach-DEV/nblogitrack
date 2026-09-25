@@ -98,9 +98,11 @@ class ClientValidationController extends Controller
             $utilisateur?->update(['is_active' => true]);
         });
 
-        if ($utilisateur) {
-            Mail::to($utilisateur->email)->send(new CompteActive($client, $utilisateur));
-        }
+        // La validation est deja enregistree. Un courriel qui ne part pas
+        // ne doit ni la masquer derriere une erreur cinq cents, ni empecher
+        // le journal de la retenir.
+        $envoye = $utilisateur === null
+            || $this->envoyer(fn () => Mail::to($utilisateur->email)->send(new CompteActive($client, $utilisateur)));
 
         ActivityLog::record(
             'client.validated',
@@ -112,6 +114,11 @@ class ClientValidationController extends Controller
                 'refus_leve' => $refusPrecedent,
             ]),
         );
+
+        if (! $envoye) {
+            return back()->with('error', $client->company_name
+                .' est validée, mais l\'e-mail d\'activation n\'a pas pu partir : prévenez le contact.');
+        }
 
         return back()->with('success', $client->company_name.($refusPrecedent
             ? ' est revalidée, le refus est levé et le contact a reçu son e-mail d\'activation.'
@@ -143,9 +150,8 @@ class ClientValidationController extends Controller
             $utilisateur?->update(['is_active' => false]);
         });
 
-        if ($utilisateur) {
-            Mail::to($utilisateur->email)->send(new InscriptionRefusee($client, $utilisateur, $data['motif']));
-        }
+        $envoye = $utilisateur === null
+            || $this->envoyer(fn () => Mail::to($utilisateur->email)->send(new InscriptionRefusee($client, $utilisateur, $data['motif'])));
 
         ActivityLog::record(
             'client.rejected',
@@ -154,6 +160,23 @@ class ClientValidationController extends Controller
             ['motif' => $data['motif']],
         );
 
+        if (! $envoye) {
+            return back()->with('error', 'Demande refusée, mais l\'e-mail n\'a pas pu partir : prévenez '.$client->company_name.'.');
+        }
+
         return back()->with('success', 'Demande refusée, '.$client->company_name.' en a été informée.');
+    }
+
+    private function envoyer(callable $envoi): bool
+    {
+        try {
+            $envoi();
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 }

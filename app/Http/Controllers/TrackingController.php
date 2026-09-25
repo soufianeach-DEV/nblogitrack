@@ -64,6 +64,11 @@ class TrackingController extends Controller
             $ordre = $requete->first();
         }
 
+        // Meme raison que sur la fiche de l'ordre : le chauffeur est decrit
+        // par le tableau « chauffeur », qui choisit ses champs. Sa fiche
+        // complete ne doit pas voyager avec l'ordre.
+        $ordre?->makeHidden('driver');
+
         return Inertia::render('Tracking/Show', [
             'searched' => $numero !== '',
             'order' => $ordre,

@@ -95,6 +95,11 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                     {flash.success}
                 </div>
             )}
+            {flash.error && (
+                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
+                    {flash.error}
+                </div>
+            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(ONGLETS).map(([cle, etiquette]) => (

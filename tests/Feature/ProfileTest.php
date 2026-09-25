@@ -28,6 +28,7 @@ class ProfileTest extends TestCase
                 'first_name' => 'Soufiane',
                 'last_name' => 'Achraa',
                 'email' => 'nouvelle@exemple.be',
+                'current_password' => 'password',
             ]);
 
         $reponse->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
@@ -39,6 +40,31 @@ class ProfileTest extends TestCase
         $this->assertSame('nouvelle@exemple.be', $utilisateur->email);
 
         $this->assertNull($utilisateur->email_verified_at);
+    }
+
+    public function test_changer_d_adresse_demande_le_mot_de_passe(): void
+    {
+        $utilisateur = User::factory()->create();
+        $ancienne = $utilisateur->email;
+
+        $this->actingAs($utilisateur)
+            ->patch(route('profile.update'), [
+                'first_name' => 'Soufiane',
+                'last_name' => 'Achraa',
+                'email' => 'intrus@exemple.be',
+            ])
+            ->assertSessionHasErrors('current_password');
+
+        $this->actingAs($utilisateur)
+            ->patch(route('profile.update'), [
+                'first_name' => 'Soufiane',
+                'last_name' => 'Achraa',
+                'email' => 'intrus@exemple.be',
+                'current_password' => 'mauvais-mot-de-passe',
+            ])
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertSame($ancienne, $utilisateur->refresh()->email);
     }
 
     public function test_la_verification_reste_acquise_si_l_adresse_ne_change_pas(): void

@@ -132,7 +132,10 @@ class StaffController extends Controller
             return $utilisateur;
         });
 
-        Password::sendResetLink(['email' => $utilisateur->email]);
+        // Le compte existe deja : une panne du serveur de courriel ne doit
+        // pas se changer en erreur cinq cents, qui laisserait croire a un
+        // echec et bloquerait le nouvel essai sur « adresse deja utilisee ».
+        $envoye = $this->envoyerLien($utilisateur);
 
         ActivityLog::record(
             'staff.created',
@@ -141,8 +144,11 @@ class StaffController extends Controller
             ['role' => $utilisateur->role, 'email' => $utilisateur->email],
         );
 
-        return back()->with('success',
-            'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à '.$utilisateur->email.'.');
+        return $envoye
+            ? back()->with('success',
+                'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à '.$utilisateur->email.'.')
+            : back()->with('error',
+                'Compte créé, mais le courriel n\'a pas pu partir. Renvoyez le lien depuis la liste.');
     }
 
     public function toggle(Request $request, User $user): RedirectResponse
@@ -190,6 +196,19 @@ class StaffController extends Controller
         return back()->with('success', $user->is_active ? 'Compte réactivé.' : 'Compte désactivé.');
     }
 
+    private function envoyerLien(User $user): bool
+    {
+        try {
+            Password::sendResetLink(['email' => $user->email]);
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+    }
+
     private function couperLesAcces(User $user): void
     {
         $user->forceFill(['remember_token' => null])->save();
@@ -205,7 +224,9 @@ class StaffController extends Controller
     {
         abort_if(! array_key_exists($user->role, self::ROLES), 404);
 
-        Password::sendResetLink(['email' => $user->email]);
+        if (! $this->envoyerLien($user)) {
+            return back()->with('error', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.');
+        }
 
         ActivityLog::record(
             'staff.reset_link',

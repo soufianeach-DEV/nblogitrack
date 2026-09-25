@@ -121,11 +121,28 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Notification incohérente, sans effet.']);
         }
 
-        if ($invoice->status === 'PAID') {
+        // Le passage a PAID se fait en une seule requete conditionnelle :
+        // deux notifications simultanees ne l'ecrivent qu'une fois. Celle
+        // qui arrive apres ne reste pas muette : une autre session payee
+        // pour une facture deja reglee est un double encaissement a
+        // rembourser.
+        $passee = Invoice::whereKey($invoice->id)
+            ->where('status', '!=', 'PAID')
+            ->update(['status' => 'PAID', 'paid_on' => now()]);
+
+        if ($passee === 0) {
+            ActivityLog::record(
+                'invoice.payment_duplicate',
+                'Paiement en ligne reçu pour '.$invoice->reference.', déjà réglée : à rembourser',
+                $invoice,
+                [
+                    'montant' => (string) $invoice->amount_incl_tax,
+                    'session_stripe' => $session->id,
+                ],
+            );
+
             return response()->json(['message' => 'Déjà enregistré.']);
         }
-
-        $invoice->update(['status' => 'PAID', 'paid_on' => now()]);
 
         ActivityLog::record(
             'invoice.paid_online',

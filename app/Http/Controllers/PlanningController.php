@@ -16,7 +16,11 @@ use Inertia\Response;
 class PlanningController extends Controller
 {
     private const TRANSITIONS = [
-        'PENDING' => ['IN_PROGRESS', 'CANCELLED'],
+        // Un ordre en attente ne passe en cours que par l'affectation, qui
+        // controle le chauffeur, le vehicule, l'ADR et les temps de
+        // conduite. Le permettre ici ouvrait un raccourci vers DELIVERED,
+        // donc vers la facture, sans chauffeur ni vehicule.
+        'PENDING' => ['CANCELLED'],
         'IN_PROGRESS' => ['DELIVERED', 'CANCELLED'],
         'DELIVERED' => [],
         'CANCELLED' => [],
@@ -95,6 +99,7 @@ class PlanningController extends Controller
 
         $drivers = Driver::with('user:id,first_name,last_name')
             ->where('is_available', true)
+            ->whereHas('user', fn ($q) => $q->where('is_active', true))
             ->get()
             ->map(fn (Driver $d) => [
                 'id' => $d->id,
@@ -194,7 +199,7 @@ class PlanningController extends Controller
             return back()->withErrors(['vehicle_registration' => 'Ce véhicule n\'est plus disponible.']);
         }
 
-        if (! $driver->is_available) {
+        if (! $driver->is_available || ! $driver->user?->is_active) {
             return back()->withErrors(['driver_id' => 'Ce chauffeur n\'est plus disponible.']);
         }
 

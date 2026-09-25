@@ -171,6 +171,11 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
                     {flash.success}
                 </p>
             )}
+            {flash.error && (
+                <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
+                    {flash.error}
+                </p>
+            )}
             {errors.is_active && (
                 <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
                     {errors.is_active}

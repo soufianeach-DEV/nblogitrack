@@ -45,7 +45,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])
+            ->middleware('throttle:6,1')
+            ->name('profile.destroy');
         Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
             ->name('transport-orders.create');
         Route::post('/transport-orders', [TransportOrderController::class, 'store'])
@@ -126,17 +128,23 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         });
 
         Route::middleware('can:manage-users')->group(function () {
-            Route::get('/personnel', [StaffController::class, 'index'])->name('staff.index');
-            Route::post('/personnel', [StaffController::class, 'store'])->name('staff.store');
-            Route::patch('/personnel/{user}/activation', [StaffController::class, 'toggle'])->name('staff.toggle');
-            Route::post('/personnel/{user}/lien-mot-de-passe', [StaffController::class, 'resetLink'])->name('staff.reset-link');
+            // Creer un compte du personnel ou une cle d'API rend durable un
+            // acces qui, sinon, finirait avec la session. Une session volee
+            // ou un poste laisse ouvert ne suffisent donc pas : ces ecrans
+            // redemandent le mot de passe, valable ensuite trois heures.
+            Route::middleware('password.confirm')->group(function () {
+                Route::get('/personnel', [StaffController::class, 'index'])->name('staff.index');
+                Route::post('/personnel', [StaffController::class, 'store'])->name('staff.store');
+                Route::patch('/personnel/{user}/activation', [StaffController::class, 'toggle'])->name('staff.toggle');
+                Route::post('/personnel/{user}/lien-mot-de-passe', [StaffController::class, 'resetLink'])->name('staff.reset-link');
+
+                Route::get('/api', [ApiKeyController::class, 'index'])->name('api-keys.index');
+                Route::post('/api', [ApiKeyController::class, 'store'])->name('api-keys.store');
+                Route::patch('/api/{apiKey}/revocation', [ApiKeyController::class, 'revoke'])->name('api-keys.revoke');
+            });
 
             Route::get('/traductions', [TranslationController::class, 'index'])->name('translations.index');
             Route::patch('/traductions/{translation}', [TranslationController::class, 'update'])->name('translations.update');
-
-            Route::get('/api', [ApiKeyController::class, 'index'])->name('api-keys.index');
-            Route::post('/api', [ApiKeyController::class, 'store'])->name('api-keys.store');
-            Route::patch('/api/{apiKey}/revocation', [ApiKeyController::class, 'revoke'])->name('api-keys.revoke');
 
             Route::get('/pages', [PageController::class, 'index'])->name('pages.index');
             Route::post('/pages', [PageController::class, 'store'])->name('pages.store');
