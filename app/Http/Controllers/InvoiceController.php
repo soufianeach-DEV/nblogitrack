@@ -78,7 +78,7 @@ class InvoiceController extends Controller
                 'emise_le' => $invoice->issued_on->format('d/m/Y'),
                 'echeance' => $invoice->due_on->format('d/m/Y'),
                 'payee_le' => $invoice->paid_on?->format('d/m/Y'),
-                'envoyee_le' => $invoice->sent_at?->format('d/m/Y à H\hi'),
+                'envoyee_le' => $invoice->sent_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
                 'ht' => (float) $invoice->amount_excl_tax,
                 'taux' => (float) $invoice->vat_rate,
                 'tva' => (float) $invoice->vat_amount,

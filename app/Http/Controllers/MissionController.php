@@ -225,7 +225,7 @@ class MissionController extends Controller
         return array_merge($this->carte($ordre), [
             'adresse_enlevement' => $ordre->pickup_address,
             'adresse_livraison' => $ordre->delivery_address,
-            'enlevement_prevu' => $ordre->pickup_date?->format('d/m/Y à H\hi'),
+            'enlevement_prevu' => $ordre->pickup_date?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
             'livraison_prevue' => $ordre->requested_delivery_date?->format('d/m/Y'),
             'livree_le' => $ordre->actual_delivery_date?->format('d/m/Y'),
             'poids' => $ordre->weight,

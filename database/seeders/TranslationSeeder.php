@@ -57,6 +57,9 @@ class TranslationSeeder extends Seeder
             'logistique' => ['Logistique B2B', 'B2B-logistiek', 'B2B logistics'],
             'chercher_entreprise' => ['Rechercher une entreprise…', 'Een onderneming zoeken…', 'Search for a company…'],
             'chercher_expedition' => ['Rechercher une expédition…', 'Een zending zoeken…', 'Search for a shipment…'],
+            'langue_actuelle' => ['Langue : :nom', 'Taal: :nom', 'Language: :nom'],
+            'fermer_menu' => ['Fermer le menu', 'Menu sluiten', 'Close the menu'],
+            'ouvrir_menu' => ['Ouvrir le menu', 'Menu openen', 'Open the menu'],
         ],
 
         'temoins' => [
@@ -196,6 +199,7 @@ class TranslationSeeder extends Seeder
             'pied_conditions' => ['Conditions générales', 'Algemene voorwaarden', 'Terms and conditions'],
             'droits' => ['Tous droits réservés.', 'Alle rechten voorbehouden.', 'All rights reserved.'],
             'pays' => ['Belgique — Union européenne', 'België — Europese Unie', 'Belgium — European Union'],
+            'certif_adr' => ['ADR compliant', 'ADR-conform', 'ADR compliant'],
         ],
 
         'vitrine' => [
@@ -327,6 +331,9 @@ class TranslationSeeder extends Seeder
             'conditions_entre' => [' et la ', ' en het ', ' and the '],
             'conditions_vie_privee' => ['politique de confidentialité', 'privacybeleid', 'privacy policy'],
             'envoyer_demande' => ['Envoyer la demande', 'Aanvraag versturen', 'Submit the request'],
+            'masquer_mdp' => ['Masquer le mot de passe', 'Wachtwoord verbergen', 'Hide password'],
+            'afficher_mdp' => ['Afficher le mot de passe', 'Wachtwoord tonen', 'Show password'],
+            'email_ex' => ['nom@entreprise.be', 'naam@bedrijf.be', 'name@company.be'],
         ],
 
         'statut' => [
@@ -362,6 +369,8 @@ class TranslationSeeder extends Seeder
             'reference' => ['Référence', 'Referentie', 'Reference'],
             'donneur_ordre' => ['Donneur d\'ordre', 'Opdrachtgever', 'Ordering party'],
             'statut' => ['Statut', 'Status', 'Status'],
+            'exemple' => ['ex. :valeur', 'bv. :valeur', 'e.g. :valeur'],
+            'copyright' => ['© :annee NBLogiTrack Belgium', '© :annee NBLogiTrack Belgium', '© :annee NBLogiTrack Belgium'],
         ],
 
         'tdb' => [
@@ -1460,6 +1469,7 @@ class TranslationSeeder extends Seeder
             'aucune' => ['Aucune', 'Geen', 'None'],
             'retour_accueil' => ['Retour à l\'accueil', 'Terug naar de startpagina', 'Back to home'],
             'creer_espace' => ['Créer mon espace client', 'Mijn klantenomgeving aanmaken', 'Create my client area'],
+            'email_ex' => ['contact@societe.be', 'contact@bedrijf.be', 'contact@company.be'],
         ],
 
         'priorite' => [
@@ -1571,6 +1581,9 @@ class TranslationSeeder extends Seeder
                 'bv. Levering op afspraak, laadklep vereist, aanbellen aan kade B…',
                 'e.g. Delivery by appointment, tail lift needed, ring at dock B…',
             ],
+            'offre_eco' => ['Éco', 'Eco', 'Economy'],
+            'offre_standard' => ['Standard', 'Standaard', 'Standard'],
+            'offre_express' => ['Express', 'Express', 'Express'],
         ],
 
         'suivi' => [
@@ -1789,6 +1802,7 @@ class TranslationSeeder extends Seeder
                 'De klant is gevestigd in een ander EU-land: de btw wordt hier niet aangerekend, hij aangeeft en betaalt ze in zijn land.',
                 'The customer is established in another EU country: VAT is not charged here, they declare and pay it in their country.',
             ],
+            'banque_carte' => ['Votre banque ne lit pas le code ? Réglez par carte en quelques secondes.', 'Leest uw bank de code niet? Betaal in enkele seconden met uw kaart.', 'Your bank can\'t read the code? Pay by card in a few seconds.'],
         ],
 
         'action' => [
@@ -2060,6 +2074,8 @@ class TranslationSeeder extends Seeder
                 'opgeladen op :date door :qui',
                 'uploaded on :date by :qui',
             ],
+            'envoyer' => ['Envoyer aux conducteurs', 'Naar de chauffeurs sturen', 'Send to drivers'],
+            'envoyer_aide' => ['Chaque conducteur la reçoit dans sa langue. L\'accusé de prise de connaissance reste demandé dans l\'application.', 'Elke chauffeur ontvangt ze in zijn taal. De bevestiging van kennisname blijft in de applicatie gevraagd.', 'Each driver receives it in their own language. The acknowledgement of receipt is still requested in the app.'],
         ],
 
         'page' => [
@@ -2179,6 +2195,29 @@ class TranslationSeeder extends Seeder
             'qr_legende' => ['Virement SEPA — norme EPC', 'SEPA-overschrijving — EPC-norm', 'SEPA transfer — EPC standard'],
             'autoliquidation' => ['Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).', 'Verlegging van heffing — btw verschuldigd door de medecontractant (art. 21, §2 van het Btw-wetboek; art. 44 van richtlijn 2006/112/EG).', 'Reverse charge — VAT payable by the customer (art. 21, §2 of the Belgian VAT Code; art. 44 of Directive 2006/112/EC).'],
             'conditions' => ['Paiement au comptant sauf convention contraire. À défaut de paiement à l\'échéance, intérêts de retard conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.', 'Contante betaling tenzij anders overeengekomen. Bij niet-betaling op de vervaldag zijn verwijlintresten verschuldigd overeenkomstig de wet van 2 augustus 2002 betreffende de bestrijding van de betalingsachterstand bij handelstransacties.', 'Payment in cash unless otherwise agreed. If not paid by the due date, late-payment interest is charged under the Belgian Act of 2 August 2002 on combating late payment in commercial transactions.'],
+        ],
+        'adresse' => [
+            'ville' => ['Ville', 'Gemeente', 'City'],
+            'ville_ex' => ['ex. Bruxelles', 'bv. Brussel', 'e.g. Brussels'],
+            'code_postal' => ['Code postal', 'Postcode', 'Postcode'],
+            'rue' => ['Rue', 'Straat', 'Street'],
+            'rue_ex' => ['ex. Rue de la Loi', 'bv. Wetstraat', 'e.g. Rue de la Loi'],
+            'numero' => ['N°', 'Nr.', 'No.'],
+            'aucune_ville' => ['Aucune ville trouvée en :pays — vérifie l\'orthographe ou le pays.', 'Geen gemeente gevonden in :pays — controleer de spelling of het land.', 'No city found in :pays — check the spelling or the country.'],
+            'choisir_ville' => ['Choisis la ville dans la liste de suggestions.', 'Kies de gemeente uit de lijst met suggesties.', 'Choose the city from the list of suggestions.'],
+            'cp_introuvable' => ['Code postal introuvable pour cette ville — choisis-en un dans la liste.', 'Postcode niet gevonden voor deze gemeente — kies er een uit de lijst.', 'Postcode not found for this city — choose one from the list.'],
+            'choisir_cp' => ['Choisis un code postal dans la liste de suggestions.', 'Kies een postcode uit de lijst met suggesties.', 'Choose a postcode from the list of suggestions.'],
+            'cp_libres' => ['Codes postaux non référencés pour cette ville — saisie libre.', 'Geen postcodes gekend voor deze gemeente — vrije invoer.', 'No postcodes on record for this city — free entry.'],
+            'aucune_rue_be' => ['Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', 'Geen straat gevonden in :lieu — een straat draagt haar plaatselijke naam (Nederlands in Vlaanderen, Frans in Wallonië): schrijf die zoals ze is (bv. « Statiestraat ») of typ een woord uit de naam (bv. « rubens »).', 'No street found in :lieu — streets carry their local name (Dutch in Flanders, French in Wallonia): write it as it is (e.g. “Statiestraat”) or type one word of the name (e.g. “rubens”).'],
+            'aucune_rue' => ['Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', 'Geen straat gevonden in :lieu — schrijf de volledige naam (bv. « champ de mars ») en controleer de spelling.', 'No street found in :lieu — write the full name (e.g. “champ de mars”) and check the spelling.'],
+            'choisir_rue' => ['Choisis la rue dans la liste de suggestions.', 'Kies de straat uit de lijst met suggesties.', 'Choose the street from the list of suggestions.'],
+            'chargement_numeros' => ['Chargement des numéros de la rue…', 'Huisnummers van de straat worden geladen…', 'Loading the street\'s house numbers…'],
+            'numero_introuvable' => ['Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.', 'Nummer niet gevonden in deze straat — enkel bestaande nummers worden voorgesteld.', 'Number not found in this street — only existing numbers are offered.'],
+            'choisir_numero' => ['Choisis le numéro dans la liste.', 'Kies het nummer uit de lijst.', 'Choose the number from the list.'],
+        ],
+        'carte' => [
+            'portique' => ['Portique', 'Portiek', 'Gantry'],
+            'peage' => ['Péage', 'Tol', 'Toll'],
         ],
     ];
 }

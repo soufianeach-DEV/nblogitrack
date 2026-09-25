@@ -302,7 +302,7 @@ class DashboardController extends Controller
                 ->map(fn (Invoice $facture) => [
                     'id' => $facture->id,
                     'reference' => $facture->reference,
-                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' â‚¬',
+                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' €',
                     'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
                 ])
                 ->all(),
@@ -481,8 +481,8 @@ class DashboardController extends Controller
             'description' => $ligne->description,
             'auteur' => $auteurs[$ligne->user_id] ?? null
                 ? $auteurs[$ligne->user_id]->first_name.' '.$auteurs[$ligne->user_id]->last_name
-                : 'Système',
-            'horodatage' => $ligne->created_at->format('d/m/Y à H\hi'),
+                : Traductions::t('msg.auteur_systeme', 'Système'),
+            'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
         ])->all();
     }
 }
