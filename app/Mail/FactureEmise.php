@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Invoice;
 use App\Support\FacturePdf;
 use App\Support\FactureUbl;
+use App\Support\Traductions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -19,12 +20,17 @@ class FactureEmise extends Mailable
     public function __construct(
         public Invoice $facture,
         public string $prenom,
-    ) {}
+        string $langue = 'fr',
+    ) {
+        $this->locale($langue);
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Votre facture '.$this->facture->reference.' - NBLogiTrack',
+            subject: Traductions::t('courriel.facture_sujet', 'Votre facture :reference - NBLogiTrack', [
+                'reference' => $this->facture->reference,
+            ]),
         );
     }
 
