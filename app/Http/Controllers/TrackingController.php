@@ -38,6 +38,11 @@ class TrackingController extends Controller
                 ])
             : null;
 
+        // client_id ne sert qu'a charger le nom de l'entreprise. Le visiteur
+        // n'a pas a connaitre les identifiants internes.
+        $ordre?->makeHidden('client_id');
+        $ordre?->client?->makeHidden('id');
+
         return Inertia::render('Tracking/Show', [
             'searched' => $cherche,
             'order' => $ordre,
@@ -63,6 +68,11 @@ class TrackingController extends Controller
 
             $ordre = $requete->first();
         }
+
+        // Meme raison que sur la fiche de l'ordre : le chauffeur est decrit
+        // par le tableau « chauffeur », qui choisit ses champs. Sa fiche
+        // complete ne doit pas voyager avec l'ordre.
+        $ordre?->makeHidden('driver');
 
         return Inertia::render('Tracking/Show', [
             'searched' => $numero !== '',

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,25 +18,19 @@ class PasswordResetLinkController extends Controller
         ]);
     }
 
-    /**
-     * @throws ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'email' => 'required|email',
         ]);
 
-        $status = Password::sendResetLink(
+        Password::sendResetLink(
             $request->only('email')
         );
 
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
-        }
-
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        // La reponse est la meme que l'adresse ait un compte ou non, et
+        // que l'envoi ait ete retenu par la limite ou pas : une reponse
+        // differente disait a n'importe qui quelles adresses sont inscrites.
+        return back()->with('status', __('passwords.user'));
     }
 }

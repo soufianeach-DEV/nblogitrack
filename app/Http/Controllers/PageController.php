@@ -117,20 +117,36 @@ class PageController extends Controller
 
         $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
 
+        // Un envoi qui echoue n'arrete pas les suivants, et le journal
+        // retient qui a recu la note et qui ne l'a pas recue.
+        $echecs = [];
+
         foreach ($conducteurs as $conducteur) {
-            Mail::to($conducteur->email)->send(
-                new NoteInformation($page, $conducteur, $conducteur->locale ?? 'fr'),
-            );
+            try {
+                Mail::to($conducteur->email)->send(
+                    new NoteInformation($page, $conducteur, $conducteur->locale ?? 'fr'),
+                );
+            } catch (\Throwable $e) {
+                report($e);
+                $echecs[] = $conducteur->email;
+            }
         }
+
+        $recus = $conducteurs->count() - count($echecs);
 
         ActivityLog::record(
             'driver.notice_sent',
-            'Note d\'information adressée à '.$conducteurs->count().' conducteur(s)',
+            'Note d\'information adressée à '.$recus.' conducteur(s)',
             $page,
-            ['version' => $page->updated_at?->toIso8601String()],
+            array_filter([
+                'version' => $page->updated_at?->toIso8601String(),
+                'echecs' => $echecs,
+            ]),
         );
 
-        return back()->with('success', $conducteurs->count().' conducteur(s) ont reçu la note.');
+        return $echecs === []
+            ? back()->with('success', $recus.' conducteur(s) ont reçu la note.')
+            : back()->with('error', $recus.' conducteur(s) ont reçu la note, '.count($echecs).' envoi(s) ont échoué : réessayez plus tard.');
     }
 
     public function destroy(Page $page): RedirectResponse

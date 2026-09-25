@@ -14,17 +14,20 @@ export default function UpdateProfileInformation({
     const user = usePage().props.auth.user;
     const t = useTraduction();
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } =
+    const { data, setData, patch, reset, errors, processing, recentlySuccessful } =
         useForm({
             first_name: user.first_name,
             last_name: user.last_name,
             email: user.email,
+            current_password: '',
         });
+
+    const adresseChangee = data.email.trim().toLowerCase() !== user.email;
 
     const submit = (e) => {
         e.preventDefault();
 
-        patch(route('profile.update'));
+        patch(route('profile.update'), { onFinish: () => reset('current_password') });
     };
 
     return (
@@ -86,6 +89,24 @@ export default function UpdateProfileInformation({
 
                     <InputError className="mt-2" message={errors.email} />
                 </div>
+
+                {adresseChangee && (
+                    <div>
+                        <InputLabel htmlFor="current_password_email" value={t('profil.mdp_actuel', 'Mot de passe actuel')} />
+
+                        <TextInput
+                            id="current_password_email"
+                            type="password"
+                            className="mt-1 block w-full"
+                            value={data.current_password}
+                            onChange={(e) => setData('current_password', e.target.value)}
+                            required
+                            autoComplete="current-password"
+                        />
+
+                        <InputError className="mt-2" message={errors.current_password} />
+                    </div>
+                )}
 
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>

@@ -41,7 +41,13 @@ class Facturier
         $requete = TransportOrder::where('status', 'DELIVERED')
             ->whereNotNull('actual_delivery_date')
             ->whereNotNull('estimated_cost')
-            ->whereDoesntHave('invoiceLine');
+            ->whereDoesntHave('invoiceLine')
+            // Le mois en cours n'est jamais facture, meme avec --tout ou
+            // --mois. Sa facture porterait une date d'emission future et
+            // resterait en brouillon : ni payable, ni comptee dans la TVA,
+            // et ses expeditions, deja rattachees a une ligne, ne seraient
+            // plus jamais reprises.
+            ->where('actual_delivery_date', '<', now()->startOfMonth()->toDateString());
 
         if ($periode !== null) {
             $requete->whereBetween('actual_delivery_date', [
@@ -63,7 +69,15 @@ class Facturier
             $periode = Carbon::createFromFormat('Y-m-d', $mois.'-01')->startOfMonth();
             $emission = $periode->copy()->addMonth()->startOfMonth();
 
-            $autoliquidation = $client->country !== 'Belgique';
+            // Le pays est compare par son code et non par son libelle :
+            // une entreprise inscrite depuis l'interface neerlandaise ou
+            // anglaise porte « België » ou « Belgium », et la comparaison
+            // au seul « Belgique » la facturait sans TVA, en
+            // autoliquidation. A defaut de pays reconnu, le prefixe du
+            // numero de TVA tranche.
+            $pays = Pays::depuisNom($client->country)
+                ?? strtoupper(substr((string) $client->vat_number, 0, 2));
+            $autoliquidation = $pays !== 'BE';
             $taux = $autoliquidation ? 0.00 : Invoice::TAUX_TVA;
 
             $horsTva = round((float) $expeditions->sum('estimated_cost'), 2);
@@ -123,7 +137,12 @@ class Facturier
 
     public function communicationStructuree(int $annee, int $numero, int $clientId): string
     {
-        $base = sprintf('%03d%04d%03d', $numero, $annee, $clientId);
+        // Une communication structuree compte dix chiffres, plus deux de
+        // controle. sprintf ne fixe qu'une largeur minimale : a partir du
+        // client 1000 ou de la millieme facture de l'annee, la base
+        // debordait et le decoupage tronquait le chiffre de controle.
+        // Chaque champ est donc ramene a sa largeur.
+        $base = sprintf('%03d%04d%03d', $numero % 1000, $annee % 10000, $clientId % 1000);
         $controle = (int) $base % 97;
         $controle = $controle === 0 ? 97 : $controle;
 

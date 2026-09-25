@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\User;
 use App\Support\IdentifiantEntreprise;
+use App\Support\Pays;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -181,6 +182,11 @@ class RegisteredUserController extends Controller
             'marque_declaree.accepted' => 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.',
             'conditions_acceptees.accepted' => 'Vous devez accepter les conditions générales et la politique de confidentialité.',
         ]);
+
+        // Le formulaire envoie le nom du pays dans la langue de
+        // l'interface. On le range sous son nom francais, le seul que la
+        // facturation et les recherches connaissent.
+        $data['country'] = Pays::nomFrancais(trim($data['country']));
 
         if ($this->denominationDejaPrise($data)) {
             return back()->withInput()->withErrors([

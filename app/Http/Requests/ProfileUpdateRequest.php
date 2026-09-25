@@ -25,6 +25,14 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // Changer l'adresse, c'est choisir ou arrive le lien de
+            // reinitialisation. Sans le mot de passe actuel, une session
+            // volee quelques minutes suffisait a prendre le compte pour de bon.
+            'current_password' => [
+                Rule::requiredIf(fn () => mb_strtolower((string) $this->input('email')) !== $this->user()->email),
+                'nullable',
+                'current_password',
+            ],
         ];
     }
 }

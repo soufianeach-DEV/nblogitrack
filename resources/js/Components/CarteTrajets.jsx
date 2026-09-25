@@ -11,6 +11,17 @@ const COULEUR = {
 };
 
 const TRACE = '#111827';
+
+// Leaflet ecrit une infobulle donnee sous forme de texte avec innerHTML.
+// Les noms de peages viennent d'OpenStreetMap, que n'importe qui peut
+// modifier : sans echappement, un nom de portique devenait du balisage
+// dans la page. Toute valeur venue des donnees passe par ici.
+const echapper = (valeur) => String(valeur ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 const HALO = '#FFFFFF';
 
 const MARQUEUR_DEPART = L.divIcon({
@@ -105,7 +116,7 @@ export default function CarteTrajets({
 
             const [depart, arrivee] = trajet.coordonnees;
             const couleur = COULEUR[trajet.statut] ?? COULEUR.PENDING;
-            const etiquette = `${trajet.numero} · ${trajet.depart} → ${trajet.arrivee}`;
+            const etiquette = `${echapper(trajet.numero)} · ${echapper(trajet.depart)} → ${echapper(trajet.arrivee)}`;
 
             const trace = trajet.trace?.length ? trajet.trace : [depart, arrivee];
             const routier = Boolean(trajet.trace?.length);
@@ -133,11 +144,11 @@ export default function CarteTrajets({
 
             if (routier) {
                 L.marker(trace[0], { icon: MARQUEUR_DEPART })
-                    .bindTooltip(`Enlèvement · ${trajet.depart}`)
+                    .bindTooltip(`Enlèvement · ${echapper(trajet.depart)}`)
                     .addTo(couche.current)
                     .on('click', () => clic.current?.(trajet.id));
                 L.marker(trace[trace.length - 1], { icon: MARQUEUR_ARRIVEE })
-                    .bindTooltip(`Livraison · ${trajet.arrivee}`)
+                    .bindTooltip(`Livraison · ${echapper(trajet.arrivee)}`)
                     .addTo(couche.current)
                     .on('click', () => clic.current?.(trajet.id));
                 trace.forEach((point) => cadre.push(point));
@@ -151,7 +162,7 @@ export default function CarteTrajets({
                         fillColor: index === 0 ? couleur : '#ffffff',
                         fillOpacity: 1,
                     })
-                        .bindTooltip(index === 0 ? `Enlèvement · ${trajet.depart}` : `Livraison · ${trajet.arrivee}`)
+                        .bindTooltip(index === 0 ? `Enlèvement · ${echapper(trajet.depart)}` : `Livraison · ${echapper(trajet.arrivee)}`)
                         .addTo(couche.current)
                         .on('click', () => clic.current?.(trajet.id));
                 });
@@ -163,7 +174,7 @@ export default function CarteTrajets({
         peages.forEach((peage) => {
             L.marker([peage.lat, peage.lng], { icon: ICONE_PEAGE, zIndexOffset: 500 })
                 .bindTooltip(
-                    `<strong>${peage.portique ? 'Portique' : 'Péage'} ${peage.nom}</strong>${peage.route ? '<br>' + peage.route : ''}`,
+                    `<strong>${peage.portique ? 'Portique' : 'Péage'} ${echapper(peage.nom)}</strong>${peage.route ? '<br>' + echapper(peage.route) : ''}`,
                 )
                 .addTo(couche.current);
         });
@@ -176,7 +187,7 @@ export default function CarteTrajets({
                 fillColor: jalon.evenement === 'DELIVERED' ? '#15803D' : '#2563EB',
                 fillOpacity: 1,
             })
-                .bindTooltip(`<strong>${jalon.libelle}</strong><br>${jalon.localite} — ${jalon.horodatage}`)
+                .bindTooltip(`<strong>${echapper(jalon.libelle)}</strong><br>${echapper(jalon.localite)} — ${echapper(jalon.horodatage)}`)
                 .addTo(couche.current);
 
             cadre.push(jalon.coordonnees);
@@ -184,7 +195,7 @@ export default function CarteTrajets({
 
         if (position) {
             L.marker(position.coordonnees, { icon: ICONE_POSITION, zIndexOffset: 800 })
-                .bindTooltip(`<strong>En route</strong><br>${position.horodatage}`)
+                .bindTooltip(`<strong>En route</strong><br>${echapper(position.horodatage)}`)
                 .addTo(couche.current);
 
             cadre.push(position.coordonnees);

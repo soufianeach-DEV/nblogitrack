@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -69,6 +70,12 @@ class TransportOrderController extends Controller
             'tariffGrid:id,label,service_level,delivery_days', 'invoiceLine:id,invoice_id,transport_order_id',
             'invoiceLine.invoice:id,reference,status,due_on,paid_on,amount_incl_tax',
         ]);
+
+        // La relation driver est chargee pour composer le nom ci-dessous,
+        // mais elle ne part pas avec l'ordre : elle porterait toute la
+        // fiche du chauffeur, numero de permis, date de naissance, examen
+        // medical et motif de sortie compris, jusque dans la page du client.
+        $transportOrder->makeHidden('driver');
 
         return Inertia::render('TransportOrders/Show', [
             'order' => $transportOrder,
@@ -143,14 +150,14 @@ class TransportOrderController extends Controller
             'pickup_lng' => 'required|numeric|between:-180,180',
             'delivery_lat' => 'required|numeric|between:-90,90',
             'delivery_lng' => 'required|numeric|between:-180,180',
-            'weight' => 'required|numeric|min:0',
+            'weight' => 'required|numeric|min:1|max:44000',
             'goods_type' => 'required|in:'.implode(',', TransportOrder::MARCHANDISES),
             'is_hazardous' => 'boolean',
             'needs_tail_lift' => 'boolean',
             'priority' => 'required|in:LOW,NORMAL,HIGH,URGENT',
             'pickup_date' => 'nullable|date|after_or_equal:now',
             'requested_delivery_date' => 'nullable|date|after_or_equal:today',
-            'tariff_grid_id' => 'required|exists:tariff_grids,id',
+            'tariff_grid_id' => ['required', Rule::exists('tariff_grids', 'id')->where('is_active', true)],
             'special_instructions' => 'nullable|string',
         ], [
             'pickup_lat.required' => 'Sélectionne une adresse de départ dans la liste de suggestions.',
