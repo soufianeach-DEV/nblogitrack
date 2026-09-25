@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Support\EnvoiFacture;
+use App\Support\FacturePdf;
 use App\Support\FactureUbl;
-use App\Support\QrPaiement;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -77,6 +77,7 @@ class InvoiceController extends Controller
                 'emise_le' => $invoice->issued_on->format('d/m/Y'),
                 'echeance' => $invoice->due_on->format('d/m/Y'),
                 'payee_le' => $invoice->paid_on?->format('d/m/Y'),
+                'envoyee_le' => $invoice->sent_at?->format('d/m/Y à H\hi'),
                 'ht' => (float) $invoice->amount_excl_tax,
                 'taux' => (float) $invoice->vat_rate,
                 'tva' => (float) $invoice->vat_amount,
@@ -84,7 +85,7 @@ class InvoiceController extends Controller
                 'autoliquidation' => (bool) $invoice->reverse_charge,
                 'communication' => $invoice->payment_reference,
                 'iban' => config('entreprise.iban'),
-                'qr' => $this->qr($invoice),
+                'qr' => FacturePdf::qr($invoice),
                 'client' => [
                     'nom' => $invoice->client->company_name,
                     'tva' => $invoice->client->vat_number,
@@ -101,10 +102,24 @@ class InvoiceController extends Controller
                 ])->all(),
             ],
             'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
+            'peutEnvoyer' => $utilisateur->can('control-payments') && $invoice->status !== 'DRAFT',
             'peutPayerEnLigne' => $invoice->status === 'SENT'
                 && $utilisateur->cannot('view-all-orders')
                 && $invoice->client_id === $utilisateur->id,
         ]);
+    }
+
+    public function envoyer(Invoice $invoice): RedirectResponse
+    {
+        if ($invoice->status === 'DRAFT') {
+            return back()->with('error', 'Un brouillon ne s\'envoie pas.');
+        }
+
+        $destinataire = EnvoiFacture::envoyer($invoice);
+
+        return $destinataire === null
+            ? back()->with('error', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.')
+            : back()->with('success', 'Facture '.$invoice->reference.' envoyée à '.$destinataire.'.');
     }
 
     public function markPaid(Request $request, Invoice $invoice): RedirectResponse
@@ -135,17 +150,10 @@ class InvoiceController extends Controller
     {
         $this->autoriserLecture($request->user(), $invoice);
 
-        $invoice->load([
-            'client:id,company_name,vat_number,billing_address,postal_code,city,country',
-            'lines.transportOrder:id,tracking_number',
+        return response(FacturePdf::contenu($invoice), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$invoice->reference.'.pdf"',
         ]);
-
-        return Pdf::loadView('pdf.facture', [
-            'facture' => $invoice,
-            'qr' => $this->qr($invoice),
-        ])
-            ->setPaper('a4')
-            ->download($invoice->reference.'.pdf');
     }
 
     public function ubl(Request $request, Invoice $invoice): \Symfony\Component\HttpFoundation\Response
@@ -161,20 +169,6 @@ class InvoiceController extends Controller
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$invoice->reference.'.xml"',
         ]);
-    }
-
-    private function qr(Invoice $invoice): ?string
-    {
-        if ($invoice->status === 'PAID') {
-            return null;
-        }
-
-        return QrPaiement::epc(
-            config('entreprise.nom'),
-            config('entreprise.iban'),
-            (float) $invoice->amount_incl_tax,
-            $invoice->payment_reference,
-        );
     }
 
     private function autoriserLecture(User $utilisateur, Invoice $invoice): void

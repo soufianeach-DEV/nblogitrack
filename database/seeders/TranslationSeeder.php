@@ -1690,6 +1690,10 @@ class TranslationSeeder extends Seeder
         ],
 
         'facture' => [
+            'envoyer' => ['Envoyer par courriel', 'Per e-mail versturen', 'Send by email'],
+            'renvoyer' => ['Renvoyer par courriel', 'Opnieuw per e-mail versturen', 'Resend by email'],
+            'envoi_en_cours' => ['Envoi…', 'Verzenden…', 'Sending…'],
+            'envoyee_le' => ['Envoyée le', 'Verzonden op', 'Sent on'],
             'titre' => ['Facture', 'Factuur', 'Invoice'],
             'numero' => ['Numéro', 'Nummer', 'Number'],
             'echeance' => ['Échéance', 'Vervaldatum', 'Due date'],

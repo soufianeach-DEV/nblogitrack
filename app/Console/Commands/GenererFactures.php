@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
+use App\Support\EnvoiFacture;
 use App\Support\Facturier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -12,7 +13,8 @@ class GenererFactures extends Command
     protected $signature = 'factures:generer
                             {--mois= : Le mois a facturer, au format AAAA-MM. Par defaut, le mois ecoule.}
                             {--tout : Facture tout ce qui reste, sans limite de mois.}
-                            {--essai : Montre ce qui serait emis, sans rien ecrire.}';
+                            {--essai : Montre ce qui serait emis, sans rien ecrire.}
+                            {--sans-envoi : Emet les factures sans les envoyer par courriel.}';
 
     protected $description = 'Emet une facture par client et par mois pour les transports livres.';
 
@@ -55,11 +57,24 @@ class GenererFactures extends Command
         }
 
         $emises = $facturier->facturer($periode);
+        $envoyer = ! $this->option('sans-envoi');
+        $echecs = 0;
 
         foreach ($emises as $facture) {
-            $this->line(sprintf('    %s  client %-4s %s EUR',
+            // Une facture emise est deja enregistree : si son courriel ne
+            // part pas, on le note et on passe a la suivante. Elle se
+            // renvoie ensuite depuis son ecran.
+            $envoi = '';
+
+            if ($envoyer && $facture->status === 'SENT') {
+                $destinataire = EnvoiFacture::envoyer($facture);
+                $envoi = $destinataire === null ? '  ENVOI ECHOUE' : '  -> '.$destinataire;
+                $echecs += $destinataire === null ? 1 : 0;
+            }
+
+            $this->line(sprintf('    %s  client %-4s %s EUR%s',
                 $facture->reference, $facture->client_id,
-                number_format((float) $facture->amount_incl_tax, 2, ',', ' ')));
+                number_format((float) $facture->amount_incl_tax, 2, ',', ' '), $envoi));
         }
 
         ActivityLog::record(
@@ -70,6 +85,10 @@ class GenererFactures extends Command
         );
 
         $this->info(sprintf('  %d facture(s) emise(s).', $emises->count()));
+
+        if ($echecs > 0) {
+            $this->warn(sprintf('  %d courriel(s) non envoye(s) : renvoyez-les depuis l\'ecran de la facture.', $echecs));
+        }
 
         return self::SUCCESS;
     }

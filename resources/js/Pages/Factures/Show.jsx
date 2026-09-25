@@ -2,7 +2,7 @@ import BoutonRetour from '@/Components/BoutonRetour';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 const ETATS = {
@@ -61,6 +61,26 @@ function BoutonPaiement({ facture }) {
     );
 }
 
+function BoutonEnvoi({ facture }) {
+    const t = useTraduction();
+    const { post, processing } = useForm({});
+
+    return (
+        <button
+            type="button"
+            onClick={() => post(route('invoices.send', facture.id), { preserveScroll: true })}
+            disabled={processing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-marine shadow-sm transition hover:bg-surface disabled:opacity-60"
+        >
+            {processing
+                ? t('facture.envoi_en_cours', 'Envoi…')
+                : facture.envoyee_le
+                    ? t('facture.renvoyer', 'Renvoyer par courriel')
+                    : t('facture.envoyer', 'Envoyer par courriel')}
+        </button>
+    );
+}
+
 function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     const t = useTraduction();
     const { post, processing } = useForm({});
@@ -83,8 +103,9 @@ function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     );
 }
 
-export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLigne = false }) {
+export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLigne = false, peutEnvoyer = false }) {
     const t = useTraduction();
+    const flash = usePage().props.flash ?? {};
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const etat = ETATS[facture.etat] ?? ETATS.SENT;
@@ -122,12 +143,24 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                             <Icone nom="facture" className="h-4 w-4" />
                             XML Peppol
                         </a>
+                        {peutEnvoyer && <BoutonEnvoi facture={facture} />}
                         {peutMarquerPayee && <BoutonPaiement facture={facture} />}
                     </div>
                 </div>
             }
         >
             <Head title={facture.reference} />
+
+            {flash.success && (
+                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
+                    {flash.success}
+                </div>
+            )}
+            {flash.error && (
+                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
+                    {flash.error}
+                </div>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-3">
                 <section className="rounded-2xl bg-white p-5 shadow-sm">
@@ -154,6 +187,12 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
                             <dt className="text-slate-600">{t('facture.echeance', 'Échéance')}</dt>
                             <dd className="font-semibold text-marine">{facture.echeance}</dd>
                         </div>
+                        {facture.envoyee_le && (
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-slate-600">{t('facture.envoyee_le', 'Envoyée le')}</dt>
+                                <dd className="font-semibold text-marine">{facture.envoyee_le}</dd>
+                            </div>
+                        )}
                         {facture.payee_le && (
                             <div className="flex justify-between gap-3">
                                 <dt className="text-slate-600">{t('ordres.payee_le', 'Payée le')}</dt>
