@@ -38,7 +38,7 @@ class InvoiceController extends Controller
                     'id' => $facture->id,
                     'reference' => $facture->reference,
                     'client' => $facture->client?->company_name,
-                    'periode' => $facture->period_start->locale('fr')->isoFormat('MMMM YYYY'),
+                    'periode' => $facture->period_start->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
                     'emise_le' => $facture->issued_on->format('d/m/Y'),
                     'echeance' => $facture->due_on->format('d/m/Y'),
                     'ttc' => (float) $facture->amount_incl_tax,

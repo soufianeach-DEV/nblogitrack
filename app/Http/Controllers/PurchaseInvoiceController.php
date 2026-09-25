@@ -53,7 +53,7 @@ class PurchaseInvoiceController extends Controller
                 'categorie' => Traductions::vocabulaire('achat', PurchaseInvoice::CATEGORIES[$a->category] ?? $a->category),
                 'vehicule' => $a->vehicle_registration,
                 'vehicule_detail' => trim(($a->vehicle?->brand ?? '').' '.($a->vehicle?->model ?? '')),
-                'periode' => $a->period_start->locale('fr')->isoFormat('MMMM YYYY'),
+                'periode' => $a->period_start->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
                 'echeance' => $a->due_on->format('d/m/Y'),
                 'ht' => (float) $a->amount_excl_tax,
                 'tva' => (float) $a->vat_amount,
@@ -186,8 +186,8 @@ class PurchaseInvoiceController extends Controller
 
                 return [
                     'mois' => $mois,
-                    'libelle' => $date->locale('fr')->isoFormat('MMMM YYYY'),
-                    'trimestre' => 'T'.$date->quarter.' '.$date->year,
+                    'libelle' => $date->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
+                    'trimestre' => Traductions::t('msg.trimestre', 'T:n :annee', ['n' => $date->quarter, 'annee' => $date->year]),
                     'ventes_ht' => (float) ($ventes[$mois]->ht ?? 0),
                     'collectee' => $collectee,
                     'achats_ht' => (float) ($achats[$mois]->ht ?? 0),
