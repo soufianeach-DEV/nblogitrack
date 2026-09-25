@@ -41,6 +41,17 @@ class TransportOrder extends Model
         'Pièces automobiles',
     ];
 
+    /*
+     * Un ordre attend (PENDING), puis le planificateur l'affecte a un
+     * chauffeur et a un camion (ASSIGNED). Il n'est en cours
+     * (IN_PROGRESS) qu'une fois la marchandise enlevee, sur confirmation
+     * du chauffeur, puis livre (DELIVERED).
+     */
+    public const STATUTS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'DELIVERED', 'CANCELLED'];
+
+    /** Les ordres qui mobilisent encore un chauffeur ou un camion. */
+    public const ACTIFS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS'];
+
     protected $table = 'transport_orders';
 
     protected $fillable = [
@@ -48,7 +59,7 @@ class TransportOrder extends Model
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
-        'vehicle_registration', 'driver_id', 'assigned_at', 'suivi_direct',
+        'vehicle_registration', 'driver_id', 'assigned_at', 'picked_up_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
     ];
 
@@ -63,6 +74,7 @@ class TransportOrder extends Model
             'actual_delivery_date' => 'date',
             'pickup_date' => 'datetime',
             'assigned_at' => 'datetime',
+            'picked_up_at' => 'datetime',
             'distance_km' => 'integer',
         ];
     }

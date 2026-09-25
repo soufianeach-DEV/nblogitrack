@@ -5,6 +5,7 @@ import { Head, Link } from '@inertiajs/react';
 
 const ETAPES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
+    { cle: 'ASSIGNED', libelle: ['statut.affecte', 'Affecté'], detail: ['suivi.detail_affectee', 'Camion et chauffeur réservés.'] },
     { cle: 'IN_PROGRESS', libelle: ['statut.en_cours', 'En cours'], detail: ['suivi.detail_transit', 'Marchandise en transit.'] },
     { cle: 'DELIVERED', libelle: ['statut.livre', 'Livré'], detail: ['suivi.detail_livree', 'Livraison effectuée.'] },
 ];

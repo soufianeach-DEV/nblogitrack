@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 const STATUS = {
     PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
+    ASSIGNED: { cle: 'statut.affecte', label: 'Affecté', cls: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
     DELIVERED: { cle: 'statut.livre', label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
@@ -741,7 +742,7 @@ export default function Dashboard({
                     />
                     <StatCard
                         label={t('tdb.expeditions_cours', 'Expéditions en cours')}
-                        value={nombre(stats.pending + stats.in_progress)}
+                        value={nombre(stats.pending + stats.assigned + stats.in_progress)}
                         detail={`${nombre(stats.in_progress)} ${t('tdb.en_circulation', 'en circulation')}`}
                         icone="camion"
                         accent="bg-marine/10 text-marine"

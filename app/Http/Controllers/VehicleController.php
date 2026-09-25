@@ -59,7 +59,7 @@ class VehicleController extends Controller
             default => null,
         };
 
-        $engages = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $engages = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereNotNull('vehicle_registration')
             ->pluck('vehicle_registration')
             ->unique()
@@ -111,7 +111,7 @@ class VehicleController extends Controller
         ]);
 
         if ($donnees['is_available'] === false) {
-            $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('vehicle_registration', $vehicle->registration)
                 ->exists();
 
