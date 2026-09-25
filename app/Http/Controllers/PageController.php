@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Mail\NoteInformation;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\Page;
 use App\Models\PageDocument;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
@@ -12,6 +11,7 @@ use App\Support\Adresse;
 use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\Tarificateur;
+use App\Support\Traductions;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

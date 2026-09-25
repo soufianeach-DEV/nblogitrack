@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Support\IdentifiantEntreprise;
+use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;

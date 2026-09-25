@@ -5,6 +5,7 @@ use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\VerifierCompteActif;
+use App\Support\Traductions;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -98,12 +99,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->expectsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([
-                    'message' => 'Votre session a expiré, reconnectez-vous.',
+                    'message' => Traductions::t('msg.session_expiree_courte', 'Votre session a expiré, reconnectez-vous.'),
                 ], 419);
             }
 
             return redirect()
                 ->route('login')
-                ->with('status', 'Votre session a expiré. Reconnectez-vous pour continuer.');
+                ->with('status', Traductions::t('msg.session_expiree', 'Votre session a expiré. Reconnectez-vous pour continuer.'));
         });
     })->create();

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Support\Traductions;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\VatController;
 use App\Models\ActivityLog;
@@ -11,6 +10,7 @@ use App\Models\ClientContact;
 use App\Models\User;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
+use App\Support\Traductions;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

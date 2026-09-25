@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Models\TariffGrid;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
+use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

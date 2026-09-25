@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Support\Traductions;
 use App\Models\Client;
+use App\Support\Traductions;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;

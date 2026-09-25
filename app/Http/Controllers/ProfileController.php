@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Invoice;
 use App\Models\TransportOrder;
+use App\Support\Traductions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

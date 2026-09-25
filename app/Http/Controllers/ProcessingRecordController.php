@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\ProcessingRecord;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

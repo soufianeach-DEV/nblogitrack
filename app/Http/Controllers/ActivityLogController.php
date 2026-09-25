@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Traductions;
 use App\Models\ActivityLog;
+use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
