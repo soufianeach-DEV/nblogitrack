@@ -95,6 +95,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
             ->middleware('can:control-payments')
             ->name('invoices.paid');
+        Route::post('/factures/{invoice}/envoi', [InvoiceController::class, 'envoyer'])
+            ->whereNumber('invoice')
+            ->middleware(['can:control-payments', 'throttle:10,1'])
+            ->name('invoices.send');
         Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
             ->whereNumber('invoice')
             ->name('invoices.pdf');
