@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -52,6 +53,47 @@ class TransportOrder extends Model
     /** Les ordres qui mobilisent encore un chauffeur ou un camion. */
     public const ACTIFS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS'];
 
+    /*
+     * Article 8 bis des conditions generales : une expedition annulee par
+     * le client alors qu'un camion lui etait reserve coute vingt-cinq pour
+     * cent de son prix, cinquante euros au moins, jamais plus que le prix.
+     */
+    public const TAUX_ANNULATION = 25;
+
+    public const MINIMUM_ANNULATION = 50;
+
+    /**
+     * Ce que coute l'annulation par le client, dans l'etat actuel de
+     * l'ordre. Null si le client ne peut plus l'annuler lui-meme.
+     */
+    public function fraisAnnulation(): ?float
+    {
+        return match ($this->status) {
+            'PENDING' => 0.0,
+            'ASSIGNED' => round(min(
+                (float) $this->estimated_cost,
+                max(self::MINIMUM_ANNULATION, (float) $this->estimated_cost * self::TAUX_ANNULATION / 100),
+            ), 2),
+            default => null,
+        };
+    }
+
+    /** Le jour qui rattache l'ordre a une facture mensuelle. */
+    public function dateFacturable(): CarbonInterface
+    {
+        return $this->status === 'CANCELLED'
+            ? $this->cancelled_at
+            : $this->actual_delivery_date;
+    }
+
+    /** Le montant qui part sur la facture : le transport, ou l'indemnite. */
+    public function montantFacturable(): float
+    {
+        return $this->status === 'CANCELLED'
+            ? (float) $this->cancellation_fee
+            : (float) $this->estimated_cost;
+    }
+
     protected $table = 'transport_orders';
 
     protected $fillable = [
@@ -61,6 +103,7 @@ class TransportOrder extends Model
         'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
         'vehicle_registration', 'driver_id', 'assigned_at', 'picked_up_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
+        'cancelled_at', 'cancelled_by', 'cancellation_fee',
     ];
 
     protected function casts(): array
@@ -75,6 +118,8 @@ class TransportOrder extends Model
             'pickup_date' => 'datetime',
             'assigned_at' => 'datetime',
             'picked_up_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'cancellation_fee' => 'decimal:2',
             'distance_km' => 'integer',
         ];
     }
