@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Traductions;
 use App\Models\TariffGrid;
 use App\Support\Localite;
 use App\Support\Pays;
@@ -36,13 +37,13 @@ class TarifController extends Controller
             'poids' => 'required|numeric|min:1|max:44000',
             'adr' => 'boolean',
         ], [
-            'depart.required' => 'Indiquez la localité d\'enlèvement.',
-            'destination.required' => 'Indiquez la localité de livraison.',
-            'pays.exists' => 'Nous ne desservons pas encore ce pays.',
-            'poids.required' => 'Indiquez le poids de la marchandise.',
-            'poids.min' => 'Le poids doit être d\'au moins un kilogramme.',
-            'poids.max' => 'Au-delà de 44 tonnes, la charge dépasse la masse maximale autorisée : demandez un devis.',
-            'poids.numeric' => 'Le poids doit être un nombre.',
+            'depart.required' => Traductions::t('msg.localite_enlevement_requise', 'Indiquez la localité d\'enlèvement.'),
+            'destination.required' => Traductions::t('msg.localite_livraison_requise', 'Indiquez la localité de livraison.'),
+            'pays.exists' => Traductions::t('msg.pays_non_desservi', 'Nous ne desservons pas encore ce pays.'),
+            'poids.required' => Traductions::t('msg.poids_requis', 'Indiquez le poids de la marchandise.'),
+            'poids.min' => Traductions::t('msg.poids_min', 'Le poids doit être d\'au moins un kilogramme.'),
+            'poids.max' => Traductions::t('msg.poids_max_tarif', 'Au-delà de 44 tonnes, la charge dépasse la masse maximale autorisée : demandez un devis.'),
+            'poids.numeric' => Traductions::t('msg.poids_nombre', 'Le poids doit être un nombre.'),
         ]);
 
         $depart = $this->localiser($donnees['depart'], 'BE');
@@ -51,8 +52,8 @@ class TarifController extends Controller
         if ($depart === null || $arrivee === null) {
             return response()->json([
                 'erreur' => $depart === null
-                    ? 'Localité de départ introuvable en Belgique.'
-                    : 'Localité de destination introuvable dans ce pays.',
+                    ? Traductions::t('msg.depart_introuvable', 'Localité de départ introuvable en Belgique.')
+                    : Traductions::t('msg.destination_introuvable', 'Localité de destination introuvable dans ce pays.'),
             ], 422);
         }
 
