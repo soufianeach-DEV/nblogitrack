@@ -115,6 +115,8 @@
                                 @php([$depart, $arrivee] = explode(' vers ', substr($ligne->description, 10), 2))
                                 <span class="gras">{{ $t::t('pdf.transport', 'Transport') }}</span>
                                 {{ $t::t('pdf.trajet', ':depart vers :arrivee', ['depart' => $depart, 'arrivee' => $arrivee]) }}
+                            @elseif (str_starts_with($ligne->description, 'Indemnité d\'annulation '))
+                                {{ $t::t('pdf.indemnite_annulation', 'Indemnité d\'annulation :numero', ['numero' => substr($ligne->description, strlen('Indemnité d\'annulation '))]) }}
                             @else
                                 {{ $ligne->description }}
                             @endif

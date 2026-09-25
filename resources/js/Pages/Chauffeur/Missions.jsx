@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const STATUTS = {
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', pastille: 'bg-action/15 text-action-dark', barre: 'border-l-action' },
+    ASSIGNED: { cle: 'mission.a_venir', libelle: 'À venir', pastille: 'bg-slate-100 text-slate-700', barre: 'border-l-slate-300' },
     PENDING: { cle: 'mission.a_venir', libelle: 'À venir', pastille: 'bg-slate-100 text-slate-700', barre: 'border-l-slate-300' },
     DELIVERED: { cle: 'mission.livree', libelle: 'Livrée', pastille: 'bg-status-delivered/10 text-status-delivered', barre: 'border-l-status-delivered' },
     CANCELLED: { cle: 'mission.annulee', libelle: 'Annulée', pastille: 'bg-status-incident/10 text-status-incident', barre: 'border-l-status-incident' },
@@ -368,7 +369,7 @@ function Fiche({ mission, onRetour }) {
 export default function Missions({ missions = [], mission = null, introuvable = false, note = null }) {
     const t = useTraduction();
     const locale = useLocale();
-    const actives = missions.filter((m) => m.statut === 'IN_PROGRESS' || m.statut === 'PENDING').length;
+    const actives = missions.filter((m) => m.statut === 'IN_PROGRESS' || m.statut === 'ASSIGNED').length;
 
     const aujourdhui = new Date().toLocaleDateString(locale, {
         weekday: 'long',

@@ -351,7 +351,7 @@ class TrackingController extends Controller
     private function expeditionsEnCours(User $utilisateur, ?TransportOrder $consultee): array
     {
         $requete = TransportOrder::with('client:id,company_name')
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereIn('status', TransportOrder::ACTIFS)
             ->whereNotNull('pickup_lat')
             ->whereNotNull('delivery_lat');
 
@@ -360,7 +360,7 @@ class TrackingController extends Controller
         }
 
         $expeditions = $requete
-            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 WHEN 'ASSIGNED' THEN 1 ELSE 2 END")
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'NORMAL' THEN 2 ELSE 3 END")
             ->orderBy('requested_delivery_date')
             ->get();
@@ -401,12 +401,20 @@ class TrackingController extends Controller
                 'fait' => true,
             ],
             [
-                'libelle' => Traductions::t('suivi.jalon_enlevement', 'Prise en charge'),
+                'libelle' => Traductions::t('suivi.etape_affectation', 'Affectation'),
                 'detail' => $ordre->vehicle
                     ? Traductions::t('suivi.etape_vehicule_affecte', 'Véhicule :immatriculation affecté.', ['immatriculation' => $ordre->vehicle->registration])
                     : Traductions::t('suivi.etape_attente_vehicule', 'En attente d\'affectation d\'un véhicule.'),
                 'horodatage' => $ordre->assigned_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
                 'fait' => $ordre->assigned_at !== null,
+            ],
+            [
+                'libelle' => Traductions::t('suivi.etape_enlevement', 'Enlèvement'),
+                'detail' => $ordre->picked_up_at
+                    ? Traductions::t('suivi.etape_chargee', 'Marchandise chargée, le camion est en route.')
+                    : Traductions::t('suivi.etape_chargement_attendu', 'Le chauffeur confirmera le chargement sur place.'),
+                'horodatage' => $ordre->picked_up_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
+                'fait' => $ordre->picked_up_at !== null || $ordre->actual_delivery_date !== null,
             ],
             [
                 'libelle' => Traductions::t('suivi.jalon_livraison', 'Livraison'),

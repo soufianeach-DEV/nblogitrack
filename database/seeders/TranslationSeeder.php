@@ -338,6 +338,7 @@ class TranslationSeeder extends Seeder
 
         'statut' => [
             'en_attente' => ['En attente', 'In afwachting', 'Pending'],
+            'affecte' => ['Affecté', 'Toegewezen', 'Assigned'],
             'en_cours' => ['En cours', 'Onderweg', 'In transit'],
             'livre' => ['Livré', 'Geleverd', 'Delivered'],
             'annule' => ['Annulé', 'Geannuleerd', 'Cancelled'],
@@ -1706,6 +1707,7 @@ class TranslationSeeder extends Seeder
             'urgent' => ['Urgent', 'Dringend', 'Urgent'],
             'prioritaire' => ['Prioritaire', 'Prioritair', 'Priority'],
             'detail_enregistree' => ['Commande enregistrée.', 'Bestelling geregistreerd.', 'Order registered.'],
+            'detail_affectee' => ['Camion et chauffeur réservés.', 'Vrachtwagen en chauffeur gereserveerd.', 'Truck and driver booked.'],
             'detail_transit' => ['Marchandise en transit.', 'Goederen onderweg.', 'Goods in transit.'],
             'detail_livree' => ['Livraison effectuée.', 'Levering uitgevoerd.', 'Delivery completed.'],
             'choisir' => [
@@ -1799,6 +1801,10 @@ class TranslationSeeder extends Seeder
             'etape_livree' => ['Marchandise livrée.', 'Goederen geleverd.', 'Goods delivered.'],
             'etape_livraison_souhaitee' => ['Livraison souhaitée le :date.', 'Gewenste levering op :date.', 'Requested delivery on :date.'],
             'etape_date_a_confirmer' => ['Date à confirmer.', 'Datum nog te bevestigen.', 'Date to be confirmed.'],
+            'etape_affectation' => ['Affectation', 'Toewijzing', 'Assignment'],
+            'etape_enlevement' => ['Enlèvement', 'Ophaling', 'Pickup'],
+            'etape_chargee' => ['Marchandise chargée, le camion est en route.', 'Goederen geladen, de vrachtwagen is onderweg.', 'Goods loaded, the truck is on its way.'],
+            'etape_chargement_attendu' => ['Le chauffeur confirmera le chargement sur place.', 'De chauffeur bevestigt het laden ter plaatse.', 'The driver will confirm loading on site.'],
         ],
 
         'facture' => [
@@ -2291,6 +2297,7 @@ class TranslationSeeder extends Seeder
             'qr_legende' => ['Virement SEPA — norme EPC', 'SEPA-overschrijving — EPC-norm', 'SEPA transfer — EPC standard'],
             'autoliquidation' => ['Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).', 'Verlegging van heffing — btw verschuldigd door de medecontractant (art. 21, §2 van het Btw-wetboek; art. 44 van richtlijn 2006/112/EG).', 'Reverse charge — VAT payable by the customer (art. 21, §2 of the Belgian VAT Code; art. 44 of Directive 2006/112/EC).'],
             'conditions' => ['Paiement au comptant sauf convention contraire. À défaut de paiement à l\'échéance, intérêts de retard conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.', 'Contante betaling tenzij anders overeengekomen. Bij niet-betaling op de vervaldag zijn verwijlintresten verschuldigd overeenkomstig de wet van 2 augustus 2002 betreffende de bestrijding van de betalingsachterstand bij handelstransacties.', 'Payment in cash unless otherwise agreed. If not paid by the due date, late-payment interest is charged under the Belgian Act of 2 August 2002 on combating late payment in commercial transactions.'],
+            'indemnite_annulation' => ['Indemnité d\'annulation :numero', 'Annuleringsvergoeding :numero', 'Cancellation fee :numero'],
         ],
         'adresse' => [
             'ville' => ['Ville', 'Gemeente', 'City'],
@@ -2453,6 +2460,22 @@ class TranslationSeeder extends Seeder
             'trimestre' => ['T:n :annee', 'K:n :annee', 'Q:n :annee'],
             'session_expiree_courte' => ['Votre session a expiré, reconnectez-vous.', 'Uw sessie is verlopen, meld u opnieuw aan.', 'Your session has expired, please sign in again.'],
             'session_expiree' => ['Votre session a expiré. Reconnectez-vous pour continuer.', 'Uw sessie is verlopen. Meld u opnieuw aan om verder te gaan.', 'Your session has expired. Sign in again to continue.'],
+            'planif_desaffectation_affectee' => ['Seule une mission affectée ou en cours peut être désaffectée.', 'Enkel een toegewezen of lopende opdracht kan losgekoppeld worden.', 'Only an assigned or in-progress job can be unassigned.'],
+        ],
+        'annulation' => [
+            'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
+            'gratuite' => ['Aucun véhicule n\'est encore affecté : l\'annulation est gratuite.', 'Er is nog geen voertuig toegewezen: annuleren is kosteloos.', 'No vehicle has been assigned yet: cancellation is free of charge.'],
+            'payante' => ['Un véhicule et un chauffeur sont déjà réservés. L\'annulation entraîne une indemnité de :montant HT (:taux % du prix, :minimum € minimum), portée sur votre prochaine facture.', 'Er zijn al een voertuig en een chauffeur gereserveerd. Annuleren brengt een vergoeding van :montant excl. btw mee (:taux % van de prijs, minimum :minimum €), die op uw volgende factuur komt.', 'A vehicle and a driver are already booked. Cancelling incurs a fee of :montant excl. VAT (:taux % of the price, minimum €:minimum), added to your next invoice.'],
+            'conditions' => ['Article 8 bis des conditions générales. Une fois la marchandise chargée, l\'annulation n\'est plus possible en ligne.', 'Artikel 8 bis van de algemene voorwaarden. Zodra de goederen geladen zijn, kan niet meer online geannuleerd worden.', 'Article 8a of the general conditions. Once the goods are loaded, the shipment can no longer be cancelled online.'],
+            'bouton' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
+            'confirmer' => ['Confirmer l\'annulation', 'Annulering bevestigen', 'Confirm cancellation'],
+            'confirmer_montant' => ['Confirmer l\'annulation pour :montant HT', 'Annulering bevestigen voor :montant excl. btw', 'Confirm cancellation for :montant excl. VAT'],
+            'garder' => ['Garder l\'expédition', 'Zending behouden', 'Keep the shipment'],
+            'facturee' => ['Expédition annulée le :date : l\'indemnité de :montant HT sera portée sur la facture du mois de l\'annulation.', 'Zending geannuleerd op :date: de vergoeding van :montant excl. btw komt op de factuur van de maand van de annulering.', 'Shipment cancelled on :date: the :montant excl. VAT fee will appear on the invoice for the month of cancellation.'],
+            'trop_tard' => ['La marchandise est déjà chargée : l\'expédition ne peut plus être annulée en ligne. Contactez-nous.', 'De goederen zijn al geladen: de zending kan niet meer online geannuleerd worden. Neem contact met ons op.', 'The goods are already loaded: the shipment can no longer be cancelled online. Please contact us.'],
+            'montant_change' => ['Un véhicule vient d\'être affecté à cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', 'Er werd net een voertuig aan deze zending toegewezen: annuleren kost nu :montant excl. btw. Controleer het bedrag en bevestig opnieuw.', 'A vehicle has just been assigned to this shipment: cancelling now costs :montant excl. VAT. Check the amount and confirm again.'],
+            'faite_payante' => ['Expédition annulée. L\'indemnité de :montant HT figurera sur votre prochaine facture.', 'Zending geannuleerd. De vergoeding van :montant excl. btw komt op uw volgende factuur.', 'Shipment cancelled. The :montant excl. VAT fee will appear on your next invoice.'],
+            'faite_gratuite' => ['Expédition annulée, sans frais.', 'Zending kosteloos geannuleerd.', 'Shipment cancelled, free of charge.'],
         ],
     ];
 }

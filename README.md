@@ -30,7 +30,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | Rôle | Accès |
 |---|---|
 | **Client** | Passe des commandes, suit ses expéditions, règle ses factures |
-| **Chauffeur** | Consulte ses missions, met à jour les statuts, confirme les livraisons |
+| **Chauffeur** | Consulte ses missions, confirme l'enlèvement puis la livraison |
 | **Planificateur** | Affecte les véhicules et les chauffeurs, organise les tournées |
 | **Administrateur** | Valide les entreprises clientes, consulte le journal d'activité, gère la flotte et les utilisateurs |
 | **Visiteur** | Suit une expédition via son numéro et son code, sans authentification |
@@ -46,7 +46,8 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Validation des inscriptions** | Examen par l'administrateur, e-mails d'activation et de refus motivé | ✅ alpha |
 | **Création de commande** | Saisie guidée de l'adresse, distance routière réelle, estimation du prix en temps réel | ✅ alpha |
 | **Catalogue des ordres** | Liste, recherche par colonne, filtrage selon le rôle, fiche détaillée d'une expédition | ✅ alpha |
-| **Planification** | Affectation véhicule et chauffeur, contrôle de capacité et de certification pour matières dangereuses (ADR), transitions de statut | ✅ alpha |
+| **Annulation par le client** | Gratuite avant l'affectation d'un camion, indemnité de 25 % du prix (50 € minimum) ensuite, portée sur la facture du mois ; impossible en ligne une fois la marchandise chargée (article 8 bis des conditions générales) | ✅ beta |
+| **Planification** | Affectation véhicule et chauffeur, contrôle de capacité et de certification pour matières dangereuses (ADR), transitions de statut (en attente, affecté, en cours, livré, annulé) | ✅ alpha |
 | **Suivi public** | Consultation d'un envoi (numéro + code), état de livraison | ✅ alpha |
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
@@ -60,7 +61,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 125 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 140 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -191,7 +192,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Cent vingt-cinq tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur, l'interface de programmation, la facturation et son envoi par courriel, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Cent quarante tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur, l'interface de programmation, la facturation et son envoi par courriel, le parcours d'une mission de l'affectation à la livraison, l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 

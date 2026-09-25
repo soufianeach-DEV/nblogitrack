@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 
 const STATUS = {
     PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
+    ASSIGNED: { cle: 'statut.affecte', label: 'Affecté', cls: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
     DELIVERED: { cle: 'statut.livre', label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
@@ -94,6 +95,7 @@ export default function Index({ orders, filters }) {
                                     <select value={search.status} onChange={(e) => update('status', e.target.value)} className={inputCls}>
                                         <option value="">{t('ordres.tous', 'Tous')}</option>
                                         <option value="PENDING">{t('statut.en_attente', 'En attente')}</option>
+                                        <option value="ASSIGNED">{t('statut.affecte', 'Affecté')}</option>
                                         <option value="IN_PROGRESS">{t('statut.en_cours', 'En cours')}</option>
                                         <option value="DELIVERED">{t('statut.livre', 'Livré')}</option>
                                         <option value="CANCELLED">{t('statut.annule', 'Annulé')}</option>

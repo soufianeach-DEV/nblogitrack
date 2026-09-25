@@ -1,10 +1,12 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 const ETAPES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
+    { cle: 'ASSIGNED', libelle: ['statut.affecte', 'Affecté'], detail: ['suivi.detail_affectee', 'Camion et chauffeur réservés.'] },
     { cle: 'IN_PROGRESS', libelle: ['statut.en_cours', 'En cours'], detail: ['suivi.detail_transit', 'Marchandise en transit.'] },
     { cle: 'DELIVERED', libelle: ['statut.livre', 'Livré'], detail: ['suivi.detail_livree', 'Livraison effectuée.'] },
 ];
@@ -60,10 +62,81 @@ function Progression({ statut }) {
     );
 }
 
-export default function Show({ order, chauffeur, facture = null }) {
+function Annulation({ order, annulation, euros }) {
+    const t = useTraduction();
+    const [arme, setArme] = useState(false);
+    const { patch, processing } = useForm({ frais: annulation.frais });
+    const gratuite = annulation.frais === 0;
+
+    const confirmer = () => {
+        if (! arme) {
+            setArme(true);
+
+            return;
+        }
+
+        patch(route('transport-orders.cancel', order.id), {
+            preserveScroll: true,
+            onFinish: () => setArme(false),
+        });
+    };
+
+    return (
+        <section className="rounded-2xl border border-status-incident/20 bg-white p-5 shadow-sm lg:col-span-3">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                {t('annulation.titre', 'Annuler l\'expédition')}
+            </h2>
+            <p className="text-sm text-slate-700">
+                {gratuite
+                    ? t('annulation.gratuite', 'Aucun véhicule n\'est encore affecté : l\'annulation est gratuite.')
+                    : t('annulation.payante', 'Un véhicule et un chauffeur sont déjà réservés. L\'annulation entraîne une indemnité de :montant HT (:taux % du prix, :minimum € minimum), portée sur votre prochaine facture.', {
+                        montant: euros(annulation.frais),
+                        taux: annulation.taux,
+                        minimum: annulation.minimum,
+                    })}
+            </p>
+            <p className="mt-1 text-xs text-slate-600">
+                {t('annulation.conditions', 'Article 8 bis des conditions générales. Une fois la marchandise chargée, l\'annulation n\'est plus possible en ligne.')}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                    type="button"
+                    onClick={confirmer}
+                    disabled={processing}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60 ${
+                        arme
+                            ? 'bg-status-incident text-white hover:opacity-90'
+                            : 'border border-status-incident text-status-incident hover:bg-status-incident/5'
+                    }`}
+                >
+                    {processing
+                        ? t('action.enregistrement', 'Enregistrement…')
+                        : arme
+                            ? (gratuite
+                                ? t('annulation.confirmer', 'Confirmer l\'annulation')
+                                : t('annulation.confirmer_montant', 'Confirmer l\'annulation pour :montant HT', { montant: euros(annulation.frais) }))
+                            : t('annulation.bouton', 'Annuler l\'expédition')}
+                </button>
+                {arme && ! processing && (
+                    <button
+                        type="button"
+                        onClick={() => setArme(false)}
+                        className="text-sm font-semibold text-slate-600 transition hover:text-marine"
+                    >
+                        {t('annulation.garder', 'Garder l\'expédition')}
+                    </button>
+                )}
+            </div>
+        </section>
+    );
+}
+
+export default function Show({ order, chauffeur, facture = null, annulation = null }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
+    const flash = usePage().props.flash ?? {};
+    const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
         ? '—'
@@ -116,6 +189,17 @@ export default function Show({ order, chauffeur, facture = null }) {
             }
         >
             <Head title={t('ordres.expedition', 'Expédition') + ' ' + order.tracking_number} />
+
+            {flash.success && (
+                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
+                    {flash.success}
+                </div>
+            )}
+            {flash.error && (
+                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
+                    {flash.error}
+                </div>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-3">
                 {carte(t('suivi.etat', 'État de livraison'), (
@@ -191,7 +275,12 @@ export default function Show({ order, chauffeur, facture = null }) {
                         {order.status === 'DELIVERED'
                             ? t('ordres.fact_apres', 'Sera portée sur la facture du mois de livraison, émise le mois suivant.')
                             : order.status === 'CANCELLED'
-                                ? t('ordres.fact_annulee', 'Expédition annulée — rien à facturer.')
+                                ? (Number(order.cancellation_fee) > 0
+                                    ? t('annulation.facturee', 'Expédition annulée le :date : l\'indemnité de :montant HT sera portée sur la facture du mois de l\'annulation.', {
+                                        date: date(order.cancelled_at),
+                                        montant: euros(order.cancellation_fee),
+                                    })
+                                    : t('ordres.fact_annulee', 'Expédition annulée — rien à facturer.'))
                                 : t('ordres.fact_livraison', 'Facturée après livraison.')}
                     </p>
                 ))}
@@ -201,6 +290,8 @@ export default function Show({ order, chauffeur, facture = null }) {
                         {order.special_instructions || t('ordres.aucune_consigne', 'Aucune consigne particulière.')}
                     </p>
                 ))}
+
+                {annulation && <Annulation order={order} annulation={annulation} euros={euros} />}
             </div>
         </AuthenticatedLayout>
     );

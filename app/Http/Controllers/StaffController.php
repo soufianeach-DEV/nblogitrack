@@ -182,7 +182,7 @@ class StaffController extends Controller
         }
 
         if ($user->is_active && $user->isDriver()) {
-            $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('driver_id', $user->id)
                 ->exists();
 

@@ -21,7 +21,7 @@ class ExpeditionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filtres = $request->validate([
-            'statut' => ['nullable', Rule::in(['PENDING', 'IN_PROGRESS', 'DELIVERED', 'CANCELLED'])],
+            'statut' => ['nullable', Rule::in(TransportOrder::STATUTS)],
             'depuis' => 'nullable|date',
             'par_page' => 'nullable|integer|min:1|max:100',
         ]);

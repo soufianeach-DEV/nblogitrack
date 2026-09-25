@@ -39,7 +39,7 @@ class GenererFactures extends Command
         }
 
         $expeditions = $groupes->sum(fn ($g) => $g->count());
-        $montant = $groupes->sum(fn ($g) => $g->sum('estimated_cost'));
+        $montant = $groupes->sum(fn ($g) => $g->sum(fn ($o) => $o->montantFacturable()));
 
         $this->line(sprintf('  %d facture(s) a emettre, %d expedition(s), %s EUR hors TVA.',
             $groupes->count(), $expeditions, number_format($montant, 2, ',', ' ')));

@@ -18,7 +18,9 @@ use Inertia\Response;
 class MissionController extends Controller
 {
     private const TRANSITIONS = [
-        'IN_PROGRESS' => 'PENDING',
+        // Statut vise => statut attendu. Le chauffeur confirme d'abord
+        // l'enlevement d'une mission affectee, puis la livraison.
+        'IN_PROGRESS' => 'ASSIGNED',
         'DELIVERED' => 'IN_PROGRESS',
     ];
 
@@ -33,7 +35,7 @@ class MissionController extends Controller
             'vehicle:registration,brand,model,vehicle_type',
         ])
             ->where('driver_id', $chauffeur->id)
-            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 WHEN 'PENDING' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 WHEN 'ASSIGNED' THEN 1 ELSE 2 END")
             ->orderBy('pickup_date')
             ->get();
 
@@ -78,6 +80,10 @@ class MissionController extends Controller
         }
 
         $changements = ['status' => $vise];
+
+        if ($vise === 'IN_PROGRESS') {
+            $changements['picked_up_at'] = now();
+        }
 
         if ($vise === 'DELIVERED') {
             $changements['actual_delivery_date'] = now();
@@ -240,7 +246,7 @@ class MissionController extends Controller
                 'type' => $ordre->vehicle->vehicle_type,
             ] : null,
             'action' => match ($ordre->status) {
-                'PENDING' => [
+                'ASSIGNED' => [
                     'statut' => 'IN_PROGRESS',
                     'libelle' => Traductions::t('mission.confirmer_prise', 'Confirmer la prise en charge'),
                 ],

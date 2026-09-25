@@ -38,26 +38,48 @@ class Facturier
      */
     public function aFacturer(?Carbon $periode = null): Collection
     {
-        $requete = TransportOrder::where('status', 'DELIVERED')
-            ->whereNotNull('actual_delivery_date')
-            ->whereNotNull('estimated_cost')
-            ->whereDoesntHave('invoiceLine')
-            // Le mois en cours n'est jamais facture, meme avec --tout ou
-            // --mois. Sa facture porterait une date d'emission future et
-            // resterait en brouillon : ni payable, ni comptee dans la TVA,
-            // et ses expeditions, deja rattachees a une ligne, ne seraient
-            // plus jamais reprises.
-            ->where('actual_delivery_date', '<', now()->startOfMonth()->toDateString());
+        // Le mois en cours n'est jamais facture, meme avec --tout ou
+        // --mois. Sa facture porterait une date d'emission future et
+        // resterait en brouillon : ni payable, ni comptee dans la TVA, et
+        // ses expeditions, deja rattachees a une ligne, ne seraient plus
+        // jamais reprises.
+        $limite = now()->startOfMonth();
+        $bornes = $periode === null ? null : [
+            $periode->copy()->startOfMonth(),
+            $periode->copy()->endOfMonth()->endOfDay(),
+        ];
 
-        if ($periode !== null) {
-            $requete->whereBetween('actual_delivery_date', [
-                $periode->copy()->startOfMonth()->toDateString(),
-                $periode->copy()->endOfMonth()->toDateString(),
-            ]);
-        }
+        // Deux choses se facturent : un transport livre, au mois de sa
+        // livraison, et l'indemnite d'une annulation tardive, au mois de
+        // l'annulation (article 8 bis des conditions generales).
+        $requete = TransportOrder::whereDoesntHave('invoiceLine')
+            ->where(fn ($q) => $q
+                ->where(function ($livre) use ($limite, $bornes) {
+                    $livre->where('status', 'DELIVERED')
+                        ->whereNotNull('actual_delivery_date')
+                        ->whereNotNull('estimated_cost')
+                        ->where('actual_delivery_date', '<', $limite->toDateString());
 
-        return $requete->orderBy('actual_delivery_date')->get()
-            ->groupBy(fn (TransportOrder $o) => $o->client_id.'|'.$o->actual_delivery_date->format('Y-m'));
+                    if ($bornes !== null) {
+                        $livre->whereBetween('actual_delivery_date', [
+                            $bornes[0]->toDateString(), $bornes[1]->toDateString(),
+                        ]);
+                    }
+                })
+                ->orWhere(function ($annule) use ($limite, $bornes) {
+                    $annule->where('status', 'CANCELLED')
+                        ->where('cancellation_fee', '>', 0)
+                        ->where('cancelled_at', '<', $limite);
+
+                    if ($bornes !== null) {
+                        $annule->whereBetween('cancelled_at', $bornes);
+                    }
+                }));
+
+        return $requete->get()
+            ->sortBy(fn (TransportOrder $o) => $o->dateFacturable()->getTimestamp())
+            ->values()
+            ->groupBy(fn (TransportOrder $o) => $o->client_id.'|'.$o->dateFacturable()->format('Y-m'));
     }
 
     /**
@@ -80,7 +102,7 @@ class Facturier
             $autoliquidation = $pays !== 'BE';
             $taux = $autoliquidation ? 0.00 : Invoice::TAUX_TVA;
 
-            $horsTva = round((float) $expeditions->sum('estimated_cost'), 2);
+            $horsTva = round((float) $expeditions->sum(fn (TransportOrder $o) => round($o->montantFacturable(), 2)), 2);
             $tva = round($horsTva * $taux / 100, 2);
 
             $rang = $this->prochainRang((int) $emission->format('Y'));
@@ -107,8 +129,10 @@ class Facturier
                 InvoiceLine::create([
                     'invoice_id' => $facture->id,
                     'transport_order_id' => $ordre->id,
-                    'description' => 'Transport '.$ordre->pickup_address.' vers '.$ordre->delivery_address,
-                    'amount_excl_tax' => round((float) $ordre->estimated_cost, 2),
+                    'description' => $ordre->status === 'CANCELLED'
+                        ? 'Indemnité d\'annulation '.$ordre->tracking_number
+                        : 'Transport '.$ordre->pickup_address.' vers '.$ordre->delivery_address,
+                    'amount_excl_tax' => round($ordre->montantFacturable(), 2),
                 ]);
             }
 

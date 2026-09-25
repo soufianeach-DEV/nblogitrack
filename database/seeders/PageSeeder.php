@@ -781,6 +781,13 @@ Sont facturés en supplément : les temps d'attente au-delà de la franchise, le
 
 Une variation significative et durable du prix du carburant peut donner lieu à un ajustement, notifié par écrit et applicable aux transports postérieurs à la notification.
 
+## Article 8 bis — Annulation par le donneur d'ordre
+Le donneur d'ordre peut annuler une expédition depuis son espace client tant que la marchandise n'a pas été chargée.
+
+L'annulation est gratuite tant qu'aucun véhicule n'a été affecté à l'expédition. Dès qu'un véhicule et un chauffeur lui sont réservés, l'annulation entraîne une indemnité forfaitaire de vingt-cinq pour cent du prix convenu hors taxes, avec un minimum de cinquante euros, sans pouvoir dépasser ce prix. Cette indemnité couvre l'immobilisation du véhicule et du chauffeur ; elle figure sur la facture du mois de l'annulation.
+
+Une fois la marchandise chargée, l'expédition ne peut plus être annulée en ligne. Un retour ou un déroutement se traite alors par écrit et donne lieu à facturation des prestations effectuées.
+
 ## Article 9 — Facturation et paiement
 Les factures sont émises par voie électronique et payables à trente jours de date de facture, sans escompte, sauf convention écrite contraire.
 
@@ -890,6 +897,13 @@ Worden bijkomend aangerekend: wachttijden boven de vrijstelling, niet voorziene 
 
 Een aanzienlijke en duurzame wijziging van de brandstofprijs kan aanleiding geven tot een aanpassing, schriftelijk meegedeeld en van toepassing op transporten na de kennisgeving.
 
+## Artikel 8 bis — Annulering door de opdrachtgever
+De opdrachtgever kan een zending annuleren vanuit zijn klantenzone zolang de goederen niet geladen zijn.
+
+De annulering is kosteloos zolang geen voertuig aan de zending is toegewezen. Zodra een voertuig en een chauffeur ervoor gereserveerd zijn, brengt de annulering een forfaitaire vergoeding mee van vijfentwintig procent van de overeengekomen prijs exclusief btw, met een minimum van vijftig euro, zonder die prijs te mogen overschrijden. Deze vergoeding dekt de immobilisatie van voertuig en chauffeur; ze wordt opgenomen in de factuur van de maand van de annulering.
+
+Zodra de goederen geladen zijn, kan de zending niet meer online geannuleerd worden. Een terugzending of omleiding wordt dan schriftelijk geregeld en de uitgevoerde prestaties worden gefactureerd.
+
 ## Artikel 9 — Facturatie en betaling
 Facturen worden elektronisch uitgereikt en zijn betaalbaar binnen dertig dagen na factuurdatum, zonder korting, behoudens andersluidende schriftelijke afspraak.
 
@@ -998,6 +1012,13 @@ Prices are exclusive of taxes and established on the basis of the information su
 Charged in addition: waiting time beyond the allowance, unforeseen services, exceptional toll costs, empty returns and any additional burden resulting from inaccurate information.
 
 A significant and lasting change in fuel prices may give rise to an adjustment, notified in writing and applicable to carriage performed after the notification.
+
+## Article 8a — Cancellation by the customer
+The customer may cancel a shipment from its customer area as long as the goods have not been loaded.
+
+Cancellation is free of charge as long as no vehicle has been assigned to the shipment. Once a vehicle and a driver have been booked for it, cancellation gives rise to a fixed indemnity of twenty-five per cent of the agreed price excluding VAT, with a minimum of fifty euros, without exceeding that price. This indemnity covers the immobilisation of the vehicle and driver; it appears on the invoice for the month of cancellation.
+
+Once the goods have been loaded, the shipment can no longer be cancelled online. A return or diversion is then handled in writing and the services performed are invoiced.
 
 ## Article 9 — Invoicing and payment
 Invoices are issued electronically and payable within thirty days of the invoice date, without discount, unless otherwise agreed in writing.

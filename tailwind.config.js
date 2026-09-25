@@ -25,6 +25,7 @@ export default {
                 // au moins 4,5 pour 1 de contraste, seuil WCAG AA du texte courant.
                 status: {
                     pending: '#43474D',
+                    assigned: '#B45309',
                     progress: '#0B61A1',
                     delivered: '#15803D',
                     incident: '#BA1A1A',

@@ -11,6 +11,7 @@ use App\Support\TempsDeConduite;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,6 +23,9 @@ class PlanningController extends Controller
         // conduite. Le permettre ici ouvrait un raccourci vers DELIVERED,
         // donc vers la facture, sans chauffeur ni vehicule.
         'PENDING' => ['CANCELLED'],
+        // Une mission affectee n'est pas encore partie : seul le chauffeur
+        // la fait passer en cours, en confirmant l'enlevement.
+        'ASSIGNED' => ['CANCELLED'],
         'IN_PROGRESS' => ['DELIVERED', 'CANCELLED'],
         'DELIVERED' => [],
         'CANCELLED' => [],
@@ -232,7 +236,7 @@ class PlanningController extends Controller
         $jour = $transportOrder->pickup_date->toDateString();
 
         $conflitChauffeur = TransportOrder::where('driver_id', $driver->id)
-            ->where('status', 'IN_PROGRESS')
+            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
             ->whereDate('pickup_date', $jour)
             ->where('vehicle_registration', '!=', $vehicle->registration)
             ->exists();
@@ -244,7 +248,7 @@ class PlanningController extends Controller
         }
 
         $conflitCamion = TransportOrder::where('vehicle_registration', $vehicle->registration)
-            ->where('status', 'IN_PROGRESS')
+            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
             ->whereDate('pickup_date', $jour)
             ->where('driver_id', '!=', $driver->id)
             ->exists();
@@ -272,7 +276,7 @@ class PlanningController extends Controller
             'vehicle_registration' => $vehicle->registration,
             'driver_id' => $driver->id,
             'assigned_at' => now(),
-            'status' => 'IN_PROGRESS',
+            'status' => 'ASSIGNED',
         ]);
 
         ActivityLog::record(
@@ -282,7 +286,7 @@ class PlanningController extends Controller
             [
                 'vehicule' => $vehicle->registration.' '.$vehicle->brand.' '.$vehicle->model,
                 'chauffeur_id' => $driver->id,
-                'statut' => 'PENDING → IN_PROGRESS',
+                'statut' => 'PENDING → ASSIGNED',
             ],
         );
 
@@ -314,7 +318,7 @@ class PlanningController extends Controller
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
         $data = $request->validate([
-            'status' => 'required|in:PENDING,IN_PROGRESS,DELIVERED,CANCELLED',
+            'status' => ['required', Rule::in(TransportOrder::STATUTS)],
         ]);
 
         $autorises = self::TRANSITIONS[$transportOrder->status] ?? [];
@@ -351,10 +355,11 @@ class PlanningController extends Controller
             'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
 
-        if ($transportOrder->status !== 'IN_PROGRESS') {
-            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_impossible', 'Seule une mission en cours peut être désaffectée.')]);
+        if (! in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true)) {
+            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée ou en cours peut être désaffectée.')]);
         }
 
+        $ancien = $transportOrder->status;
         $camion = $transportOrder->vehicle_registration;
         $chauffeur = $transportOrder->driver_id;
 
@@ -363,6 +368,7 @@ class PlanningController extends Controller
             'vehicle_registration' => null,
             'driver_id' => null,
             'assigned_at' => null,
+            'picked_up_at' => null,
             'suivi_direct' => false,
         ]);
 
@@ -374,7 +380,7 @@ class PlanningController extends Controller
                 'motif' => $donnees['motif'],
                 'camion' => $camion,
                 'chauffeur_id' => $chauffeur,
-                'statut' => 'IN_PROGRESS → PENDING',
+                'statut' => $ancien.' → PENDING',
             ],
         );
 

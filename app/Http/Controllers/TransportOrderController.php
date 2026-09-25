@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\Formats;
 use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\Tarificateur;
@@ -99,7 +100,63 @@ class TransportOrderController extends Controller
                 'echeance' => $transportOrder->invoiceLine->invoice->due_on->format('d/m/Y'),
                 'payee_le' => $transportOrder->invoiceLine->invoice->paid_on?->format('d/m/Y'),
             ] : null,
+            // Seul le client de l'expedition l'annule lui-meme ; le personnel
+            // passe par la planification, sans indemnite.
+            'annulation' => $transportOrder->client_id === $request->user()->id
+                && $transportOrder->fraisAnnulation() !== null ? [
+                    'frais' => $transportOrder->fraisAnnulation(),
+                    'taux' => TransportOrder::TAUX_ANNULATION,
+                    'minimum' => TransportOrder::MINIMUM_ANNULATION,
+                ] : null,
         ]);
+    }
+
+    public function annuler(Request $request, TransportOrder $transportOrder): RedirectResponse
+    {
+        abort_if($transportOrder->client_id !== $request->user()->id, 404);
+
+        $donnees = $request->validate([
+            'frais' => 'required|numeric|min:0',
+        ]);
+
+        $frais = $transportOrder->fraisAnnulation();
+
+        if ($frais === null) {
+            return back()->with('error', Traductions::t('annulation.trop_tard', 'La marchandise est déjà chargée : l\'expédition ne peut plus être annulée en ligne. Contactez-nous.'));
+        }
+
+        // Le client confirme le montant qu'il a vu. Si un camion a ete
+        // affecte entre-temps, l'indemnite a change : on ne l'impose pas
+        // sans le lui montrer.
+        if (abs($frais - (float) $donnees['frais']) > 0.001) {
+            return back()->with('error', Traductions::t('annulation.montant_change', 'Un véhicule vient d\'être affecté à cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', [
+                'montant' => Formats::montant($frais),
+            ]));
+        }
+
+        $ancien = $transportOrder->status;
+
+        $transportOrder->update([
+            'status' => 'CANCELLED',
+            'cancelled_at' => now(),
+            'cancelled_by' => $request->user()->id,
+            'cancellation_fee' => $frais > 0 ? $frais : null,
+            'suivi_direct' => false,
+        ]);
+
+        ActivityLog::record(
+            'order.cancelled_by_client',
+            'Annulation de l\'ordre '.$transportOrder->tracking_number.' par le client'
+                .($frais > 0 ? ', indemnité de '.number_format($frais, 2, ',', ' ').' € HT' : ', sans frais'),
+            $transportOrder,
+            ['avant' => $ancien, 'indemnite' => $frais, 'chauffeur_id' => $transportOrder->driver_id],
+        );
+
+        return back()->with('success', $frais > 0
+            ? Traductions::t('annulation.faite_payante', 'Expédition annulée. L\'indemnité de :montant HT figurera sur votre prochaine facture.', [
+                'montant' => Formats::montant($frais),
+            ])
+            : Traductions::t('annulation.faite_gratuite', 'Expédition annulée, sans frais.'));
     }
 
     /**

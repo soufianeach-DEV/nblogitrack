@@ -61,6 +61,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
             ->whereNumber('transportOrder')
             ->name('transport-orders.show');
+        Route::patch('/transport-orders/{transportOrder}/annulation', [TransportOrderController::class, 'annuler'])
+            ->whereNumber('transportOrder')
+            ->middleware('throttle:10,1')
+            ->name('transport-orders.cancel');
 
         Route::middleware('can:plan-orders')->group(function () {
             Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
