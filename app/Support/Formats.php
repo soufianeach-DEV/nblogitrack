@@ -41,10 +41,7 @@ class Formats
             return '';
         }
 
-        return Traductions::t('format.date_heure', ':date à :heure', [
-            'date' => $date->format('d/m/Y'),
-            'heure' => $date->format('H:i'),
-        ]);
+        return $date->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi'));
     }
 
     private static function region(): string
