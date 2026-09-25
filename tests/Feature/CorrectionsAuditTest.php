@@ -228,6 +228,22 @@ class CorrectionsAuditTest extends TestCase
                 ->where('chauffeur.numero_permis', null));
     }
 
+    public function test_le_suivi_anonyme_ne_montre_pas_les_identifiants_internes(): void
+    {
+        $ordre = TransportOrder::factory()->create();
+
+        $this->get(route('tracking.show', [
+            'tracking_number' => $ordre->tracking_number,
+            'code' => $ordre->tracking_code,
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('order.tracking_number', $ordre->tracking_number)
+                ->missing('order.client_id')
+                ->missing('order.client.id')
+                ->has('order.client.company_name'));
+    }
+
     public function test_un_ordre_en_attente_ne_passe_en_cours_que_par_l_affectation(): void
     {
         $ordre = TransportOrder::factory()->create(['status' => 'PENDING']);
