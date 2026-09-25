@@ -23,7 +23,7 @@ class Invoice extends Model
     protected $fillable = [
         'client_id', 'reference', 'issued_on', 'due_on', 'period_start', 'period_end',
         'amount_excl_tax', 'vat_rate', 'vat_amount', 'amount_incl_tax',
-        'reverse_charge', 'status', 'paid_on', 'payment_reference',
+        'reverse_charge', 'status', 'paid_on', 'payment_reference', 'sent_at',
     ];
 
     protected function casts(): array
@@ -34,6 +34,7 @@ class Invoice extends Model
             'period_start' => 'date',
             'period_end' => 'date',
             'paid_on' => 'date',
+            'sent_at' => 'datetime',
             'reverse_charge' => 'boolean',
             'amount_excl_tax' => 'decimal:2',
             'vat_rate' => 'decimal:2',

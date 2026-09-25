@@ -81,7 +81,7 @@ class ClientValidationController extends Controller
     public function approve(Client $client): RedirectResponse
     {
         if ($client->is_validated) {
-            return back()->withErrors(['client' => 'Cette entreprise est déjà validée.']);
+            return back()->withErrors(['client' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
         }
 
         $utilisateur = User::find($client->id);
@@ -116,13 +116,24 @@ class ClientValidationController extends Controller
         );
 
         if (! $envoye) {
-            return back()->with('error', $client->company_name
-                .' est validée, mais l\'e-mail d\'activation n\'a pas pu partir : prévenez le contact.');
+            return back()->with('error', Traductions::t(
+                'msg.entreprise_validee_sans_courriel',
+                ':entreprise est validée, mais l\'e-mail d\'activation n\'a pas pu partir : prévenez le contact.',
+                ['entreprise' => $client->company_name],
+            ));
         }
 
-        return back()->with('success', $client->company_name.($refusPrecedent
-            ? ' est revalidée, le refus est levé et le contact a reçu son e-mail d\'activation.'
-            : ' est validée, le contact a reçu son e-mail d\'activation.'));
+        return back()->with('success', $refusPrecedent
+            ? Traductions::t(
+                'msg.entreprise_revalidee',
+                ':entreprise est revalidée, le refus est levé et le contact a reçu son e-mail d\'activation.',
+                ['entreprise' => $client->company_name],
+            )
+            : Traductions::t(
+                'msg.entreprise_validee',
+                ':entreprise est validée, le contact a reçu son e-mail d\'activation.',
+                ['entreprise' => $client->company_name],
+            ));
     }
 
     public function reject(Request $request, Client $client): RedirectResponse
@@ -130,12 +141,12 @@ class ClientValidationController extends Controller
         $data = $request->validate([
             'motif' => 'required|string|min:10|max:255',
         ], [
-            'motif.required' => 'Indiquez le motif : il sera envoyé à l\'entreprise.',
-            'motif.min' => 'Le motif doit être explicite, 10 caractères au minimum.',
+            'motif.required' => Traductions::t('msg.motif_refus_requis', 'Indiquez le motif : il sera envoyé à l\'entreprise.'),
+            'motif.min' => Traductions::t('msg.motif_refus_court', 'Le motif doit être explicite, 10 caractères au minimum.'),
         ]);
 
         if ($client->is_validated) {
-            return back()->withErrors(['motif' => 'Cette entreprise est déjà validée.']);
+            return back()->withErrors(['motif' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
         }
 
         $utilisateur = User::find($client->id);
@@ -161,10 +172,18 @@ class ClientValidationController extends Controller
         );
 
         if (! $envoye) {
-            return back()->with('error', 'Demande refusée, mais l\'e-mail n\'a pas pu partir : prévenez '.$client->company_name.'.');
+            return back()->with('error', Traductions::t(
+                'msg.demande_refusee_sans_courriel',
+                'Demande refusée, mais l\'e-mail n\'a pas pu partir : prévenez :entreprise.',
+                ['entreprise' => $client->company_name],
+            ));
         }
 
-        return back()->with('success', 'Demande refusée, '.$client->company_name.' en a été informée.');
+        return back()->with('success', Traductions::t(
+            'msg.demande_refusee',
+            'Demande refusée, :entreprise en a été informée.',
+            ['entreprise' => $client->company_name],
+        ));
     }
 
     private function envoyer(callable $envoi): bool

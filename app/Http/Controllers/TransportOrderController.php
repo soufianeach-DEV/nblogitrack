@@ -8,8 +8,8 @@ use App\Models\Invoice;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
-use App\Support\JoursFeries;
 use App\Support\Formats;
+use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
@@ -88,8 +88,14 @@ class TransportOrderController extends Controller
                 'id' => $transportOrder->invoiceLine->invoice->id,
                 'reference' => $transportOrder->invoiceLine->invoice->reference,
                 'etat' => $transportOrder->invoiceLine->invoice->estEnRetard()
-                    ? 'En retard'
-                    : Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status],
+                    ? Traductions::t('statut.en_retard', 'En retard')
+                    : match ($transportOrder->invoiceLine->invoice->status) {
+                        'DRAFT' => Traductions::t('facture.brouillon', Invoice::STATUTS['DRAFT']),
+                        'SENT' => Traductions::t('statut.envoyee', Invoice::STATUTS['SENT']),
+                        'PAID' => Traductions::t('statut.payee', Invoice::STATUTS['PAID']),
+                        'OVERDUE' => Traductions::t('statut.en_retard', Invoice::STATUTS['OVERDUE']),
+                        default => Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status] ?? $transportOrder->invoiceLine->invoice->status,
+                    },
                 'ttc' => (float) $transportOrder->invoiceLine->invoice->amount_incl_tax,
                 'echeance' => $transportOrder->invoiceLine->invoice->due_on->format('d/m/Y'),
                 'payee_le' => $transportOrder->invoiceLine->invoice->paid_on?->format('d/m/Y'),
@@ -162,13 +168,15 @@ class TransportOrderController extends Controller
         $ecartMax = 30;
 
         $points = [
-            'pickup' => [Localite::coordonnees(Adresse::localite($data['pickup_address']), 'BE'), 'd\'enlèvement'],
-            'delivery' => [Localite::coordonnees(Adresse::localite($data['delivery_address']), $data['delivery_country']), 'de livraison'],
+            'pickup' => Localite::coordonnees(Adresse::localite($data['pickup_address']), 'BE'),
+            'delivery' => Localite::coordonnees(Adresse::localite($data['delivery_address']), $data['delivery_country']),
         ];
 
-        foreach ($points as $cle => [$point, $quoi]) {
+        foreach ($points as $cle => $point) {
             if ($point === null) {
-                return 'L\'adresse '.$quoi.' ne correspond à aucune localité connue. Choisissez-la dans la liste de suggestions.';
+                return $cle === 'pickup'
+                    ? Traductions::t('msg.adresse_enlevement_inconnue', 'L\'adresse d\'enlèvement ne correspond à aucune localité connue. Choisissez-la dans la liste de suggestions.')
+                    : Traductions::t('msg.adresse_livraison_inconnue', 'L\'adresse de livraison ne correspond à aucune localité connue. Choisissez-la dans la liste de suggestions.');
             }
 
             $ecart = Tarificateur::distanceVol(
@@ -179,11 +187,13 @@ class TransportOrderController extends Controller
             );
 
             if ($ecart > $ecartMax) {
-                return 'L\'adresse '.$quoi.' ne correspond pas au point transmis. Resélectionnez-la dans la liste de suggestions.';
+                return $cle === 'pickup'
+                    ? Traductions::t('msg.adresse_enlevement_ecart', 'L\'adresse d\'enlèvement ne correspond pas au point transmis. Resélectionnez-la dans la liste de suggestions.')
+                    : Traductions::t('msg.adresse_livraison_ecart', 'L\'adresse de livraison ne correspond pas au point transmis. Resélectionnez-la dans la liste de suggestions.');
             }
         }
 
-        return ['pickup' => $points['pickup'][0], 'delivery' => $points['delivery'][0]];
+        return ['pickup' => $points['pickup'], 'delivery' => $points['delivery']];
     }
 
     public function create(Request $request): Response
@@ -218,19 +228,19 @@ class TransportOrderController extends Controller
             'tariff_grid_id' => ['required', Rule::exists('tariff_grids', 'id')->where('is_active', true)],
             'special_instructions' => 'nullable|string',
         ], [
-            'pickup_lat.required' => 'Sélectionne une adresse de départ dans la liste de suggestions.',
-            'pickup_lng.required' => 'Sélectionne une adresse de départ dans la liste de suggestions.',
-            'delivery_lat.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
-            'delivery_lng.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
-            'delivery_country.required' => 'Sélectionne une adresse de destination dans la liste de suggestions.',
-            'pickup_date.after_or_equal' => 'La date d\'enlèvement ne peut pas être dans le passé.',
-            'requested_delivery_date.after_or_equal' => 'La date de livraison souhaitée ne peut pas être dans le passé.',
+            'pickup_lat.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionne une adresse de départ dans la liste de suggestions.'),
+            'pickup_lng.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionne une adresse de départ dans la liste de suggestions.'),
+            'delivery_lat.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
+            'delivery_lng.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
+            'delivery_country.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
+            'pickup_date.after_or_equal' => Traductions::t('msg.enlevement_passe', 'La date d\'enlèvement ne peut pas être dans le passé.'),
+            'requested_delivery_date.after_or_equal' => Traductions::t('msg.livraison_passee', 'La date de livraison souhaitée ne peut pas être dans le passé.'),
         ]);
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
 
         if ($grid->zone !== $data['delivery_country']) {
-            return back()->withErrors(['tariff_grid_id' => 'La grille tarifaire ne correspond pas au pays de destination.']);
+            return back()->withErrors(['tariff_grid_id' => Traductions::t('msg.grille_pays', 'La grille tarifaire ne correspond pas au pays de destination.')]);
         }
 
         if (! empty($data['pickup_date'])) {
@@ -238,10 +248,16 @@ class TransportOrderController extends Controller
 
             if (JoursFeries::chome($enlevement)) {
                 return back()->withErrors([
-                    'pickup_date' => 'Aucun enlèvement le '
-                        .($enlevement->isSunday() ? 'dimanche' : strtolower(JoursFeries::nom($enlevement)))
-                        .'. Le premier jour ouvrable est le '
-                        .JoursFeries::prochainJourOuvrable($enlevement)->format('d/m/Y').'.',
+                    'pickup_date' => Traductions::t(
+                        'msg.enlevement_jour_chome',
+                        'Aucun enlèvement le :jour. Le premier jour ouvrable est le :date.',
+                        [
+                            'jour' => $enlevement->isSunday()
+                                ? Traductions::t('msg.dimanche', 'dimanche')
+                                : mb_strtolower((string) JoursFeries::nom($enlevement)),
+                            'date' => JoursFeries::prochainJourOuvrable($enlevement)->format('d/m/Y'),
+                        ],
+                    ),
                 ]);
             }
         }
@@ -255,7 +271,7 @@ class TransportOrderController extends Controller
             }
 
             if ($grid->delivery_days > $delai) {
-                return back()->withErrors(['tariff_grid_id' => 'La formule choisie ne permet pas de livrer à la date demandée.']);
+                return back()->withErrors(['tariff_grid_id' => Traductions::t('msg.formule_trop_lente', 'La formule choisie ne permet pas de livrer à la date demandée.')]);
             }
         }
 
@@ -312,10 +328,10 @@ class TransportOrderController extends Controller
 
         try {
             Mail::to($request->user()->email)->send(new OrdreCree($order, $request->user(), $grid));
-            $confirmation = 'Ordre créé : '.$order->tracking_number.' — le code de suivi vous a été envoyé par e-mail.';
+            $confirmation = Traductions::t('msg.ordre_cree', 'Ordre créé : :numero — le code de suivi vous a été envoyé par e-mail.', ['numero' => $order->tracking_number]);
         } catch (\Throwable $e) {
             report($e);
-            $confirmation = 'Ordre créé : '.$order->tracking_number.' — l\'e-mail de confirmation n\'a pas pu être envoyé.';
+            $confirmation = Traductions::t('msg.ordre_cree_sans_courriel', 'Ordre créé : :numero — l\'e-mail de confirmation n\'a pas pu être envoyé.', ['numero' => $order->tracking_number]);
         }
 
         return redirect()->route('transport-orders.index')

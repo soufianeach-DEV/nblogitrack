@@ -346,7 +346,7 @@ export default function Index({ pages, documents, types }) {
                                 className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                             />
                             <p className="mt-1 text-xs text-slate-600">
-                                {t('pages.corps_aide', 'Texte simple. Les sauts de ligne sont conservés ; le HTML n\'est pas interprété.')}
+                                {t('pages.corps_aide', 'Une ligne commençant par ## devient un titre de rubrique, une ligne commençant par - devient une puce. Le HTML n\'est jamais interprété.')}
                             </p>
                             {errors[champ('corps')] && <p className="mt-1 text-sm text-status-incident">{errors[champ('corps')]}</p>}
                         </div>

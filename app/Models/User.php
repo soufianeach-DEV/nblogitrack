@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -62,5 +63,14 @@ class User extends Authenticatable
     public function isDriver(): bool
     {
         return $this->role === 'DRIVER';
+    }
+
+    /**
+     * La langue choisie par l'utilisateur : ses notifications, dont le lien
+     * de mot de passe, lui parviennent dans cette langue.
+     */
+    public function preferredLocale(): string
+    {
+        return $this->locale ?: 'fr';
     }
 }

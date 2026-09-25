@@ -46,21 +46,22 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Validation des inscriptions** | Examen par l'administrateur, e-mails d'activation et de refus motivé | ✅ alpha |
 | **Création de commande** | Saisie guidée de l'adresse, distance routière réelle, estimation du prix en temps réel | ✅ alpha |
 | **Catalogue des ordres** | Liste, recherche par colonne, filtrage selon le rôle, fiche détaillée d'une expédition | ✅ alpha |
+| **Annulation par le client** | Gratuite avant l'affectation d'un camion, indemnité de 25 % du prix (50 € minimum) ensuite, portée sur la facture du mois ; impossible en ligne une fois la marchandise chargée (article 8 bis des conditions générales) | ✅ beta |
 | **Planification** | Affectation véhicule et chauffeur, contrôle de capacité et de certification pour matières dangereuses (ADR), transitions de statut (en attente, affecté, en cours, livré, annulé) | ✅ alpha |
 | **Suivi public** | Consultation d'un envoi (numéro + code), état de livraison | ✅ alpha |
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
-| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (norme européenne EN 16931) | ✅ beta |
+| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes | ✅ beta |
 | **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
-| **Multilingue** | Français, néerlandais et anglais, avec écran d'administration des traductions | ✅ alpha |
+| **Multilingue** | Français, néerlandais et anglais partout : écrans, messages, courriels et facture PDF, dans la langue de chaque utilisateur ; écran d'administration des traductions, et un test qui refuse toute clé sans ses trois traductions | ✅ beta |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
 | **Devis** | Demande de devis publique, traitement par le personnel | ✅ beta |
 | **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours | ✅ beta |
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 115 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 140 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -158,11 +159,11 @@ Trois traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit êtr
 
 | Quand | Commande | Rôle |
 |---|---|---|
-| Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture les transports livrés du mois écoulé |
+| Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture les transports livrés du mois écoulé et envoie chaque facture par courriel |
 | Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route au-delà de sept jours |
 | Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
 
-Les trois restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout` et `--essai` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
+Les trois restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout`, `--essai` et `--sans-envoi` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
 
 ### Comptes de démonstration
 
@@ -191,7 +192,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Cent quinze tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur, l'interface de programmation, la facturation, le parcours d'une mission de l'affectation à la livraison, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Cent quarante tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur, l'interface de programmation, la facturation et son envoi par courriel, le parcours d'une mission de l'affectation à la livraison, l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 

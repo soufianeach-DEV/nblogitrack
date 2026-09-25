@@ -272,7 +272,7 @@ class TrackingController extends Controller
                 'rang' => $rang,
                 'lat' => (float) $noeud['lat'],
                 'lng' => (float) $noeud['lon'],
-                'nom' => $tags['name'] ?? ($tags['operator'] ?? 'Péage'),
+                'nom' => $tags['name'] ?? ($tags['operator'] ?? Traductions::t('suivi.peage_sans_nom', 'Péage')),
                 'route' => $tags['highway:ref'] ?? ($tags['ref'] ?? null),
                 'portique' => ($tags['barrier'] ?? '') === 'toll_gantry',
             ];
@@ -395,34 +395,34 @@ class TrackingController extends Controller
     {
         return [
             [
-                'libelle' => 'Commande enregistrée',
-                'detail' => 'Ordre créé et confirmé.',
+                'libelle' => Traductions::t('suivi.etape_enregistree', 'Commande enregistrée'),
+                'detail' => Traductions::t('suivi.etape_enregistree_detail', 'Ordre créé et confirmé.'),
                 'horodatage' => $ordre->created_date?->format('d/m/Y'),
                 'fait' => true,
             ],
             [
-                'libelle' => 'Affectation',
+                'libelle' => Traductions::t('suivi.etape_affectation', 'Affectation'),
                 'detail' => $ordre->vehicle
-                    ? 'Véhicule '.$ordre->vehicle->registration.' affecté.'
-                    : "En attente d'affectation d'un véhicule.",
-                'horodatage' => $ordre->assigned_at?->format('d/m/Y à H\hi'),
+                    ? Traductions::t('suivi.etape_vehicule_affecte', 'Véhicule :immatriculation affecté.', ['immatriculation' => $ordre->vehicle->registration])
+                    : Traductions::t('suivi.etape_attente_vehicule', 'En attente d\'affectation d\'un véhicule.'),
+                'horodatage' => $ordre->assigned_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
                 'fait' => $ordre->assigned_at !== null,
             ],
             [
-                'libelle' => 'Enlèvement',
+                'libelle' => Traductions::t('suivi.etape_enlevement', 'Enlèvement'),
                 'detail' => $ordre->picked_up_at
-                    ? 'Marchandise chargée, le camion est en route.'
-                    : 'Le chauffeur confirmera le chargement sur place.',
-                'horodatage' => $ordre->picked_up_at?->format('d/m/Y à H\hi'),
+                    ? Traductions::t('suivi.etape_chargee', 'Marchandise chargée, le camion est en route.')
+                    : Traductions::t('suivi.etape_chargement_attendu', 'Le chauffeur confirmera le chargement sur place.'),
+                'horodatage' => $ordre->picked_up_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
                 'fait' => $ordre->picked_up_at !== null || $ordre->actual_delivery_date !== null,
             ],
             [
-                'libelle' => 'Livraison',
+                'libelle' => Traductions::t('suivi.jalon_livraison', 'Livraison'),
                 'detail' => $ordre->actual_delivery_date
-                    ? 'Marchandise livrée.'
+                    ? Traductions::t('suivi.etape_livree', 'Marchandise livrée.')
                     : ($ordre->requested_delivery_date
-                        ? 'Livraison souhaitée le '.$ordre->requested_delivery_date->format('d/m/Y').'.'
-                        : 'Date à confirmer.'),
+                        ? Traductions::t('suivi.etape_livraison_souhaitee', 'Livraison souhaitée le :date.', ['date' => $ordre->requested_delivery_date->format('d/m/Y')])
+                        : Traductions::t('suivi.etape_date_a_confirmer', 'Date à confirmer.')),
                 'horodatage' => $ordre->actual_delivery_date?->format('d/m/Y'),
                 'fait' => $ordre->actual_delivery_date !== null,
             ],
@@ -440,7 +440,7 @@ class TrackingController extends Controller
             ->get(['description', 'created_at'])
             ->map(fn ($ligne) => [
                 'description' => $ligne->description,
-                'horodatage' => $ligne->created_at->format('d/m/Y à H\hi'),
+                'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
             ])
             ->all();
     }

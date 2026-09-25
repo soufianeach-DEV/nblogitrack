@@ -194,7 +194,7 @@ export default function Create({ choix }) {
                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                         {champ('company_name', t('devis.societe', 'Société'), { obligatoire: true, exemple: t('devis.societe_ex', 'Ex : Meubles Van Damme SPRL') })}
                         {champ('contact_name', t('auth.personne_contact', 'Personne de contact'), { obligatoire: true, exemple: t('devis.contact_ex', 'Nom et prénom') })}
-                        {champ('email', t('devis.email', 'Adresse e-mail'), { obligatoire: true, type: 'email', exemple: 'contact@societe.be' })}
+                        {champ('email', t('devis.email', 'Adresse e-mail'), { obligatoire: true, type: 'email', exemple: t('devis.email_ex', 'contact@societe.be') })}
                         {champ('phone', t('auth.telephone', 'Téléphone'), { obligatoire: true, exemple: '+32 (0) 2 000 00 00' })}
                         {liste('customer_type', t('devis.vous_etes', 'Vous êtes'), choix.clients)}
                     </div>

@@ -1,5 +1,8 @@
+@php($t = \App\Support\Traductions::class)
+@php($f = \App\Support\Formats::class)
+@php($pays = \App\Support\Pays::class)
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <title>{{ $facture->reference }}</title>
@@ -49,10 +52,10 @@
             <tr>
                 <td>
                     <div class="marque">NBLOGITRACK</div>
-                    <div class="marque-sous">Logistique B2B</div>
+                    <div class="marque-sous">{{ $t::t('pdf.slogan', 'Logistique B2B') }}</div>
                 </td>
                 <td>
-                    <div class="doc-titre">FACTURE</div>
+                    <div class="doc-titre">{{ $t::t('pdf.facture', 'FACTURE') }}</div>
                     <div class="doc-ref">{{ $facture->reference }}</div>
                 </td>
             </tr>
@@ -63,30 +66,30 @@
         <table class="blocs">
             <tr>
                 <td class="bloc">
-                    <div class="bloc-titre">Émetteur</div>
+                    <div class="bloc-titre">{{ $t::t('pdf.emetteur', 'Émetteur') }}</div>
                     <p class="gras">{{ config('entreprise.nom') }}</p>
                     <p>{{ config('entreprise.adresse') }}</p>
-                    <p>{{ config('entreprise.localite') }}, {{ config('entreprise.pays') }}</p>
+                    <p>{{ config('entreprise.localite') }}, {{ $pays::localise(config('entreprise.pays')) }}</p>
                     <p class="mono">{{ config('entreprise.tva') }}</p>
                 </td>
                 <td class="bloc">
-                    <div class="bloc-titre">Facturé à</div>
+                    <div class="bloc-titre">{{ $t::t('pdf.facture_a', 'Facturé à') }}</div>
                     <p class="gras">{{ $facture->client->company_name }}</p>
                     @if ($facture->client->billing_address)
                         <p>{{ $facture->client->billing_address }}</p>
                     @endif
                     <p>{{ trim($facture->client->postal_code.' '.$facture->client->city) }}</p>
-                    <p>{{ $facture->client->country }}</p>
+                    <p>{{ $pays::localise($facture->client->country) }}</p>
                     <p class="mono">{{ $facture->client->vat_number }}</p>
                 </td>
                 <td class="bloc">
-                    <div class="bloc-titre">Détails</div>
-                    <p>Émise le <span class="gras">{{ $facture->issued_on->format('d/m/Y') }}</span></p>
-                    <p>Échéance le <span class="gras">{{ $facture->due_on->format('d/m/Y') }}</span></p>
-                    <p>Période du {{ $facture->period_start->format('d/m/Y') }}</p>
-                    <p>au {{ $facture->period_end->format('d/m/Y') }}</p>
+                    <div class="bloc-titre">{{ $t::t('pdf.details', 'Détails') }}</div>
+                    <p>{{ $t::t('pdf.emise_le', 'Émise le') }} <span class="gras">{{ $f::date($facture->issued_on) }}</span></p>
+                    <p>{{ $t::t('pdf.echeance_le', 'Échéance le') }} <span class="gras">{{ $f::date($facture->due_on) }}</span></p>
+                    <p>{{ $t::t('pdf.periode_du', 'Période du :date', ['date' => $f::date($facture->period_start)]) }}</p>
+                    <p>{{ $t::t('pdf.periode_au', 'au :date', ['date' => $f::date($facture->period_end)]) }}</p>
                     @if ($facture->paid_on)
-                        <p>Payée le <span class="gras">{{ $facture->paid_on->format('d/m/Y') }}</span></p>
+                        <p>{{ $t::t('pdf.payee_le', 'Payée le') }} <span class="gras">{{ $f::date($facture->paid_on) }}</span></p>
                     @endif
                 </td>
             </tr>
@@ -95,9 +98,9 @@
         <table class="lignes">
             <thead>
                 <tr>
-                    <th>Expédition</th>
-                    <th>Prestation</th>
-                    <th class="droite">Montant HT</th>
+                    <th>{{ $t::t('pdf.expedition', 'Expédition') }}</th>
+                    <th>{{ $t::t('pdf.prestation', 'Prestation') }}</th>
+                    <th class="droite">{{ $t::t('pdf.montant_ht', 'Montant HT') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -105,13 +108,20 @@
                     <tr>
                         <td class="mono">{{ $ligne->transportOrder?->tracking_number ?? '—' }}</td>
                         <td>
-                            @if (str_starts_with($ligne->description, 'Transport '))
-                                <span class="gras">Transport</span>{{ substr($ligne->description, 9) }}
+                            {{-- La description est enregistree en francais,
+                                 « Transport <depart> vers <arrivee> » : on la
+                                 recompose dans la langue du lecteur. --}}
+                            @if (str_starts_with($ligne->description, 'Transport ') && str_contains($ligne->description, ' vers '))
+                                @php([$depart, $arrivee] = explode(' vers ', substr($ligne->description, 10), 2))
+                                <span class="gras">{{ $t::t('pdf.transport', 'Transport') }}</span>
+                                {{ $t::t('pdf.trajet', ':depart vers :arrivee', ['depart' => $depart, 'arrivee' => $arrivee]) }}
+                            @elseif (str_starts_with($ligne->description, 'Indemnité d\'annulation '))
+                                {{ $t::t('pdf.indemnite_annulation', 'Indemnité d\'annulation :numero', ['numero' => substr($ligne->description, strlen('Indemnité d\'annulation '))]) }}
                             @else
                                 {{ $ligne->description }}
                             @endif
                         </td>
-                        <td class="droite">{{ number_format((float) $ligne->amount_excl_tax, 2, ',', ' ') }} €</td>
+                        <td class="droite">{{ $f::montant($ligne->amount_excl_tax) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -119,16 +129,16 @@
 
         <table class="totaux">
             <tr>
-                <td>Total HT</td>
-                <td class="droite">{{ number_format((float) $facture->amount_excl_tax, 2, ',', ' ') }} €</td>
+                <td>{{ $t::t('pdf.total_ht', 'Total HT') }}</td>
+                <td class="droite">{{ $f::montant($facture->amount_excl_tax) }}</td>
             </tr>
             <tr>
-                <td>TVA {{ number_format((float) $facture->vat_rate, 2, ',', ' ') }} %</td>
-                <td class="droite">{{ number_format((float) $facture->vat_amount, 2, ',', ' ') }} €</td>
+                <td>{{ $t::t('pdf.tva', 'TVA :taux %', ['taux' => $f::nombre($facture->vat_rate, 2)]) }}</td>
+                <td class="droite">{{ $f::montant($facture->vat_amount) }}</td>
             </tr>
             <tr class="ttc">
-                <td>Total TTC</td>
-                <td class="droite">{{ number_format((float) $facture->amount_incl_tax, 2, ',', ' ') }} €</td>
+                <td>{{ $t::t('pdf.total_ttc', 'Total TTC') }}</td>
+                <td class="droite">{{ $f::montant($facture->amount_incl_tax) }}</td>
             </tr>
         </table>
 
@@ -136,28 +146,28 @@
             <table>
                 <tr>
                     <td>
-                        <div class="etiquette">Compte</div>
+                        <div class="etiquette">{{ $t::t('pdf.compte', 'Compte') }}</div>
                         <div class="valeur mono">{{ config('entreprise.iban') }}</div>
-                        <div class="etiquette" style="margin-top: 9px;">Communication structurée</div>
+                        <div class="etiquette" style="margin-top: 9px;">{{ $t::t('pdf.communication', 'Communication structurée') }}</div>
                         <div class="valeur mono">{{ $facture->payment_reference }}</div>
                     </td>
                     <td style="text-align: right; padding-right: 18px;">
                         <div class="etiquette">
                             @if ($facture->paid_on)
-                                Paiement reçu
+                                {{ $t::t('pdf.paiement_recu', 'Paiement reçu') }}
                             @else
-                                À payer pour le {{ $facture->due_on->format('d/m/Y') }}
+                                {{ $t::t('pdf.a_payer_pour', 'À payer pour le :date', ['date' => $f::date($facture->due_on)]) }}
                             @endif
                         </div>
-                        <div class="valeur" style="font-size: 15px;">{{ number_format((float) $facture->amount_incl_tax, 2, ',', ' ') }} €</div>
+                        <div class="valeur" style="font-size: 15px;">{{ $f::montant($facture->amount_incl_tax) }}</div>
                     </td>
                     @if ($qr ?? null)
                         <td style="width: 113px; text-align: right;">
                             <div class="qr-boite">
-                                <img src="{{ $qr }}" alt="QR de virement SEPA au format EPC">
+                                <img src="{{ $qr }}" alt="{{ $t::t('pdf.qr_alt', 'QR de virement SEPA au format EPC') }}">
                             </div>
                             <div style="font-size: 7px; color: #94a3b8; margin-top: 3px;">
-                                Virement SEPA — norme EPC
+                                {{ $t::t('pdf.qr_legende', 'Virement SEPA — norme EPC') }}
                             </div>
                         </td>
                     @endif
@@ -167,13 +177,12 @@
 
         @if ($facture->reverse_charge)
             <p class="mention">
-                Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).
+                {{ $t::t('pdf.autoliquidation', 'Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).') }}
             </p>
         @endif
 
         <p class="mention">
-            Paiement au comptant sauf convention contraire. À défaut de paiement à l'échéance, intérêts de retard
-            conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.
+            {{ $t::t('pdf.conditions', 'Paiement au comptant sauf convention contraire. À défaut de paiement à l\'échéance, intérêts de retard conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.') }}
         </p>
     </div>
 

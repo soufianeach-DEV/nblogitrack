@@ -243,12 +243,12 @@ export default function Register({ secteurs, fonctions }) {
                             {champ('first_name', t('auth.prenom', 'Prénom'), { autoComplete: 'given-name' })}
                             {champ('last_name', t('auth.nom', 'Nom'), { autoComplete: 'family-name' })}
                             {liste('position', t('auth.fonction', 'Fonction'), fonctions, t('auth.fonction_ex', 'ex. Directeur logistique'), { large: true })}
-                            {champ('phone', t('auth.telephone', 'Téléphone'), { large: true, exemple: 'ex. +32 2 123 45 67' })}
+                            {champ('phone', t('auth.telephone', 'Téléphone'), { large: true, exemple: t('commun.exemple', 'ex. :valeur', { valeur: '+32 2 123 45 67' }) })}
                         </div>
 
                         <p className={titre + ' mt-5'}>{t('auth.identifiants_titre', 'Identifiants')}</p>
                         <div className="grid gap-2 sm:grid-cols-2">
-                            {champ('email', t('compte.email', 'E-mail professionnel'), { large: true, type: 'email', autoComplete: 'username', exemple: 'nom@entreprise.be' })}
+                            {champ('email', t('compte.email', 'E-mail professionnel'), { large: true, type: 'email', autoComplete: 'username', exemple: t('auth.email_ex', 'nom@entreprise.be') })}
                             {champ('password', t('compte.mot_de_passe', 'Mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
                             {champ('password_confirmation', t('auth.confirmer_mdp', 'Confirmer le mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
                         </div>

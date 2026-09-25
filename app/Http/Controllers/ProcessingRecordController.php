@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\ProcessingRecord;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -77,6 +78,6 @@ class ProcessingRecordController extends Controller
             $processingRecord,
         );
 
-        return back()->with('success', 'Entrée du registre enregistrée.');
+        return back()->with('success', Traductions::t('msg.registre_enregistre', 'Entrée du registre enregistrée.'));
     }
 }

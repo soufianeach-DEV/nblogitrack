@@ -52,7 +52,7 @@ export default function Login({ status, canResetPassword }) {
                         className="mt-1 block w-full"
                         autoComplete="username"
                         isFocused={true}
-                        placeholder="nom@entreprise.be"
+                        placeholder={t('auth.email_ex', 'nom@entreprise.be')}
                         onChange={(e) => setData('email', e.target.value)}
                     />
                     <InputError message={errors.email} className="mt-2" />
@@ -93,7 +93,7 @@ export default function Login({ status, canResetPassword }) {
             </form>
 
             <div className="mt-8 flex justify-between text-xs text-slate-600">
-                <span>© 2024 NBLogiTrack Belgium</span>
+                <span>{t('commun.copyright', '© :annee NBLogiTrack Belgium', { annee: new Date().getFullYear() })}</span>
                 <span>{t('auth.aide', 'Aide · Confidentialité')}</span>
             </div>
         </GuestLayout>

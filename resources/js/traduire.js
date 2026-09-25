@@ -8,8 +8,8 @@ import { usePage } from '@inertiajs/react';
  * phrase a sa place au lieu de devoir ouvrir un dictionnaire pour
  * savoir ce que la page affiche.
  *
- * Les valeurs entre accolades sont remplacees : t('suivi.bonjour',
- * 'Bonjour :nom', { nom: 'Sofie' }).
+ * Les valeurs entre accolades sont remplacees : t('courriel.bonjour',
+ * 'Bonjour :prenom,', { prenom: 'Sofie' }).
  */
 export function useTraduction() {
     const { dictionnaire = {} } = usePage().props;

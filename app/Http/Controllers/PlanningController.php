@@ -8,6 +8,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\TempsDeConduite;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -193,40 +194,43 @@ class PlanningController extends Controller
         ]);
 
         if ($transportOrder->status !== 'PENDING') {
-            return back()->withErrors(['vehicle_registration' => 'Seul un ordre en attente peut être affecté.']);
+            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_ordre_non_attente', 'Seul un ordre en attente peut être affecté.')]);
         }
 
         $vehicle = Vehicle::find($data['vehicle_registration']);
         $driver = Driver::find($data['driver_id']);
 
         if (! $vehicle->is_available) {
-            return back()->withErrors(['vehicle_registration' => 'Ce véhicule n\'est plus disponible.']);
+            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_vehicule_indisponible', 'Ce véhicule n\'est plus disponible.')]);
         }
 
         if (! $driver->is_available || ! $driver->user?->is_active) {
-            return back()->withErrors(['driver_id' => 'Ce chauffeur n\'est plus disponible.']);
+            return back()->withErrors(['driver_id' => Traductions::t('msg.planif_chauffeur_indisponible', 'Ce chauffeur n\'est plus disponible.')]);
         }
 
         if ($empechements = $driver->empechements()) {
             return back()->withErrors([
-                'driver_id' => 'Ce chauffeur ne peut pas prendre la route : '.implode(', ', $empechements).'.',
+                'driver_id' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)]),
             ]);
         }
 
         if ($vehicle->capacity_tonnes * 1000 < $transportOrder->weight) {
             return back()->withErrors([
-                'vehicle_registration' => 'Capacité insuffisante : '.$vehicle->capacity_tonnes.' t pour '.$transportOrder->weight.' kg.',
+                'vehicle_registration' => Traductions::t('msg.planif_capacite', 'Capacité insuffisante : :capacite t pour :poids kg.', [
+                    'capacite' => $vehicle->capacity_tonnes,
+                    'poids' => $transportOrder->weight,
+                ]),
             ]);
         }
 
         if ($transportOrder->needs_tail_lift && ! $vehicle->has_tail_lift) {
             return back()->withErrors([
-                'vehicle_registration' => 'Cette expédition demande un hayon élévateur : ce véhicule n\'en a pas.',
+                'vehicle_registration' => Traductions::t('msg.planif_hayon', 'Cette expédition demande un hayon élévateur : ce véhicule n\'en a pas.'),
             ]);
         }
 
         if ($transportOrder->is_hazardous && ! $driver->adr_certified) {
-            return back()->withErrors(['driver_id' => 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.']);
+            return back()->withErrors(['driver_id' => Traductions::t('msg.planif_adr', 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.')]);
         }
 
         $jour = $transportOrder->pickup_date->toDateString();
@@ -239,7 +243,7 @@ class PlanningController extends Controller
 
         if ($conflitChauffeur) {
             return back()->withErrors([
-                'driver_id' => 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.',
+                'driver_id' => Traductions::t('msg.planif_chauffeur_occupe', 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.'),
             ]);
         }
 
@@ -251,7 +255,7 @@ class PlanningController extends Controller
 
         if ($conflitCamion) {
             return back()->withErrors([
-                'vehicle_registration' => 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.',
+                'vehicle_registration' => Traductions::t('msg.planif_camion_occupe', 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.'),
             ]);
         }
 
@@ -264,7 +268,7 @@ class PlanningController extends Controller
 
         if ($conduite !== []) {
             return back()->withErrors([
-                'driver_id' => 'Temps de conduite : '.implode(' ; ', $conduite).'.',
+                'driver_id' => Traductions::t('msg.planif_temps_conduite', 'Temps de conduite : :motifs.', ['motifs' => implode(' ; ', $conduite)]),
             ]);
         }
 
@@ -286,7 +290,10 @@ class PlanningController extends Controller
             ],
         );
 
-        return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' affecté au véhicule '.$vehicle->registration.'.');
+        return back()->with('success', Traductions::t('msg.planif_ordre_affecte', 'Ordre :numero affecté au véhicule :vehicule.', [
+            'numero' => $transportOrder->tracking_number,
+            'vehicule' => $vehicle->registration,
+        ]));
     }
 
     public function suiviDirect(TransportOrder $transportOrder): RedirectResponse
@@ -304,8 +311,8 @@ class PlanningController extends Controller
         );
 
         return back()->with('success', $ouvert
-            ? 'Suivi de position activé pour cette mission. Le chauffeur en est averti sur son écran.'
-            : 'Suivi de position désactivé.');
+            ? Traductions::t('msg.planif_suivi_active', 'Suivi de position activé pour cette mission. Le chauffeur en est averti sur son écran.')
+            : Traductions::t('msg.planif_suivi_desactive', 'Suivi de position désactivé.'));
     }
 
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
@@ -317,7 +324,7 @@ class PlanningController extends Controller
         $autorises = self::TRANSITIONS[$transportOrder->status] ?? [];
 
         if (! in_array($data['status'], $autorises, true)) {
-            return back()->withErrors(['status' => 'Transition impossible depuis le statut '.$transportOrder->status.'.']);
+            return back()->withErrors(['status' => Traductions::t('msg.planif_transition_impossible', 'Transition impossible depuis le statut :statut.', ['statut' => $transportOrder->status])]);
         }
 
         $ancien = $transportOrder->status;
@@ -336,7 +343,7 @@ class PlanningController extends Controller
             ['avant' => $ancien, 'apres' => $data['status']],
         );
 
-        return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' : statut mis à jour.');
+        return back()->with('success', Traductions::t('msg.planif_statut_mis_a_jour', 'Ordre :numero : statut mis à jour.', ['numero' => $transportOrder->tracking_number]));
     }
 
     public function desaffecter(Request $request, TransportOrder $transportOrder): RedirectResponse
@@ -344,12 +351,12 @@ class PlanningController extends Controller
         $donnees = $request->validate([
             'motif' => 'required|string|min:5|max:200',
         ], [
-            'motif.required' => 'Indiquez le motif de la désaffectation.',
-            'motif.min' => 'Le motif doit faire au moins 5 caractères.',
+            'motif.required' => Traductions::t('msg.planif_motif_requis', 'Indiquez le motif de la désaffectation.'),
+            'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
 
         if (! in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true)) {
-            return back()->withErrors(['motif' => 'Seule une mission affectée ou en cours peut être désaffectée.']);
+            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée ou en cours peut être désaffectée.')]);
         }
 
         $ancien = $transportOrder->status;
@@ -377,6 +384,6 @@ class PlanningController extends Controller
             ],
         );
 
-        return back()->with('success', 'Ordre '.$transportOrder->tracking_number.' remis en attente d\'affectation.');
+        return back()->with('success', Traductions::t('msg.planif_ordre_desaffecte', 'Ordre :numero remis en attente d\'affectation.', ['numero' => $transportOrder->tracking_number]));
     }
 }

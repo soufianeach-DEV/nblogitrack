@@ -18,7 +18,9 @@ class NoteInformation extends Mailable
         public Page $note,
         public User $destinataire,
         public string $langue,
-    ) {}
+    ) {
+        $this->locale($langue);
+    }
 
     public function envelope(): Envelope
     {

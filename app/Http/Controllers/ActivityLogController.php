@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,7 +55,9 @@ class ActivityLogController extends Controller
 
         return Inertia::render('ActivityLogs/Index', [
             'logs' => $query->paginate(30)->withQueryString(),
-            'actions' => self::ACTIONS,
+            'actions' => collect(self::ACTIONS)
+                ->map(fn (string $libelle, string $action) => Traductions::t('journal.action_'.str_replace('.', '_', $action), $libelle))
+                ->all(),
             'filtres' => $request->only(['utilisateur', 'action', 'ip', 'du', 'au']),
             'stats' => [
                 'total' => ActivityLog::count(),

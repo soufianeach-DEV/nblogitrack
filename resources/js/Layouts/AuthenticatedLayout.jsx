@@ -216,7 +216,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         <button
                             type="button"
                             onClick={fermer}
-                            aria-label="Fermer le menu"
+                            aria-label={t('nav.fermer_menu', 'Fermer le menu')}
                             className="absolute right-4 top-5 rounded-lg p-1 text-slate-300 transition hover:bg-white/10 hover:text-white"
                         >
                             <Icone nom="fermer" className="h-6 w-6" />
@@ -232,7 +232,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <button
                         type="button"
                         onClick={() => setMenuOuvert(true)}
-                        aria-label="Ouvrir le menu"
+                        aria-label={t('nav.ouvrir_menu', 'Ouvrir le menu')}
                         aria-expanded={menuOuvert}
                         className="rounded-lg p-2 text-marine transition hover:bg-surface md:hidden"
                     >
