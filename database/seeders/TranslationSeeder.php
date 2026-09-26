@@ -2458,6 +2458,7 @@ class TranslationSeeder extends Seeder
             'chargement_numeros' => ['Chargement des numéros de la rue…', 'Huisnummers van de straat worden geladen…', 'Loading the street\'s house numbers…'],
             'numero_introuvable' => ['Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.', 'Nummer niet gevonden in deze straat — enkel bestaande nummers worden voorgesteld.', 'Number not found in this street — only existing numbers are offered.'],
             'choisir_numero' => ['Choisis le numéro dans la liste.', 'Kies het nummer uit de lijst.', 'Choose the number from the list.'],
+            'numero_non_repertorie' => ['Numéro non répertorié dans cette rue : vérifiez-le. L\'adresse sera localisée au niveau de la rue.', 'Huisnummer niet gekend in deze straat: controleer het. Het adres wordt op straatniveau gelokaliseerd.', 'House number not listed for this street: please check it. The address will be located at street level.'],
         ],
         'carte' => [
             'portique' => ['Portique', 'Portiek', 'Gantry'],
