@@ -490,7 +490,7 @@ function CarteEnCirculation({ carte, total }) {
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
             {}
             <div className="relative isolate h-56">
-                <CarteTrajets trajets={trajets} onSelection={ouvrir} className="h-full w-full" />
+                <CarteTrajets trajets={trajets} onSelection={ouvrir} positionZoom="bottomright" className="h-full w-full" />
                 <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
                     {total > carte.length ? `${carte.length} ${t('tdb.des', 'des')} ${total}` : total} {t('tdb.en_circulation', 'en circulation')}
                 </span>

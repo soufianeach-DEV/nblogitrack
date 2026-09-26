@@ -10,4 +10,8 @@ export default defineConfig({
         }),
         react(),
     ],
+    // Le travailleur de MapLibre est un module : il garde ses imports.
+    worker: {
+        format: 'es',
+    },
 });

@@ -125,3 +125,122 @@
 .overflow-x-auto {
     position: relative;
 }
+
+/*
+ * Carte facon Waze : bulles blanches arrondies, boutons ronds, epingle
+ * d'arrivee et camion qui pulse.
+ */
+.carte-waze .leaflet-tooltip {
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 12px;
+    color: #1f2a37;
+    font: 600 12px/1.35 Inter, system-ui, sans-serif;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+}
+
+/* Plus precis que les regles de Leaflet (.leaflet-touch .leaflet-bar a:first-child). */
+.carte-waze.leaflet-container .leaflet-bar.leaflet-control-zoom {
+    border: 0;
+    box-shadow: none;
+}
+
+.carte-waze.leaflet-container .leaflet-bar.leaflet-control-zoom a {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 8px;
+    border: 0;
+    border-radius: 9999px;
+    color: #1f2a37;
+    font: 600 20px/36px Inter, system-ui, sans-serif;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .22);
+}
+
+.carte-waze.leaflet-container .leaflet-bar.leaflet-control-zoom a:last-child {
+    margin-bottom: 0;
+}
+
+.carte-waze.leaflet-container .leaflet-bar.leaflet-control-zoom a:hover {
+    background: #f1f5f9;
+}
+
+.carte-waze .leaflet-control-attribution {
+    border-radius: 8px 0 0 0;
+    background: rgba(255, 255, 255, .8);
+    font-size: 10px;
+}
+
+.carte-pastille {
+    display: block;
+    box-sizing: border-box;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .35);
+}
+
+.carte-epingle {
+    display: flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #fff;
+    border-radius: 50% 50% 50% 0;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, .35);
+    transform: rotate(-45deg);
+}
+
+.carte-epingle > span {
+    display: flex;
+    transform: rotate(45deg);
+}
+
+.carte-bulle {
+    display: flex;
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    border-radius: 9px;
+    font: 800 13px/1 Inter, system-ui, sans-serif;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .3);
+}
+
+.carte-camion {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 40px;
+}
+
+.carte-camion-bulle {
+    position: absolute;
+    inset: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #3db2ff;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .3);
+}
+
+.carte-camion-onde {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: rgba(61, 178, 255, .35);
+    animation: carte-onde 2s ease-out infinite;
+}
+
+@keyframes carte-onde {
+    from { transform: scale(.9); opacity: .9; }
+    to { transform: scale(1.9); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .carte-camion-onde {
+        animation: none;
+    }
+}

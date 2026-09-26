@@ -9,7 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnTetesDeSecurite
 {
+    // Carte de secours, sans WebGL 2 : les tuiles images d'OpenStreetMap.
     private const IMAGES = 'https://tile.openstreetmap.org';
+
+    // Fond de carte vectoriel : description, tuiles et polices d'OpenFreeMap.
+    private const TUILES = 'https://tiles.openfreemap.org';
 
     private const APPELS = 'https://photon.komoot.io https://router.project-osrm.org https://api-adresse.data.gouv.fr https://api.pdok.nl';
 
@@ -63,7 +67,9 @@ class EnTetesDeSecurite
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: ".self::IMAGES,
             "font-src 'self'",
-            "connect-src 'self' ".self::APPELS,
+            "connect-src 'self' ".self::TUILES.' '.self::APPELS,
+            // Le travailleur de MapLibre est un fichier de l'application.
+            "worker-src 'self'",
         ]);
     }
 }
