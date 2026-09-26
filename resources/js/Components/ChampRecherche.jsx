@@ -47,7 +47,7 @@ export default function ChampRecherche({ value, onChange, suggestions = [], loca
         } else if (e.key === 'Enter' && visible && proposees[survol]) {
             e.preventDefault();
             prendre(proposees[survol]);
-        } else if (e.key === 'Escape') {
+        } else if (e.key === 'Escape' || e.key === 'Tab') {
             setOuvert(false);
         }
     };
@@ -60,9 +60,13 @@ export default function ChampRecherche({ value, onChange, suggestions = [], loca
                 value={value}
                 onChange={(e) => { onChange(e.target.value); setOuvert(true); setSurvol(-1); }}
                 onFocus={() => setOuvert(true)}
+                onBlur={() => setOuvert(false)}
                 onKeyDown={auClavier}
                 placeholder={placeholder}
-                aria-label={placeholder}
+                // Avec un id, c'est le <label for> qui nomme le champ : le
+                // texte d'exemple n'est pas son nom.
+                aria-label={id ? undefined : placeholder}
+                aria-activedescendant={visible && survol >= 0 ? `${idListe}-o${survol}` : undefined}
                 role="combobox"
                 aria-expanded={visible}
                 aria-controls={idListe}
@@ -72,10 +76,11 @@ export default function ChampRecherche({ value, onChange, suggestions = [], loca
             />
             {visible && (
                 <ul id={idListe} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg">
-                    <li className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">{t('liste.suggestions', 'Suggestions')}</li>
+                    <li role="presentation" className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">{t('liste.suggestions', 'Suggestions')}</li>
                     {proposees.map((s, i) => (
                         <li
                             key={s}
+                            id={`${idListe}-o${i}`}
                             role="option"
                             aria-selected={i === survol}
                             onMouseDown={(e) => { e.preventDefault(); prendre(s); }}

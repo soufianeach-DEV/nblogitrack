@@ -137,7 +137,7 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                 </div>
                 <div>
                     <label htmlFor="categorie" className={intitule}>{t('personnel.categorie', 'Catégorie')}</label>
-                    <ListeRecherche id="categorie" value={data.category} onChange={(v) => v && choisirCategorie(v)} options={Object.entries(categories).map(([valeur, libelle]) => ({ valeur, libelle }))} className={champ} />
+                    <ListeRecherche id="categorie" value={data.category} onChange={(v) => v && choisirCategorie(v)} options={Object.entries(categories).map(([valeur, libelle]) => ({ valeur, libelle }))} className={champ} required />
                     {erreur('category')}
                 </div>
                 <div>

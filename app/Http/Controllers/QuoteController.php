@@ -120,6 +120,10 @@ class QuoteController extends Controller
         return Inertia::render('Devis/Create', [
             'choix' => self::choixTraduits(),
             'equivalences' => self::equivalences(),
+            'limites' => [
+                'fichier' => self::octets((string) ini_get('upload_max_filesize')),
+                'envoi' => self::octets((string) ini_get('post_max_size')) - 1048576,
+            ],
             'listes' => [
                 'colis' => self::COLIS,
                 'acces' => self::ACCES,
@@ -147,6 +151,19 @@ class QuoteController extends Controller
                 $valeurs,
             ))
             ->all();
+    }
+
+    /** « 10M », « 512K », « 2G » (php.ini) en octets. */
+    private static function octets(string $valeur): int
+    {
+        $nombre = (int) $valeur;
+
+        return match (strtoupper(substr(trim($valeur), -1))) {
+            'G' => $nombre * 1073741824,
+            'M' => $nombre * 1048576,
+            'K' => $nombre * 1024,
+            default => $nombre,
+        };
     }
 
     /**
@@ -311,6 +328,7 @@ class QuoteController extends Controller
             'temperature_min.required' => Traductions::t('msg.devis_temperature_requise', 'Indiquez la plage de température à respecter.'),
             'temperature_max.required' => Traductions::t('msg.devis_temperature_requise', 'Indiquez la plage de température à respecter.'),
             'temperature_max.gte' => Traductions::t('msg.devis_temperature_ordre', 'La température maximale ne peut pas être inférieure à la minimale.'),
+            'attachments.*.uploaded' => Traductions::t('msg.devis_piece_non_recue', 'Une pièce jointe n\'a pas pu être reçue : elle dépasse la taille acceptée par le serveur.'),
             'attachments.*.max' => Traductions::t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
             'attachments.*.mimes' => Traductions::t('msg.devis_piece_format', 'Pièces jointes acceptées : PDF, images, tableurs et documents Word.'),
             'privacy.accepted' => Traductions::t('msg.devis_confidentialite', 'Acceptez la politique de confidentialité pour envoyer votre demande.'),
@@ -347,6 +365,12 @@ class QuoteController extends Controller
 
         if (($data['volume'] ?? null) === null && ($m3 = QuoteRequest::volumeDesColis($colis)) !== null) {
             $data['volume'] = str_replace('.', ',', (string) $m3).' m³';
+        }
+
+        // Le client final ne compte que pour une demande faite pour un tiers :
+        // saisi puis masque en changeant de choix, il n'est pas garde.
+        if ($data['customer_type'] !== self::POUR_UN_TIERS) {
+            $data['end_client_name'] = null;
         }
 
         if (! ($data['needs_temperature'] ?? false)) {

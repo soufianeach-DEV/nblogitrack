@@ -228,6 +228,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                 <ListeRecherche
                     value={data.vehicle_registration}
                     onChange={(v) => setData('vehicle_registration', v)}
+                    required
                     placeholder={'— ' + t('ordres.vehicule', 'Véhicule') + ' —'}
                     aria-label={t('ordres.vehicule', 'Véhicule')}
                     className={selectCls}
@@ -248,6 +249,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                 <ListeRecherche
                     value={data.driver_id}
                     onChange={(v) => setData('driver_id', v)}
+                    required
                     placeholder={'— ' + t('suivi.chauffeur', 'Chauffeur') + ' —'}
                     aria-label={t('suivi.chauffeur', 'Chauffeur')}
                     className={selectCls}

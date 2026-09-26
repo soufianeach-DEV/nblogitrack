@@ -20,6 +20,7 @@ export default function ListeRecherche({
     vide,
     className = '',
     disabled = false,
+    required = false,
     trier = true,
     'aria-label': ariaLabel,
 }) {
@@ -27,9 +28,12 @@ export default function ListeRecherche({
     const idListe = useId();
     const conteneur = useRef(null);
     const liste = useRef(null);
+    const champ = useRef(null);
     const [ouvert, setOuvert] = useState(false);
     const [saisie, setSaisie] = useState('');
-    const [survol, setSurvol] = useState(0);
+    // -1 : rien de surligne. Entrer dans le champ ne surligne rien, pour
+    // qu'Entree ne remplace pas la valeur par la premiere de la liste.
+    const [survol, setSurvol] = useState(-1);
 
     const langue = typeof document !== 'undefined' ? document.documentElement.lang || 'fr' : 'fr';
     const comparer = useMemo(() => new Intl.Collator(langue, { sensitivity: 'base', numeric: true }).compare, [langue]);
@@ -46,7 +50,15 @@ export default function ListeRecherche({
         return cherche === '' ? triees : triees.filter((o) => normaliser(o.libelle).includes(cherche) || normaliser(o.groupe).includes(cherche));
     }, [options, value, saisie, trier, comparer]);
 
-    const choisissables = rangees.filter((o) => ! o.desactive);
+    // « Tous... » (vide) se choisit aussi au clavier.
+    const optionVide = vide !== undefined && saisie === '' ? { valeur: '', libelle: vide, estVide: true } : null;
+    const choisissables = [...(optionVide ? [optionVide] : []), ...rangees.filter((o) => ! o.desactive)];
+    const idOption = (rang) => `${idListe}-o${rang}`;
+
+    // Champ obligatoire : le navigateur le signale comme un <select required>.
+    useEffect(() => {
+        champ.current?.setCustomValidity(required && ! value ? t('liste.requis', 'Choisissez une valeur dans la liste.') : '');
+    }, [required, value]);
 
     useEffect(() => {
         const dehors = (e) => {
@@ -66,6 +78,7 @@ export default function ListeRecherche({
 
     const choisir = (option) => {
         if (option.desactive) return;
+        setSurvol(-1);
         onChange(String(option.valeur));
         setOuvert(false);
         setSaisie('');
@@ -77,11 +90,26 @@ export default function ListeRecherche({
             if (! ouvert) { setOuvert(true); return; }
             if (choisissables.length === 0) return;
             const pas = e.key === 'ArrowDown' ? 1 : -1;
-            setSurvol((i) => (i + pas + choisissables.length) % choisissables.length);
+            setSurvol((i) => {
+                // Premiere fleche : on part de la valeur actuelle.
+                if (i < 0) {
+                    const actuel = choisissables.findIndex((o) => String(o.valeur) === String(value ?? ''));
+                    return actuel >= 0 ? actuel : (pas > 0 ? 0 : choisissables.length - 1);
+                }
+                return (i + pas + choisissables.length) % choisissables.length;
+            });
         } else if (e.key === 'Enter') {
-            if (ouvert && choisissables[survol]) {
+            if (! ouvert) return;
+            if (choisissables[survol]) {
                 e.preventDefault();
                 choisir(choisissables[survol]);
+            } else if (saisie.trim() !== '') {
+                // Texte tape sans resultat choisi : rien ne part.
+                e.preventDefault();
+            } else {
+                // Rien de surligne ni tape : la valeur reste, Entree suit
+                // son cours (envoi du formulaire).
+                setOuvert(false);
             }
         } else if (e.key === 'Escape' || e.key === 'Tab') {
             setOuvert(false);
@@ -95,18 +123,21 @@ export default function ListeRecherche({
         <div ref={conteneur} className="relative">
             <input
                 id={id}
+                ref={champ}
                 type="text"
                 role="combobox"
                 aria-expanded={ouvert}
                 aria-controls={idListe}
                 aria-autocomplete="list"
+                aria-activedescendant={ouvert && survol >= 0 ? idOption(survol) : undefined}
+                aria-required={required || undefined}
                 aria-label={ariaLabel}
                 autoComplete="off"
                 disabled={disabled}
                 value={ouvert ? saisie : (choisi?.libelle ?? (value ? String(value) : ''))}
                 placeholder={ouvert && choisi ? choisi.libelle : (vide ?? placeholder ?? t('liste.choisir', 'Tapez pour chercher…'))}
-                onChange={(e) => { setSaisie(e.target.value); setSurvol(0); setOuvert(true); }}
-                onFocus={() => { setOuvert(true); setSurvol(0); }}
+                onChange={(e) => { setSaisie(e.target.value); setSurvol(e.target.value.trim() === '' ? -1 : (optionVide ? 1 : 0)); setOuvert(true); }}
+                onFocus={() => { setOuvert(true); setSurvol(-1); }}
                 onClick={() => setOuvert(true)}
                 onKeyDown={auClavier}
                 className={className + ' pr-8'}
@@ -120,12 +151,15 @@ export default function ListeRecherche({
                     role="listbox"
                     className="absolute z-30 mt-1 max-h-72 w-full min-w-[14rem] overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-lg"
                 >
-                    {vide !== undefined && saisie === '' && (
+                    {optionVide && (
                         <li
+                            id={idOption(0)}
                             role="option"
                             aria-selected={! value}
-                            onMouseDown={(e) => { e.preventDefault(); onChange(''); setOuvert(false); }}
-                            className="cursor-pointer px-3 py-1.5 text-slate-500 hover:bg-surface"
+                            data-survol={survol === 0 ? '1' : undefined}
+                            onMouseDown={(e) => { e.preventDefault(); choisir(optionVide); }}
+                            onMouseEnter={() => setSurvol(0)}
+                            className={'cursor-pointer px-3 py-1.5 text-slate-500 hover:bg-surface ' + (survol === 0 ? 'bg-marine/10' : '')}
                         >
                             {vide}
                         </li>
@@ -142,6 +176,7 @@ export default function ListeRecherche({
                             <li key={(o.groupe ?? '') + '|' + o.valeur} role="presentation">
                                 {titre && <div className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">{titre}</div>}
                                 <div
+                                    id={rang >= 0 ? idOption(rang) : undefined}
                                     role="option"
                                     aria-selected={String(o.valeur) === String(value ?? '')}
                                     aria-disabled={o.desactive || undefined}

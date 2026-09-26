@@ -1107,6 +1107,7 @@ class TranslationSeeder extends Seeder
         ],
 
         'liste' => [
+            'requis' => ['Choisissez une valeur dans la liste.', 'Kies een waarde uit de lijst.', 'Choose a value from the list.'],
             'choisir' => ['Tapez pour chercher…', 'Typ om te zoeken…', 'Type to search…'],
             'aucun' => ['Aucun résultat', 'Geen resultaten', 'No results'],
             'suggestions' => ['Suggestions', 'Suggesties', 'Suggestions'],
@@ -1630,6 +1631,8 @@ class TranslationSeeder extends Seeder
         ],
 
         'devis' => [
+            'pieces_cinq' => ['Cinq fichiers au plus : seuls les cinq premiers sont gardés.', 'Hoogstens vijf bestanden: alleen de eerste vijf worden behouden.', 'Five files at most: only the first five are kept.'],
+            'pieces_total' => ['Les pièces jointes dépassent :max Mo au total : retirez-en une.', 'De bijlagen overschrijden in totaal :max MB: verwijder er een.', 'The attachments exceed :max MB in total: remove one.'],
             'titre' => ['Demander un devis de transport', 'Transportofferte aanvragen', 'Request a transport quote'],
             'gratuit' => [
                 'Devis gratuit et sans engagement',
@@ -2980,6 +2983,7 @@ class TranslationSeeder extends Seeder
             'devis_trop_lourd' => ['Le poids total des colis dépasse 44 t, la limite d\'un camion : répartissez l\'envoi en plusieurs demandes.', 'Het totale gewicht van de colli overschrijdt 44 t, de limiet van een vrachtwagen: verdeel de zending over meerdere aanvragen.', 'The total weight of the packages exceeds 44 t, the limit of a truck: split the shipment into several requests.'],
             'tva_pays_inconnu' => ['Ce préfixe de pays n\'est pas reconnu : saisissez un numéro de TVA européen, suisse, norvégien ou britannique (ex. BE0123456749).', 'Dit landvoorvoegsel wordt niet herkend: voer een Europees, Zwitsers, Noors of Brits btw-nummer in (bv. BE0123456749).', 'This country prefix is not recognised: enter a European, Swiss, Norwegian or British VAT number (e.g. BE0123456749).'],
             'note_en_cours' => ['Envoi de la note en cours à :n conducteur(s). Le journal d\'activité indiquera les éventuels échecs.', 'De nota wordt verzonden naar :n bestuurder(s). Het activiteitenlogboek toont eventuele mislukkingen.', 'The notice is being sent to :n driver(s). The activity log will show any failures.'],
+            'devis_piece_non_recue' => ['Une pièce jointe n\'a pas pu être reçue : elle dépasse la taille acceptée par le serveur.', 'Een bijlage kon niet worden ontvangen: ze overschrijdt de grootte die de server aanvaardt.', 'An attachment could not be received: it exceeds the size accepted by the server.'],
             'devis_sans_client' => ['Aucune entreprise cliente n\'a ce numéro de TVA ni cette adresse e-mail : créez d\'abord son compte.', 'Geen klant heeft dit btw-nummer of dit e-mailadres: maak eerst het account aan.', 'No client company has this VAT number or email address: create its account first.'],
             'devis_sans_grille' => ['Aucune formule n\'est ouverte pour ce trajet.', 'Voor dit traject is geen formule beschikbaar.', 'No service is available for this route.'],
             'devis_sans_poids' => ['Renseignez le poids avant de transformer la demande en commande.', 'Vul het gewicht in voordat u de aanvraag omzet in een bestelling.', 'Enter the weight before converting the request into an order.'],

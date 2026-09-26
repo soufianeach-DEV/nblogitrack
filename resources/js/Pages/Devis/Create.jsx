@@ -16,9 +16,9 @@ const PAYS = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 
 
 // Champs de chaque etape : une erreur du serveur ramene a son etape.
 const ETAPES = [
-    ['vat_number', 'company_name', 'legal_form', 'sector', 'eori_number', 'billing_street', 'billing_postal_code', 'billing_city', 'billing_country', 'correspondence_language', 'customer_type', 'end_client_name'],
+    ['vat_number', 'company_name', 'legal_form', 'sector', 'billing_street', 'billing_postal_code', 'billing_city', 'billing_country', 'correspondence_language', 'customer_type', 'end_client_name'],
     ['contact_name', 'contact_function', 'email', 'phone', 'mobile_phone', 'billing_email', 'preferred_channel', 'callback_slot'],
-    ['pickup_address', 'pickup_lat', 'delivery_address', 'delivery_lat', 'delivery_country', 'pickup_date', 'delivery_date', 'trip_type', 'frequency', 'date_flexibility', 'monthly_volume', 'pickup_', 'delivery_'],
+    ['eori_number', 'pickup_address', 'pickup_lat', 'delivery_address', 'delivery_lat', 'delivery_country', 'pickup_date', 'delivery_date', 'trip_type', 'frequency', 'date_flexibility', 'monthly_volume', 'pickup_', 'delivery_'],
     ['goods_type', 'weight', 'volume', 'packages', 'declared_value', 'vehicle_type', 'insurance_value', 'temperature_min', 'temperature_max', 'un_number', 'adr_class', 'packing_group'],
     ['budget', 'response_deadline', 'attachments', 'special_instructions', 'privacy'],
 ];
@@ -60,7 +60,10 @@ const CHAMPS_CHOIX = {
     vehicle_type: 'vehicules', monthly_volume: 'volumes',
 };
 
-export default function Create({ choix, listes, equivalences = {} }) {
+export default function Create({ choix, listes, equivalences = {}, limites = {} }) {
+    // Limites du serveur (php.ini) : au-dela, le fichier n'arrive pas.
+    const MAX_PIECE = Math.min(10 * 1048576, limites.fichier ?? 10 * 1048576);
+    const MAX_ENVOI = limites.envoi ?? 50 * 1048576;
     const t = useTraduction();
     const langue = useLangue();
     const nomPays = useMemo(() => new Intl.DisplayNames([langue], { type: 'region' }), [langue]);
@@ -185,8 +188,14 @@ export default function Create({ choix, listes, equivalences = {} }) {
         return PAYS.includes(code) ? code : '';
     };
 
+    // Le numero tape, lu au moment de la reponse : un nouvel essai prevu,
+    // ou une reponse en retard, ne porte que sur le numero encore saisi.
+    const normaliserTva = (v) => String(v ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const tvaSaisie = useRef(data.vat_number);
+    tvaSaisie.current = data.vat_number;
+
     const verifierTva = async (automatique = false) => {
-        const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
+        const tva = normaliserTva(tvaSaisie.current);
 
         if (! automatique) {
             relances.current = 0;
@@ -203,6 +212,10 @@ export default function Create({ choix, listes, equivalences = {} }) {
         try {
             const reponse = await fetch(`/verification-tva?tva=${encodeURIComponent(tva)}`);
             const resultat = await reponse.json();
+
+            // Numero modifie pendant la verification : reponse perimee.
+            if (normaliserTva(tvaSaisie.current) !== tva) return;
+
             setVies(resultat);
 
             if (resultat.statut === 'valide') {
@@ -240,6 +253,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
                 minuteurRelance.current = setTimeout(() => verifierTva(true), delai * 1000);
             }
         } catch {
+            if (normaliserTva(tvaSaisie.current) !== tva) return;
             if (tva !== reprisPour.current) reprendreDuRegistre({ billing_country: paysDuNumero(tva) });
             setVies({ statut: 'indisponible', message: t('devis.registre_injoignable', 'Le registre européen est momentanément injoignable.') });
         } finally {
@@ -258,10 +272,13 @@ export default function Create({ choix, listes, equivalences = {} }) {
     // ----- Raccourcis de saisie -----
     // Date AAAA-MM-JJ du jour local (toISOString donnerait la veille le
     // soir a l'est de Greenwich).
+    // « Aujourd'hui » a Bruxelles, comme le serveur : a Lisbonne ou a
+    // Dublin entre 23 h et minuit, la date du navigateur est la veille.
+    const aujourdhui = () => new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels' }).format(new Date()) + 'T12:00:00');
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     // n jours ouvres apres une date (samedi et dimanche sautes).
     const ouvres = (depart, n) => {
-        const d = depart ? new Date(depart + 'T12:00:00') : new Date();
+        const d = depart ? new Date(depart + 'T12:00:00') : aujourdhui();
         let reste = n;
         while (reste > 0 || d.getDay() === 0 || d.getDay() === 6) {
             d.setDate(d.getDate() + 1);
@@ -270,18 +287,20 @@ export default function Create({ choix, listes, equivalences = {} }) {
         return iso(d);
     };
     const lundiProchain = () => {
-        const d = new Date();
+        const d = aujourdhui();
         d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
         return iso(d);
     };
+    // Le vendredi de cette semaine ; le week-end, il est passe : pas de choix.
     const vendredi = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
+        const d = aujourdhui();
+        if (d.getDay() === 0 || d.getDay() === 6) return null;
+        d.setDate(d.getDate() + (5 - d.getDay()));
         return iso(d);
     };
     const puces = (nom, choixRapides) => (
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {choixRapides.map(([libelle, valeur]) => (
+            {choixRapides.filter(([, valeur]) => valeur !== null).map(([libelle, valeur]) => (
                 <button
                     key={libelle}
                     type="button"
@@ -512,6 +531,9 @@ export default function Create({ choix, listes, equivalences = {} }) {
     ];
 
     // Ce qui manque pour passer a l'etape suivante (le serveur revalide tout).
+    const EORI = /^[A-Z]{2}[A-Z0-9]{1,15}$/;
+    const eoriFormat = t('msg.devis_eori_format', 'Le numéro EORI commence par le code du pays (ex. BE0123456749).');
+
     const aCompleter = (n) => {
         const requis = t('devis.champ_requis', 'Champ obligatoire.');
         const m = {};
@@ -522,7 +544,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
             }
             if (data.billing_country !== 'IE' && ! data.billing_postal_code.trim()) m.billing_postal_code = requis;
             if (data.customer_type === choix.clients[2] && ! data.end_client_name.trim()) m.end_client_name = requis;
-            if (douane && ! data.eori_number.trim()) m.eori_number = t('msg.devis_eori_requis', 'Pour la Suisse, le Royaume-Uni et la Norvège, la douane exige votre numéro EORI.');
+            if (! douane && data.eori_number.trim() && ! EORI.test(data.eori_number.replace(/\s/g, ''))) m.eori_number = eoriFormat;
         }
         if (n === 1) {
             if (! data.contact_name.trim()) m.contact_name = requis;
@@ -533,6 +555,10 @@ export default function Create({ choix, listes, equivalences = {} }) {
             if (! data.pickup_lat) m.pickup_address = t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.');
             if (! data.delivery_lat) m.delivery_address = t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.');
             if (! data.pickup_date) m.pickup_date = requis;
+            // Les pays du trajet se choisissent ici : c'est ici que la douane
+            // se sait, et que l'EORI se demande.
+            if (douane && ! data.eori_number.trim()) m.eori_number = t('msg.devis_eori_requis', 'Pour la Suisse, le Royaume-Uni et la Norvège, la douane exige votre numéro EORI.');
+            else if (douane && ! EORI.test(data.eori_number.replace(/\s/g, ''))) m.eori_number = eoriFormat;
         }
         if (n === 3) {
             if (! data.goods_type.trim()) m.goods_type = requis;
@@ -578,6 +604,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
             pickup_has_dock: d.pickup_has_dock === '' ? null : d.pickup_has_dock,
             delivery_has_dock: d.delivery_has_dock === '' ? null : d.delivery_has_dock,
             packages: d.packages.filter((c) => Number(c.quantite) > 0),
+            eori_number: d.eori_number.replace(/\s/g, ''),
         }));
         post(route('devis.store'), {
             forceFormData: true,
@@ -638,9 +665,14 @@ export default function Create({ choix, listes, equivalences = {} }) {
                             <input
                                 id="vat_number"
                                 value={data.vat_number}
-                                onChange={(e) => { setData('vat_number', e.target.value); setVies(null); }}
+                                onChange={(e) => { clearTimeout(minuteurRelance.current); setData('vat_number', e.target.value); setVies(null); }}
+                                onBlur={() => {
+                                    // Numero change sans cliquer « Verifier » : on verifie en quittant le champ.
+                                    const tva = normaliserTva(data.vat_number);
+                                    if (! verification && tva.length >= 6 && tva !== reprisPour.current && vies === null) verifierTva();
+                                }}
                                 placeholder={t('devis.tva_exemple_europe', 'BE0123456749, FR40303265045, CHE-123.456.788…')}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (! verification) verifierTva(); } }}
                                 className={CHAMP + ' mt-0 flex-1'}
                             />
                             <button
@@ -690,13 +722,10 @@ export default function Create({ choix, listes, equivalences = {} }) {
                                 <ListeSecteurs id="sector" value={data.sector} onChange={(v) => setData('sector', v)} groupes={listes.secteurs} className={CHAMP} />
                                 <InputError message={erreur('sector')} className="mt-1" />
                             </div>
-                            {champ('eori_number', t('devis.eori', 'Numéro EORI'), {
-                                obligatoire: douane,
+                            {! douane && champ('eori_number', t('devis.eori', 'Numéro EORI'), {
                                 majuscules: true,
                                 exemple: 'BE0123456749',
-                                aide: douane
-                                    ? t('devis.eori_aide_douane', 'Obligatoire pour la Suisse, le Royaume-Uni et la Norvège (dédouanement).')
-                                    : t('devis.eori_aide', 'Utile seulement pour les envois hors Union européenne.'),
+                                aide: t('devis.eori_aide', 'Utile seulement pour les envois hors Union européenne.'),
                             })}
                         </div>
 
@@ -790,7 +819,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
                             </div>
 
                             <div>
-                                {champ('pickup_date', t('devis.date_souhaitee', 'Date d\'enlèvement souhaitée'), { obligatoire: true, type: 'date', min: iso(new Date()) })}
+                                {champ('pickup_date', t('devis.date_souhaitee', 'Date d\'enlèvement souhaitée'), { obligatoire: true, type: 'date', min: iso(aujourdhui()) })}
                                 {puces('pickup_date', [
                                     [t('devis.date_demain', 'Prochain jour ouvré'), ouvres(null, 1)],
                                     [t('devis.date_apres_demain', 'Dans 2 jours ouvrés'), ouvres(null, 2)],
@@ -798,7 +827,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
                                 ])}
                             </div>
                             <div>
-                                {champ('delivery_date', t('devis.date_livraison', 'Date de livraison souhaitée'), { type: 'date', min: data.pickup_date || iso(new Date()) })}
+                                {champ('delivery_date', t('devis.date_livraison', 'Date de livraison souhaitée'), { type: 'date', min: data.pickup_date || iso(aujourdhui()) })}
                                 {data.pickup_date && puces('delivery_date', [
                                     [t('devis.livraison_meme_jour', 'Le jour même'), data.pickup_date],
                                     [t('devis.livraison_plus_1', '+1 jour ouvré'), ouvres(data.pickup_date, 1)],
@@ -840,6 +869,16 @@ export default function Create({ choix, listes, equivalences = {} }) {
                             <p className="mt-4 rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
                                 {t('devis.douane_aide', 'Trajet hors union douanière : prévoyez votre numéro EORI, la facture commerciale et le code des marchandises. Nous nous chargeons du transit.')}
                             </p>
+                        )}
+                        {douane && (
+                            <div className="mt-4 max-w-sm">
+                                {champ('eori_number', t('devis.eori', 'Numéro EORI'), {
+                                    obligatoire: true,
+                                    majuscules: true,
+                                    exemple: 'BE0123456749',
+                                    aide: t('devis.eori_aide_douane', 'Obligatoire pour la Suisse, le Royaume-Uni et la Norvège (dédouanement).'),
+                                })}
+                            </div>
                         )}
                         <div className="mt-6 grid gap-5 lg:grid-cols-2">
                             {surPlace('pickup', t('devis.sur_place_enlevement', 'À l\'enlèvement'))}
@@ -978,7 +1017,7 @@ export default function Create({ choix, listes, equivalences = {} }) {
                         <div className="grid gap-5 sm:grid-cols-2">
                             {champ('budget', t('devis.budget', 'Budget indicatif (€ HT)'), { type: 'number', min: 0, aide: t('devis.budget_aide', 'Facultatif : il nous aide à proposer la bonne formule.') })}
                             <div>
-                                {champ('response_deadline', t('devis.reponse_avant', 'Réponse souhaitée avant le'), { type: 'date', min: iso(new Date()) })}
+                                {champ('response_deadline', t('devis.reponse_avant', 'Réponse souhaitée avant le'), { type: 'date', min: iso(aujourdhui()) })}
                                 {puces('response_deadline', [
                                     [t('devis.reponse_vite', 'Dès que possible'), ouvres(null, 1)],
                                     [t('devis.reponse_48h', 'Sous 48 h'), ouvres(null, 2)],
@@ -1020,11 +1059,25 @@ export default function Create({ choix, listes, equivalences = {} }) {
                                 type="file"
                                 multiple
                                 accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc,.csv"
-                                onChange={(e) => setData('attachments', Array.from(e.target.files ?? []).slice(0, 5))}
+                                onChange={(e) => {
+                                    // Trop de fichiers ou trop lourds : on le dit tout de suite,
+                                    // au lieu d'un refus du serveur a l'envoi.
+                                    const fichiers = Array.from(e.target.files ?? []);
+                                    const legers = fichiers.filter((f) => f.size <= MAX_PIECE);
+                                    const gardes = legers.slice(0, 5);
+                                    const total = gardes.reduce((somme, f) => somme + f.size, 0);
+                                    const message = [
+                                        fichiers.length > legers.length && t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
+                                        legers.length > 5 && t('devis.pieces_cinq', 'Cinq fichiers au plus : seuls les cinq premiers sont gardés.'),
+                                        total > MAX_ENVOI && t('devis.pieces_total', 'Les pièces jointes dépassent :max Mo au total : retirez-en une.', { max: Math.floor(MAX_ENVOI / 1048576) }),
+                                    ].filter(Boolean).join(' ');
+                                    setManques((m) => ({ ...m, attachments: message || undefined }));
+                                    setData('attachments', total > MAX_ENVOI ? [] : gardes);
+                                }}
                                 className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-surface file:px-4 file:py-2 file:text-sm file:font-semibold file:text-marine"
                             />
                             <p className="mt-1 text-xs text-slate-500">{t('devis.pieces_aide', 'Bon de commande, fiche de données de sécurité, plan d\'accès… 5 fichiers, 10 Mo chacun au plus.')}</p>
-                            <InputError message={Object.entries(errors).find(([cle]) => cle.startsWith('attachments'))?.[1]} className="mt-1" />
+                            <InputError message={manques.attachments ?? Object.entries(errors).find(([cle]) => cle.startsWith('attachments'))?.[1]} className="mt-1" />
                         </div>
 
                         <div className="mt-6 rounded-xl border border-slate-200 p-4">

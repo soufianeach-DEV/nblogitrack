@@ -293,6 +293,14 @@ class DevisCompletTest extends TestCase
         $this->assertSame('Nouvelle entreprise', QuoteRequest::firstOrFail()->customer_type);
     }
 
+    /** Un client final saisi puis masque (autre choix) n'est pas garde. */
+    public function test_le_client_final_masque_n_est_pas_enregistre(): void
+    {
+        $this->post(route('devis.store'), $this->demande(['end_client_name' => 'Brasserie Dupont SA']))->assertSessionHasNoErrors();
+
+        $this->assertNull(QuoteRequest::firstOrFail()->end_client_name);
+    }
+
     /** La ligne de colis proposee par defaut, laissee telle quelle, n'est pas gardee. */
     public function test_la_palette_par_defaut_non_remplie_n_est_pas_gardee(): void
     {
