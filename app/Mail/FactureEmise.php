@@ -28,9 +28,11 @@ class FactureEmise extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: Traductions::t('courriel.facture_sujet', 'Votre facture :reference - NBLogiTrack', [
-                'reference' => $this->facture->reference,
-            ]),
+            subject: $this->facture->estAvoir()
+                ? Traductions::t('courriel.avoir_sujet', 'Votre avoir :reference - NBLogiTrack', ['reference' => $this->facture->reference])
+                : Traductions::t('courriel.facture_sujet', 'Votre facture :reference - NBLogiTrack', [
+                    'reference' => $this->facture->reference,
+                ]),
         );
     }
 

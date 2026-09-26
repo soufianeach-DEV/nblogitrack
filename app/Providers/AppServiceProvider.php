@@ -7,11 +7,15 @@ use App\Models\User;
 use App\Support\Traductions;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
                 ->subject(Traductions::t('courriel.mdp_sujet', 'Choisissez votre mot de passe NBLogiTrack'))
                 ->view('emails.lien-mot-de-passe', [
                     'destinataire' => $destinataire,
+                    // Jamais connecte : c'est une invitation, pas une
+                    // reinitialisation.
+                    'invitation' => $destinataire->email_verified_at === null,
                     'minutes' => config('auth.passwords.users.expire', 60),
                     'lien' => route('password.reset', [
                         'langue' => $langue,
@@ -45,9 +52,14 @@ class AppServiceProvider extends ServiceProvider
                 ]);
         });
 
-        RateLimiter::for('suivi', fn (Request $r) => $r->user()
-            ? Limit::perMinute(120)->by('u'.$r->user()->id)
-            : Limit::perMinute(10)->by($r->ip()));
+        // Seule une recherche (numero + code) compte : ouvrir la page ou y
+        // revenir n'use pas le quota qui protege les codes contre la force
+        // brute.
+        RateLimiter::for('suivi', fn (Request $r) => match (true) {
+            $r->user() !== null => Limit::perMinute(120)->by('u'.$r->user()->id),
+            ! $r->filled('code') => Limit::none(),
+            default => Limit::perMinute(10)->by($r->ip()),
+        });
 
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));
 
@@ -67,7 +79,26 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('control-payments', fn (User $user) => $user->isAdmin());
         Gate::define('view-fleet', fn (User $user) => $user->isStaff());
         Gate::define('drive', fn (User $user) => $user->isDriver());
+        Gate::define('manage-company', fn (User $user) => $user->gereEntreprise());
 
         Event::subscribe(JournaliserAuthentification::class);
+
+        // Recherche « contient », insensible a la casse et aux accents ;
+        // % et _ tapes par l'utilisateur se cherchent tels quels.
+        $contient = function (string $colonne, string $terme, string $booleen = 'and') {
+            $motif = '%'.addcslashes($terme, '\\%_').'%';
+
+            return $this->whereRaw('unaccent(('.$this->getGrammar()->wrap($colonne).')::text) ILIKE unaccent(?)', [$motif], $booleen);
+        };
+        QueryBuilder::macro('whereContient', $contient);
+        QueryBuilder::macro('orWhereContient', fn (string $colonne, string $terme) => $this->whereContient($colonne, $terme, 'or'));
+
+        // Apres chaque migration, le dictionnaire suit le code : les textes
+        // ajoutes depuis le dernier deploiement sont traduits tout de suite.
+        Event::listen(MigrationsEnded::class, function (MigrationsEnded $evenement) {
+            if ($evenement->method === 'up' && ! $this->app->runningUnitTests() && Schema::hasTable('translations')) {
+                Artisan::call('traductions:synchroniser');
+            }
+        });
     }
 }

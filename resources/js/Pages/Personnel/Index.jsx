@@ -138,7 +138,6 @@ function Creation({ roles, permis, statuts, onFermer }) {
 export default function Index({ comptes = [], roles = {}, permis = [], statuts = {}, compteurs, filtres = {} }) {
     const t = useTraduction();
     const [creer, setCreer] = useState(false);
-    const flash = usePage().props.flash ?? {};
     const { errors } = usePage().props;
 
     return (
@@ -166,16 +165,6 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
         >
             <Head title={t('nav.personnel', 'Personnel')} />
 
-            {flash.success && (
-                <p className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-semibold text-status-delivered">
-                    {flash.success}
-                </p>
-            )}
-            {flash.error && (
-                <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
-                    {flash.error}
-                </p>
-            )}
             {errors.is_active && (
                 <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
                     {errors.is_active}
@@ -199,7 +188,7 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
             />
 
             <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
@@ -231,7 +220,7 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
                                             {c.actif ? t('personnel.actif', 'Actif') : t('personnel.desactive', 'Désactivé')}
                                         </span>
                                         {c.sorti_le && (
-                                            <span className="mt-1 block text-xs text-slate-600">{t('personnel.parti_le', 'parti le')} {c.sorti_le}</span>
+                                            <span className="mt-1 block text-xs text-slate-600">{c.depart_futur ? t('personnel.depart_prevu_le', 'départ prévu le') : t('personnel.parti_le', 'parti le')} {c.sorti_le}</span>
                                         )}
                                         {! c.confirme && c.actif && (
                                             <span className="mt-1 block text-xs text-slate-600">{t('personnel.mdp_pas_choisi', 'mot de passe pas encore choisi')}</span>

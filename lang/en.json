@@ -1,0 +1,13 @@
+{
+    "This action is unauthorized.": "You do not have access to this action.",
+    "Forbidden": "Access denied",
+    "Not Found": "Page not found",
+    "Page Expired": "Page expired",
+    "Payment Required": "Payment required",
+    "Server Error": "Server error",
+    "Service Unavailable": "Service temporarily unavailable",
+    "Too Many Requests": "Too many requests",
+    "Unauthorized": "Unauthorized",
+    "(and :count more error)": "(and :count more error)",
+    "(and :count more errors)": "(and :count more errors)"
+}

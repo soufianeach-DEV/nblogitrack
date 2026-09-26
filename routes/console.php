@@ -19,3 +19,7 @@ Schedule::command('journaux:purger --mois=12')
 Schedule::command('factures:generer')
     ->monthlyOn(1, '04:00')
     ->onOneServer();
+
+Schedule::command('chauffeurs:cloturer-departs')
+    ->dailyAt('00:15')
+    ->onOneServer();

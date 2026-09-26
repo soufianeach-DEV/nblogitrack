@@ -1,12 +1,14 @@
 import BarreFiltres from '@/Components/BarreFiltres';
+import Indisponibilites from '@/Components/Indisponibilites';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 function Fiche({ vehicule, peutModifier, onFermer }) {
     const t = useTraduction();
+    const voc = useVocabulaire();
     const locale = useLocale();
     const nombre = (valeur, unite, decimales = 0) => Number(valeur).toLocaleString(locale, {
         minimumFractionDigits: decimales,
@@ -18,6 +20,8 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
         inspection_date: vehicule.controle ?? '',
         inspection_valid_until: vehicule.controle_valide ?? '',
         mileage: vehicule.kilometrage,
+        permis_requis: vehicule.permis_fiche ?? '',
+        adr_equipe: vehicule.adr_equipe,
     });
 
     const passageControle = (valeur) => {
@@ -29,6 +33,8 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
         }));
     };
 
+    const idForm = 'fiche-vehicule-' + vehicule.immatriculation;
+
     const enregistrer = (e) => {
         e.preventDefault();
         patch(route('vehicles.update', vehicule.immatriculation), {
@@ -38,87 +44,130 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
     };
 
     return (
-        <form onSubmit={enregistrer} className="p-6">
-            <p className="font-mono text-lg font-bold text-marine">{vehicule.immatriculation}</p>
-            <p className="text-sm text-slate-600">{vehicule.marque}</p>
+        <div className="p-6">
+            <form id={idForm} onSubmit={enregistrer}>
+                <p className="font-mono text-lg font-bold text-marine">{vehicule.immatriculation}</p>
+                <p className="text-sm text-slate-600">{vehicule.marque}</p>
 
-            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.carrosserie', 'Carrosserie')}</dt><dd className="font-semibold text-marine">{vehicule.type}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.norme', 'Norme')}</dt><dd className="font-semibold text-marine">{vehicule.norme} · {vehicule.carburant}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.charge_utile', 'Charge utile')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.capacite, 't', 1)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('commande.volume', 'Volume')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.volume, 'm³', 0)}</dd></div>
-                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.hayon', 'Hayon élévateur')}</dt><dd className="font-semibold text-marine">{vehicule.hayon ? t('ordres.oui', 'Oui') : t('ordres.non', 'Non')}</dd></div>
-                <div className="col-span-2"><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.chassis', 'Numéro de châssis')}</dt><dd className="font-mono text-xs text-marine">{vehicule.vin}</dd></div>
-            </dl>
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.carrosserie', 'Carrosserie')}</dt><dd className="font-semibold text-marine">{voc('vehicule', vehicule.type)}</dd></div>
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.norme', 'Norme')}</dt><dd className="font-semibold text-marine">{vehicule.norme} · {voc('carburant', vehicule.carburant)}</dd></div>
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.charge_utile', 'Charge utile')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.capacite, 't', 1)}</dd></div>
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('commande.volume', 'Volume')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.volume, 'm³', 0)}</dd></div>
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.hayon', 'Hayon élévateur')}</dt><dd className="font-semibold text-marine">{vehicule.hayon ? t('ordres.oui', 'Oui') : t('ordres.non', 'Non')}</dd></div>
+                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.permis_requis', 'Permis requis')}</dt><dd className="font-semibold text-marine">{vehicule.permis_requis}{vehicule.adr_equipe ? ' · ADR' : ''}</dd></div>
+                    <div className="col-span-2"><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.chassis', 'Numéro de châssis')}</dt><dd className="font-mono text-xs text-marine">{vehicule.vin}</dd></div>
+                </dl>
 
-            {! peutModifier ? (
-                <p className="mt-5 rounded-lg bg-surface px-3 py-2 text-sm text-slate-600">
-                    {t('parc.lecture_seule', 'Consultation seule — la modification du parc est réservée à l\'administrateur.')}
-                </p>
-            ) : (
-                <div className="mt-5 space-y-4 border-t border-slate-100 pt-4">
-                    <label className="flex items-center gap-3">
-                        <input
-                            type="checkbox"
-                            checked={data.is_available}
-                            onChange={(e) => setData('is_available', e.target.checked)}
-                            className="rounded border-slate-300 text-marine focus:ring-marine"
-                        />
-                        <span className="text-sm font-semibold text-marine">{t('parc.dispo_affectation', 'Disponible pour affectation')}</span>
-                    </label>
-
-                    {vehicule.engage && (
-                        <p className="rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
-                            {t('parc.vehicule_engage', 'Ce véhicule porte une expédition en cours : il ne peut pas être retiré du service.')}
-                        </p>
-                    )}
-                    {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label htmlFor="controle" className="text-xs uppercase tracking-wide text-slate-600">
-                                {t('parc.controle_passe', 'Contrôle passé le')}
-                            </label>
+                {! peutModifier ? (
+                    <p className="mt-5 rounded-lg bg-surface px-3 py-2 text-sm text-slate-600">
+                        {t('parc.lecture_seule', 'Consultation seule — la modification du parc est réservée à l\'administrateur.')}
+                    </p>
+                ) : (
+                    <div className="mt-5 space-y-4 border-t border-slate-100 pt-4">
+                        <label className="flex items-center gap-3">
                             <input
-                                id="controle"
-                                type="date"
-                                value={data.inspection_date ?? ''}
-                                onChange={(e) => passageControle(e.target.value)}
-                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                type="checkbox"
+                                checked={data.is_available}
+                                onChange={(e) => setData('is_available', e.target.checked)}
+                                className="rounded border-slate-300 text-marine focus:ring-marine"
                             />
-                            {errors.inspection_date && <p className="mt-1 text-xs text-status-incident">{errors.inspection_date}</p>}
-                        </div>
-                        <div>
-                            <label htmlFor="controle-validite" className="text-xs uppercase tracking-wide text-slate-600">
-                                {t('parc.valable_jusqu', 'Valable jusqu\'au')}
-                            </label>
-                            <input
-                                id="controle-validite"
-                                type="date"
-                                value={data.inspection_valid_until ?? ''}
-                                onChange={(e) => setData('inspection_valid_until', e.target.value)}
-                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                            />
-                            {errors.inspection_valid_until && <p className="mt-1 text-xs text-status-incident">{errors.inspection_valid_until}</p>}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="km" className="text-xs uppercase tracking-wide text-slate-600">
-                            {t('parc.kilometrage_releve', 'Kilométrage relevé')}
+                            <span className="text-sm font-semibold text-marine">{t('parc.dispo_affectation', 'Disponible pour affectation')}</span>
                         </label>
-                        <input
-                            id="km"
-                            type="number"
-                            min="0"
-                            value={data.mileage ?? ''}
-                            onChange={(e) => setData('mileage', e.target.value)}
-                            className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        />
-                        {errors.mileage && <p className="mt-1 text-xs text-status-incident">{errors.mileage}</p>}
+
+                        {vehicule.engage && (
+                            <p className="rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
+                                {t('parc.vehicule_engage', 'Ce véhicule porte une expédition en cours : il ne peut pas être retiré du service.')}
+                            </p>
+                        )}
+                        {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label htmlFor="controle" className="text-xs uppercase tracking-wide text-slate-600">
+                                    {t('parc.controle_passe', 'Contrôle passé le')}
+                                </label>
+                                <input
+                                    id="controle"
+                                    type="date"
+                                    value={data.inspection_date ?? ''}
+                                    onChange={(e) => passageControle(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                />
+                                {errors.inspection_date && <p className="mt-1 text-xs text-status-incident">{errors.inspection_date}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="controle-validite" className="text-xs uppercase tracking-wide text-slate-600">
+                                    {t('parc.valable_jusqu', 'Valable jusqu\'au')}
+                                </label>
+                                <input
+                                    id="controle-validite"
+                                    type="date"
+                                    value={data.inspection_valid_until ?? ''}
+                                    onChange={(e) => setData('inspection_valid_until', e.target.value)}
+                                    className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                />
+                                {errors.inspection_valid_until && <p className="mt-1 text-xs text-status-incident">{errors.inspection_valid_until}</p>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label htmlFor="permis-requis" className="text-xs uppercase tracking-wide text-slate-600">
+                                    {t('parc.permis_requis', 'Permis requis')}
+                                </label>
+                                <select
+                                    id="permis-requis"
+                                    value={data.permis_requis ?? ''}
+                                    onChange={(e) => setData('permis_requis', e.target.value)}
+                                    className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                >
+                                    <option value="">{t('parc.permis_gabarit', 'Selon le gabarit (:permis)', { permis: vehicule.permis_gabarit })}</option>
+                                    {['B', 'C1', 'C1E', 'C', 'CE'].map((p) => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                                {errors.permis_requis && <p className="mt-1 text-xs text-status-incident">{errors.permis_requis}</p>}
+                            </div>
+                            <label className="mt-5 flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(data.adr_equipe)}
+                                    onChange={(e) => setData('adr_equipe', e.target.checked)}
+                                    className="rounded border-slate-300 text-marine focus:ring-marine"
+                                />
+                                <span className="text-sm font-semibold text-marine">{t('parc.adr_equipe', 'Équipé ADR (plaques orange, extincteurs, lot de bord)')}</span>
+                            </label>
+                        </div>
+                        {errors.adr_equipe && <p className="text-xs text-status-incident">{errors.adr_equipe}</p>}
+
+                        <div>
+                            <label htmlFor="km" className="text-xs uppercase tracking-wide text-slate-600">
+                                {t('parc.kilometrage_releve', 'Kilométrage relevé')}
+                            </label>
+                            <input
+                                id="km"
+                                type="number"
+                                min="0"
+                                value={data.mileage ?? ''}
+                                onChange={(e) => setData('mileage', e.target.value)}
+                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            />
+                            {errors.mileage && <p className="mt-1 text-xs text-status-incident">{errors.mileage}</p>}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </form>
+
+            {/* Hors du formulaire de la fiche : Entree ajoute l'indisponibilite
+                sans enregistrer ni fermer la fiche, et une date invalide ici ne
+                bloque pas « Enregistrer ». Visible aussi en lecture seule. */}
+            <div className="mt-4 border-t border-slate-100 pt-4">
+                <Indisponibilites
+                    liste={vehicule.indisponibilites}
+                    motifs={['ENTRETIEN', 'REPARATION', 'CONTROLE', 'AUTRE']}
+                    routeAjout={route('vehicles.unavailability', vehicule.immatriculation)}
+                    peutModifier={peutModifier}
+                />
+            </div>
 
             <div className="mt-6 flex justify-end gap-3">
                 <button type="button" onClick={onFermer} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-marine">
@@ -127,6 +176,7 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                 {peutModifier && (
                     <button
                         type="submit"
+                        form={idForm}
                         disabled={processing}
                         className="rounded-lg bg-marine px-5 py-2 text-sm font-bold text-white transition hover:bg-marine-deep disabled:opacity-50"
                     >
@@ -134,14 +184,18 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                     </button>
                 )}
             </div>
-        </form>
+        </div>
     );
 }
 
 export default function Vehicules({ vehicules = [], types = [], normes = [], compteurs, filtres = {}, peutModifier = false }) {
     const t = useTraduction();
+    const voc = useVocabulaire();
     const locale = useLocale();
-    const [ouvert, setOuvert] = useState(null);
+    // La fiche garde l'immatriculation, pas une copie : apres un ajout,
+    // elle montre les donnees rechargees.
+    const [ouvertId, setOuvert] = useState(null);
+    const ouvert = vehicules.find((v) => v.immatriculation === ouvertId) ?? null;
 
     const nombre = (valeur, unite, decimales = 0) => Number(valeur).toLocaleString(locale, {
         minimumFractionDigits: decimales,
@@ -177,7 +231,7 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                 filtres={filtres}
                 placeholder={t('parc.filtre_vehicule', 'Immatriculation, marque, châssis…')}
                 listes={[
-                    { champ: 'type', intitule: t('parc.toutes_carrosseries', 'Toutes les carrosseries'), options: types },
+                    { champ: 'type', intitule: t('parc.toutes_carrosseries', 'Toutes les carrosseries'), options: types.map((x) => ({ valeur: x, libelle: voc('vehicule', x) })) },
                     { champ: 'charge', intitule: t('parc.toutes_charges', 'Toutes les charges'), options: CHARGES },
                     { champ: 'norme', intitule: t('parc.toutes_normes', 'Toutes les normes'), options: normes },
                     { champ: 'hayon', intitule: t('parc.hayon_indifferent', 'Hayon indifférent'), options: [{ valeur: '1', libelle: t('parc.avec_hayon', 'Avec hayon') }] },
@@ -187,6 +241,7 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                     { libelle: t('parc.disponibles', 'Disponibles'), valeur: 'disponibles', nombre: compteurs.disponibles },
                     { libelle: t('parc.hors_service', 'Hors service'), valeur: 'indisponibles', nombre: compteurs.total - compteurs.disponibles },
                     { libelle: t('parc.controle_depasse', 'Contrôle dépassé'), valeur: 'controle', nombre: compteurs.controle, alerte: true },
+                    { libelle: t('parc.a_mettre_en_regle', 'À mettre en règle'), valeur: 'controle_roulant', nombre: compteurs.controle_roulant, alerte: true },
                 ]}
             />
 
@@ -208,13 +263,13 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                             {vehicules.map((v) => (
                                 <tr
                                     key={v.immatriculation}
-                                    onClick={() => setOuvert(v)}
+                                    onClick={() => setOuvert(v.immatriculation)}
                                     className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-surface"
                                 >
                                     <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-marine">{v.immatriculation}</td>
                                     <td className="whitespace-nowrap px-4 py-3 text-slate-700">{v.marque}</td>
                                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                                        {v.type}
+                                        {voc('vehicule', v.type)}
                                         <span className="ml-2 text-xs text-slate-600">{v.norme}</span>
                                         {v.hayon && (
                                             <span className="ml-2 rounded bg-brand-blue/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-blue">
@@ -226,7 +281,7 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{nombre(v.kilometrage, 'km')}</td>
                                     <td className="whitespace-nowrap px-4 py-3">
                                         <span className={v.controle_depasse ? 'font-semibold text-status-incident' : 'text-slate-600'}>
-                                            {v.controle_valide_affiche ? `${t('parc.valable', 'valable')} → ${v.controle_valide_affiche}` : '—'}
+                                            {v.controle_valide_affiche ? `${v.controle_depasse ? t('parc.echu_le', 'échu le') : t('parc.valable', 'valable')} → ${v.controle_valide_affiche}` : '—'}
                                         </span>
                                         {v.controle_affiche && (
                                             <span className="block text-xs text-slate-600">{t('parc.passe_le', 'passé le')} {v.controle_affiche}</span>

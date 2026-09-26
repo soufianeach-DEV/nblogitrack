@@ -10,5 +10,7 @@ class TransportOrderSeeder extends Seeder
     public function run(): void
     {
         DB::unprepared(file_get_contents(database_path('seeders/sql/transport_orders.sql')));
+
+        (new CoherenceDesAffectations)();
     }
 }

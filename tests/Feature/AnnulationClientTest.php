@@ -33,7 +33,7 @@ class AnnulationClientTest extends TestCase
 
     private function client(TransportOrder $ordre): User
     {
-        return User::find($ordre->client_id);
+        return Client::find($ordre->client_id)->compte();
     }
 
     public function test_une_expedition_en_attente_s_annule_sans_frais(): void
@@ -48,7 +48,7 @@ class AnnulationClientTest extends TestCase
         $this->assertSame('CANCELLED', $ordre->status);
         $this->assertNull($ordre->cancellation_fee);
         $this->assertNotNull($ordre->cancelled_at);
-        $this->assertSame($ordre->client_id, $ordre->cancelled_by);
+        $this->assertSame($this->client($ordre)->id, $ordre->cancelled_by);
         $this->assertTrue(ActivityLog::where('action', 'order.cancelled_by_client')->exists());
     }
 
@@ -101,7 +101,7 @@ class AnnulationClientTest extends TestCase
     {
         $ordre = $this->ordre('PENDING');
 
-        $this->actingAs(User::find(Client::factory()->create()->id))
+        $this->actingAs(Client::factory()->create()->compte())
             ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
             ->assertNotFound();
 

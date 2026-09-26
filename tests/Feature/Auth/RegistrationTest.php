@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -63,7 +62,8 @@ class RegistrationTest extends TestCase
 
         $this->assertNotNull($utilisateur);
         $this->assertSame('CLIENT', $utilisateur->role);
-        $this->assertNotNull(Client::find($utilisateur->id));
+        $this->assertNotNull($utilisateur->client);
+        $this->assertSame('ADMIN', $utilisateur->company_role);
     }
 
     public function test_le_role_ne_se_choisit_pas_dans_le_formulaire(): void
@@ -112,5 +112,25 @@ class RegistrationTest extends TestCase
             ->assertSessionHasErrors('conditions_acceptees');
 
         $this->assertDatabaseMissing('users', ['email' => 'contact@transports-essai.be']);
+    }
+
+    public function test_la_langue_de_l_inscription_devient_celle_des_courriels(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register', ['langue' => 'nl']), $this->formulaire())
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('nl', User::where('email', 'contact@transports-essai.be')->value('locale'));
+    }
+
+    public function test_une_adresse_en_majuscules_est_rangee_en_minuscules(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register'), $this->formulaire(['email' => 'Contact@Transports-Essai.BE']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull(User::where('email', 'contact@transports-essai.be')->first());
     }
 }

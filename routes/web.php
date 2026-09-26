@@ -3,12 +3,15 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\ClientValidationController;
+use App\Http\Controllers\CompanyUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\GeoController;
+use App\Http\Controllers\IndisponibiliteController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LangueController;
 use App\Http\Controllers\MissionController;
+use App\Http\Controllers\OrderChargeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PagePubliqueController;
 use App\Http\Controllers\PaymentController;
@@ -46,25 +49,47 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])
-            ->middleware('throttle:6,1')
+            ->middleware('throttle:6,1,profil-suppression')
             ->name('profile.destroy');
         Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
             ->name('transport-orders.create');
         Route::post('/transport-orders', [TransportOrderController::class, 'store'])
             ->name('transport-orders.store');
+        Route::post('/transport-orders/estimation', [TransportOrderController::class, 'estimation'])
+            ->middleware('throttle:60,1,estimation')
+            ->name('transport-orders.estimation');
         Route::get('/transport-orders', [TransportOrderController::class, 'index'])
             ->name('transport-orders.index');
 
         Route::get('/recherche', [RechercheController::class, 'suggestions'])
-            ->middleware('throttle:60,1')
+            ->middleware('throttle:60,1,recherche')
             ->name('recherche.suggestions');
         Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
             ->whereNumber('transportOrder')
             ->name('transport-orders.show');
         Route::patch('/transport-orders/{transportOrder}/annulation', [TransportOrderController::class, 'annuler'])
             ->whereNumber('transportOrder')
-            ->middleware('throttle:10,1')
+            ->middleware('throttle:10,1,annulation')
             ->name('transport-orders.cancel');
+
+        Route::middleware('can:manage-company')->group(function () {
+            Route::get('/entreprise/utilisateurs', [CompanyUserController::class, 'index'])->name('company.users.index');
+            Route::post('/entreprise/utilisateurs', [CompanyUserController::class, 'store'])
+                ->middleware('throttle:10,1,invitation')
+                ->name('company.users.store');
+            Route::patch('/entreprise/utilisateurs/{utilisateur}', [CompanyUserController::class, 'update'])
+                ->whereNumber('utilisateur')
+                ->name('company.users.update');
+        });
+
+        Route::middleware(['can:plan-orders', 'throttle:30,1,supplement'])->group(function () {
+            Route::post('/transport-orders/{transportOrder}/supplements', [OrderChargeController::class, 'store'])
+                ->whereNumber('transportOrder')
+                ->name('transport-orders.charges.store');
+            Route::delete('/transport-orders/{transportOrder}/supplements/{supplement}', [OrderChargeController::class, 'destroy'])
+                ->whereNumber(['transportOrder', 'supplement'])
+                ->name('transport-orders.charges.destroy');
+        });
 
         Route::middleware('can:plan-orders')->group(function () {
             Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
@@ -86,7 +111,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
 
             Route::post('/missions/{transportOrder}/position', [MissionController::class, 'position'])
-                ->middleware('throttle:30,1')
+                ->middleware('throttle:30,1,positions')
                 ->name('missions.position');
 
             Route::post('/missions/note', [MissionController::class, 'accuser'])->name('missions.notice');
@@ -99,9 +124,13 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
             ->middleware('can:control-payments')
             ->name('invoices.paid');
+        Route::post('/factures/{invoice}/avoir', [InvoiceController::class, 'avoir'])
+            ->whereNumber('invoice')
+            ->middleware(['can:control-payments', 'throttle:10,1,avoir'])
+            ->name('invoices.credit');
         Route::post('/factures/{invoice}/envoi', [InvoiceController::class, 'envoyer'])
             ->whereNumber('invoice')
-            ->middleware(['can:control-payments', 'throttle:10,1'])
+            ->middleware(['can:control-payments', 'throttle:10,1,envoi-facture'])
             ->name('invoices.send');
         Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
             ->whereNumber('invoice')
@@ -133,6 +162,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::middleware('can:manage-fleet')->group(function () {
             Route::patch('/vehicules/{vehicle:registration}', [VehicleController::class, 'update'])->name('vehicles.update');
             Route::patch('/chauffeurs/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+            Route::post('/chauffeurs/{driver}/indisponibilites', [IndisponibiliteController::class, 'chauffeur'])->name('drivers.unavailability');
+            Route::post('/vehicules/{vehicle:registration}/indisponibilites', [IndisponibiliteController::class, 'vehicule'])->name('vehicles.unavailability');
+            Route::delete('/indisponibilites/{indisponibilite}', [IndisponibiliteController::class, 'destroy'])->name('unavailability.destroy');
         });
 
         Route::middleware('can:manage-users')->group(function () {
@@ -183,12 +215,12 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
 
     Route::get('/tarifs', [TarifController::class, 'index'])->name('tarifs.index');
     Route::post('/tarifs/simulation', [TarifController::class, 'simuler'])
-        ->middleware('throttle:20,1')
+        ->middleware('throttle:20,1,simulation')
         ->name('tarifs.simuler');
 
     Route::get('/devis', [QuoteController::class, 'create'])->name('devis.create');
     Route::post('/devis', [QuoteController::class, 'store'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,devis')
         ->name('devis.store');
     Route::get('/devis/confirmation', [QuoteController::class, 'confirmation'])->name('devis.confirmation');
 
@@ -209,20 +241,20 @@ Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
         ->name('tracking.peages');
 });
 
-Route::middleware('throttle:120,1')->group(function () {
+Route::middleware('throttle:120,1,geo')->group(function () {
     Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
 });
 
 Route::get('/geo/numeros', [GeoController::class, 'numeros'])
-    ->middleware('throttle:15,1')
+    ->middleware('throttle:15,1,geo-numeros')
     ->name('geo.numeros');
 
 Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
     ->name('payments.webhook');
 
 Route::get('/verification-tva', [VatController::class, 'verifier'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:20,1,tva')
     ->name('vat.verify');
 
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])

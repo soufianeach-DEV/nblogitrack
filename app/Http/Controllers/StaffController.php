@@ -48,11 +48,11 @@ class StaffController extends Controller
         $requete = User::whereIn('role', array_keys(self::ROLES));
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('first_name', 'ilike', $terme)
-                ->orWhere('last_name', 'ilike', $terme)
-                ->orWhere('email', 'ilike', $terme));
+                ->whereContient('first_name', $terme)
+                ->orWhereContient('last_name', $terme)
+                ->orWhereContient('email', $terme));
         }
 
         if (! empty($filtres['role'])) {
@@ -65,7 +65,7 @@ class StaffController extends Controller
             default => null,
         };
 
-        $chauffeurs = Driver::whereIn('id', (clone $requete)->pluck('id'))->get()->keyBy('id');
+        $chauffeurs = Driver::whereIn('user_id', (clone $requete)->pluck('id'))->get()->keyBy('user_id');
 
         return Inertia::render('Personnel/Index', [
             'comptes' => $requete->orderBy('last_name')->orderBy('first_name')->get()
@@ -85,6 +85,7 @@ class StaffController extends Controller
                         'permis' => $chauffeur?->license_type,
                         'empechements' => $chauffeur?->empechements() ?? [],
                         'sorti_le' => $chauffeur?->left_on?->format('d/m/Y'),
+                        'depart_futur' => $chauffeur?->left_on !== null && $chauffeur->left_on->gt(today()),
                     ];
                 })->all(),
             'roles' => self::roles(),
@@ -132,7 +133,7 @@ class StaffController extends Controller
 
             if ($donnees['role'] === 'DRIVER') {
                 Driver::create([
-                    'id' => $utilisateur->id,
+                    'user_id' => $utilisateur->id,
                     'license_number' => $donnees['license_number'],
                     'license_type' => $donnees['license_type'],
                     'license_expiry' => $donnees['license_expiry'],
@@ -150,7 +151,7 @@ class StaffController extends Controller
         // Le compte existe deja : une panne du serveur de courriel ne doit
         // pas se changer en erreur cinq cents, qui laisserait croire a un
         // echec et bloquerait le nouvel essai sur « adresse deja utilisee ».
-        $envoye = $this->envoyerLien($utilisateur);
+        $envoye = $this->envoyerLien($utilisateur) === 'envoye';
 
         ActivityLog::record(
             'staff.created',
@@ -181,9 +182,21 @@ class StaffController extends Controller
             ]);
         }
 
+        // Un chauffeur sorti des effectifs ne revient pas par ce bouton : sa
+        // date de sortie se retire d'abord sur l'ecran Chauffeurs.
+        $sortie = $user->isDriver() ? $user->driver?->left_on : null;
+
+        if (! $user->is_active && $sortie !== null && $sortie->lte(now())) {
+            return back()->withErrors([
+                'is_active' => Traductions::t('msg.chauffeur_sorti', 'Ce chauffeur a quitté l\'entreprise le :date : retirez sa date de sortie sur l\'écran Chauffeurs avant de réactiver son compte.', [
+                    'date' => $sortie->format('d/m/Y'),
+                ]),
+            ]);
+        }
+
         if ($user->is_active && $user->isDriver()) {
             $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
-                ->where('driver_id', $user->id)
+                ->where('driver_id', $user->driver?->id)
                 ->exists();
 
             if ($engage) {
@@ -218,16 +231,22 @@ class StaffController extends Controller
             : Traductions::t('msg.compte_ferme', 'Compte désactivé.'));
     }
 
-    private function envoyerLien(User $user): bool
+    /**
+     * @return 'envoye'|'attente'|'panne'
+     */
+    private function envoyerLien(User $user): string
     {
         try {
-            Password::sendResetLink(['email' => $user->email]);
-
-            return true;
+            // Le courtier refuse un second lien dans la minute : il le dit
+            // par son statut, sans exception. L'ignorer annoncait « Lien
+            // envoye » alors que rien n'etait parti.
+            return Password::sendResetLink(['email' => $user->email]) === Password::RESET_THROTTLED
+                ? 'attente'
+                : 'envoye';
         } catch (\Throwable $e) {
             report($e);
 
-            return false;
+            return 'panne';
         }
     }
 
@@ -246,7 +265,17 @@ class StaffController extends Controller
     {
         abort_if(! array_key_exists($user->role, self::ROLES), 404);
 
-        if (! $this->envoyerLien($user)) {
+        if (! $user->is_active) {
+            return back()->with('error', Traductions::t('msg.lien_compte_ferme', 'Ce compte est fermé : réactivez-le avant d\'envoyer un lien.'));
+        }
+
+        $resultat = $this->envoyerLien($user);
+
+        if ($resultat === 'attente') {
+            return back()->with('error', Traductions::t('msg.lien_deja_envoye', 'Un lien vient déjà de partir vers cette adresse. Réessayez dans une minute.'));
+        }
+
+        if ($resultat === 'panne') {
             return back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'));
         }
 

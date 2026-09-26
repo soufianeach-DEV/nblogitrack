@@ -7,7 +7,9 @@ use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\GeocodageIndisponible;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
@@ -67,21 +69,40 @@ class ExpeditionController extends Controller
         $donnees = $request->validate([
             'enlevement' => 'required|string|max:255',
             'livraison' => 'required|string|max:255',
-            'poids' => 'required|numeric|min:1|max:44000',
+            'poids' => 'required|numeric|min:1|max:'.Vehicle::chargeUtileMaxKg(),
+            'volume' => 'nullable|numeric|min:0.1|max:'.Vehicle::volumeMaxM3(),
             'marchandise' => ['required', Rule::in(TransportOrder::MARCHANDISES)],
             'date_enlevement' => 'required|date|after_or_equal:today',
             'date_livraison' => 'required|date|after_or_equal:date_enlevement',
-            'matieres_dangereuses' => 'boolean',
+            // Pour les marchandises souvent soumises a l'ADR, l'appelant
+            // declare explicitement si l'envoi l'est.
+            'matieres_dangereuses' => [Rule::requiredIf(fn () => in_array($request->input('marchandise'), TransportOrder::MARCHANDISES_ADR, true)), 'boolean'],
             'hayon' => 'boolean',
             'instructions' => 'nullable|string|max:500',
             'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
             'formule' => ['nullable', Rule::in(['ECO', 'STANDARD', 'EXPRESS'])],
         ]);
 
+        // Un envoi qu'aucun camion ne peut prendre (ADR avec hayon, 20 t...)
+        // ne serait jamais affecte : refuse tout de suite.
+        $volume = isset($donnees['volume']) ? (float) $donnees['volume'] : null;
+        $adr = (bool) ($donnees['matieres_dangereuses'] ?? false);
+        $hayon = (bool) ($donnees['hayon'] ?? false);
+
+        if (! Vehicle::peutPorter((float) $donnees['poids'], $volume, $adr, $hayon)) {
+            return response()->json(['message' => Vehicle::refusFlotte((float) $donnees['poids'], $volume, $adr, $hayon)], 422);
+        }
+
         $pays = strtoupper($donnees['pays_livraison'] ?? '')
             ?: (Pays::depuisNom(Adresse::pays($donnees['livraison'])) ?? 'BE');
 
-        $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+        try {
+            $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+        } catch (GeocodageIndisponible) {
+            return response()->json([
+                'message' => 'La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.',
+            ], 503)->header('Retry-After', '120');
+        }
 
         if (is_string($points)) {
             return response()->json(['message' => $points], 422);
@@ -112,6 +133,7 @@ class ExpeditionController extends Controller
             'delivery_lat' => $points['livraison']->lat,
             'delivery_lng' => $points['livraison']->lng,
             'weight' => $donnees['poids'],
+            'volume' => $donnees['volume'] ?? null,
             'goods_type' => $donnees['marchandise'],
             'is_hazardous' => $adr,
             'needs_tail_lift' => $request->boolean('hayon'),

@@ -8,7 +8,10 @@ const ETATS = {
     SENT: { cle: 'statut.envoyee', libelle: 'Envoyée', classe: 'bg-brand-blue/10 text-brand-blue' },
     PAID: { cle: 'statut.payee', libelle: 'Payée', classe: 'bg-status-delivered/10 text-status-delivered' },
     OVERDUE: { cle: 'statut.en_retard', libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
+    CREDITED: { cle: 'facture.annulee_avoir', libelle: 'Annulée par avoir', classe: 'bg-slate-100 text-slate-500 line-through' },
 };
+
+const AVOIR = { cle: 'facture.avoir', libelle: 'Avoir', classe: 'bg-action/20 text-marine' };
 
 export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false }) {
     const { canPlan } = usePage().props.auth;
@@ -75,7 +78,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                         </thead>
                         <tbody>
                             {factures.data.map((facture) => {
-                                const etat = ETATS[facture.etat] ?? ETATS.SENT;
+                                const etat = facture.avoir ? AVOIR : (ETATS[facture.etat] ?? ETATS.SENT);
 
                                 return (
                                     <tr
@@ -112,7 +115,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                                     {t('facture.tva_due_client', 'TVA due par le client')}
                                                 </span>
                                             )}
-                                            {euros(facture.ttc)}
+                                            {facture.avoir ? '− ' : ''}{euros(facture.ttc)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>

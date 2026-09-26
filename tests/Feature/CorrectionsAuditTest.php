@@ -41,7 +41,9 @@ class CorrectionsAuditTest extends TestCase
         $utilisateur = User::factory()->chauffeur()->create();
 
         return Driver::create([
-            'id' => $utilisateur->id,
+            'cpc_expiry' => now()->addYears(2)->toDateString(),
+            'tacho_card_expiry' => now()->addYears(2)->toDateString(),
+            'user_id' => $utilisateur->id,
             'license_number' => 'PERMIS-'.$utilisateur->id,
             'license_type' => 'CE',
             'license_expiry' => now()->addYears(3)->toDateString(),
@@ -66,7 +68,8 @@ class CorrectionsAuditTest extends TestCase
 
         TransportOrder::factory()->create();
 
-        User::find($client->id)->delete();
+        $client->users()->delete();
+        $client->delete();
 
         $this->assertNull(ApiKey::find($cle->id));
         $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])
@@ -116,9 +119,7 @@ class CorrectionsAuditTest extends TestCase
 
     public function test_la_communication_structuree_reste_valide_apres_le_client_mille(): void
     {
-        $client = Client::factory()->create([
-            'id' => User::factory()->create(['id' => 12345])->id,
-        ]);
+        $client = Client::factory()->create(['id' => 12345]);
         $this->livree($client, '2026-03-04');
 
         $reference = app(Facturier::class)->facturer()->first()->payment_reference;
@@ -144,7 +145,7 @@ class CorrectionsAuditTest extends TestCase
     {
         $client = Client::factory()->create();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), ['weight' => 0])
             ->assertSessionHasErrors('weight');
     }
@@ -154,7 +155,7 @@ class CorrectionsAuditTest extends TestCase
         $client = Client::factory()->create();
         $grille = TariffGrid::factory()->create(['is_active' => false]);
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), ['tariff_grid_id' => $grille->id])
             ->assertSessionHasErrors('tariff_grid_id');
     }
@@ -213,14 +214,14 @@ class CorrectionsAuditTest extends TestCase
             'driver_id' => $chauffeur->id,
         ]);
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->get(route('transport-orders.show', $ordre))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->missing('order.driver')
                 ->has('chauffeur'));
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->get(route('tracking.show', ['tracking_number' => $ordre->tracking_number]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -250,7 +251,7 @@ class CorrectionsAuditTest extends TestCase
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->patch(route('planning.status', $ordre), ['status' => 'IN_PROGRESS'])
-            ->assertSessionHasErrors('status');
+            ->assertSessionHas('error');
 
         $this->assertSame('PENDING', $ordre->refresh()->status);
     }
@@ -283,14 +284,14 @@ class CorrectionsAuditTest extends TestCase
         $client = Client::factory()->create();
         TransportOrder::factory()->create(['client_id' => $client->id]);
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->from(route('profile.edit'))
             ->delete(route('profile.destroy'), ['password' => 'password'])
             ->assertSessionHasErrors('password')
             ->assertRedirect(route('profile.edit'));
 
         $this->assertAuthenticated();
-        $this->assertNotNull(User::find($client->id));
+        $this->assertNotNull($client->compte());
     }
 
     // --- Authentification --------------------------------------------------
@@ -323,9 +324,15 @@ class CorrectionsAuditTest extends TestCase
                 ->assertSessionHasErrors('password');
         }
 
+        // La septieme tentative est refusee avant meme d'etre verifiee :
+        // l'utilisateur revient sur sa page avec un message qui dit
+        // d'attendre, plutot qu'une page « 429 » brute.
         $this->actingAs($utilisateur)
-            ->post(route('password.confirm'), ['password' => 'essai-7'])
-            ->assertTooManyRequests();
+            ->from(route('password.confirm'))
+            ->post(route('password.confirm'), ['password' => 'password'])
+            ->assertRedirect(route('password.confirm'))
+            ->assertSessionHas('error')
+            ->assertSessionMissing('auth.password_confirmed_at');
     }
 
     public function test_le_lien_de_reinitialisation_ne_revele_pas_les_comptes(): void

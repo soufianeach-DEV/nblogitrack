@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 
 class Page extends Model
 {
+    use DatesHeureDeBruxelles;
+
     protected $fillable = [
         'slug', 'titre_fr', 'titre_nl', 'titre_en',
         'corps_fr', 'corps_nl', 'corps_en',

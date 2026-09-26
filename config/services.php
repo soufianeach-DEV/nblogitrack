@@ -39,6 +39,8 @@ return [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        // Vide en production : l'API de Stripe. Renseigne pour un emulateur.
+        'api_base' => env('STRIPE_API_BASE'),
     ],
 
 ];

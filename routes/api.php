@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\ExpeditionController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware('throttle:120,1')->group(function () {
+Route::prefix('v1')->middleware('throttle:120,1,api')->group(function () {
     Route::middleware('cle.api:lecture')->group(function () {
         Route::get('/expeditions', [ExpeditionController::class, 'index'])
             ->name('api.expeditions.index');

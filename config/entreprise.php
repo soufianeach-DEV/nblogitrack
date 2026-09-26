@@ -4,7 +4,7 @@
 // puisent au meme endroit. Le numero d'entreprise porte une cle de controle
 // valide, et l'IBAN est le compte d'essai officiel du format belge.
 return [
-    'nom' => 'NBLogiTrack SA',
+    'nom' => 'NBLogiTrack SRL',
     'adresse' => 'Avenue du Port 86C',
     'localite' => '1000 Bruxelles',
     'pays' => 'Belgique',

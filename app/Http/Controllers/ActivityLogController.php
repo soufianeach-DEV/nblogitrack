@@ -22,18 +22,68 @@ class ActivityLogController extends Controller
         'client.validated' => 'Validation entreprise',
         'client.rejected' => 'Refus entreprise',
         'quote.handled' => 'Traitement de devis',
+        'order.created_api' => 'Création d\'ordre par API',
+        'order.unassigned' => 'Désaffectation',
+        'order.reassigned' => 'Réaffectation',
+        'order.charge_added' => 'Supplément ajouté',
+        'order.charge_removed' => 'Supplément retiré',
+        'invoice.credited' => 'Avoir émis',
+        'company.user_invited' => 'Collègue invité',
+        'company.user_updated' => 'Droits d\'un collègue modifiés',
+        'order.cancelled_by_client' => 'Annulation par le client',
+        'order.tracking_opened' => 'Suivi direct ouvert',
+        'order.tracking_closed' => 'Suivi direct fermé',
+        'mission.started' => 'Enlèvement confirmé',
+        'mission.delivered' => 'Livraison confirmée',
+        'invoices.generated' => 'Émission des factures',
+        'invoice.sent' => 'Facture envoyée',
+        'invoice.send_failed' => 'Échec d\'envoi de facture',
+        'invoice.paid' => 'Facture payée',
+        'invoice.paid_online' => 'Paiement en ligne',
+        'invoice.payment_duplicate' => 'Paiement en double',
+        'invoice.payment_rejected' => 'Paiement refusé',
+        'purchase.created' => 'Facture d\'achat encodée',
+        'purchase.paid' => 'Facture d\'achat payée',
+        'staff.created' => 'Compte du personnel créé',
+        'staff.enabled' => 'Compte réactivé',
+        'staff.disabled' => 'Compte désactivé',
+        'staff.reset_link' => 'Lien de mot de passe',
+        'driver.updated' => 'Fiche chauffeur modifiée',
+        'driver.left' => 'Sortie d\'un chauffeur',
+        'driver.notice_sent' => 'Note aux conducteurs envoyée',
+        'driver.notice_acknowledged' => 'Prise de connaissance de la note',
+        'vehicle.updated' => 'Véhicule modifié',
+        'page.created' => 'Page créée',
+        'page.updated' => 'Page modifiée',
+        'page.published' => 'Page publiée',
+        'page.unpublished' => 'Page dépubliée',
+        'page.deleted' => 'Page supprimée',
+        'document.uploaded' => 'Document ajouté',
+        'document.deleted' => 'Document supprimé',
+        'translation.updated' => 'Traduction modifiée',
+        'api_key.created' => 'Clé d\'API créée',
+        'api_key.revoked' => 'Clé d\'API révoquée',
+        'processing_record.updated' => 'Registre RGPD modifié',
     ];
 
     public function index(Request $request): Response
     {
+        // Un filtre transmis comme tableau (?ip[]=1) faisait tomber la page
+        // en erreur 500 : seuls les textes sont retenus.
+        foreach (['utilisateur', 'action', 'ip', 'du', 'au'] as $filtre) {
+            if (! is_string($request->query($filtre))) {
+                $request->query->remove($filtre);
+            }
+        }
+
         $query = ActivityLog::with('user:id,first_name,last_name,email,role')->latest('created_at');
 
         if ($request->filled('utilisateur')) {
             $recherche = $request->string('utilisateur')->toString();
             $query->whereHas('user', function ($q) use ($recherche) {
-                $q->where('email', 'ilike', '%'.$recherche.'%')
-                    ->orWhere('first_name', 'ilike', '%'.$recherche.'%')
-                    ->orWhere('last_name', 'ilike', '%'.$recherche.'%');
+                $q->whereContient('email', (string) $recherche)
+                    ->orWhereContient('first_name', (string) $recherche)
+                    ->orWhereContient('last_name', (string) $recherche);
             });
         }
 
@@ -42,15 +92,23 @@ class ActivityLogController extends Controller
         }
 
         if ($request->filled('ip')) {
-            $query->where('ip_address', 'ilike', '%'.$request->query('ip').'%');
+            $query->whereContient('ip_address', (string) $request->query('ip'));
         }
 
-        if ($request->filled('du')) {
-            $query->whereDate('created_at', '>=', $request->query('du'));
+        // Une date mal formee dans l'adresse faisait tomber la page en
+        // erreur 500 : elle est simplement ignoree.
+        $date = function (?string $valeur): ?string {
+            $d = \DateTime::createFromFormat('!Y-m-d', (string) $valeur);
+
+            return $d && $d->format('Y-m-d') === $valeur ? $valeur : null;
+        };
+
+        if ($du = $date($request->query('du'))) {
+            $query->whereDate('created_at', '>=', $du);
         }
 
-        if ($request->filled('au')) {
-            $query->whereDate('created_at', '<=', $request->query('au'));
+        if ($au = $date($request->query('au'))) {
+            $query->whereDate('created_at', '<=', $au);
         }
 
         return Inertia::render('ActivityLogs/Index', [

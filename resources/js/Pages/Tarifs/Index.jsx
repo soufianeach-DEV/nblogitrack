@@ -2,11 +2,28 @@ import Icone from '@/Components/Icone';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
+// Pays sans codes postaux (la Grece) : le serveur n'a pas de liste de
+// localites, Photon propose les siennes, que le serveur sait verifier.
+const villesPhoton = async (q, pays) => {
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=fr&limit=10&layer=city&layer=district&layer=locality`);
+
+    if (! r.ok) return [];
+
+    const { features = [] } = await r.json();
+
+    return features
+        .filter((f) => f.properties?.name && (f.properties.countrycode || '').toUpperCase() === pays)
+        .map((f) => ({ ville: f.properties.name, region: f.properties.state || null, code: null }));
+};
+
+function ChoixVille({ id, pays, enLigne = false, valeur, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [minuteur, setMinuteur] = useState(null);
+    // Une reponse qui arrive apres que le champ a perdu le focus ne doit
+    // pas rouvrir la liste par-dessus le reste du formulaire.
+    const actif = useRef(false);
 
     const saisir = (texte) => {
         onChange(texte);
@@ -18,11 +35,19 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
             return;
         }
 
-        setMinuteur(setTimeout(() => {
-            fetch(route('geo.villes', { pays, q: texte.trim() }), { headers: { Accept: 'application/json' } })
+        setMinuteur(setTimeout(async () => {
+            const q = texte.trim();
+            let villes = await fetch(route('geo.villes', { pays, q }), { headers: { Accept: 'application/json' } })
                 .then((r) => (r.ok ? r.json() : []))
-                .then((villes) => setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []))
-                .catch(() => setSuggestions([]));
+                .catch(() => []);
+
+            if (enLigne && (! Array.isArray(villes) || villes.length === 0)) {
+                villes = await villesPhoton(q, pays).catch(() => []);
+            }
+
+            if (actif.current) {
+                setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []);
+            }
         }, 200));
     };
 
@@ -32,15 +57,20 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
                 id={id}
                 value={valeur}
                 onChange={(e) => saisir(e.target.value)}
-                onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+                onFocus={() => { actif.current = true; }}
+                onBlur={() => {
+                    actif.current = false;
+                    clearTimeout(minuteur);
+                    setTimeout(() => setSuggestions([]), 150);
+                }}
                 placeholder={placeholder}
                 autoComplete="off"
                 className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
             />
             {suggestions.length > 0 && (
                 <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {suggestions.map((ville) => (
-                        <li key={ville.ville + ville.code}>
+                    {suggestions.map((ville, i) => (
+                        <li key={`${i}-${ville.ville}-${ville.code ?? ''}`}>
                             <button
                                 type="button"
                                 onMouseDown={(e) => e.preventDefault()}
@@ -57,6 +87,12 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
         </div>
     );
 }
+
+const NOM_FORMULE = {
+    'Éco': ['commande.offre_eco', 'Éco'],
+    Standard: ['commande.offre_standard', 'Standard'],
+    Express: ['commande.offre_express', 'Express'],
+};
 
 export default function Index({ destinations = [], formules = [] }) {
     const t = useTraduction();
@@ -158,6 +194,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <ChoixVille
                                     id="destination"
                                     pays={pays}
+                                    enLigne={destinations.find((d) => d.code === pays)?.en_ligne === true}
                                     valeur={destination}
                                     onChange={setDestination}
                                     placeholder={t('tarifs.taper', 'Commencez à taper…')}
@@ -229,7 +266,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 {resultat.formules.map((f) => (
                                     <div key={f.formule} className="rounded-xl border border-slate-200 p-5 text-center">
                                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            {f.formule}
+                                            {NOM_FORMULE[f.formule] ? t(...NOM_FORMULE[f.formule]) : f.formule}
                                         </p>
                                         <p className="mt-2 text-2xl font-bold text-marine">{euros(f.prix)}</p>
                                         <p className="mt-1 text-sm text-slate-600">
@@ -270,7 +307,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                     <Icone nom="camion" className="h-5 w-5" />
                                 </span>
                                 <p className="text-sm text-slate-600">
-                                    <span className="block font-semibold text-marine">{formule}</span>
+                                    <span className="block font-semibold text-marine">{NOM_FORMULE[formule] ? t(...NOM_FORMULE[formule]) : formule}</span>
                                     {formule === 'Express'
                                         ? t('tarifs.express_texte', 'Un véhicule pour vous seul, au plus court.')
                                         : formule === 'Standard'

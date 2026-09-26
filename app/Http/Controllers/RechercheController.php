@@ -26,7 +26,7 @@ class RechercheController extends Controller
 
         $suggestions = $personnel
             ? $this->pourLePersonnel($terme)
-            : $this->pourLeClient($terme, $utilisateur->id);
+            : $this->pourLeClient($terme, (int) $utilisateur->client_id);
 
         return response()->json(['suggestions' => array_slice($suggestions, 0, self::MAXIMUM)]);
     }
@@ -34,11 +34,11 @@ class RechercheController extends Controller
     /** @return array<int, array<string, string>> */
     private function pourLePersonnel(string $terme): array
     {
-        $filtre = '%'.$terme.'%';
+        $filtre = (string) $terme;
 
         $entreprises = Client::where(fn ($q) => $q
-            ->where('company_name', 'ilike', $filtre)
-            ->orWhere('vat_number', 'ilike', $filtre))
+            ->whereContient('company_name', $filtre)
+            ->orWhereContient('vat_number', $filtre))
             ->orderBy('company_name')
             ->limit(self::MAXIMUM)
             ->get(['id', 'company_name', 'vat_number', 'city'])
@@ -46,7 +46,11 @@ class RechercheController extends Controller
                 'type' => 'entreprise',
                 'libelle' => $c->company_name,
                 'detail' => trim($c->vat_number.' · '.Traductions::vocabulaire('ville', (string) $c->city), ' ·'),
-                'url' => route('clients.index', ['etat' => 'tout', 'q' => $c->company_name]),
+                // L'ecran Entreprises est reserve a l'administrateur ; le
+                // planificateur arrive sur les expeditions de l'entreprise.
+                'url' => request()->user()->can('validate-clients')
+                    ? route('clients.index', ['etat' => 'tout', 'q' => $c->company_name])
+                    : route('transport-orders.index', ['client' => $c->company_name]),
             ])->all();
 
         return array_merge($entreprises, $this->expeditions($terme, null));
@@ -63,13 +67,14 @@ class RechercheController extends Controller
      */
     private function expeditions(string $terme, ?int $client): array
     {
-        $filtre = '%'.$terme.'%';
+        $filtre = (string) $terme;
 
         return TransportOrder::with('client:id,company_name')
             ->when($client !== null, fn ($q) => $q->where('client_id', $client))
             ->where(fn ($q) => $q
-                ->where('tracking_number', 'ilike', $filtre)
-                ->orWhere('delivery_address', 'ilike', $filtre))
+                ->whereContient('tracking_number', $filtre)
+                ->orWhereContient('pickup_address', $filtre)
+                ->orWhereContient('delivery_address', $filtre))
             ->orderByDesc('id')
             ->limit(self::MAXIMUM)
             ->get()

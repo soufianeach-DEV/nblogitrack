@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Support\PaiementStripe;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Stripe\Exception\ExceptionInterface as ErreurStripe;
 use Stripe\Exception\SignatureVerificationException;
-use Stripe\StripeClient;
 use Stripe\Webhook;
 use Symfony\Component\HttpFoundation\Response as BaseResponse;
 
@@ -21,33 +21,37 @@ class PaymentController extends Controller
     {
         $this->autoriserPaiement($request, $invoice);
 
-        if ($invoice->status !== 'SENT') {
+        if (! $invoice->estAPayer() || $invoice->solde() <= 0) {
             return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));
         }
 
-        $stripe = new StripeClient(config('services.stripe.secret'));
+        // Sans cle Stripe, ou si Stripe refuse, le client reste sur sa
+        // facture avec un message, au lieu d'une erreur 500.
+        if (! PaiementStripe::actif()) {
+            return back()->with('error', Traductions::t('msg.paiement_en_ligne_indisponible', 'Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.'));
+        }
 
-        $session = $stripe->checkout->sessions->create([
-            'mode' => 'payment',
-            'client_reference_id' => (string) $invoice->id,
-            'customer_email' => $request->user()->email,
-            'line_items' => [[
-                'quantity' => 1,
-                'price_data' => [
-                    'currency' => 'eur',
-                    'unit_amount' => (int) round((float) $invoice->amount_incl_tax * 100),
-                    'product_data' => [
-                        'name' => Traductions::t('msg.stripe_facture', 'Facture :reference', ['reference' => $invoice->reference]),
-                        'description' => Traductions::t('msg.stripe_periode', 'Transport du :debut au :fin', [
-                            'debut' => $invoice->period_start->format('d/m/Y'),
-                            'fin' => $invoice->period_end->format('d/m/Y'),
-                        ]),
-                    ],
-                ],
-            ]],
-            'success_url' => route('payments.retour', $invoice).'?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => route('invoices.show', $invoice),
-        ]);
+        // Un virement lance depuis Stripe est en cours : un second paiement
+        // ferait payer deux fois la meme facture.
+        if ($invoice->online_payment_pending_at !== null) {
+            return back()->with('error', Traductions::t('msg.paiement_deja_en_cours', 'Un paiement en ligne de cette facture est en cours de traitement par la banque depuis le :date : il sera enregistré dès sa réception.', [
+                'date' => $invoice->online_payment_pending_at->format('d/m/Y'),
+            ]));
+        }
+
+        try {
+            // Le verrou sur la facture : deux clics simultanes ne creent
+            // qu'une session.
+            $session = DB::transaction(function () use ($invoice, $request) {
+                $facture = Invoice::whereKey($invoice->id)->lockForUpdate()->first();
+
+                return PaiementStripe::sessionPourPayer($facture, $request->user());
+            });
+        } catch (ErreurStripe $e) {
+            report($e);
+
+            return back()->with('error', Traductions::t('msg.paiement_en_ligne_indisponible', 'Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.'));
+        }
 
         return Inertia::location($session->url);
     }
@@ -56,32 +60,34 @@ class PaymentController extends Controller
     {
         $this->autoriserPaiement($request, $invoice);
 
-        $regle = $invoice->status === 'PAID';
+        $etat = null;
+        $montant = null;
 
-        if (! $regle && $request->filled('session_id')) {
-            $regle = $this->sessionAcquittee((string) $request->query('session_id'), $invoice);
+        // Le paiement s'enregistre des le retour du client, sans attendre
+        // la notification de Stripe : il reste compte une seule fois si
+        // celle-ci arrive ensuite.
+        if ($request->filled('session_id') && PaiementStripe::actif()) {
+            try {
+                $session = PaiementStripe::lireSession((string) $request->query('session_id'));
+                $etat = PaiementStripe::enregistrer($session, $invoice);
+                $montant = ((int) $session->amount_total) / 100;
+            } catch (ErreurStripe $e) {
+                report($e);
+            }
         }
+
+        $invoice->refresh();
 
         return Inertia::render('Factures/Paiement', [
             'reference' => $invoice->reference,
             'facture_id' => $invoice->id,
-            'montant' => (float) $invoice->amount_incl_tax,
-            'regle' => $regle,
-            'enregistre' => $invoice->status === 'PAID',
+            'montant' => $montant ?? (float) $invoice->amount_incl_tax,
+            'regle' => in_array($etat, ['enregistre', 'deja'], true) || ($etat === null && $invoice->status === 'PAID'),
+            'double' => $etat === 'excedent',
+            'en_attente' => $etat === 'en_attente',
+            'solde' => $invoice->solde(),
+            'enregistre' => in_array($etat, ['enregistre', 'deja'], true) || $invoice->status === 'PAID',
         ]);
-    }
-
-    private function sessionAcquittee(string $identifiant, Invoice $invoice): bool
-    {
-        try {
-            $session = (new StripeClient(config('services.stripe.secret')))
-                ->checkout->sessions->retrieve($identifiant);
-        } catch (ErreurStripe) {
-            return false;
-        }
-
-        return $session->payment_status === 'paid'
-            && (string) $session->client_reference_id === (string) $invoice->id;
     }
 
     public function webhook(Request $request): JsonResponse
@@ -98,93 +104,41 @@ class PaymentController extends Controller
                 $request->header('Stripe-Signature', ''),
                 $secret,
             );
-        } catch (SignatureVerificationException) {
+        } catch (SignatureVerificationException|\UnexpectedValueException) {
             return response()->json(['message' => 'Signature invalide.'], 400);
         }
 
-        if ($evenement->type !== 'checkout.session.completed') {
+        // Un paiement differe (virement SEPA...) arrive par
+        // async_payment_succeeded, apres un completed encore impaye.
+        if (! in_array($evenement->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed'], true)) {
             return response()->json(['message' => 'Ignoré.']);
         }
 
         $session = $evenement->data->object;
         $invoice = Invoice::find($session->client_reference_id);
 
-        if ($invoice === null || $session->payment_status !== 'paid') {
+        if ($invoice === null) {
             return response()->json(['message' => 'Sans effet.']);
         }
 
-        if ($ecart = $this->discordance($evenement, $session, $invoice)) {
-            ActivityLog::record(
-                'invoice.payment_rejected',
-                'Notification de paiement refusée pour '.$invoice->reference.' : '.$ecart,
-                $invoice,
-                ['session_stripe' => $session->id, 'motif' => $ecart],
-            );
+        // Le virement differe n'est pas arrive : la facture redevient
+        // payable.
+        if ($evenement->type === 'checkout.session.async_payment_failed') {
+            PaiementStripe::echec($session, $invoice);
 
-            return response()->json(['message' => 'Notification incohérente, sans effet.']);
+            return response()->json(['message' => 'Paiement échoué, facture de nouveau payable.']);
         }
 
-        // Le passage a PAID se fait en une seule requete conditionnelle :
-        // deux notifications simultanees ne l'ecrivent qu'une fois. Celle
-        // qui arrive apres ne reste pas muette : une autre session payee
-        // pour une facture deja reglee est un double encaissement a
-        // rembourser.
-        $passee = Invoice::whereKey($invoice->id)
-            ->where('status', '!=', 'PAID')
-            ->update(['status' => 'PAID', 'paid_on' => now()]);
-
-        if ($passee === 0) {
-            ActivityLog::record(
-                'invoice.payment_duplicate',
-                'Paiement en ligne reçu pour '.$invoice->reference.', déjà réglée : à rembourser',
-                $invoice,
-                [
-                    'montant' => (string) $invoice->amount_incl_tax,
-                    'session_stripe' => $session->id,
-                ],
-            );
-
-            return response()->json(['message' => 'Déjà enregistré.']);
-        }
-
-        ActivityLog::record(
-            'invoice.paid_online',
-            'Paiement en ligne reçu pour '.$invoice->reference,
-            $invoice,
-            [
-                'montant' => (string) $invoice->amount_incl_tax,
-                'session_stripe' => $session->id,
-            ],
-        );
-
-        return response()->json(['message' => 'Enregistré.']);
-    }
-
-    private function discordance(object $evenement, object $session, Invoice $invoice): ?string
-    {
-        $reel = str_starts_with((string) config('services.stripe.secret'), 'sk_live_');
-
-        if ((bool) $evenement->livemode !== $reel) {
-            return 'mode '.($evenement->livemode ? 'réel' : 'test')
-                .' alors que l\'application est en '.($reel ? 'réel' : 'test');
-        }
-
-        $attendu = (int) round((float) $invoice->amount_incl_tax * 100);
-
-        if ((int) $session->amount_total !== $attendu) {
-            return 'montant reçu '.$session->amount_total.' contre '.$attendu.' attendu';
-        }
-
-        if (strtolower((string) $session->currency) !== 'eur') {
-            return 'devise '.$session->currency.' au lieu de eur';
-        }
-
-        return null;
+        return response()->json(['message' => match (PaiementStripe::enregistrer($session, $invoice)) {
+            'enregistre' => 'Enregistré.',
+            'deja', 'excedent' => 'Déjà enregistré.',
+            'en_attente' => 'En attente du paiement.',
+            'refuse' => 'Notification incohérente, sans effet.',
+        }]);
     }
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void
     {
-        abort_if($request->user()->cannot('view-all-orders')
-            && $invoice->client_id !== $request->user()->id, 404);
+        abort_unless($request->user()->can('view-all-orders') || $request->user()->can('pay', $invoice), 404);
     }
 }

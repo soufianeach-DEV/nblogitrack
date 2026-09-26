@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 
-export default function Paiement({ reference, facture_id: factureId, montant, regle, enregistre }) {
+export default function Paiement({ reference, facture_id: factureId, montant, regle, enregistre, en_attente: enAttente = false, double = false }) {
     const t = useTraduction();
 
     const locale = useLocale();
@@ -22,7 +22,19 @@ export default function Paiement({ reference, facture_id: factureId, montant, re
             <Head title={t('facture.paiement', 'Paiement') + ' ' + reference} />
 
             <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 text-center shadow-sm">
-                {regle ? (
+                {double ? (
+                    <>
+                        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-status-incident/10 text-status-incident">
+                            <Icone nom="facture" className="h-7 w-7" />
+                        </span>
+                        <h2 className="mt-4 text-xl font-bold text-marine">
+                            {t('facture.paiement_double', 'Facture déjà réglée')}
+                        </h2>
+                        <p className="mt-2 text-slate-600">
+                            {t('facture.paiement_double_texte', 'La facture :reference était déjà payée : ce paiement de :montant vous sera remboursé, sans démarche de votre part.', { reference, montant: euros(montant) })}
+                        </p>
+                    </>
+                ) : regle ? (
                     <>
                         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-status-delivered/10 text-status-delivered">
                             <Icone nom="facture" className="h-7 w-7" />
@@ -42,6 +54,18 @@ export default function Paiement({ reference, facture_id: factureId, montant, re
                                 {t('facture.attente_notification', 'Votre banque a accepté le paiement. Son enregistrement définitif nous parvient par une notification signée de l\'opérateur, ce qui prend quelques secondes : la facture peut rester affichée comme envoyée un court instant.')}
                             </p>
                         )}
+                    </>
+                ) : enAttente ? (
+                    <>
+                        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue">
+                            <Icone nom="facture" className="h-7 w-7" />
+                        </span>
+                        <h2 className="mt-4 text-xl font-bold text-marine">
+                            {t('facture.paiement_en_cours', 'Paiement en cours')}
+                        </h2>
+                        <p className="mt-2 text-slate-600">
+                            {t('facture.paiement_differe', 'Votre banque traite le paiement de :montant (par exemple un virement SEPA). La facture :reference sera marquée payée dès sa réception, en général sous quelques jours ouvrables.', { montant: euros(montant), reference })}
+                        </p>
                     </>
                 ) : (
                     <>

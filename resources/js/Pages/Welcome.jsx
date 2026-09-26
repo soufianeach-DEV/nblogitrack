@@ -1,3 +1,4 @@
+import MenuVitrineMobile from '@/Components/MenuVitrineMobile';
 import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
@@ -89,8 +90,8 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </nav>
 
                         <div className="ml-auto flex items-center gap-3">
-                            {}
                             <ChoixLangue />
+                            <MenuVitrineMobile ancres="#" />
 
                             {auth?.user ? (
                                 <Link href={route('dashboard')} className={boutonAction}>
@@ -158,7 +159,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     {}
                     <div className="relative bg-marine-deep">
                         <ul className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-3 px-4 py-5 sm:px-6">
-                            <Certification icone="valide" texte={t('accueil.certif_cmr', 'e-CMR certifié')} />
+                            <Certification icone="valide" texte={t('accueil.certif_cmr', 'Contrats régis par la CMR')} />
                             <Certification icone="coche" texte="Viapass / OBU" />
                             <Certification icone="camion" texte={t('accueil.certif_adr', 'ADR compliant')} />
                         </ul>
@@ -195,7 +196,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                             <Service
                                 icone="journal"
                                 titre={t('accueil.service_facturation', 'Facturation simplifiée')}
-                                texte={t('accueil.service_facturation_texte', 'Identifiant Peppol généré automatiquement à l\'inscription, pour une facturation électronique conforme dans toute l\'Union européenne.')}
+                                texte={t('accueil.service_facturation_texte', 'Identifiant Peppol déduit de votre numéro d\'entreprise à l\'inscription, et factures jointes au format électronique européen (UBL, norme EN 16931).')}
                             />
                         </div>
                     </div>
@@ -219,12 +220,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                 />
                                 <Tarif
                                     icone="horloge"
-                                    titre={t('accueil.tarif_standard', 'Standard — 3 jours')}
+                                    titre={t('accueil.tarif_standard', 'Standard — dès 3 jours')}
                                     texte={t('accueil.tarif_standard_texte', 'Le meilleur rapport entre délai et coût pour un envoi courant.')}
                                 />
                                 <Tarif
                                     icone="rotation"
-                                    titre={t('accueil.tarif_express', 'Express — 48 heures')}
+                                    titre={t('accueil.tarif_express', 'Express — dès 24 heures')}
                                     texte={t('accueil.tarif_express_texte', 'Transport dédié, facturé au coût de revient réel plus marge.')}
                                 />
                             </ul>
@@ -317,7 +318,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </div>
 
                         <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-                            <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.789. {t('accueil.droits', 'Tous droits réservés.')}</p>
+                            <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.749. {t('accueil.droits', 'Tous droits réservés.')}</p>
                             <button type="button" onClick={ouvrirTemoins} className="text-left text-slate-300 transition-colors hover:text-action sm:text-center">
                                 {t('temoins.gerer', 'Gérer les cookies')}
                             </button>

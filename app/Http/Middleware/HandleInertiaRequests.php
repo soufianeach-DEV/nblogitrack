@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Page;
+use App\Models\TariffGrid;
 use App\Models\Translation;
 use App\Support\Traductions;
 use Illuminate\Http\Request;
@@ -36,6 +37,10 @@ class HandleInertiaRequests extends Middleware
                 'canValidateClients' => (bool) $request->user()?->isAdmin(),
                 'canManageUsers' => (bool) $request->user()?->isAdmin(),
                 'canViewFleet' => (bool) $request->user()?->isStaff(),
+                // Les droits d'un compte au sein de son entreprise cliente.
+                'canOrder' => (bool) $request->user()?->peutCommander(),
+                'canSeeInvoices' => (bool) ($request->user()?->isStaff() || $request->user()?->voitFacturesEntreprise()),
+                'canManageCompany' => (bool) $request->user()?->gereEntreprise(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -44,6 +49,11 @@ class HandleInertiaRequests extends Middleware
             ],
             'langue' => app()->getLocale(),
             'langues' => Translation::LANGUES,
+            // Un chiffre vrai pour la page de connexion : les pays ou une
+            // formule de transport est en vente.
+            'paysDesservis' => fn () => $request->user() === null
+                ? Cache::remember('pays-desservis', 3600, fn () => TariffGrid::where('is_active', true)->distinct()->count('zone'))
+                : null,
             'dictionnaire' => fn () => Traductions::pour(app()->getLocale()),
             'pages_pied' => fn () => Cache::remember(
                 'pages.pied.'.app()->getLocale(),

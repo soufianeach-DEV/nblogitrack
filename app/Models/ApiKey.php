@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Support\Str;
 
 class ApiKey extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const PERMISSIONS = [
         'lecture' => 'Lecture',
         'ecriture' => 'Écriture',
@@ -84,6 +87,19 @@ class ApiKey extends Model
 
         if (! in_array($permission, $this->abilities ?? [], true)) {
             return 'permission_absente';
+        }
+
+        // Une entreprise refusee, desactivee ou pas encore validee ne se
+        // connecte pas a l'application : elle ne passe pas davantage par
+        // l'API avec une cle obtenue plus tot.
+        if ($this->client_id !== null) {
+            $client = $this->client;
+
+            // Une entreprise dont plus aucun compte n'est actif est
+            // consideree comme desactivee.
+            if ($client === null || ! $client->is_validated || ! $client->users()->where('is_active', true)->exists()) {
+                return 'entreprise_inactive';
+            }
         }
 
         return null;

@@ -55,7 +55,7 @@
                     <div class="marque-sous">{{ $t::t('pdf.slogan', 'Logistique B2B') }}</div>
                 </td>
                 <td>
-                    <div class="doc-titre">{{ $t::t('pdf.facture', 'FACTURE') }}</div>
+                    <div class="doc-titre">{{ $facture->estAvoir() ? $t::t('pdf.avoir', 'AVOIR') : $t::t('pdf.facture', 'FACTURE') }}</div>
                     <div class="doc-ref">{{ $facture->reference }}</div>
                 </td>
             </tr>
@@ -74,18 +74,23 @@
                 </td>
                 <td class="bloc">
                     <div class="bloc-titre">{{ $t::t('pdf.facture_a', 'Facturé à') }}</div>
-                    <p class="gras">{{ $facture->client->company_name }}</p>
-                    @if ($facture->client->billing_address)
-                        <p>{{ $facture->client->billing_address }}</p>
+                    {{-- L'acheteur tel qu'il etait a l'emission. --}}
+                    <p class="gras">{{ $facture->buyer_name }}</p>
+                    @if ($facture->buyer_address)
+                        <p>{{ $facture->buyer_address }}</p>
                     @endif
-                    <p>{{ trim($facture->client->postal_code.' '.$facture->client->city) }}</p>
-                    <p>{{ $pays::localise($facture->client->country) }}</p>
-                    <p class="mono">{{ $facture->client->vat_number }}</p>
+                    <p>{{ trim($facture->buyer_postal_code.' '.$facture->buyer_city) }}</p>
+                    <p>{{ $pays::libelle($facture->buyer_country) }}</p>
+                    <p class="mono">{{ $facture->buyer_vat_number }}</p>
                 </td>
                 <td class="bloc">
                     <div class="bloc-titre">{{ $t::t('pdf.details', 'Détails') }}</div>
                     <p>{{ $t::t('pdf.emise_le', 'Émise le') }} <span class="gras">{{ $f::date($facture->issued_on) }}</span></p>
-                    <p>{{ $t::t('pdf.echeance_le', 'Échéance le') }} <span class="gras">{{ $f::date($facture->due_on) }}</span></p>
+                    @if ($facture->estAvoir())
+                        <p>{{ $t::t('pdf.annule_facture', 'Annule la facture :reference', ['reference' => $facture->creditedInvoice?->reference]) }}</p>
+                    @else
+                        <p>{{ $t::t('pdf.echeance_le', 'Échéance le') }} <span class="gras">{{ $f::date($facture->due_on) }}</span></p>
+                    @endif
                     <p>{{ $t::t('pdf.periode_du', 'Période du :date', ['date' => $f::date($facture->period_start)]) }}</p>
                     <p>{{ $t::t('pdf.periode_au', 'au :date', ['date' => $f::date($facture->period_end)]) }}</p>
                     @if ($facture->paid_on)
@@ -142,6 +147,9 @@
             </tr>
         </table>
 
+        @if ($facture->estAvoir())
+            <p class="mention">{{ $t::t('pdf.motif_avoir', 'Motif : :motif', ['motif' => $facture->credit_reason]) }}</p>
+        @else
         <div class="paiement">
             <table>
                 <tr>
@@ -159,7 +167,7 @@
                                 {{ $t::t('pdf.a_payer_pour', 'À payer pour le :date', ['date' => $f::date($facture->due_on)]) }}
                             @endif
                         </div>
-                        <div class="valeur" style="font-size: 15px;">{{ $f::montant($facture->amount_incl_tax) }}</div>
+                        <div class="valeur" style="font-size: 15px;">{{ $f::montant($facture->paid_on ? $facture->amount_incl_tax : $facture->solde()) }}</div>
                     </td>
                     @if ($qr ?? null)
                         <td style="width: 113px; text-align: right;">
@@ -174,8 +182,13 @@
                 </tr>
             </table>
         </div>
+        @endif
 
-        @if ($facture->reverse_charge)
+        @if ($facture->vat_category === 'O')
+            <p class="mention">
+                {{ $t::t('pdf.hors_champ', 'Prestation hors du champ de la TVA belge — preneur établi hors de l\'Union européenne (art. 21, §2 du Code de la TVA).') }}
+            </p>
+        @elseif ($facture->vat_category === 'AE')
             <p class="mention">
                 {{ $t::t('pdf.autoliquidation', 'Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).') }}
             </p>

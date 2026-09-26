@@ -37,6 +37,14 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Un visiteur non connecte revient a l'ecran de connexion dans la
+        // langue de l'adresse demandee (/nl/missions -> /nl/login).
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $langue = $request->segment(1);
+
+            return route('login', ['langue' => Traductions::estServie($langue) ? $langue : 'fr']);
+        });
+
         // Stripe notifie le paiement depuis ses serveurs : aucune session,
         // donc aucun jeton de formulaire a presenter. L'appel est authentifie
         // par la signature de son en-tete, verifiee dans le controleur.
@@ -80,6 +88,19 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Une adresse inconnue (/nl/inexistant, /en/p/nope) echoue avant
+        // que la langue soit fixee : la page d'erreur sortait en francais.
+        // On la lit dans le premier segment de l'adresse.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            $langue = $request->segment(1);
+
+            if (Traductions::estServie($langue)) {
+                app()->setLocale($langue);
+            }
+
+            return null;
+        });
+
         // Une session dure deux heures. Passe ce delai, le jeton du
         // formulaire ne correspond plus et Laravel repond « 419 PAGE
         // EXPIRED » : une page nue qui ne dit rien et ou l'utilisateur reste
@@ -106,5 +127,32 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()
                 ->route('login')
                 ->with('status', Traductions::t('msg.session_expiree', 'Votre session a expiré. Reconnectez-vous pour continuer.'));
+        });
+
+        // Une limite de debit depassee repondait par une fenetre brute
+        // « 429 TOO MANY REQUESTS », en anglais, par-dessus le formulaire.
+        // L'utilisateur reste sur sa page, ses champs intacts, avec un
+        // message qui dit combien de temps attendre.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 429 || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
+                return null;
+            }
+
+            $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return back()->with('error', Traductions::t('msg.trop_de_demandes', 'Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', [
+                'secondes' => max(1, $secondes),
+            ]));
+        });
+
+        // Un refus pendant la navigation (lien vers un ecran d'un autre
+        // role) s'ouvrait dans une fenetre d'erreur brute, en anglais. On
+        // reste sur la page, avec un message dans la langue de l'ecran.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 403 || ! $request->header('X-Inertia')) {
+                return null;
+            }
+
+            return back()->with('error', Traductions::t('msg.acces_refuse', 'Vous n\'avez pas accès à cet écran.'));
         });
     })->create();

@@ -96,7 +96,7 @@ class EnvoiFactureTest extends TestCase
             ->post(route('invoices.send', $facture))
             ->assertSessionHas('success');
 
-        Mail::assertSent(FactureEmise::class, fn ($courriel) => $courriel->hasTo(User::find($facture->client_id)->email));
+        Mail::assertSent(FactureEmise::class, fn ($courriel) => $courriel->hasTo(Client::find($facture->client_id)->compte()->email));
     }
 
     public function test_une_panne_de_courriel_n_empeche_pas_l_emission(): void
@@ -155,7 +155,7 @@ class EnvoiFactureTest extends TestCase
 
         $facture = $this->facture();
 
-        $this->actingAs(User::find($facture->client_id))
+        $this->actingAs(Client::find($facture->client_id)->compte())
             ->post(route('invoices.send', $facture))
             ->assertForbidden();
 

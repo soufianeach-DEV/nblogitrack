@@ -144,7 +144,10 @@ export default function Index({ logs, actions, filtres, stats }) {
                                     {log.description}
                                     {log.properties && (
                                         <span className="mt-1 block text-xs text-slate-600">
-                                            {Object.entries(log.properties).map(([cle, valeur]) => `${cle} : ${valeur}`).join(' · ')}
+                                            {Object.entries(log.properties)
+                                                .filter(([, valeur]) => valeur !== null && valeur !== '')
+                                                .map(([cle, valeur]) => `${cle} : ${typeof valeur === 'object' ? JSON.stringify(valeur) : valeur}`)
+                                                .join(' · ')}
                                         </span>
                                     )}
                                 </td>

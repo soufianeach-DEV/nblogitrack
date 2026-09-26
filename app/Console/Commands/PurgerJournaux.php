@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
 use App\Models\ApiRequest;
+use App\Models\QuoteRequest;
 use Illuminate\Console\Command;
 
 class PurgerJournaux extends Command
@@ -26,18 +27,26 @@ class PurgerJournaux extends Command
         $appels = ApiRequest::where('created_at', '<', $limite);
         $nombreAppels = $appels->count();
 
+        // Registre RGPD : une demande de devis restee sans suite se garde
+        // deux ans (nom, adresse, telephone du demandeur), puis s'efface.
+        $devis = QuoteRequest::whereIn('status', ['PENDING', 'PROCESSING', 'CLOSED'])
+            ->where('created_at', '<', now()->subYears(2));
+        $nombreDevis = $devis->count();
+
         if ($this->option('essai')) {
             $this->line("  $nombre entrée(s) antérieures au ".$limite->format('d/m/Y').' seraient effacées.');
             $this->line('  Total actuel : '.ActivityLog::count());
             $this->line("  $nombreAppels appel(s) d'API seraient effacés.");
+            $this->line("  $nombreDevis demande(s) de devis sans suite seraient effacées.");
 
             return self::SUCCESS;
         }
 
         $requete->delete();
         $appels->delete();
+        $devis->delete();
 
-        $this->info("  $nombre entrée(s) effacée(s), $nombreAppels appel(s) d'API.");
+        $this->info("  $nombre entrée(s) effacée(s), $nombreAppels appel(s) d'API, $nombreDevis demande(s) de devis.");
         $this->line('  Reste : '.ActivityLog::count().' entrée(s), la plus ancienne du '
             .(ActivityLog::min('created_at') ?? '—'));
 

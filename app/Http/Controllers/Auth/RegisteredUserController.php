@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
 use App\Support\Traductions;
+use Closure;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -166,9 +167,23 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Une adresse tapee en majuscules est la meme adresse : on la range
+        // en minuscules plutot que de la refuser.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
-            'vat_number' => ['required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/'],
+            'vat_number' => [
+                'bail', 'required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/',
+                // Un numero belge porte sa propre cle de controle : un
+                // chiffre de trop ou mal tape se refuse ici, sans attendre
+                // la reponse du registre europeen.
+                function (string $attribut, mixed $valeur, Closure $echec) {
+                    if (! IdentifiantEntreprise::controleLocal((string) $valeur)) {
+                        $echec(Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'));
+                    }
+                },
+            ],
             'billing_address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:10',
             'city' => 'required|string|max:100',
@@ -178,12 +193,12 @@ class RegisteredUserController extends Controller
             'last_name' => 'required|string|max:100',
             'position' => 'nullable|string|max:100',
             'phone' => 'required|string|max:20',
-            'email' => 'required|string|lowercase|email|max:150|unique:'.User::class,
+            'email' => 'required|string|email|max:150|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
         ], [
-            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.'),
+            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
             'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionne l\'adresse du siège dans les listes proposées.'),
             'marque_declaree.accepted' => Traductions::t('msg.marque_non_confirmee', 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.'),
             'conditions_acceptees.accepted' => Traductions::t('msg.conditions_non_acceptees', 'Vous devez accepter les conditions générales et la politique de confidentialité.'),
@@ -220,18 +235,9 @@ class RegisteredUserController extends Controller
         }
 
         $user = DB::transaction(function () use ($data, $identifiants) {
-            $user = User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'password' => Hash::make($data['password']),
-                'role' => 'CLIENT',
-                'is_active' => true,
-            ]);
-
-            Client::create([
-                'id' => $user->id,
+            // L'entreprise d'abord, avec sa propre numerotation ; le compte
+            // qui l'inscrit en devient l'administrateur.
+            $client = Client::create([
                 'company_name' => $data['company_name'],
                 'vat_number' => $data['vat_number'],
                 'enterprise_number' => $identifiants['national'],
@@ -244,8 +250,22 @@ class RegisteredUserController extends Controller
                 'is_validated' => false,
             ]);
 
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => 'CLIENT',
+                'client_id' => $client->id,
+                'company_role' => 'ADMIN',
+                // La langue de l'inscription devient celle de ses courriels.
+                'locale' => app()->getLocale(),
+                'is_active' => true,
+            ]);
+
             ClientContact::create([
-                'client_id' => $user->id,
+                'client_id' => $client->id,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],

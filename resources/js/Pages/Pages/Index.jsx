@@ -11,7 +11,6 @@ const VIDE = {
 
 export default function Index({ pages, documents, types }) {
     const t = useTraduction();
-    const flash = usePage().props.flash ?? {};
     const [edition, setEdition] = useState(null);
     const [langue, setLangue] = useState('fr');
     const [aSupprimer, setASupprimer] = useState(null);
@@ -70,16 +69,6 @@ export default function Index({ pages, documents, types }) {
         >
             <Head title={t('nav.pages', 'Pages du site')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="space-y-3">
                 {pages.length === 0 && (
@@ -93,7 +82,7 @@ export default function Index({ pages, documents, types }) {
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-lg font-bold text-marine">{p.titre_fr}</h2>
+                                    <h2 className="text-lg font-bold text-marine">{p.titre}</h2>
                                     <span className={
                                         'rounded-full px-3 py-0.5 text-xs font-semibold ' +
                                         (p.publiee
@@ -110,7 +99,7 @@ export default function Index({ pages, documents, types }) {
                                         </span>
                                     )}
                                 </div>
-                                <p className="mt-1 font-mono text-xs text-brand-blue">/{p.slug}</p>
+                                <p className="mt-1 font-mono text-xs text-brand-blue">/p/{p.slug}</p>
                                 <p className="mt-2 text-xs text-slate-600">
                                     {}
                                     {['nl', 'en'].filter((l) => ! p.traduite[l]).length === 0
@@ -146,7 +135,10 @@ export default function Index({ pages, documents, types }) {
                                 {p.slug === 'information-chauffeurs' && (
                                     <button
                                         type="button"
-                                        onClick={() => router.post(route('pages.notice.send', p.id), {}, { preserveScroll: true })}
+                                        onClick={() => {
+                                            if (! window.confirm(t('pages.confirmer_envoi', 'Envoyer la note par courriel à tous les conducteurs actifs ?'))) return;
+                                            router.post(route('pages.notice.send', p.id), {}, { preserveScroll: true });
+                                        }}
                                         className="rounded-lg border border-brand-blue px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue/5"
                                         title={t('pages.envoyer_aide', 'Chaque conducteur la reçoit dans sa langue. L\'accusé de prise de connaissance reste demandé dans l\'application.')}
                                     >
@@ -308,8 +300,11 @@ export default function Index({ pages, documents, types }) {
                                 }
                             >
                                 {l}
-                                {l !== 'fr' && ! data[`titre_${l}`] && (
+                                {l !== 'fr' && ! data[`titre_${l}`] && ! errors[`titre_${l}`] && ! errors[`corps_${l}`] && (
                                     <span className="ml-1 text-xs opacity-70">•</span>
+                                )}
+                                {(errors[`titre_${l}`] || errors[`corps_${l}`]) && (
+                                    <span className="ml-1 inline-block h-2 w-2 rounded-full bg-status-incident" aria-label={t('pages.onglet_erreur', 'Erreur dans cette langue')} />
                                 )}
                             </button>
                         ))}
@@ -368,7 +363,7 @@ export default function Index({ pages, documents, types }) {
                     <h2 className="text-lg font-bold text-marine">{t('action.supprimer', 'Supprimer')}</h2>
                     <p className="mt-2 text-sm text-slate-600">
                         {t('pages.supprimer_aide', 'La page « :titre » et son contenu seront perdus. Pour la retirer du site sans l\'effacer, utilisez plutôt « Retirer ».', {
-                            titre: aSupprimer?.titre_fr ?? '',
+                            titre: aSupprimer?.titre ?? '',
                         })}
                     </p>
                     <div className="mt-6 flex justify-end gap-2">

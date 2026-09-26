@@ -39,15 +39,15 @@ class GenererFactures extends Command
         }
 
         $expeditions = $groupes->sum(fn ($g) => $g->count());
-        $montant = $groupes->sum(fn ($g) => $g->sum(fn ($o) => $o->montantFacturable()));
+        $montant = $groupes->sum(fn ($g) => $g->sum('montant'));
 
-        $this->line(sprintf('  %d facture(s) a emettre, %d expedition(s), %s EUR hors TVA.',
+        $this->line(sprintf('  %d facture(s) a emettre, %d ligne(s), %s EUR hors TVA.',
             $groupes->count(), $expeditions, number_format($montant, 2, ',', ' ')));
 
         if ($this->option('essai')) {
             foreach ($groupes as $cle => $lot) {
                 [$clientId, $mois] = explode('|', (string) $cle);
-                $this->line(sprintf('    client %-4s %s  %d expedition(s)',
+                $this->line(sprintf('    client %-4s %s  %d ligne(s)',
                     $clientId, $mois, $lot->count()));
             }
 

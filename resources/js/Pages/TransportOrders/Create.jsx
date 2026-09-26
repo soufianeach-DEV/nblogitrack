@@ -9,13 +9,6 @@ import { useLangue, useLocale, useTraduction, useVocabulaire } from '@/traduire'
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
-const haversineKm = (lat1, lng1, lat2, lng2) => {
-    const toRad = (d) => (d * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    return 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.3;
-};
-
 const MARCHANDISES = [
     'Boissons',
     'Colis express',
@@ -40,7 +33,7 @@ const NOMS_OFFRE = {
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-export default function Create({ tariffGrids, pricing }) {
+export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [] }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -49,7 +42,7 @@ export default function Create({ tariffGrids, pricing }) {
     const { data, setData, post, processing, errors } = useForm({
         pickup_address: '', delivery_address: '', delivery_country: '',
         pickup_lat: '', pickup_lng: '', delivery_lat: '', delivery_lng: '',
-        weight: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
+        weight: '', volume: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
         pickup_date: '', requested_delivery_date: '',
         tariff_grid_id: '', special_instructions: '',
     });
@@ -62,16 +55,27 @@ export default function Create({ tariffGrids, pricing }) {
     const today = `${maintenant.getFullYear()}-${pad(maintenant.getMonth() + 1)}-${pad(maintenant.getDate())}`;
     const nowLocal = `${today}T${pad(maintenant.getHours())}:${pad(maintenant.getMinutes())}`;
 
+    const [prix, setPrix] = useState({});
+
+    // Le prix vient du serveur, qui calcule exactement ce qui sera
+    // enregistre : les formules restent coherentes entre elles.
     useEffect(() => {
-        if (!data.pickup_lat || !data.delivery_lat) { setDistance(null); return; }
-        const fallback = () => haversineKm(Number(data.pickup_lat), Number(data.pickup_lng), Number(data.delivery_lat), Number(data.delivery_lng));
+        if (!data.pickup_lat || !data.delivery_lat || !data.delivery_country) { setDistance(null); setPrix({}); return; }
         setLoadingDist(true);
-        fetch(`https://router.project-osrm.org/route/v1/driving/${data.pickup_lng},${data.pickup_lat};${data.delivery_lng},${data.delivery_lat}?overview=false`)
-            .then((r) => r.json())
-            .then((j) => setDistance(j.routes?.[0]?.distance ? j.routes[0].distance / 1000 : fallback()))
-            .catch(() => setDistance(fallback()))
-            .finally(() => setLoadingDist(false));
-    }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng]);
+        const minuteur = setTimeout(() => {
+            window.axios.post(route('transport-orders.estimation'), {
+                delivery_country: data.delivery_country,
+                pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng,
+                delivery_lat: data.delivery_lat, delivery_lng: data.delivery_lng,
+                weight: data.weight || null,
+                is_hazardous: Boolean(data.is_hazardous),
+            })
+                .then(({ data: r }) => { setDistance(r.distance_km); setPrix(r.prix ?? {}); })
+                .catch(() => { setDistance(null); setPrix({}); })
+                .finally(() => setLoadingDist(false));
+        }, 400);
+        return () => clearTimeout(minuteur);
+    }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng, data.delivery_country, data.weight, data.is_hazardous]);
 
     const fr = (n, dec = 2) => Number(n).toLocaleString(locale, { minimumFractionDigits: dec, maximumFractionDigits: dec });
     const kmTxt = distance != null ? distance.toLocaleString(locale, { maximumFractionDigits: 1 }) : '';
@@ -118,11 +122,44 @@ export default function Create({ tariffGrids, pricing }) {
     }, [urgence48h]);
 
     const [soumis, setSoumis] = useState(false);
+    // Produits chimiques, batteries, airbags... : le client dit
+    // explicitement si l'envoi est soumis a l'ADR, la case decochee par
+    // defaut ne vaut pas declaration.
+    const aDeclarer = marchandisesAdr.includes(data.goods_type);
+
+    // Chaque limite prise a part ne suffit pas : un envoi ADR avec hayon
+    // de 20 t doit trouver un camion qui reunit les trois. Dit tout de
+    // suite, pas a l'envoi du formulaire.
+    const kg = Number(data.weight) || 0;
+    const m3 = Number(data.volume) || null;
+    const tropLourd = kg > poidsMax;
+    const tropVolumineux = m3 !== null && m3 > volumeMax;
+    const horsFlotte = kg > 0 && ! tropLourd && ! tropVolumineux && flotte.length > 0 && ! flotte.some((v) => v.kg >= kg
+        && (m3 === null || v.m3 === null || v.m3 >= m3)
+        && (! data.is_hazardous || v.adr)
+        && (! data.needs_tail_lift || v.hayon));
+    const refusFlotte = horsFlotte
+        ? t('msg.flotte_incapable', 'Aucun camion de notre flotte ne réunit ces conditions (:conditions) : demandez un devis.', {
+            conditions: [
+                kg.toLocaleString(locale) + ' kg',
+                m3 !== null ? m3.toLocaleString(locale) + ' m³' : null,
+                data.is_hazardous ? t('commande.cond_adr', 'équipement ADR') : null,
+                data.needs_tail_lift ? t('commande.cond_hayon', 'hayon élévateur') : null,
+            ].filter(Boolean).join(', '),
+        })
+        : null;
+    const messagePoids = tropLourd ? t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', { max: (poidsMax / 1000).toLocaleString(locale) }) : null;
+    const messageVolume = tropVolumineux ? t('msg.volume_flotte', 'Aucun camion de notre flotte ne charge plus de :max m³ : demandez un devis.', { max: volumeMax.toLocaleString(locale) }) : null;
 
     const manque = {
         pickup: !data.pickup_lat ? t('commande.manque_depart', 'Complétez l\'adresse de départ : pays, ville, code postal, rue et numéro.') : null,
         delivery: !data.delivery_lat ? t('commande.manque_destination', 'Complétez l\'adresse de destination : pays, ville, code postal, rue et numéro.') : null,
-        weight: !data.weight ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.') : null,
+        weight: !data.weight
+            ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.')
+            : messagePoids,
+        volume: messageVolume,
+        flotte: refusFlotte,
+        adr: aDeclarer && data.is_hazardous === null ? t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.') : null,
         goods: !data.goods_type ? t('commande.manque_marchandise', 'Choisissez le type de marchandise.') : null,
         grille: !data.tariff_grid_id ? t('commande.manque_formule', 'Choisissez une formule de livraison.') : null,
         delai: delaiTropCourt ? t('commande.delai_impossible', 'Aucune formule ne tient ce délai : comptez au moins :n jours vers cette destination.', { n: grilleAuto.delivery_days }) : null,
@@ -136,24 +173,11 @@ export default function Create({ tariffGrids, pricing }) {
     };
     const selectCls = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-marine focus:ring-marine';
 
-    const prixDetail = (g) => {
-        if (!g || distance == null || !data.delivery_country) return null;
-        const adr = data.is_hazardous ? Number(g.adr_coefficient) : 1;
-        if (g.service_level === 'EXPRESS') {
-            const carburant = distance * pricing.consumption_l_per_100km / 100 * pricing.diesel_price;
-            const peages = distance * (pricing.toll_per_km[data.delivery_country] ?? 0);
-            const chauffeur = distance * pricing.driver_cost_per_km;
-            const vehicule = distance * pricing.vehicle_cost_per_km;
-            const total = (Number(g.base_rate) + carburant + peages + chauffeur + vehicule) * (1 + pricing.margin) * adr;
-            return { total, carburant, peages, chauffeur, vehicule };
-        }
-        if (!data.weight) return null;
-        const total = (Number(g.base_rate) + Number(g.price_per_kg) * Number(data.weight) + Number(g.price_per_km) * distance) * adr;
-        return { total };
-    };
+    const prixDe = (g) => (g && prix[g.id] != null ? Number(prix[g.id]) : null);
 
     const selectedGrid = tariffGrids.find((g) => String(g.id) === String(data.tariff_grid_id));
-    const detail = prixDetail(selectedGrid);
+    // Pas de prix pour un envoi qu'aucun camion ne peut prendre.
+    const total = refusFlotte || messageVolume ? null : prixDe(selectedGrid);
 
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('commande.titre', 'Nouvelle expédition')}</h1>}>
@@ -164,6 +188,7 @@ export default function Create({ tariffGrids, pricing }) {
                     <AdresseAutocompletion
                         label={t('commande.adresse_depart', 'Adresse de départ')}
                         required
+                        pays="BE"
                         onChange={(v) => setData({ ...data, pickup_address: v, pickup_lat: '', pickup_lng: '' })}
                         onSelect={({ address, lat, lng }) => setData({ ...data, pickup_address: address, pickup_lat: lat, pickup_lng: lng })}
                         error={(soumis && manque.pickup) || errors.pickup_address || errors.pickup_lat}
@@ -178,11 +203,19 @@ export default function Create({ tariffGrids, pricing }) {
                     <div>
                         <InputLabel htmlFor="weight">{t('commande.poids_kg', 'Poids (kg)')} <span className="text-status-incident">*</span></InputLabel>
                         <TextInput id="weight" type="number" step="0.01" min="0" value={data.weight} onChange={(e) => setData('weight', e.target.value)} placeholder={t('commande.poids_ex', 'ex. 300')} className="mt-1 block w-full" />
-                        <InputError message={(soumis && manque.weight) || errors.weight} className="mt-2" />
+                        <InputError message={messagePoids || (soumis && manque.weight) || errors.weight} className="mt-2" />
                     </div>
                     <div>
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
-                        <select id="goods_type" value={data.goods_type} onChange={(e) => setData('goods_type', e.target.value)} className={selectCls}>
+                        <select
+                            id="goods_type"
+                            value={data.goods_type}
+                            onChange={(e) => {
+                                const type = e.target.value;
+                                setData({ ...data, goods_type: type, is_hazardous: marchandisesAdr.includes(type) ? null : Boolean(data.is_hazardous) });
+                            }}
+                            className={selectCls}
+                        >
                             <option value="">{t('commande.choisir', '— Choisir —')}</option>
                             {}
                             {MARCHANDISES.map((m) => (
@@ -191,14 +224,41 @@ export default function Create({ tariffGrids, pricing }) {
                         </select>
                         <InputError message={(soumis && manque.goods) || errors.goods_type} className="mt-2" />
                     </div>
-                    <label className="flex items-center gap-2 sm:col-span-2">
-                        <Checkbox name="is_hazardous" checked={data.is_hazardous} onChange={(e) => setData('is_hazardous', e.target.checked)} />
-                        <span className="text-sm text-slate-600">{t('devis.adr', 'Marchandise dangereuse (ADR)')}</span>
-                    </label>
+                    <div>
+                        <InputLabel htmlFor="volume">{t('commande.volume_m3', 'Volume (m³)')}</InputLabel>
+                        <TextInput id="volume" type="number" step="0.1" min="0" value={data.volume} onChange={(e) => setData('volume', e.target.value)} placeholder={t('commande.volume_ex', 'facultatif, ex. 12')} className="mt-1 block w-full" />
+                        <InputError message={messageVolume || errors.volume} className="mt-2" />
+                    </div>
+                    {aDeclarer ? (
+                        <fieldset className="sm:col-span-2">
+                            <legend className="text-sm font-medium text-slate-700">
+                                {t('commande.adr_question', 'Cet envoi est-il soumis à l\'ADR (matière dangereuse) ?')} <span className="text-status-incident">*</span>
+                            </legend>
+                            <div className="mt-1 flex gap-6">
+                                <label className="flex items-center gap-2 text-sm text-slate-600">
+                                    <input type="radio" name="is_hazardous" checked={data.is_hazardous === true} onChange={() => setData('is_hazardous', true)} className="text-marine focus:ring-marine" />
+                                    {t('commande.adr_oui', 'Oui, matière dangereuse (ADR)')}
+                                </label>
+                                <label className="flex items-center gap-2 text-sm text-slate-600">
+                                    <input type="radio" name="is_hazardous" checked={data.is_hazardous === false} onChange={() => setData('is_hazardous', false)} className="text-marine focus:ring-marine" />
+                                    {t('commande.adr_non', 'Non, non soumis à l\'ADR')}
+                                </label>
+                            </div>
+                            <InputError message={(soumis && manque.adr) || errors.is_hazardous} className="mt-2" />
+                        </fieldset>
+                    ) : (
+                        <label className="flex items-center gap-2 sm:col-span-2">
+                            <Checkbox name="is_hazardous" checked={Boolean(data.is_hazardous)} onChange={(e) => setData('is_hazardous', e.target.checked)} />
+                            <span className="text-sm text-slate-600">{t('devis.adr', 'Marchandise dangereuse (ADR)')}</span>
+                        </label>
+                    )}
                     <label className="flex items-center gap-2 sm:col-span-2">
                         <Checkbox name="needs_tail_lift" checked={data.needs_tail_lift} onChange={(e) => setData('needs_tail_lift', e.target.checked)} />
                         <span className="text-sm text-slate-600">{t('commande.hayon_long', 'Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)')}</span>
                     </label>
+                    {(refusFlotte || errors.flotte) && (
+                        <InputError message={refusFlotte || errors.flotte} className="sm:col-span-2" />
+                    )}
                     <div className="sm:col-span-2">
                         <InputLabel htmlFor="priority">{t('commande.priorite', 'Priorité')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="priority" value={data.priority} onChange={(e) => setData('priority', e.target.value)} className={selectCls} disabled={urgence48h}>
@@ -248,7 +308,7 @@ export default function Create({ tariffGrids, pricing }) {
                     {data.delivery_country ? (
                         <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             {offres.map((g) => {
-                                const p = prixDetail(g);
+                                const p = prixDe(g);
                                 const actif = String(data.tariff_grid_id) === String(g.id);
                                 const tropLent = delaiJours !== null && Number(g.delivery_days) > delaiJours;
                                 return (
@@ -262,7 +322,7 @@ export default function Create({ tariffGrids, pricing }) {
                                     >
                                         <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ? t(...NOMS_OFFRE[g.service_level]) : g.label}</p>
                                         <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {g.delivery_days} {t('ordres.j', 'j')}</p>
-                                        <p className="mt-2 text-lg font-bold text-action-dark">{p ? `${fr(p.total)} €` : '—'}</p>
+                                        <p className="mt-2 text-lg font-bold text-action-dark">{p != null ? `${fr(p)} €` : '—'}</p>
                                         {tropLent && <p className="mt-1 text-xs text-gray-400">{t('commande.trop_lent', 'trop lent pour la date demandée')}</p>}
                                     </button>
                                 );
@@ -288,25 +348,21 @@ export default function Create({ tariffGrids, pricing }) {
                             <div className="flex items-center justify-between gap-4">
                                 <div>
                                     <p className="text-sm font-medium text-marine">
-                                        {detail
+                                        {total != null
                                             ? t('commande.estimation_prix', 'Estimation du prix')
                                             : t('commande.distance', 'Distance') + ' : ' + kmTxt + ' km'}
                                     </p>
-                                    {detail ? (
-                                        detail.carburant != null ? (
-                                            <p className="text-xs text-gray-500">
-                                                {t('tarifs.dedie', 'Véhicule dédié')} · {kmTxt} km — {t('commande.carburant', 'Carburant')} {fr(detail.carburant, 0)} € + {t('commande.peages', 'Péages')} {fr(detail.peages, 0)} € + {t('suivi.chauffeur', 'Chauffeur')} {fr(detail.chauffeur, 0)} € + {t('ordres.vehicule', 'Véhicule')} {fr(detail.vehicule, 0)} € + {t('commande.frais_fixes', 'Frais fixes')} {fr(selectedGrid.base_rate, 0)} € + {t('commande.marge', 'Marge')} {Math.round(pricing.margin * 100)} %{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
-                                            </p>
-                                        ) : (
-                                            <p className="text-xs text-gray-500">
-                                                {t('commande.base', 'Base')} {fr(selectedGrid.base_rate)} € + {fr(selectedGrid.price_per_kg, 3)} €/kg × {data.weight} kg + {fr(selectedGrid.price_per_km)} €/km × {kmTxt} km{data.is_hazardous ? ` × ADR ${fr(selectedGrid.adr_coefficient)}` : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
-                                            </p>
-                                        )
+                                    {total != null ? (
+                                        <p className="text-xs text-gray-500">
+                                            {selectedGrid.service_level === 'EXPRESS' ? t('tarifs.dedie', 'Véhicule dédié') : t('tarifs.groupage', 'Groupage')} · {kmTxt} km · {data.weight} kg{data.is_hazardous ? ' · ADR' : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
+                                        </p>
                                     ) : (
-                                        <p className="text-xs text-gray-500">{t('commande.poids_pour_prix', 'Indiquez le poids pour voir les prix groupage.')}</p>
+                                        <p className={'text-xs ' + (messagePoids || messageVolume || refusFlotte ? 'text-status-incident' : 'text-gray-500')}>
+                                            {messagePoids || messageVolume || refusFlotte || t('commande.poids_pour_prix', 'Indiquez le poids pour voir les prix groupage.')}
+                                        </p>
                                     )}
                                 </div>
-                                {detail && <p className="text-3xl font-bold text-action-dark">{fr(detail.total)} €</p>}
+                                {total != null && <p className="text-3xl font-bold text-action-dark">{fr(total)} €</p>}
                             </div>
                         )}
                     </div>

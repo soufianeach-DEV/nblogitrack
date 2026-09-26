@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TariffGrid;
+use App\Support\GeocodageIndisponible;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
@@ -46,8 +47,14 @@ class TarifController extends Controller
             'poids.numeric' => Traductions::t('msg.poids_nombre', 'Le poids doit être un nombre.'),
         ]);
 
-        $depart = $this->localiser($donnees['depart'], 'BE');
-        $arrivee = $this->localiser($donnees['destination'], $donnees['pays']);
+        try {
+            $depart = $this->localiser($donnees['depart'], 'BE');
+            $arrivee = $this->localiser($donnees['destination'], $donnees['pays']);
+        } catch (GeocodageIndisponible) {
+            return response()->json([
+                'erreur' => Traductions::t('tarifs.service_indisponible', 'Le service est momentanément indisponible.'),
+            ], 503);
+        }
 
         if ($depart === null || $arrivee === null) {
             return response()->json([
@@ -79,8 +86,8 @@ class TarifController extends Controller
             ->all();
 
         return response()->json([
-            'depart' => $depart->ville,
-            'arrivee' => $arrivee->ville,
+            'depart' => Traductions::vocabulaire('ville', $depart->ville),
+            'arrivee' => Traductions::vocabulaire('ville', $arrivee->ville),
             'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
             'distance' => (int) round($km),
             'poids' => (float) $donnees['poids'],
@@ -90,7 +97,10 @@ class TarifController extends Controller
     }
 
     /**
-     * @return array<int, array<string, string>>
+     * en_ligne : pays sans codes postaux, dont les localites se proposent
+     * par Photon (voir Geocodeur).
+     *
+     * @return array<int, array{code: string, nom: string, en_ligne: bool}>
      */
     private function destinations(): array
     {
@@ -101,6 +111,7 @@ class TarifController extends Controller
             ->map(fn (string $code) => [
                 'code' => $code,
                 'nom' => Pays::libelle($code) ?? $code,
+                'en_ligne' => Localite::enLigne($code),
             ])
             ->all();
 

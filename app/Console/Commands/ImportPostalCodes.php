@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Geocodeur;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -26,6 +27,12 @@ class ImportPostalCodes extends Command
 
             $reponse = Http::timeout(120)->get("https://download.geonames.org/export/zip/{$pays}.zip");
             if (! $reponse->ok()) {
+                if ($reponse->status() === 404 && Geocodeur::couvre($pays)) {
+                    $this->line("  {$pays} : GeoNames ne publie pas ce pays ; ses localités se vérifient en ligne (Photon).");
+
+                    continue;
+                }
+
                 $this->warn("  {$pays} : téléchargement impossible (HTTP {$reponse->status()}), ignoré.");
 
                 continue;

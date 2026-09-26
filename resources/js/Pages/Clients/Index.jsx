@@ -12,7 +12,6 @@ const ONGLETS = {
 };
 
 export default function Index({ clients, etat, filtres, suggestions, compteurs }) {
-    const flash = usePage().props.flash ?? {};
     const t = useTraduction();
     const v = useVocabulaire();
     const p = usePays();
@@ -90,16 +89,6 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('entreprises.titre', 'Entreprises inscrites')}</h1>}>
             <Head title={t('entreprises.titre', 'Entreprises inscrites')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(ONGLETS).map(([cle, etiquette]) => (

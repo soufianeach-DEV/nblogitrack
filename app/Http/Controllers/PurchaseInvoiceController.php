@@ -26,11 +26,11 @@ class PurchaseInvoiceController extends Controller
         $requete = PurchaseInvoice::with('vehicle:registration,brand,model');
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('supplier_name', 'ilike', $terme)
-                ->orWhere('reference', 'ilike', $terme)
-                ->orWhere('vehicle_registration', 'ilike', $terme));
+                ->whereContient('supplier_name', $terme)
+                ->orWhereContient('reference', $terme)
+                ->orWhereContient('vehicle_registration', $terme));
         }
 
         if (! empty($filtres['categorie'])) {
@@ -94,9 +94,12 @@ class PurchaseInvoiceController extends Controller
             'reference' => 'required|string|max:50',
             'category' => 'required|in:'.implode(',', array_keys(PurchaseInvoice::CATEGORIES)),
             'vehicle_registration' => 'required|exists:vehicles,registration',
-            'period_start' => 'required|date',
+            // Un mois qui n'a pas encore commence n'a rien pu consommer :
+            // une periode 2027-03 est une faute de frappe, qui fausserait
+            // le suivi du parc et la declaration de TVA.
+            'period_start' => 'required|date|before_or_equal:today',
             'period_end' => 'required|date|after_or_equal:period_start',
-            'issued_on' => 'required|date',
+            'issued_on' => 'required|date|before_or_equal:today',
             'due_on' => 'required|date|after_or_equal:issued_on',
             'liters' => 'nullable|numeric|min:0|max:99999',
             'taxed_km' => 'nullable|numeric|min:0|max:999999',
@@ -104,6 +107,8 @@ class PurchaseInvoiceController extends Controller
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
+            'period_start.before_or_equal' => Traductions::t('msg.achat_periode_future', 'La période facturée ne peut pas être dans le futur.'),
+            'issued_on.before_or_equal' => Traductions::t('msg.achat_date_future', 'Une facture d\'achat ne peut pas être datée dans le futur.'),
             'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
             'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
         ]);
@@ -162,7 +167,11 @@ class PurchaseInvoiceController extends Controller
     {
         $ventes = DB::table('invoices')
             ->where('status', '!=', 'DRAFT')
-            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois, sum(amount_excl_tax) AS ht, sum(vat_amount) AS collectee")
+            // Un avoir se deduit, au mois de son emission, de la TVA
+            // collectee ; la facture qu'il annule reste comptee a son mois.
+            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -amount_excl_tax ELSE amount_excl_tax END) AS ht,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -vat_amount ELSE vat_amount END) AS collectee")
             ->groupBy('mois')
             ->get()
             ->keyBy('mois');
@@ -180,7 +189,10 @@ class PurchaseInvoiceController extends Controller
             ->sortDesc()
             ->values()
             ->map(function (string $mois) use ($ventes, $achats) {
-                $date = Carbon::createFromFormat('Y-m', $mois);
+                // Sans « ! », Carbon complete la date avec le jour courant :
+                // un 30 octobre, « 2026-02 » devenait le 30 fevrier, soit
+                // le 2 mars, et la ligne de fevrier s'affichait en mars.
+                $date = Carbon::createFromFormat('!Y-m', $mois);
                 $collectee = (float) ($ventes[$mois]->collectee ?? 0);
                 $deductible = (float) ($achats[$mois]->deductible ?? 0);
 

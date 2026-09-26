@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class TransportOrder extends Model
 {
+    use DatesHeureDeBruxelles;
     use HasFactory;
 
     public const PRIORITES = ['URGENT', 'HIGH', 'NORMAL', 'LOW'];
@@ -35,6 +38,12 @@ class TransportOrder extends Model
         'Autre',
     ];
 
+    /**
+     * Marchandises souvent soumises a l'ADR (produits chimiques, batteries
+     * au lithium, airbags...) : le client doit dire explicitement si son
+     * envoi l'est. Une case decochee par defaut faisait partir des
+     * produits chimiques sans chauffeur ni vehicule ADR.
+     */
     public const MARCHANDISES_ADR = [
         'Produits chimiques',
         'Produits pharmaceutiques',
@@ -49,6 +58,9 @@ class TransportOrder extends Model
      * du chauffeur, puis livre (DELIVERED).
      */
     public const STATUTS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'DELIVERED', 'CANCELLED'];
+
+    // Les transitions entre ces statuts sont definies par App\Enums\OrderStatus
+    // et appliquees par App\Support\OrderWorkflow, seul a modifier le statut.
 
     /** Les ordres qui mobilisent encore un chauffeur ou un camion. */
     public const ACTIFS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS'];
@@ -68,6 +80,12 @@ class TransportOrder extends Model
      */
     public function fraisAnnulation(): ?float
     {
+        // Marchandise deja chargee (puis desaffectee apres une panne, par
+        // exemple) : l'annulation en ligne n'est plus possible.
+        if ($this->picked_up_at !== null) {
+            return null;
+        }
+
         return match ($this->status) {
             'PENDING' => 0.0,
             'ASSIGNED' => round(min(
@@ -100,7 +118,7 @@ class TransportOrder extends Model
         'client_id', 'created_date', 'pickup_date', 'pickup_address', 'delivery_address',
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
-        'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
+        'actual_delivery_date', 'delivered_at', 'received_by', 'delivery_reserves', 'estimated_cost', 'tariff_grid_id',
         'vehicle_registration', 'driver_id', 'assigned_at', 'picked_up_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
         'cancelled_at', 'cancelled_by', 'cancellation_fee',
@@ -118,6 +136,7 @@ class TransportOrder extends Model
             'pickup_date' => 'datetime',
             'assigned_at' => 'datetime',
             'picked_up_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'cancellation_fee' => 'decimal:2',
             'distance_km' => 'integer',
@@ -163,9 +182,17 @@ class TransportOrder extends Model
         return $this->belongsTo(TariffGrid::class);
     }
 
+    /** La ligne qui facture cette expedition, tant qu'aucun avoir ne l'a liberee. */
     public function invoiceLine(): HasOne
     {
-        return $this->hasOne(InvoiceLine::class);
+        return $this->hasOne(InvoiceLine::class)
+            ->where('active', true)
+            ->whereIn('kind', [InvoiceLine::TRANSPORT, InvoiceLine::ANNULATION]);
+    }
+
+    public function charges(): HasMany
+    {
+        return $this->hasMany(OrderCharge::class)->orderBy('id');
     }
 
     public function estEnAttenteDePaiement(): bool

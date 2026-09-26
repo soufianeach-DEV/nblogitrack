@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Client;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\User;
@@ -23,7 +24,9 @@ class PriseEnChargeTest extends TestCase
         $utilisateur = User::factory()->chauffeur()->create();
 
         return Driver::create([
-            'id' => $utilisateur->id,
+            'cpc_expiry' => now()->addYears(2)->toDateString(),
+            'tacho_card_expiry' => now()->addYears(2)->toDateString(),
+            'user_id' => $utilisateur->id,
             'license_number' => 'PERMIS-'.$utilisateur->id,
             'license_type' => 'CE',
             'license_expiry' => now()->addYears(3)->toDateString(),
@@ -114,7 +117,7 @@ class PriseEnChargeTest extends TestCase
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->patch(route('planning.status', $ordre), ['status' => 'IN_PROGRESS'])
-            ->assertSessionHasErrors('status');
+            ->assertSessionHas('error');
 
         $this->assertSame('ASSIGNED', $ordre->refresh()->status);
     }
@@ -138,7 +141,7 @@ class PriseEnChargeTest extends TestCase
     {
         $chauffeur = $this->chauffeur();
         $ordre = TransportOrder::factory()->affectee()->create(['driver_id' => $chauffeur->id]);
-        $client = User::find($ordre->client_id);
+        $client = Client::find($ordre->client_id)->compte();
 
         $this->actingAs($client)
             ->get(route('tracking.show', ['tracking_number' => $ordre->tracking_number]))

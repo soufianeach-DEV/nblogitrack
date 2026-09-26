@@ -43,7 +43,7 @@ export default function Create({ choix }) {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
 
         if (tva.length < 6) {
-            setVies({ statut: 'format', message: t('devis.tva_format', 'Saisissez le numéro complet, code pays inclus (ex. BE0123456789).') });
+            setVies({ statut: 'format', message: t('devis.tva_format', 'Saisissez le numéro complet, code pays inclus (ex. BE0123456749).') });
 
             return;
         }
@@ -161,7 +161,7 @@ export default function Create({ choix }) {
                             <input
                                 id="vat_number"
                                 value={data.vat_number}
-                                placeholder={t('devis.tva_exemple', 'BE0123456789 — ou un SIREN / SIRET français')}
+                                placeholder={t('devis.tva_exemple', 'BE0123456749 — ou un SIREN / SIRET français')}
                                 onChange={(e) => { setData('vat_number', e.target.value.toUpperCase()); setVies(null); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
                                 className="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"

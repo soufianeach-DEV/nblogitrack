@@ -68,7 +68,7 @@ class RejouerTrajet extends Command
 
             ShipmentPosition::create([
                 'transport_order_id' => $ordre->id,
-                'driver_id' => $ordre->driver_id,
+                'driver_id' => $ordre->driver?->user_id,
                 'type' => ShipmentPosition::ROUTE,
                 'lat' => $lat,
                 'lng' => $lng,
@@ -104,7 +104,7 @@ class RejouerTrajet extends Command
             return 'Le suivi de position n\'est pas ouvert pour cette mission. Ouvrez-le depuis la planification.';
         }
 
-        if (! DriverAcknowledgement::aJour($ordre->driver_id)) {
+        if (! DriverAcknowledgement::aJour((int) $ordre->driver?->user_id)) {
             return 'Le conducteur n\'a pas pris connaissance de la note d\'information : aucune position ne serait relevée.';
         }
 

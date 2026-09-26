@@ -10,9 +10,9 @@ const CODES_EUROPE = ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI'
 // usePays le retrouvent sous cette forme. Seul l'affichage suit la langue.
 const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
 
-const CP_NUMERIQUE = { BE: 4, LU: 4, FR: 5, DE: 5, IT: 5, ES: 5, AT: 4, CH: 4, DK: 4, HU: 4, SI: 4, BG: 4, NO: 4, FI: 5, EE: 5, HR: 5, RO: 6, LT: 5 };
+const CP_NUMERIQUE = { BE: 4, LU: 4, FR: 5, DE: 5, IT: 5, ES: 5, AT: 4, CH: 4, DK: 4, HU: 4, SI: 4, BG: 4, NO: 4, FI: 5, EE: 5, HR: 5, RO: 6, LT: 5, GR: 5 };
 
-const CP_EXEMPLE = { BE: '1000', FR: '75001', DE: '10115', NL: '1012 AB', GB: 'SW1A 1AA', PL: '00-950', PT: '1000-001', CZ: '110 00' };
+const CP_EXEMPLE = { BE: '1000', FR: '75001', DE: '10115', NL: '1012 AB', GB: 'SW1A 1AA', PL: '00-950', PT: '1000-001', CZ: '110 00', GR: '10557' };
 
 const GRANDES_VILLES = {
     AT: [['Vienne', 48.2082, 16.3738], ['Graz', 47.0707, 15.4395], ['Linz', 48.3069, 14.2858], ['Salzbourg', 47.8095, 13.0550]],
@@ -52,17 +52,20 @@ const kmEntre = (lat1, lng1, lat2, lng2) => {
     return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false }) {
+export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false, pays: paysImpose = null }) {
     const t = useTraduction();
     const langue = useLangue();
     const PAYS = useMemo(() => {
         const noms = new Intl.DisplayNames([langue], { type: 'region' });
 
-        return CODES_EUROPE
+        // Un pays impose (l'enlevement se fait en Belgique) reduit la liste
+        // a ce seul pays, plutot que d'accepter une adresse que le serveur
+        // refusera.
+        return (paysImpose ? [paysImpose] : CODES_EUROPE)
             .map((code) => ({ code, nom: noms.of(code) }))
             .sort((a, b) => a.nom.localeCompare(b.nom, langue));
-    }, [langue]);
-    const [pays, setPays] = useState('BE');
+    }, [langue, paysImpose]);
+    const [pays, setPays] = useState(paysImpose ?? 'BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
     const [cp, setCp] = useState('');
@@ -77,6 +80,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const [numsDispo, setNumsDispo] = useState([]);
     const [numsChargement, setNumsChargement] = useState(false);
     const numeroRef = useRef('');
+    // Le point de la rue choisie : un numero non repertorie y est localise.
+    const coordsRue = useRef(null);
     const [coords, setCoords] = useState(null);
     const [suggVilles, setSuggVilles] = useState([]);
     const [suggCps, setSuggCps] = useState([]);
@@ -236,6 +241,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         const v = brut.toLowerCase();
         setVille(v);
         setCoords(null);
+        coordsRue.current = null;
         setVilleCoords(null);
         setRue('');
         setRueChoisie(false);
@@ -281,6 +287,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         setRue('');
         setRueChoisie(false);
         setCoords(null);
+        coordsRue.current = null;
         setSuggRues([]);
         setAucuneRue(false);
         resetNumero();
@@ -333,16 +340,30 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         })();
     };
 
+    // Entonnoir : changer le code postal efface la rue et le numero choisis,
+    // comme changer de ville.
+    const oublierRue = () => {
+        if (! rue) return;
+        setRue('');
+        setRueChoisie(false);
+        setCoords(null);
+        coordsRue.current = null;
+        setSuggRues([]);
+        setAucuneRue(false);
+        resetNumero();
+    };
+
     const chercherCps = (brut) => {
         const v = formatCp(brut);
+        if (v !== cp) oublierRue();
         setCp(v);
         setCpChoisi(false);
         setAucunCp(false);
         if (cpsLibres) {
-            publier({ cp: v });
+            publier({ cp: v, rue: '', numero: '', coords: null });
             return;
         }
-        publier({ cp: '' });
+        publier({ cp: '', rue: '', numero: '', coords: null });
         const liste = cpsDispo.filter((c) => c.cp.startsWith(v));
         setSuggCps(liste);
         setAucunCp(v.length > 0 && liste.length === 0);
@@ -350,13 +371,14 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
 
     const choisirCp = ({ cp: code, localite, f }) => {
         const [lng, lat] = f.geometry.coordinates;
+        if (code !== cp) oublierRue();
         setCp(code);
         setCpLocalite(localite || '');
         setCpChoisi(true);
         setVilleCoords({ lat, lng });
         setSuggCps([]);
         setAucunCp(false);
-        publier({ cp: code });
+        publier(code !== cp ? { cp: code, rue: '', numero: '', coords: null } : { cp: code });
     };
 
     const chercherRues = (brut) => {
@@ -364,6 +386,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         setRue(v);
         setRueChoisie(false);
         setCoords(null);
+        coordsRue.current = null;
         setAucuneRue(false);
         resetNumero();
         publier({ rue: v, coords: null, numero: '' });
@@ -372,16 +395,26 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         timer.current = setTimeout(async () => {
             try {
                 const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
+                // Un code postal choisi (ou saisi en entier quand la liste
+                // manque) limite les rues proposees a ce code.
+                const cpFiltre = cp && (cpChoisi || (cpsLibres && cp.length >= (CP_NUMERIQUE[pays] ?? 4))) ? cp : '';
+                const compact = (c) => formatCp(String(c)).replace(/\s+/g, '');
+                const memeCp = (f) => (f.properties.postcode || '').split(/[;,]/).some((c) => c.trim() !== '' && compact(c.trim()) === compact(cpFiltre));
                 let res = [];
-                if (pays === 'FR') {
+                if (cpFiltre) {
+                    res = (await photon(`${v} ${cpFiltre}`, `&layer=street${centre}`, pays, 30).catch(() => [])).filter(memeCp);
+                }
+                if (res.length > 0) {
+                    // deja limite au code postal
+                } else if (pays === 'FR') {
                     res = await banRues(`${v} ${cpLocalite || ville}`);
                     if (res.length === 0) res = await banRues(v);
                 } else if (pays === 'NL') {
                     res = await pdokRues(`${v} ${cpLocalite || ville}`);
                     if (res.length === 0) res = await pdokRues(v);
                 }
-                if (res.length === 0) {
-                    res = await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                if (res.length === 0 || (cpFiltre && ! res.some(memeCp))) {
+                    res = [...res, ...await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30)];
                 }
                 if (res.length === 0) {
                     res = await photon(v, `&layer=street${centre}`, pays, 30);
@@ -409,9 +442,17 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     vus.add(cle);
                     return true;
                 });
-                if (cp) {
-                    const memeCp = (f) => (f.properties.postcode || '').split(';').some((c) => c.trim() === cp);
-                    res = [...res].sort((a, b) => (memeCp(b) ? 1 : 0) - (memeCp(a) ? 1 : 0));
+                if (cpFiltre) {
+                    const dansCp = res.filter(memeCp);
+                    // Sans rue portant ce code, une rue dont le code n'est pas
+                    // connu reste proposee si elle est au coeur du code postal.
+                    res = dansCp.length > 0
+                        ? dansCp
+                        : res.filter((f) => {
+                            if (f.properties.postcode || ! villeCoords) return false;
+                            const [flng, flat] = f.geometry.coordinates;
+                            return kmEntre(villeCoords.lat, villeCoords.lng, flat, flng) <= 3;
+                        });
                 }
                 setSuggRues(res.slice(0, 8));
                 setAucuneRue(res.length === 0);
@@ -424,6 +465,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const choisirRue = (f) => {
         const p = f.properties;
         const [lng, lat] = f.geometry.coordinates;
+        coordsRue.current = { lat, lng };
         setRue(p.name);
         setRueChoisie(true);
         setCoords({ lat, lng });
@@ -441,6 +483,36 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         if (! numeroLibre) chargerNumeros(p.name, lat, lng, cpRue);
     };
 
+    // Le numero tape est retenu tel quel : present dans la liste, avec la
+    // position de la maison ; absent (beaucoup de rues n'ont pas leurs
+    // numeros dans OpenStreetMap, en Grece par exemple), localise a la rue
+    // choisie. Le prix ne depend que de la localite, que le serveur verifie.
+    const retenirNumero = (v, liste, definitif) => {
+        const exact = liste.find((n) => n.hn.toLowerCase() === v.toLowerCase());
+
+        if (exact) {
+            setNumChoisi(true);
+            setAucunNum(false);
+            setCoords({ lat: exact.lat, lng: exact.lng });
+            let cpNum = cp;
+            if (exact.pc) {
+                cpNum = formatCp(exact.pc);
+                setCp(cpNum);
+                setCpChoisi(true);
+            }
+            publier({ numero: exact.hn, cp: cpNum, coords: { lat: exact.lat, lng: exact.lng } });
+
+            return;
+        }
+
+        setNumChoisi(false);
+        if (definitif) {
+            setAucunNum(! liste.some((n) => n.hn.toLowerCase().startsWith(v.toLowerCase())));
+        }
+        setCoords(coordsRue.current);
+        publier({ numero: v, coords: coordsRue.current });
+    };
+
     const chercherNums = (brut) => {
         const v = formatNumero(brut);
         setNumero(v);
@@ -448,15 +520,20 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         setNumChoisi(false);
         setAucunNum(false);
         if (numeroLibre) { publier({ numero: v }); return; }
-        publier({ numero: '' });
+        if (v.length === 0) {
+            setSuggNums([]);
+            publier({ numero: '' });
+            return;
+        }
         if (numsDispo.length > 0) {
             const liste = numsDispo.filter((n) => n.hn.toLowerCase().startsWith(v.toLowerCase()));
             setSuggNums(liste.slice(0, 30));
-            setAucunNum(v.length > 0 && liste.length === 0);
+            retenirNumero(v, numsDispo, true);
             return;
         }
         setSuggNums([]);
-        if (numsChargement || v.length === 0) return;
+        retenirNumero(v, [], false);
+        if (numsChargement) return;
         clearTimeout(timer.current);
         timer.current = setTimeout(async () => {
             try {
@@ -472,10 +549,12 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     if (!liste.some((n) => n.hn === hn)) liste.push({ hn, lat: flat, lng: flng, pc: f.properties.postcode || '' });
                 });
                 liste.sort((a, b) => (parseInt(a.hn) - parseInt(b.hn)) || a.hn.localeCompare(b.hn));
+                if (numeroRef.current !== v) return;
                 setSuggNums(liste.slice(0, 30));
-                setAucunNum(liste.length === 0);
+                retenirNumero(v, liste, true);
             } catch {
                 setSuggNums([]);
+                if (numeroRef.current === v) setAucunNum(true);
             }
         }, 150);
     };
@@ -494,10 +573,10 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             const liste = (await r.json()).map((n) => ({ hn: n.numero, lat: n.lat, lng: n.lng, pc: n.cp }));
             setNumsDispo(liste);
             const attendu = numeroRef.current;
-            if (attendu && liste.length > 0) {
+            if (attendu) {
                 const filtres = liste.filter((n) => n.hn.toLowerCase().startsWith(attendu.toLowerCase()));
                 setSuggNums(filtres.slice(0, 30));
-                setAucunNum(filtres.length === 0);
+                retenirNumero(attendu, liste, true);
             }
         } catch {
             setNumsDispo([]);
@@ -529,6 +608,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         setRue('');
         setRueChoisie(false);
         setCoords(null);
+        coordsRue.current = null;
         setSuggVilles([]);
         setSuggRues([]);
         setAucuneVille(false);
@@ -544,7 +624,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
-                    <select value={pays} onChange={(e) => changerPays(e.target.value)} className={selectCls}>
+                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysImpose !== null} className={selectCls}>
                         {PAYS.map((p) => (
                             <option key={p.code} value={p.code}>{p.nom}</option>
                         ))}
@@ -723,8 +803,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     {aucuneRue && rue.length >= 2 && (
                         <p className="mt-1 text-xs text-status-incident">
                             {pays === 'BE'
-                                ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cpLocalite || ville || nomPays })
-                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cpLocalite || ville || nomPays })}
+                                ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })
+                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })}
                         </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
@@ -733,11 +813,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     {numsChargement && (
                         <p className="mt-1 text-xs text-slate-600">{t('adresse.chargement_numeros', 'Chargement des numéros de la rue…')}</p>
                     )}
-                    {aucunNum && (
-                        <p className="mt-1 text-xs text-status-incident">{t('adresse.numero_introuvable', 'Numéro introuvable dans cette rue — seuls les numéros existants sont proposés.')}</p>
-                    )}
-                    {! numeroLibre && rueChoisie && numero && !numChoisi && !aucunNum && !numsChargement && suggNums.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_numero', 'Choisis le numéro dans la liste.')}</p>
+                    {aucunNum && rueChoisie && numero && (
+                        <p className="mt-1 text-xs text-amber-700">{t('adresse.numero_non_repertorie', 'Numéro non répertorié dans cette rue : vérifiez-le. L\'adresse sera localisée au niveau de la rue.')}</p>
                     )}
                 </div>
             </div>

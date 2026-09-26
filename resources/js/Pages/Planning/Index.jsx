@@ -42,34 +42,59 @@ const enHeures = (heures) => {
     return min === 0 ? `${h} h` : `${h} h ${String(min).padStart(2, '0')}`;
 };
 
-function LigneAffectation({ ordre, vehicles, drivers }) {
+function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffectation = false, onFermer }) {
     const t = useTraduction();
+    const voc = useVocabulaire();
     const { data, setData, post, processing, errors } = useForm({
-        vehicle_registration: '',
-        driver_id: '',
+        vehicle_registration: reaffectation ? (ordre.vehicle?.registration ?? '') : '',
+        driver_id: reaffectation ? String(ordre.driver_id ?? '') : '',
+        motif: '',
+        reaffectation,
     });
 
     const affecter = (e) => {
         e.preventDefault();
-        post(route('planning.assign', ordre.id), { preserveScroll: true });
+        post(route('planning.assign', ordre.id), {
+            preserveScroll: true,
+            onSuccess: () => onFermer?.(),
+        });
     };
 
-    const capaciteSuffisante = (v) => Number(v.capacity_tonnes) * 1000 >= Number(ordre.weight);
-    const hayonSuffisant = (v) => ! ordre.needs_tail_lift || v.has_tail_lift;
-    const vehiculeCompatible = (v) => capaciteSuffisante(v) && hayonSuffisant(v);
+    // Le serveur dit, a la date de la mission, pourquoi un camion ou un
+    // chauffeur ne convient pas (capacite, hayon, ADR, controle technique,
+    // documents) : l'ecran et l'affectation ne se contredisent plus.
+    const vehiculeChoisi = vehicles.find((v) => v.registration === data.vehicle_registration);
+    const chauffeurChoisi = drivers.find((d) => String(d.id) === String(data.driver_id));
+    // Code 95 et carte tachygraphe ne sont exiges qu'au-dela de 3,5 t :
+    // ils ne grisent pas un chauffeur si le camion choisi est une
+    // camionnette de permis B.
+    const lourd = (v) => ! v || v.permis_requis !== 'B';
+    const refusPro = (d, v) => (lourd(v) ? ordre.refus_chauffeurs_pro?.[d.id] ?? null : null);
+    const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration]
+        ?? (chauffeurChoisi && v.permis_requis !== 'B' ? ordre.refus_chauffeurs_pro?.[chauffeurChoisi.id] ?? null : null);
+    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? refusPro(d, vehiculeChoisi);
+    // Le permis depend du couple : celui du chauffeur doit couvrir celui
+    // qu'exige le camion (un tracteur de 44 t exige le CE).
+    const permisManquant = (permis, vehicule) => (
+        vehicule && ! (couverture[permis] ?? []).includes(vehicule.permis_requis) ? vehicule.permis_requis : null
+    );
+    const motifPermis = (permis) => ' (' + t('planif.permis_requis', 'permis :permis requis', { permis }) + ')';
+
+    const vehiculeCompatible = (v) => ! refusVehicule(v) && ! (chauffeurChoisi && permisManquant(chauffeurChoisi.license_type, v));
     const motifRefus = (v) => {
-        if (! capaciteSuffisante(v)) return ' (' + t('planif.capacite_insuffisante', 'capacité insuffisante') + ')';
-        if (! hayonSuffisant(v)) return ' (' + t('planif.sans_hayon', 'sans hayon') + ')';
+        const refus = refusVehicule(v);
+        if (refus) return ' (' + refus + ')';
+        const permis = chauffeurChoisi ? permisManquant(chauffeurChoisi.license_type, v) : null;
 
-        return '';
+        return permis ? motifPermis(permis) : '';
     };
-    const chauffeurApte = (d) => (d.empechements ?? []).length === 0;
-    const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified);
+    const chauffeurCompatible = (d) => ! refusChauffeur(d) && ! permisManquant(d.license_type, vehiculeChoisi);
     const motifChauffeur = (d) => {
-        if (! chauffeurApte(d)) return ' (' + d.empechements[0] + ')';
-        if (ordre.is_hazardous && ! d.adr_certified) return ' (' + t('planif.adr_requis', 'ADR requis') + ')';
+        const refus = refusChauffeur(d);
+        if (refus) return ' (' + refus + ')';
+        const permis = permisManquant(d.license_type, vehiculeChoisi);
 
-        return '';
+        return permis ? motifPermis(permis) : '';
     };
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
@@ -83,9 +108,17 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
             <span className="font-semibold uppercase tracking-wide text-slate-600">{t('planif.besoins', 'Besoins')}</span>
 
+            {/* Tronque au centieme : arrondi au dixieme, 850 kg s'affichaient
+                0,9 t et semblaient ecarter un camion de 0,85 t qui convient. */}
             <span className={pastille + ' bg-surface text-marine'}>
-                {t('planif.charge_utile', 'Charge utile ≥')} {(Number(ordre.weight) / 1000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
+                {t('planif.charge_utile', 'Charge utile ≥')} {(Math.floor(Number(ordre.weight) / 10) / 100).toLocaleString(locale, { maximumFractionDigits: 2 })} t
             </span>
+
+            {ordre.volume && (
+                <span className={pastille + ' bg-surface text-marine'}>
+                    {t('planif.volume_min', 'Volume ≥')} {Number(ordre.volume).toLocaleString(locale)} m³
+                </span>
+            )}
 
             {ordre.conduite && (
                 <span className={pastille + ' bg-surface text-marine'}>
@@ -94,9 +127,14 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
             )}
 
             {ordre.is_hazardous && (
-                <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
-                    {t('planif.chauffeur_adr', 'Chauffeur certifié ADR')}
-                </span>
+                <>
+                    <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
+                        {t('planif.chauffeur_adr', 'Chauffeur certifié ADR')}
+                    </span>
+                    <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
+                        {t('planif.vehicule_adr', 'Véhicule équipé ADR')}
+                    </span>
+                </>
             )}
 
             {ordre.needs_tail_lift && (
@@ -110,6 +148,26 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
             </span>
         </div>
 
+        {reaffectation && (
+            <div className="mb-2">
+                <p className="mb-1 text-xs text-slate-600">
+                    {ordre.status === 'IN_PROGRESS'
+                        ? t('planif.transbordement_aide', 'La marchandise est chargée : choisissez le camion ou le chauffeur qui prend le relais. La mission reste en cours.')
+                        : t('planif.reaffectation_aide', 'Changez de camion ou de chauffeur sans remettre la mission en attente.')}
+                </p>
+                <input
+                    type="text"
+                    value={data.motif}
+                    onChange={(e) => setData('motif', e.target.value)}
+                    placeholder={t('planif.motif_reaffectation', 'Motif (panne, accident, relais de chauffeur…)')}
+                    className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                    required
+                    minLength={5}
+                    maxLength={200}
+                />
+                {errors.motif && <p className="mt-1 text-xs text-status-incident">{errors.motif}</p>}
+            </div>
+        )}
         <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <select
@@ -121,8 +179,11 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                     <option value="">— {t('ordres.vehicule', 'Véhicule')} —</option>
                     {vehicles.map((v) => (
                         <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
-                            {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {v.registration} · {voc('vehicule', v.vehicle_type)} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {v.capacity_volume ? ` · ${Number(v.capacity_volume).toLocaleString(locale)} m³` : ''}
+                            {' · ' + t('suivi.permis', 'Permis').toLowerCase() + ' ' + v.permis_requis}
                             {v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : ''}
+                            {v.adr_equipe ? ' · ADR' : ''}
                             {motifRefus(v)}
                         </option>
                     ))}
@@ -141,6 +202,7 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                         <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
                             {d.nom} · {t('suivi.permis', 'Permis').toLowerCase()} {d.license_type}{d.adr_certified ? ' · ADR' : ''}
                             {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} ${t('planif.cette_semaine', 'cette semaine')}` : ''}
+                            {d.retraite_passee ? ' · ' + t('planif.retraite_passee', 'retraite prévue le :date, fiche à revoir', { date: d.retraite_passee }) : ''}
                             {motifChauffeur(d)}
                         </option>
                     ))}
@@ -152,14 +214,23 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                 disabled={processing}
                 className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
             >
-                {t('planif.affecter', 'Affecter')}
+                {reaffectation ? t('planif.reaffecter', 'Réaffecter') : t('planif.affecter', 'Affecter')}
             </button>
+            {reaffectation && (
+                <button
+                    type="button"
+                    onClick={onFermer}
+                    className="px-2 py-2 text-sm font-semibold text-slate-600 hover:text-marine"
+                >
+                    {t('action.annuler', 'Annuler')}
+                </button>
+            )}
         </form>
         </>
     );
 }
 
-function BoutonsStatut({ ordre }) {
+function BoutonsStatut({ ordre, onReaffecter }) {
     const t = useTraduction();
 
     const changer = (statut, confirmation) => {
@@ -182,13 +253,22 @@ function BoutonsStatut({ ordre }) {
             {ordre.status === 'IN_PROGRESS' && (
                 <button
                     type="button"
-                    onClick={() => changer('DELIVERED')}
+                    onClick={() => changer('DELIVERED', t('planif.confirmer_livre', 'Marquer l\'ordre :numero comme livré aujourd\'hui ? Ce changement est définitif.', { numero: ordre.tracking_number }))}
                     className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 >
                     {t('planif.marquer_livre', 'Marquer livré')}
                 </button>
             )}
             {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
+                <button
+                    type="button"
+                    onClick={onReaffecter}
+                    className="rounded-lg border border-marine px-3 py-1.5 text-xs font-semibold text-marine transition hover:bg-marine/5"
+                >
+                    {t('planif.reaffecter', 'Réaffecter')}
+                </button>
+            )}
+            {ordre.status === 'ASSIGNED' && (
                 <button
                     type="button"
                     onClick={desaffecter}
@@ -216,13 +296,14 @@ const LIBELLE_CONTRAINTE = {
 };
 
 export default function Index({
-    orders, vehicles, drivers, statut, compteurs,
+    orders, vehicles, drivers, couverture = {}, statut, compteurs,
     priorite = null, priorites = [],
     contrainte = null, contraintes = [],
+    jour = null,
     q = '', suggestions = [],
 }) {
-    const flash = usePage().props.flash ?? {};
     const t = useTraduction();
+    const [enReaffectation, setEnReaffectation] = useState(null);
     const v = useVocabulaire();
     const locale = useLocale();
 
@@ -237,6 +318,7 @@ export default function Index({
                 status: statut,
                 priorite,
                 contrainte,
+                jour: jour || undefined,
                 q: valeur || undefined,
             }, {
                 only: ['orders', 'priorites', 'contraintes', 'compteurs', 'suggestions', 'q'],
@@ -251,15 +333,14 @@ export default function Index({
         ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '—';
 
+    // Le jour arrive en AAAA-MM-JJ : new Date() le lirait en UTC et
+    // afficherait la veille sous un fuseau a l'ouest de Greenwich.
+    const jourCourt = (valeur) => valeur.split('-').reverse().join('/');
+
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.planification', 'Planification')}</h1>}>
             <Head title={t('nav.planification', 'Planification')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
 
             {}
             <div className="mb-4">
@@ -286,11 +367,28 @@ export default function Index({
                 )}
             </div>
 
+            {jour && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-marine py-1 pl-3 pr-1.5 text-sm font-medium text-white">
+                        {t('planif.enlevement_le', 'Enlèvement le :date', { date: jourCourt(jour) })}
+                        <Link
+                            href={route('planning.index', { status: statut, priorite, contrainte, q: champs || undefined })}
+                            preserveScroll
+                            aria-label={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            title={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            className="flex h-5 w-5 items-center justify-center rounded-full leading-none text-white/80 transition hover:bg-white/20 hover:text-white"
+                        >
+                            ×
+                        </Link>
+                    </span>
+                </div>
+            )}
+
             <div className="mb-5 flex flex-wrap gap-2">
                 {Object.keys(LIBELLE_STATUT).map((cle) => (
                     <Link
                         key={cle}
-                        href={route('planning.index', { status: cle, q: champs || undefined })}
+                        href={route('planning.index', { status: cle, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-lg px-4 py-2 text-sm font-medium transition ' +
@@ -306,7 +404,7 @@ export default function Index({
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('commande.priorite', 'Priorité')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, contrainte, q: champs || undefined })}
+                    href={route('planning.index', { status: statut, contrainte, jour: jour || undefined, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -318,7 +416,7 @@ export default function Index({
                 {priorites.map((p) => (
                     <Link
                         key={p.valeur}
-                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte, q: champs || undefined })}
+                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -338,7 +436,7 @@ export default function Index({
             <div className="mb-5 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('planif.contrainte', 'Contrainte')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, priorite, q: champs || undefined })}
+                    href={route('planning.index', { status: statut, priorite, jour: jour || undefined, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -350,7 +448,7 @@ export default function Index({
                 {contraintes.map((c) => (
                     <Link
                         key={c.valeur}
-                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur, q: champs || undefined })}
+                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -379,7 +477,12 @@ export default function Index({
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-semibold text-marine">{ordre.tracking_number}</span>
+                                    <Link
+                                        href={route('transport-orders.show', ordre.id)}
+                                        className="font-semibold text-marine hover:underline"
+                                    >
+                                        {ordre.tracking_number}
+                                    </Link>
                                     <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + COULEUR_STATUT[ordre.status]}>
                                         {t(...LIBELLE_STATUT[ordre.status])}
                                     </span>
@@ -403,17 +506,27 @@ export default function Index({
                                 </p>
                                 <p className="mt-1 text-xs text-slate-600">
                                     {Number(ordre.weight).toLocaleString(locale)} kg
+                                    {ordre.volume ? ` · ${Number(ordre.volume).toLocaleString(locale)} m³` : ''}
                                     {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString(locale)} km` : ''}
                                     {' · ' + t('planif.chargement', 'chargement') + ' '}{dateCourte(ordre.pickup_date)}
                                     {ordre.goods_type ? ` · ${v('marchandise', ordre.goods_type)}` : ''}
                                 </p>
                             </div>
-                            <BoutonsStatut ordre={ordre} />
+                            <BoutonsStatut ordre={ordre} onReaffecter={() => setEnReaffectation(ordre.id)} />
                         </div>
 
                         <div className="mt-4 border-t border-slate-100 pt-4">
                             {ordre.status === 'PENDING' ? (
-                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} />
+                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} couverture={couverture} />
+                            ) : enReaffectation === ordre.id ? (
+                                <LigneAffectation
+                                    ordre={ordre}
+                                    vehicles={vehicles}
+                                    drivers={drivers}
+                                    couverture={couverture}
+                                    reaffectation
+                                    onFermer={() => setEnReaffectation(null)}
+                                />
                             ) : (
                                 <div className="flex flex-wrap gap-6 text-xs text-slate-600">
                                     <span>
@@ -428,6 +541,19 @@ export default function Index({
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
                                             : t('planif.non_affecte', 'non affecté')}
                                     </span>
+                                    {ordre.en_route_depuis && (
+                                        <p className="basis-full rounded-lg bg-status-assigned/10 px-3 py-2 text-status-assigned" role="status">
+                                            {t('planif.en_route_depuis', 'En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', { date: ordre.en_route_depuis })}
+                                        </p>
+                                    )}
+                                    {(ordre.alertes ?? []).length > 0 && (
+                                        <div className="basis-full rounded-lg bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">
+                                            <p className="font-semibold">{t('planif.non_conforme', 'Affectation non conforme : réaffectez cette mission.')}</p>
+                                            <ul className="mt-1 list-disc pl-4">
+                                                {ordre.alertes.map((alerte) => <li key={alerte}>{alerte}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
                                     {ordre.actual_delivery_date && (
                                         <span>
                                             <span className="text-slate-600">{t('planif.livre_le', 'Livré le')} : </span>

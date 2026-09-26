@@ -2,7 +2,7 @@ import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const ETAPES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
@@ -65,7 +65,13 @@ function Progression({ statut }) {
 function Annulation({ order, annulation, euros }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
-    const { patch, processing } = useForm({ frais: annulation.frais });
+    const { setData, patch, processing } = useForm({ frais: annulation.frais });
+
+    // Si un camion a ete affecte entre-temps, le serveur renvoie le nouveau
+    // montant : le formulaire doit confirmer celui-la, pas l'ancien.
+    useEffect(() => {
+        setData('frais', annulation.frais);
+    }, [annulation.frais]);
     const gratuite = annulation.frais === 0;
 
     const confirmer = () => {
@@ -131,11 +137,95 @@ function Annulation({ order, annulation, euros }) {
     );
 }
 
-export default function Show({ order, chauffeur, facture = null, annulation = null }) {
+function Supplements({ order, supplements, peutAjouter, peutRetirer = false, euros }) {
+    const t = useTraduction();
+    const { data, setData, post, processing, errors, reset } = useForm({ libelle: '', montant: '' });
+    const retirer = useForm({});
+
+    // Une expedition annulee sans indemnite ne sera jamais facturee : le
+    // serveur refuse tout supplement, le formulaire n'a pas a le proposer.
+    const annuleeSansFrais = order.status === 'CANCELLED' && ! (Number(order.cancellation_fee) > 0);
+    const formulaire = peutAjouter && ! annuleeSansFrais;
+
+    if (supplements.length === 0 && ! formulaire) return null;
+
+    const ajouter = (e) => {
+        e.preventDefault();
+        post(route('transport-orders.charges.store', order.id), { preserveScroll: true, onSuccess: () => reset() });
+    };
+
+    const champ = 'block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
+
+    return (
+        <section className="rounded-2xl bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">{t('ordres.supplements', 'Suppléments')}</h2>
+            {supplements.length === 0 ? (
+                <p className="text-sm text-slate-600">{t('ordres.aucun_supplement', 'Aucun supplément.')}</p>
+            ) : (
+                <ul className="divide-y divide-slate-100 text-sm">
+                    {supplements.map((s) => (
+                        <li key={s.id} className="flex items-center justify-between gap-3 py-2">
+                            <span className="text-slate-700">
+                                {s.libelle}
+                                <span className="block text-xs text-slate-500">
+                                    {s.date} · {s.facture ? t('ordres.supplement_facture', 'facturé') : annuleeSansFrais ? t('ordres.supplement_non_facture', 'non facturé : expédition annulée sans frais') : t('ordres.supplement_a_facturer', 'sur la prochaine facture')}
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <span className="font-semibold text-marine">{euros(s.montant)}</span>
+                                {peutRetirer && ! s.facture && (
+                                    <button
+                                        type="button"
+                                        onClick={() => retirer.delete(route('transport-orders.charges.destroy', [order.id, s.id]), { preserveScroll: true })}
+                                        className="text-xs font-semibold text-status-incident hover:underline"
+                                    >
+                                        {t('ordres.retirer', 'Retirer')}
+                                    </button>
+                                )}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {formulaire && (
+                <form onSubmit={ajouter} className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-[1fr_7rem_auto]">
+                    <input
+                        type="text"
+                        value={data.libelle}
+                        onChange={(e) => setData('libelle', e.target.value)}
+                        placeholder={t('ordres.supplement_libelle', 'Attente au quai 2 h, manutention…')}
+                        className={champ}
+                        minLength={3}
+                        maxLength={200}
+                        required
+                    />
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="100000"
+                        value={data.montant}
+                        onChange={(e) => setData('montant', e.target.value)}
+                        placeholder={t('ordres.supplement_montant', '€ HT')}
+                        className={champ}
+                        required
+                    />
+                    <button type="submit" disabled={processing} className="rounded-lg bg-action px-3 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark disabled:opacity-60">
+                        {t('ordres.ajouter_supplement', 'Ajouter')}
+                    </button>
+                    {(errors.libelle || errors.montant) && (
+                        <p className="text-xs text-status-incident sm:col-span-3">{errors.libelle || errors.montant}</p>
+                    )}
+                </form>
+            )}
+        </section>
+    );
+}
+
+export default function Show({ order, chauffeur, facture = null, annulation = null, supplements = [], peutAjouterSupplement = false, peutRetirerSupplement = false }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
-    const flash = usePage().props.flash ?? {};
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
@@ -190,16 +280,6 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
         >
             <Head title={t('ordres.expedition', 'Expédition') + ' ' + order.tracking_number} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="grid gap-4 lg:grid-cols-3">
                 {carte(t('suivi.etat', 'État de livraison'), (
@@ -207,7 +287,9 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         <Progression statut={order.status} />
                         <dl className="mt-4 border-t border-slate-100 pt-3">
                             {ligne(t('ordres.livraison_souhaitee', 'Livraison souhaitée'), date(order.requested_delivery_date))}
-                            {ligne(t('ordres.livraison_effective', 'Livraison effective'), date(order.actual_delivery_date))}
+                            {ligne(t('ordres.livraison_effective', 'Livraison effective'), order.delivered_at ? date(order.delivered_at, true) : date(order.actual_delivery_date))}
+                            {order.received_by && ligne(t('mission.receptionnaire', 'Réceptionné par'), order.received_by)}
+                            {order.delivery_reserves && ligne(t('ordres.reserves', 'Réserves à la livraison'), order.delivery_reserves)}
                         </dl>
                     </>
                 ))}
@@ -225,11 +307,13 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                     <dl>
                         {ligne(t('ordres.nature', 'Nature'), v('marchandise', order.goods_type))}
                         {ligne(t('commande.poids', 'Poids'), nombre(order.weight, 'kg'))}
+                        {order.volume != null && ligne(t('commande.volume', 'Volume'), nombre(order.volume, 'm³', 1))}
+                        {order.needs_tail_lift && ligne(t('commande.hayon', 'Hayon élévateur nécessaire'), t('ordres.oui', 'Oui'))}
                         {ligne(t('ordres.dangereuse', 'Matière dangereuse'), order.is_hazardous
                             ? t('ordres.oui_adr', 'Oui — ADR')
                             : t('ordres.non', 'Non'))}
                         {ligne(t('ordres.formule', 'Formule'), order.tariff_grid
-                            ? order.tariff_grid.label + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
+                            ? (order.tariff_grid.libelle ?? order.tariff_grid.label) + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
                             : null)}
                         {ligne(t('commande.estimation', 'Prix estimé'), nombre(order.estimated_cost, '€', 2))}
                     </dl>
@@ -290,6 +374,8 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         {order.special_instructions || t('ordres.aucune_consigne', 'Aucune consigne particulière.')}
                     </p>
                 ))}
+
+                <Supplements order={order} supplements={supplements} peutAjouter={peutAjouterSupplement} peutRetirer={peutRetirerSupplement} euros={euros} />
 
                 {annulation && <Annulation order={order} annulation={annulation} euros={euros} />}
             </div>

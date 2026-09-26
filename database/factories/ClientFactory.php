@@ -21,7 +21,6 @@ class ClientFactory extends Factory
         $numero = fake()->numerify('0#########');
 
         return [
-            'id' => User::factory(),
             'company_name' => fake()->company().' '.fake()->randomElement(['SA', 'SRL', 'BV', 'SC']),
             'vat_number' => 'BE'.$numero,
             'enterprise_number' => substr($numero, 0, 4).'.'.substr($numero, 4, 3).'.'.substr($numero, 7),
@@ -35,6 +34,25 @@ class ClientFactory extends Factory
             'credit_limit' => fake()->numberBetween(5, 50) * 1000,
             'payment_terms' => '30 jours',
         ];
+    }
+
+    /**
+     * L'entreprise a sa propre numerotation ; son administrateur est cree
+     * avec elle. Ses identifiants ne coincident pas avec ceux des comptes,
+     * pour qu'aucun code ne puisse les confondre sans que les tests le
+     * voient.
+     */
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Client $client) {
+            $client->id ??= max(100000, (int) Client::max('id') + 1);
+        })->afterCreating(function (Client $client) {
+            User::factory()->create([
+                'role' => 'CLIENT',
+                'client_id' => $client->id,
+                'company_role' => 'ADMIN',
+            ]);
+        });
     }
 
     public function enAttente(): static

@@ -22,6 +22,21 @@ class AdresseTest extends TestCase
         }
     }
 
+    public function test_un_code_postal_a_espace_ne_masque_pas_la_localite(): void
+    {
+        $cas = [
+            'Ermou 10, 105 57 Athènes, Grèce' => 'Athènes',
+            'Ermou 10, 10557 Athènes, Grèce' => 'Athènes',
+            'Tsimiski 5, 546 24 Thessalonique, Grèce' => 'Thessalonique',
+            'Václavské náměstí 1, 110 00 Prague, Tchéquie' => 'Prague',
+            'Drottninggatan 1, 111 51 Stockholm, Suède' => 'Stockholm',
+        ];
+
+        foreach ($cas as $adresse => $attendu) {
+            $this->assertSame($attendu, Adresse::localite($adresse), $adresse);
+        }
+    }
+
     public function test_la_localite_se_rabat_sur_le_dernier_segment(): void
     {
         $this->assertSame('Bruxelles', Adresse::localite('Rue Haute 100, Bruxelles'));
