@@ -239,6 +239,69 @@ export default function Create({ choix, listes }) {
     const volumeColis = data.packages.reduce((s, c) => s + (Number(c.quantite) || 0) * (Number(c.longueur) || 0) * (Number(c.largeur) || 0) * (Number(c.hauteur) || 0) / 1e6, 0);
     const nombre = (n, dec = 0) => Number(n).toLocaleString(langue, { maximumFractionDigits: dec });
 
+    // ----- Raccourcis de saisie -----
+    // Date AAAA-MM-JJ du jour local (toISOString donnerait la veille le
+    // soir a l'est de Greenwich).
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // n jours ouvres apres une date (samedi et dimanche sautes).
+    const ouvres = (depart, n) => {
+        const d = depart ? new Date(depart + 'T12:00:00') : new Date();
+        let reste = n;
+        while (reste > 0 || d.getDay() === 0 || d.getDay() === 6) {
+            d.setDate(d.getDate() + 1);
+            if (d.getDay() !== 0 && d.getDay() !== 6) reste -= 1;
+        }
+        return iso(d);
+    };
+    const lundiProchain = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+        return iso(d);
+    };
+    const vendredi = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
+        return iso(d);
+    };
+    const puces = (nom, choixRapides) => (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {choixRapides.map(([libelle, valeur]) => (
+                <button
+                    key={libelle}
+                    type="button"
+                    onClick={() => setData(nom, valeur)}
+                    className={'rounded-full border px-2.5 py-0.5 text-xs transition ' + (data[nom] === valeur ? 'border-action bg-action/10 font-semibold text-action-dark' : 'border-slate-300 text-slate-600 hover:border-slate-400')}
+                >
+                    {libelle}
+                </button>
+            ))}
+        </div>
+    );
+
+    // La valeur declaree choisit la tranche d'assurance.
+    const trancheAssurance = (valeur) => {
+        const v = Number(valeur);
+        if (! valeur || ! v) return choix.assurances[0];
+        return choix.assurances[v < 10000 ? 1 : v <= 50000 ? 2 : 3];
+    };
+
+    const CONSIGNES = [
+        t('devis.consigne_fragile', 'Marchandise fragile'),
+        t('devis.consigne_gerber', 'Ne pas gerber'),
+        t('devis.consigne_sangles', 'Sanglage renforcé'),
+        t('devis.consigne_appeler', 'Appeler le destinataire avant la livraison'),
+        t('devis.consigne_documents', 'Documents à remettre au destinataire'),
+    ];
+    const ajouterConsigne = (texte) => setData('special_instructions', data.special_instructions.includes(texte)
+        ? data.special_instructions
+        : (data.special_instructions.trim() ? data.special_instructions.trim() + '\n' : '') + texte);
+
+    const TEMPERATURES = [
+        [t('devis.temp_frais', 'Frais (2 à 8 °C)'), 2, 8],
+        [t('devis.temp_surgele', 'Surgelé (-25 à -18 °C)'), -25, -18],
+        [t('devis.temp_tempere', 'Tempéré (15 à 25 °C)'), 15, 25],
+    ];
+
     // ----- Champs -----
     const erreur = (nom) => errors[nom] ?? manques[nom];
 
@@ -283,7 +346,8 @@ export default function Create({ choix, listes }) {
         </div>
     );
 
-    const option = (nom, titre, texte) => (
+    // « lie » : les champs qui suivent la case cochee (camion frigorifique...).
+    const option = (nom, titre, texte, lie = null) => (
         <label
             className={
                 'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ' +
@@ -293,7 +357,7 @@ export default function Create({ choix, listes }) {
             <input
                 type="checkbox"
                 checked={data[nom]}
-                onChange={(e) => setData(nom, e.target.checked)}
+                onChange={(e) => setData(lie ? { ...data, [nom]: e.target.checked, ...lie(e.target.checked) } : { ...data, [nom]: e.target.checked })}
                 className="mt-0.5 rounded border-slate-300 text-action focus:ring-action"
             />
             <span>
@@ -367,7 +431,11 @@ export default function Create({ choix, listes }) {
                     </div>
                     <div>
                         {etiquette(lieu + '_has_dock', t('devis.quai', 'Quai de chargement'))}
-                        <select id={lieu + '_has_dock'} value={String(data[lieu + '_has_dock'])} onChange={(e) => setData(lieu + '_has_dock', e.target.value === '' ? '' : e.target.value === 'true')} className={CHAMP}>
+                        <select id={lieu + '_has_dock'} value={String(data[lieu + '_has_dock'])} onChange={(e) => {
+                            const quai = e.target.value === '' ? '' : e.target.value === 'true';
+                            // Sans quai, il faut un hayon.
+                            setData({ ...data, [lieu + '_has_dock']: quai, needs_tail_lift: quai === false ? true : data.needs_tail_lift });
+                        }} className={CHAMP}>
                             <option value="">{t('devis.ne_sait_pas', 'Je ne sais pas')}</option>
                             <option value="true">{t('devis.quai_oui', 'Oui, un quai')}</option>
                             <option value="false">{t('devis.quai_non', 'Non : hayon nécessaire')}</option>
@@ -705,11 +773,36 @@ export default function Create({ choix, listes }) {
                                 {data.delivery_address && <p className="mt-1 text-xs text-status-delivered">{data.delivery_address}</p>}
                             </div>
 
-                            {champ('pickup_date', t('devis.date_souhaitee', 'Date d\'enlèvement souhaitée'), { obligatoire: true, type: 'date', min: new Date().toISOString().slice(0, 10) })}
-                            {champ('delivery_date', t('devis.date_livraison', 'Date de livraison souhaitée'), { type: 'date', min: data.pickup_date || new Date().toISOString().slice(0, 10) })}
+                            <div>
+                                {champ('pickup_date', t('devis.date_souhaitee', 'Date d\'enlèvement souhaitée'), { obligatoire: true, type: 'date', min: iso(new Date()) })}
+                                {puces('pickup_date', [
+                                    [t('devis.date_demain', 'Prochain jour ouvré'), ouvres(null, 1)],
+                                    [t('devis.date_apres_demain', 'Dans 2 jours ouvrés'), ouvres(null, 2)],
+                                    [t('devis.date_lundi', 'Lundi prochain'), lundiProchain()],
+                                ])}
+                            </div>
+                            <div>
+                                {champ('delivery_date', t('devis.date_livraison', 'Date de livraison souhaitée'), { type: 'date', min: data.pickup_date || iso(new Date()) })}
+                                {data.pickup_date && puces('delivery_date', [
+                                    [t('devis.livraison_meme_jour', 'Le jour même'), data.pickup_date],
+                                    [t('devis.livraison_plus_1', '+1 jour ouvré'), ouvres(data.pickup_date, 1)],
+                                    [t('devis.livraison_plus_2', '+2 jours ouvrés'), ouvres(data.pickup_date, 2)],
+                                    [t('devis.livraison_plus_3', '+3 jours ouvrés'), ouvres(data.pickup_date, 3)],
+                                ])}
+                            </div>
                             {liste('date_flexibility', t('devis.flexibilite', 'Flexibilité de date'), choix.flexibilites)}
-                            {liste('frequency', t('devis.frequence', 'Fréquence'), choix.frequences)}
-                            {liste('monthly_volume', t('devis.volume_mensuel', 'Volume prévu'), choix.volumes)}
+                            <div>
+                                {etiquette('frequency', t('devis.frequence', 'Fréquence'))}
+                                <select
+                                    id="frequency"
+                                    value={data.frequency}
+                                    onChange={(e) => setData({ ...data, frequency: e.target.value, monthly_volume: e.target.value === choix.frequences[0] ? choix.volumes[0] : (data.monthly_volume === choix.volumes[0] ? choix.volumes[1] : data.monthly_volume) })}
+                                    className={CHAMP}
+                                >
+                                    {choix.frequences.map((f) => <option key={f} value={f}>{f}</option>)}
+                                </select>
+                            </div>
+                            {data.frequency !== choix.frequences[0] && liste('monthly_volume', t('devis.volume_mensuel', 'Volume prévu'), choix.volumes.slice(1))}
                         </div>
                         {data.pickup_lat && data.delivery_lat && (
                             <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-sm text-marine">
@@ -739,7 +832,22 @@ export default function Create({ choix, listes }) {
                     <Bloc numero="4" titre={t('devis.bloc_marchandise', 'La marchandise')}>
                         <div className="grid gap-5 sm:grid-cols-2">
                             {champ('goods_type', t('commande.marchandise', 'Type de marchandise'), { obligatoire: true, exemple: t('devis.marchandise_ex', 'Ex : palettes, mobilier, matériel'), suggestions: choix.marchandises })}
-                            {champ('declared_value', t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'), { type: 'number', min: 0, exemple: '0', aide: t('devis.valeur_aide', 'Pour l\'assurance ad valorem.') })}
+                            <div>
+                                {etiquette('declared_value', t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'))}
+                                <input
+                                    id="declared_value"
+                                    type="number"
+                                    min="0"
+                                    value={data.declared_value}
+                                    placeholder="0"
+                                    onChange={(e) => setData({ ...data, declared_value: e.target.value, insurance_value: trancheAssurance(e.target.value) })}
+                                    className={CHAMP}
+                                />
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {t('devis.valeur_aide2', 'Facultatif. Assurance : :tranche', { tranche: data.insurance_value })}
+                                </p>
+                                <InputError message={erreur('declared_value')} className="mt-1" />
+                            </div>
                         </div>
 
                         <div className="mt-6">
@@ -778,23 +886,27 @@ export default function Create({ choix, listes }) {
                                 </button>
                             )}
                             {(poidsColis > 0 || volumeColis > 0) && (
-                                <p className="mt-2 text-xs text-slate-600">
+                                <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-marine">
                                     {t('devis.colis_total', 'Total déclaré : :poids kg · :volume m³', { poids: nombre(poidsColis), volume: nombre(volumeColis, 2) })}
                                 </p>
                             )}
+                            <details className="mt-3 rounded-lg bg-surface/60 px-3 py-2" open={Boolean(data.weight || data.volume)}>
+                                <summary className="cursor-pointer text-sm font-semibold text-marine">{t('devis.sans_detail', 'Pas le détail des colis ? Indiquez seulement le poids et le volume')}</summary>
+                                <div className="mt-3 grid gap-5 sm:grid-cols-2">
+                                    {champ('weight', t('devis.poids_total', 'Poids total (kg)'), { type: 'number', min: 0, exemple: poidsColis > 0 ? nombre(poidsColis) : '0', aide: t('devis.poids_aide', 'Laissé vide : la somme des colis.') })}
+                                    {champ('volume', t('devis.volume_palettes', 'Volume / palettes'), { exemple: t('devis.volume_ex', 'Ex : 6 palettes ou 12 m³') })}
+                                </div>
+                            </details>
                         </div>
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                            {champ('weight', t('devis.poids_total', 'Poids total (kg)'), { type: 'number', min: 0, exemple: poidsColis > 0 ? nombre(poidsColis) : '0', aide: t('devis.poids_aide', 'Laissé vide : la somme des colis.') })}
-                            {champ('volume', t('devis.volume_palettes', 'Volume / palettes'), { exemple: t('devis.volume_ex', 'Ex : 6 palettes ou 12 m³') })}
                             {liste('vehicle_type', t('devis.type_vehicule', 'Type de véhicule souhaité'), choix.vehicules)}
-                            {liste('insurance_value', t('devis.assurance', 'Valeur estimée (assurance)'), choix.assurances)}
                         </div>
 
                         <div className="mt-5 grid gap-3 sm:grid-cols-2">
                             {option('needs_tail_lift', t('devis.hayon', 'Hayon élévateur'), t('devis.hayon_texte', 'Chargement et déchargement sans quai'))}
                             {option('is_hazardous', t('devis.adr', 'Marchandise dangereuse (ADR)'), t('devis.adr_texte', 'Véhicule et chauffeur certifiés'))}
-                            {option('needs_temperature', t('devis.temperature', 'Température dirigée'), t('devis.temperature_texte', 'Camion frigorifique, plage à respecter'))}
+                            {option('needs_temperature', t('devis.temperature', 'Température dirigée'), t('devis.temperature_texte', 'Camion frigorifique, plage à respecter'), (coche) => ({ vehicle_type: coche ? choix.vehicules[4] : (data.vehicle_type === choix.vehicules[4] ? choix.vehicules[0] : data.vehicle_type) }))}
                             {option('needs_express', t('devis.express', 'Livraison express'), t('devis.express_texte', 'Enlèvement le jour même'))}
                             {option('needs_ecmr', t('devis.ecmr', 'Preuve de livraison (e-CMR)'), t('devis.ecmr_texte', 'Document signé numérique'))}
                         </div>
@@ -822,6 +934,18 @@ export default function Create({ choix, listes }) {
 
                         {data.needs_temperature && (
                             <div className="mt-5 grid gap-5 rounded-xl bg-brand-blue/5 p-4 sm:grid-cols-2">
+                                <div className="flex flex-wrap gap-1.5 sm:col-span-2">
+                                    {TEMPERATURES.map(([libelle, min, max]) => (
+                                        <button
+                                            key={libelle}
+                                            type="button"
+                                            onClick={() => setData({ ...data, temperature_min: min, temperature_max: max })}
+                                            className={'rounded-full border px-2.5 py-0.5 text-xs transition ' + (Number(data.temperature_min) === min && Number(data.temperature_max) === max && data.temperature_min !== '' ? 'border-action bg-action/10 font-semibold text-action-dark' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400')}
+                                        >
+                                            {libelle}
+                                        </button>
+                                    ))}
+                                </div>
                                 {champ('temperature_min', t('devis.temperature_min', 'Température minimale (°C)'), { obligatoire: true, type: 'number', min: -30, max: 30, step: 0.5, exemple: '2' })}
                                 {champ('temperature_max', t('devis.temperature_max', 'Température maximale (°C)'), { obligatoire: true, type: 'number', min: -30, max: 30, step: 0.5, exemple: '8' })}
                             </div>
@@ -833,7 +957,15 @@ export default function Create({ choix, listes }) {
                     <Bloc numero="5" titre={t('devis.bloc_precisions', 'Précisions')}>
                         <div className="grid gap-5 sm:grid-cols-2">
                             {champ('budget', t('devis.budget', 'Budget indicatif (€ HT)'), { type: 'number', min: 0, aide: t('devis.budget_aide', 'Facultatif : il nous aide à proposer la bonne formule.') })}
-                            {champ('response_deadline', t('devis.reponse_avant', 'Réponse souhaitée avant le'), { type: 'date', min: new Date().toISOString().slice(0, 10) })}
+                            <div>
+                                {champ('response_deadline', t('devis.reponse_avant', 'Réponse souhaitée avant le'), { type: 'date', min: iso(new Date()) })}
+                                {puces('response_deadline', [
+                                    [t('devis.reponse_vite', 'Dès que possible'), ouvres(null, 1)],
+                                    [t('devis.reponse_48h', 'Sous 48 h'), ouvres(null, 2)],
+                                    [t('devis.reponse_semaine', 'Cette semaine'), vendredi()],
+                                    [t('devis.reponse_pas_presse', 'Pas pressé'), ''],
+                                ])}
+                            </div>
                         </div>
 
                         <div className="mt-5">
@@ -846,6 +978,18 @@ export default function Create({ choix, listes }) {
                                 placeholder={t('devis.instructions_ex2', 'Ex : marchandise fragile, sanglage particulier, documents à remettre au destinataire…')}
                                 className={CHAMP}
                             />
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {CONSIGNES.map((c) => (
+                                    <button
+                                        key={c}
+                                        type="button"
+                                        onClick={() => ajouterConsigne(c)}
+                                        className={'rounded-full border px-2.5 py-0.5 text-xs transition ' + (data.special_instructions.includes(c) ? 'border-action bg-action/10 font-semibold text-action-dark' : 'border-slate-300 text-slate-600 hover:border-slate-400')}
+                                    >
+                                        + {c}
+                                    </button>
+                                ))}
+                            </div>
                             <InputError message={erreur('special_instructions')} className="mt-1" />
                         </div>
 
@@ -861,6 +1005,31 @@ export default function Create({ choix, listes }) {
                             />
                             <p className="mt-1 text-xs text-slate-500">{t('devis.pieces_aide', 'Bon de commande, fiche de données de sécurité, plan d\'accès… 5 fichiers, 10 Mo chacun au plus.')}</p>
                             <InputError message={Object.entries(errors).find(([cle]) => cle.startsWith('attachments'))?.[1]} className="mt-1" />
+                        </div>
+
+                        <div className="mt-6 rounded-xl border border-slate-200 p-4">
+                            <p className="text-sm font-semibold text-marine">{t('devis.recapitulatif', 'Récapitulatif')}</p>
+                            <dl className="mt-2 space-y-1.5 text-sm">
+                                {[
+                                    [0, t('devis.societe', 'Société'), [data.company_name, data.vat_number].filter(Boolean).join(' · ')],
+                                    [1, t('devis.contact', 'Contact'), [data.contact_name, data.email, data.phone].filter(Boolean).join(' · ')],
+                                    [2, t('devis.trajet', 'Trajet'), [data.pickup_address, data.delivery_address].filter(Boolean).join(' → ')],
+                                    [2, t('devis.dates', 'Dates'), [data.pickup_date, data.delivery_date].filter(Boolean).map((d) => d.split('-').reverse().join('/')).join(' → ')],
+                                    [3, t('devis.bloc_marchandise', 'La marchandise'), [
+                                        data.goods_type,
+                                        poidsColis > 0 || data.weight ? nombre(data.weight || poidsColis) + ' kg' : null,
+                                        volumeColis > 0 ? nombre(volumeColis, 2) + ' m³' : data.volume,
+                                        data.is_hazardous ? 'ADR ' + data.un_number : null,
+                                        data.needs_temperature ? `${data.temperature_min} / ${data.temperature_max} °C` : null,
+                                    ].filter(Boolean).join(' · ')],
+                                ].map(([n, libelle, valeur]) => (
+                                    <div key={libelle} className="flex gap-3">
+                                        <dt className="w-32 shrink-0 text-slate-500">{libelle}</dt>
+                                        <dd className="flex-1 text-marine">{valeur || '—'}</dd>
+                                        <button type="button" onClick={() => allerA(n)} className="shrink-0 text-xs font-semibold text-brand-blue hover:underline">{t('action.modifier', 'Modifier')}</button>
+                                    </div>
+                                ))}
+                            </dl>
                         </div>
 
                         <label className="mt-6 flex items-start gap-3 text-sm text-slate-700">
