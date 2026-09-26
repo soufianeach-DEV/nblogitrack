@@ -1,3 +1,4 @@
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
@@ -38,7 +39,7 @@ const LIBELLES_CRENEAU = {
     indifferent: ['devis.indifferent', 'Indifférent'],
 };
 
-export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {} }) {
+export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {}, entreprises = [] }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -46,9 +47,26 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
     const [traitement, setTraitement] = useState(null);
     const [ouverte, setOuverte] = useState(null);
 
+    // Transformation en commande : l'agent confirme l'entreprise. La
+    // proposition vient du numero de TVA ou de l'e-mail saisis dans le
+    // formulaire public, qu'il faut verifier.
+    const [aCommander, setACommander] = useState(null);
+    const [entreprise, setEntreprise] = useState('');
+    const [envoiCommande, setEnvoiCommande] = useState(false);
+
     const commander = (d) => {
-        if (! window.confirm(t('demandes.commander_confirmer', 'Créer la commande correspondante pour l\'entreprise cliente ? Le prix est calculé comme au formulaire de commande.'))) return;
-        router.post(route('quotes.order', d.id), {}, { preserveScroll: true });
+        setEntreprise(d.client_propose ? String(d.client_propose) : '');
+        setACommander(d);
+    };
+
+    const confirmerCommande = (e) => {
+        e.preventDefault();
+        if (! entreprise || envoiCommande) return;
+        router.post(route('quotes.order', aCommander.id), { client_id: entreprise }, {
+            preserveScroll: true,
+            onStart: () => setEnvoiCommande(true),
+            onFinish: () => { setEnvoiCommande(false); setACommander(null); },
+        });
     };
 
     // Ce qu'on sait du lieu d'enlevement ou de livraison, en une ligne.
@@ -331,6 +349,47 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                     ))}
                 </div>
             )}
+
+            <Modal show={aCommander !== null} onClose={() => ! envoiCommande && setACommander(null)} maxWidth="lg">
+                <form onSubmit={confirmerCommande} className="p-6">
+                    <h2 className="text-lg font-bold text-marine">
+                        {t('demandes.transformer', 'Transformer en commande')} — {aCommander?.reference}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                        {t('demandes.commander_explication', 'La commande est créée pour l\'entreprise choisie et tarifée comme au formulaire de commande. Ses responsables reçoivent un e-mail et peuvent l\'annuler depuis leur espace.')}
+                    </p>
+                    <label htmlFor="entreprise_commande" className="mt-4 block text-sm font-semibold text-marine">
+                        {t('demandes.entreprise_commande', 'Entreprise cliente')}
+                    </label>
+                    <ListeRecherche
+                        id="entreprise_commande"
+                        value={entreprise}
+                        onChange={setEntreprise}
+                        options={entreprises}
+                        placeholder={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')}
+                        className="mt-1"
+                    />
+                    {aCommander && (aCommander.client_propose
+                        ? String(aCommander.client_propose) === entreprise && (
+                            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                {t('demandes.entreprise_proposee', 'Proposée d\'après le numéro de TVA ou l\'e-mail saisis par le demandeur (:tva, :email) : vérifiez que la demande vient bien de cette entreprise.', { tva: aCommander.vat_number || '—', email: aCommander.email })}
+                            </p>
+                        )
+                        : (
+                            <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm text-slate-600">
+                                {t('demandes.entreprise_inconnue', 'Aucune entreprise validée n\'a ce numéro de TVA ni cette adresse e-mail. Choisissez-la, ou créez d\'abord son compte.')}
+                            </p>
+                        ))}
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button type="button" onClick={() => setACommander(null)} disabled={envoiCommande} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-surface disabled:opacity-50">
+                            {t('action.annuler', 'Annuler')}
+                        </button>
+                        <button type="submit" disabled={! entreprise || envoiCommande} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
+                            {envoiCommande ? t('demandes.creation_en_cours', 'Création…') : t('demandes.creer_commande', 'Créer la commande')}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
 
             <Modal show={traitement !== null} onClose={() => setTraitement(null)} maxWidth="lg">
                 <form onSubmit={enregistrer} className="p-6">

@@ -130,6 +130,18 @@ class QuoteRequest extends Model
         return $total > 0 ? round($total, 2) : null;
     }
 
+    /** Le volume saisi en texte (« 12 m³ », « 7,5 ») en m3, null sinon. */
+    public static function volumeSaisi(?string $texte): ?float
+    {
+        if ($texte === null || ! preg_match('/(\d+(?:[.,]\d+)?)/', $texte, $m)) {
+            return null;
+        }
+
+        $m3 = (float) str_replace(',', '.', $m[1]);
+
+        return $m3 > 0 && $m3 <= 200 ? round($m3, 2) : null;
+    }
+
     public function handler(): BelongsTo
     {
         return $this->belongsTo(User::class, 'handled_by');

@@ -42,6 +42,23 @@ class Client extends Model
         return $this->hasMany(User::class)->orderBy('id');
     }
 
+    /**
+     * Entreprises a qui l'on peut rattacher une commande : validees, non
+     * refusees, avec au moins un compte actif autorise a commander.
+     */
+    public function scopeCommandables($query)
+    {
+        return $query->where('is_validated', true)
+            ->whereNull('rejection_reason')
+            ->whereHas('users', fn ($u) => $u->where('is_active', true)->whereIn('company_role', ['ADMIN', 'ORDERS']));
+    }
+
+    /** Les comptes actifs qui passent les commandes de l'entreprise. */
+    public function commanditaires()
+    {
+        return $this->users()->where('is_active', true)->whereIn('company_role', ['ADMIN', 'ORDERS'])->get();
+    }
+
     /** L'administrateur principal : le premier compte administrateur. */
     public function user(): HasOne
     {

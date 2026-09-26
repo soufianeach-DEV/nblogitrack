@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OrdreCree;
 use App\Models\Client;
 use App\Models\QuoteRequest;
 use App\Models\TransportOrder;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\GrillesDeDemonstration;
 use Tests\TestCase;
@@ -148,7 +150,7 @@ class DevisCompletTest extends TestCase
         $devis = QuoteRequest::firstOrFail();
         $planificateur = User::factory()->planificateur()->create();
 
-        $this->actingAs($planificateur)->post(route('quotes.order', $devis))->assertRedirect();
+        $this->actingAs($planificateur)->post(route('quotes.order', $devis), ['client_id' => $client->id])->assertRedirect();
 
         $ordre = TransportOrder::firstOrFail();
         $this->assertSame($client->id, $ordre->client_id);
@@ -160,20 +162,110 @@ class DevisCompletTest extends TestCase
         $this->assertSame(['ORDERED', $ordre->id], [$devis->fresh()->status, $devis->fresh()->converted_order_id]);
 
         // Une seconde fois : refuse.
-        $this->actingAs($planificateur)->post(route('quotes.order', $devis))->assertSessionHas('error');
+        $this->actingAs($planificateur)->post(route('quotes.order', $devis), ['client_id' => $client->id])->assertSessionHas('error');
         $this->assertSame(1, TransportOrder::count());
     }
 
-    public function test_sans_entreprise_cliente_la_transformation_est_refusee(): void
+    public function test_sans_entreprise_choisie_la_transformation_est_refusee(): void
     {
         $this->creerLesGrillesDeDemonstration();
         $this->post(route('devis.store'), $this->demande())->assertSessionHasNoErrors();
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->post(route('quotes.order', QuoteRequest::firstOrFail()))
-            ->assertSessionHas('error');
+            ->assertSessionHasErrors('client_id');
 
         $this->assertSame(0, TransportOrder::count());
+    }
+
+    /** Une entreprise en attente, refusee ou sans compte actif ne recoit rien. */
+    public function test_une_entreprise_non_validee_ne_recoit_pas_de_commande(): void
+    {
+        $this->creerLesGrillesDeDemonstration();
+        $this->post(route('devis.store'), $this->demande())->assertSessionHasNoErrors();
+        $devis = QuoteRequest::firstOrFail();
+        $planificateur = User::factory()->planificateur()->create();
+
+        $enAttente = Client::factory()->enAttente()->create(['vat_number' => 'BE0123456749']);
+        $refusee = Client::factory()->create(['rejection_reason' => 'Refus test']);
+        $sansCompte = Client::factory()->create();
+        $sansCompte->users()->update(['is_active' => false]);
+
+        foreach ([$enAttente, $refusee, $sansCompte] as $client) {
+            $this->actingAs($planificateur)->post(route('quotes.order', $devis), ['client_id' => $client->id])->assertSessionHas('error');
+        }
+
+        $this->assertSame(0, TransportOrder::count());
+    }
+
+    /** La TVA saisie par un inconnu propose une entreprise, sans la choisir a sa place. */
+    public function test_l_entreprise_est_proposee_d_apres_la_tva_et_prevenue_par_courriel(): void
+    {
+        Mail::fake();
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        $this->creerLesGrillesDeDemonstration();
+        $client = Client::factory()->create(['vat_number' => 'BE0123456749']);
+        $this->post(route('devis.store'), $this->demande())->assertSessionHasNoErrors();
+        $planificateur = User::factory()->planificateur()->create();
+
+        $this->actingAs($planificateur)->get(route('quotes.index'))
+            ->assertInertia(fn ($page) => $page->where('demandes.data.0.client_propose', $client->id)
+                ->where('entreprises.0.valeur', $client->id));
+
+        $this->actingAs($planificateur)->post(route('quotes.order', QuoteRequest::firstOrFail()), ['client_id' => $client->id]);
+
+        Mail::assertSent(OrdreCree::class, fn ($m) => $m->hasTo($client->users()->first()->email));
+    }
+
+    /** Date passee ou dimanche : l'enlevement glisse au premier jour ouvrable. */
+    public function test_une_date_passee_glisse_au_prochain_jour_ouvrable(): void
+    {
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        $this->creerLesGrillesDeDemonstration();
+        $client = Client::factory()->create();
+        $this->post(route('devis.store'), $this->demande(['delivery_date' => null]))->assertSessionHasNoErrors();
+        $devis = QuoteRequest::firstOrFail();
+        $devis->update(['pickup_date' => now()->subDays(20)->toDateString()]);
+
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->post(route('quotes.order', $devis), ['client_id' => $client->id])
+            ->assertSessionHas('success');
+
+        $enlevement = TransportOrder::firstOrFail()->pickup_date->copy()->setTimezone('Europe/Brussels');
+        $this->assertTrue($enlevement->isFuture());
+        $this->assertFalse($enlevement->isSunday());
+        $this->assertStringContainsString('reporté', session('success'));
+    }
+
+    /** Plus de 44 t de colis : refuse des le devis. */
+    public function test_des_colis_de_plus_de_44_tonnes_sont_refuses(): void
+    {
+        $this->post(route('devis.store'), $this->demande([
+            'packages' => [['type' => 'palette_europe', 'quantite' => 30, 'longueur' => 120, 'largeur' => 80, 'hauteur' => 150, 'poids_unitaire' => 1500, 'empilable' => false]],
+        ]))->assertSessionHasErrors('weight');
+    }
+
+    /** La marchandise du devis garde son sens dans la commande. */
+    public function test_la_marchandise_du_devis_est_reprise_dans_la_commande(): void
+    {
+        $this->assertSame('Produits chimiques', TransportOrder::marchandiseDepuisDevis('Chimie'));
+        $this->assertSame('Produits alimentaires', TransportOrder::marchandiseDepuisDevis('Alimentaire'));
+        $this->assertSame('Palettes', TransportOrder::marchandiseDepuisDevis('Palettes'));
+        $this->assertSame('Autre', TransportOrder::marchandiseDepuisDevis('Vrac'));
+        $this->assertSame(12.0, QuoteRequest::volumeSaisi('12 m³'));
+        $this->assertSame(7.5, QuoteRequest::volumeSaisi('environ 7,5'));
+        $this->assertNull(QuoteRequest::volumeSaisi('beaucoup'));
+    }
+
+    /** La ligne de colis proposee par defaut, laissee telle quelle, n'est pas gardee. */
+    public function test_la_palette_par_defaut_non_remplie_n_est_pas_gardee(): void
+    {
+        $this->post(route('devis.store'), $this->demande([
+            'weight' => 500, 'volume' => '12 m³',
+            'packages' => [['type' => 'palette_europe', 'quantite' => 1, 'longueur' => 120, 'largeur' => 80, 'hauteur' => null, 'poids_unitaire' => null, 'empilable' => false]],
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertNull(QuoteRequest::firstOrFail()->packages);
     }
 
     public function test_le_statut_transformee_ne_se_pose_pas_a_la_main(): void

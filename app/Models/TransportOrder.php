@@ -42,6 +42,30 @@ class TransportOrder extends Model
         'Autre',
     ];
 
+    /** Marchandise du formulaire de devis => marchandise de la commande. */
+    public const DEPUIS_DEVIS = [
+        'Palettes' => 'Palettes',
+        'Mobilier' => 'Mobilier',
+        'Matériel' => 'Machines',
+        'Alimentaire' => 'Produits alimentaires',
+        'Frigorifique' => 'Produits alimentaires',
+        'Textile' => 'Textile',
+        'Électronique' => 'Matériel électronique',
+        'Matériaux de construction' => 'Matériaux de construction',
+        'Chimie' => 'Produits chimiques',
+        'Automobile' => 'Pièces automobiles',
+        'Colis' => 'Colis express',
+    ];
+
+    public static function marchandiseDepuisDevis(?string $devis): string
+    {
+        if (in_array($devis, self::MARCHANDISES, true)) {
+            return $devis;
+        }
+
+        return self::DEPUIS_DEVIS[$devis] ?? 'Autre';
+    }
+
     /**
      * Marchandises souvent soumises a l'ADR (produits chimiques, batteries
      * au lithium, airbags...) : le client doit dire explicitement si son

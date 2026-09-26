@@ -2,6 +2,7 @@ import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 const ETATS = {
     DRAFT: { cle: 'facture.brouillon', libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
@@ -17,6 +18,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const locale = useLocale();
+    const [paiement, setPaiement] = useState(null);
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
     const ouvrir = (facture) => (e) => {
@@ -128,12 +130,16 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                                 {facture.peut_payer && (
                                                     <button
                                                         type="button"
+                                                        disabled={paiement !== null}
                                                         onClick={(e) => {
-
                                                             e.stopPropagation();
-                                                            router.post(route('payments.payer', facture.id));
+                                                            // Un seul envoi : un double clic ouvrait deux paiements.
+                                                            router.post(route('payments.payer', facture.id), {}, {
+                                                                onStart: () => setPaiement(facture.id),
+                                                                onFinish: () => setPaiement(null),
+                                                            });
                                                         }}
-                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark"
+                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
                                                     >
                                                         {t('facture.payer', 'Payer')}
                                                     </button>

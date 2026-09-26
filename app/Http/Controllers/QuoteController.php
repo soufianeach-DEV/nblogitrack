@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\QuoteRequest;
 use App\Models\TransportOrder;
-use App\Models\User;
+use App\Models\Vehicle;
 use App\Support\Audience;
 use App\Support\Chronologie;
 use App\Support\FretRetour;
 use App\Support\IdentifiantEntreprise;
+use App\Support\JoursFeries;
 use App\Support\Secteurs;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
@@ -21,8 +23,10 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -296,9 +300,20 @@ class QuoteController extends Controller
 
         // Les colis pesent et mesurent : ils completent le poids et le
         // volume laisses vides.
-        $colis = array_values($data['packages'] ?? []);
+        // La ligne proposee par defaut (une palette Europe, sans hauteur ni
+        // poids) n'est pas un colis decrit : elle n'est pas gardee.
+        $colis = array_values(array_filter($data['packages'] ?? [], fn (array $c) => ! (
+            $c['type'] === 'palette_europe' && (int) $c['quantite'] === 1
+            && empty($c['hauteur']) && empty($c['poids_unitaire'])
+        )));
         $data['packages'] = $colis === [] ? null : $colis;
         $data['weight'] ??= ($poids = QuoteRequest::poidsDesColis($colis)) === null ? null : (int) round($poids);
+
+        if ($data['weight'] !== null && $data['weight'] > 44000) {
+            throw ValidationException::withMessages([
+                'weight' => Traductions::t('msg.devis_trop_lourd', 'Le poids total des colis dépasse 44 t, la limite d\'un camion : répartissez l\'envoi en plusieurs demandes.'),
+            ]);
+        }
 
         if (($data['volume'] ?? null) === null && ($m3 = QuoteRequest::volumeDesColis($colis)) !== null) {
             $data['volume'] = str_replace('.', ',', (string) $m3).' m³';
@@ -388,7 +403,17 @@ class QuoteController extends Controller
         }
 
         return Inertia::render('Devis/Index', [
-            'demandes' => $requete->paginate(10)->withQueryString(),
+            'demandes' => $requete->paginate(10)->withQueryString()
+                ->through(function (QuoteRequest $d) {
+                    $d->setAttribute('client_propose', $d->converted_order_id === null ? self::clientPropose($d)?->id : null);
+
+                    return $d;
+                }),
+            // Pour choisir l'entreprise de la commande : celles qui peuvent
+            // en recevoir une.
+            'entreprises' => Client::commandables()->orderBy('company_name')
+                ->get(['id', 'company_name', 'vat_number'])
+                ->map(fn (Client $c) => ['valeur' => $c->id, 'libelle' => $c->company_name.($c->vat_number ? ' · '.$c->vat_number : '')]),
             'statut' => $statut,
             'recherche' => $recherche,
             'statuts' => collect(QuoteRequest::STATUTS)
@@ -464,23 +489,39 @@ class QuoteController extends Controller
     }
 
     /**
-     * Le devis accepte devient une commande, preremplie et tarifee comme le
-     * formulaire de commande le ferait, pour l'entreprise cliente qui a le
-     * meme numero de TVA ou dont un compte a la meme adresse e-mail.
+     * Entreprise proposee pour une demande : celle au meme numero de TVA,
+     * sinon celle d'un compte a la meme adresse e-mail, parmi les
+     * entreprises qui peuvent commander. Ce n'est qu'une suggestion : ces
+     * deux champs sont saisis librement dans le formulaire public, l'agent
+     * confirme l'entreprise avant de creer la commande.
      */
-    public function commander(QuoteRequest $quoteRequest): RedirectResponse
+    private static function clientPropose(QuoteRequest $d): ?Client
     {
+        $tva = IdentifiantEntreprise::analyser((string) $d->vat_number)['tva'];
+
+        return ($tva !== null ? Client::commandables()->where('vat_number', $tva)->first() : null)
+            ?? Client::commandables()->whereHas('users', fn ($u) => $u->where('email', $d->email))->first();
+    }
+
+    /**
+     * Le devis accepte devient une commande, preremplie et tarifee comme le
+     * formulaire de commande le ferait, pour l'entreprise que l'agent a
+     * choisie. Memes controles que la commande en ligne : entreprise
+     * validee, flotte capable, jour ouvrable, delai tenable.
+     */
+    public function commander(Request $request, QuoteRequest $quoteRequest): RedirectResponse
+    {
+        $choix = $request->validate(['client_id' => 'required|integer']);
+
         if ($quoteRequest->converted_order_id !== null
             || ! in_array('ORDERED', QuoteRequest::TRANSITIONS[$quoteRequest->status] ?? [], true)) {
             return back()->with('error', Traductions::t('msg.devis_deja_commande', 'Cette demande est déjà transformée ou close.'));
         }
 
-        $tva = IdentifiantEntreprise::analyser((string) $quoteRequest->vat_number)['tva'];
-        $client = ($tva !== null ? Client::where('vat_number', $tva)->first() : null)
-            ?? User::where('email', $quoteRequest->email)->whereNotNull('client_id')->first()?->client;
+        $client = Client::commandables()->find($choix['client_id']);
 
         if ($client === null) {
-            return back()->with('error', Traductions::t('msg.devis_sans_client', 'Aucune entreprise cliente n\'a ce numéro de TVA ni cette adresse e-mail : créez d\'abord son compte.'));
+            return back()->with('error', Traductions::t('msg.devis_client_non_commandable', 'Cette entreprise ne peut pas recevoir de commande : elle doit être validée et avoir un compte actif autorisé à commander.'));
         }
 
         $trajet = new Trajet((string) ($quoteRequest->pickup_country ?: 'BE'), (string) $quoteRequest->delivery_country);
@@ -489,28 +530,78 @@ class QuoteController extends Controller
             return back()->with('error', $refus);
         }
 
-        if (! ($quoteRequest->weight > 0)) {
+        $poids = (float) $quoteRequest->weight;
+
+        if (! ($poids > 0)) {
             return back()->with('error', Traductions::t('msg.devis_sans_poids', 'Renseignez le poids avant de transformer la demande en commande.'));
         }
 
-        $niveau = $quoteRequest->needs_express ? 'EXPRESS' : 'STANDARD';
-        $grille = $trajet->grilles()->firstWhere('service_level', $niveau) ?? $trajet->grilles()->first();
+        $volume = QuoteRequest::volumeDesColis($quoteRequest->packages) ?? QuoteRequest::volumeSaisi($quoteRequest->volume);
+        $adr = (bool) $quoteRequest->is_hazardous;
+        $hayon = (bool) $quoteRequest->needs_tail_lift;
 
-        if ($grille === null) {
-            return back()->with('error', Traductions::t('msg.devis_sans_grille', 'Aucune formule n\'est ouverte pour ce trajet.'));
+        if ($poids > 44000 || ! Vehicle::peutPorter($poids, $volume, $adr, $hayon)) {
+            return back()->with('error', Vehicle::refusFlotte($poids, $volume, $adr, $hayon));
         }
 
         $pays = $trajet->depart;
-        $enlevement = Carbon::parse($quoteRequest->pickup_date->toDateString().' 08:00', Trajet::fuseau($pays))->setTimezone(config('app.timezone'));
+        $fuseau = Trajet::fuseau($pays);
+        $region = $pays !== 'BE' ? FretRetour::regionDe($pays, $quoteRequest->pickup_address) : null;
+
+        // La date demandee, a 8 h locales. Passee ou chomee, elle glisse au
+        // premier jour ouvrable a venir ; hors de Belgique, jamais avant
+        // qu'un camion puisse etre sur place.
+        $demandee = Carbon::parse($quoteRequest->pickup_date->toDateString().' 08:00', $fuseau);
+        $enlevement = $demandee->copy();
+
+        if ($enlevement->lt(now())) {
+            $enlevement = now($fuseau)->addDay()->setTime(8, 0);
+        }
 
         if ($pays !== 'BE') {
-            $premier = FretRetour::premierEnlevement($pays, (float) $quoteRequest->pickup_lat, (float) $quoteRequest->pickup_lng, $quoteRequest->pickup_address);
+            $premier = FretRetour::premierEnlevement($pays, (float) $quoteRequest->pickup_lat, (float) $quoteRequest->pickup_lng, $quoteRequest->pickup_address)->setTimezone($fuseau);
             $enlevement = $enlevement->lt($premier) ? $premier : $enlevement;
         }
 
+        if (JoursFeries::chome($enlevement, $pays, $region)) {
+            $jour = JoursFeries::prochainJourOuvrable($enlevement, $pays, $region);
+            $enlevement = $jour->setTimezone($fuseau)->setTime(8, 0);
+        }
+
+        $decalee = ! $enlevement->isSameDay($demandee);
+        $enlevement = $enlevement->setTimezone(config('app.timezone'));
+
         $km = Tarificateur::distanceRoutiere((float) $quoteRequest->pickup_lat, (float) $quoteRequest->pickup_lng, (float) $quoteRequest->delivery_lat, (float) $quoteRequest->delivery_lng);
-        $marchandise = in_array($quoteRequest->goods_type, TransportOrder::MARCHANDISES, true) ? $quoteRequest->goods_type : 'Autre';
-        $volume = QuoteRequest::volumeDesColis($quoteRequest->packages);
+
+        // La formule demandee d'abord, puis les autres : la premiere qui
+        // livre a temps. Livraison souhaitee avant l'enlevement : oubliee.
+        $livraison = $quoteRequest->delivery_date;
+        $delai = $livraison !== null
+            ? $enlevement->copy()->startOfDay()->diffInDays($livraison->copy()->startOfDay(), false)
+            : null;
+
+        if ($delai !== null && $delai < 0) {
+            $livraison = null;
+            $delai = null;
+        }
+
+        $niveau = $quoteRequest->needs_express ? 'EXPRESS' : 'STANDARD';
+        $grilles = $trajet->grilles()->sortBy(fn ($g) => $g->service_level === $niveau ? 0 : 1)->values();
+        $grille = $grilles->first(fn ($g) => $delai === null || Tarificateur::delai($g, $km) <= $delai);
+
+        if ($grilles->isEmpty()) {
+            return back()->with('error', Traductions::t('msg.devis_sans_grille', 'Aucune formule n\'est ouverte pour ce trajet.'));
+        }
+
+        if ($grille === null) {
+            return back()->with('error', Traductions::t('msg.devis_delai_intenable', 'Aucune formule ne livre le :date avec un enlèvement le :enlevement : convenez d\'une autre date avec le demandeur.', [
+                'date' => $livraison->format('d/m/Y'),
+                'enlevement' => $enlevement->copy()->setTimezone($fuseau)->format('d/m/Y'),
+            ]));
+        }
+
+        $priorite = $delai !== null && $delai <= 2 ? 'URGENT' : ($quoteRequest->needs_express ? 'HIGH' : 'NORMAL');
+        $marchandise = TransportOrder::marchandiseDepuisDevis($quoteRequest->goods_type);
 
         $demande = new TransportOrder([
             'client_id' => $client->id,
@@ -520,15 +611,25 @@ class QuoteController extends Controller
             'pickup_lat' => $quoteRequest->pickup_lat, 'pickup_lng' => $quoteRequest->pickup_lng,
             'delivery_lat' => $quoteRequest->delivery_lat, 'delivery_lng' => $quoteRequest->delivery_lng,
             'pickup_date' => $enlevement,
-            'weight' => $quoteRequest->weight,
+            'weight' => $poids,
             'volume' => $volume,
-            'is_hazardous' => (bool) $quoteRequest->is_hazardous,
-            'needs_tail_lift' => (bool) $quoteRequest->needs_tail_lift,
+            'is_hazardous' => $adr,
+            'needs_tail_lift' => $hayon,
             'distance_km' => (int) round($km),
         ]);
 
-        $ordre = DB::transaction(function () use ($quoteRequest, $trajet, $demande, $km, $grille, $marchandise, $pays) {
+        $ordre = DB::transaction(function () use ($quoteRequest, $trajet, $demande, $km, $grille, $marchandise, $pays, $priorite, $livraison) {
             DB::statement('select pg_advisory_xact_lock(?)', [FretRetour::VERROU]);
+
+            // Deux clics, ou deux agents, en meme temps : le second voit la
+            // demande deja transformee et s'arrete.
+            $devis = QuoteRequest::whereKey($quoteRequest->id)->lockForUpdate()->first();
+
+            if ($devis->converted_order_id !== null
+                || ! in_array('ORDERED', QuoteRequest::TRANSITIONS[$devis->status] ?? [], true)) {
+                return null;
+            }
+
             $offre = Tarificateur::offre($trajet, $demande, $km);
 
             $ordre = TransportOrder::deposer([
@@ -536,8 +637,8 @@ class QuoteController extends Controller
                     'delivery_lat', 'delivery_lng', 'pickup_date', 'weight', 'volume', 'is_hazardous', 'needs_tail_lift', 'distance_km']),
                 'delivery_address' => $quoteRequest->delivery_address,
                 'goods_type' => $marchandise,
-                'priority' => $quoteRequest->needs_express ? 'HIGH' : 'NORMAL',
-                'requested_delivery_date' => $quoteRequest->delivery_date,
+                'priority' => $priorite,
+                'requested_delivery_date' => $livraison,
                 'tariff_grid_id' => $grille->id,
                 'special_instructions' => $this->consignes($quoteRequest),
                 'shipper_name' => $quoteRequest->pickup_contact_name ?? ($pays !== 'BE' ? $quoteRequest->company_name : null),
@@ -553,7 +654,7 @@ class QuoteController extends Controller
                 'tracking_code' => TransportOrder::prochainCode(),
             ]);
 
-            $quoteRequest->update([
+            $devis->update([
                 'status' => 'ORDERED',
                 'converted_order_id' => $ordre->id,
                 'handled_by' => Auth::id(),
@@ -563,6 +664,10 @@ class QuoteController extends Controller
             return $ordre;
         });
 
+        if ($ordre === null) {
+            return back()->with('error', Traductions::t('msg.devis_deja_commande', 'Cette demande est déjà transformée ou close.'));
+        }
+
         ActivityLog::record(
             'quote.ordered',
             'Demande '.$quoteRequest->reference.' transformée en commande '.$ordre->tracking_number,
@@ -570,11 +675,28 @@ class QuoteController extends Controller
             ['entreprise' => $client->company_name, 'commande' => $ordre->tracking_number, 'prix' => (float) $ordre->estimated_cost],
         );
 
-        return redirect()->route('transport-orders.show', $ordre)
-            ->with('success', Traductions::t('msg.devis_commande_creee', 'Commande :numero créée à partir de la demande :reference.', [
-                'numero' => $ordre->tracking_number,
-                'reference' => $quoteRequest->reference,
-            ]));
+        // L'entreprise est prevenue : une commande qu'elle n'a pas demandee
+        // se voit tout de suite, et elle peut l'annuler depuis son espace.
+        foreach ($client->commanditaires() as $compte) {
+            try {
+                Mail::to($compte->email)->send(new OrdreCree($ordre, $compte, $grille));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $message = Traductions::t('msg.devis_commande_creee', 'Commande :numero créée à partir de la demande :reference.', [
+            'numero' => $ordre->tracking_number,
+            'reference' => $quoteRequest->reference,
+        ]);
+
+        if ($decalee) {
+            $message .= ' '.Traductions::t('msg.devis_enlevement_decale', 'L\'enlèvement a été reporté au :date (date demandée passée ou non ouvrable).', [
+                'date' => $ordre->pickup_date->copy()->setTimezone($fuseau)->format('d/m/Y'),
+            ]);
+        }
+
+        return redirect()->route('transport-orders.show', $ordre)->with('success', $message);
     }
 
     /** Ce que le chauffeur et le planificateur doivent savoir, en une note. */
