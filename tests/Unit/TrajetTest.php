@@ -4,10 +4,14 @@ namespace Tests\Unit;
 
 use App\Support\Adresse;
 use App\Support\Trajet;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class TrajetTest extends TestCase
 {
+    // Les messages et les feries belges passent par les traductions en base.
+    use RefreshDatabase;
+
     public function test_la_zone_est_le_pays_etranger_du_trajet(): void
     {
         $this->assertSame([Trajet::NATIONAL, 'BE'], [(new Trajet('BE', 'BE'))->type(), (new Trajet('BE', 'BE'))->zone()]);
