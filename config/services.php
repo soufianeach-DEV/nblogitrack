@@ -43,6 +43,15 @@ return [
         'base' => env('HMRC_API_BASE', 'https://api.service.hmrc.gov.uk'),
     ],
 
+    // Point d'acces Peppol (prestataire agree : Billit, Unifiedpost,
+    // e-invoice.be...). Il recoit le XML UBL de chaque facture et le
+    // remet au destinataire sur le reseau Peppol. Vide : pas d'envoi Peppol,
+    // la facture part seulement par courriel.
+    'peppol' => [
+        'url' => env('PEPPOL_URL'),
+        'cle' => env('PEPPOL_CLE'),
+    ],
+
     // Pages de l'entreprise sur les reseaux sociaux : liens du pied de page
     // et fiche schema.org. Vides : rien n'est affiche.
     'reseaux' => [

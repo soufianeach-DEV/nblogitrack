@@ -20,6 +20,10 @@ class EnvoiFacture
      */
     public static function envoyer(Invoice $facture): ?string
     {
+        // Le reseau Peppol d'abord, quand un point d'acces est configure :
+        // c'est la facture qui fait foi. Le courriel en est la copie.
+        EnvoiPeppol::envoyer($facture->loadMissing('client', 'lines'));
+
         [$adresse, $prenom] = self::destinataire($facture);
 
         if ($adresse === null) {

@@ -7,9 +7,12 @@ use App\Models\Invoice;
 use App\Models\OrderCharge;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\EnvoiPeppol;
 use App\Support\FactureUbl;
 use App\Support\Facturier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -58,6 +61,37 @@ class SocleFacturationTest extends TestCase
         $this->assertSame('Gand', $facture->buyer_city);
         $this->assertSame('BE', $facture->buyer_country);
         $this->assertStringContainsString('Ancien Nom SA', FactureUbl::pour($facture->load('lines')));
+    }
+
+    /** Regles Peppol belges : le numero BCE figure dans l'entite legale. */
+    public function test_le_xml_porte_le_numero_bce_des_societes_belges(): void
+    {
+        $client = Client::factory()->create(['vat_number' => 'BE0417497106']);
+        $this->livree($client);
+
+        $xml = FactureUbl::pour($this->facturer()->load('lines'));
+
+        $this->assertStringContainsString('<cbc:CompanyID schemeID="0208">0123456749</cbc:CompanyID>', $xml);
+        $this->assertStringContainsString('<cbc:CompanyID schemeID="0208">0417497106</cbc:CompanyID>', $xml);
+    }
+
+    /** Un point d'acces configure recoit le XML ; sans lui, rien ne part. */
+    public function test_la_facture_est_remise_au_point_d_acces_peppol(): void
+    {
+        Mail::fake();
+        Http::fake(['peppol.exemple/*' => Http::response(['id' => 'x'], 202)]);
+        $this->livree(Client::factory()->create());
+        $facture = $this->facturer();
+
+        $this->assertNull(EnvoiPeppol::envoyer($facture));
+        Http::assertNothingSent();
+
+        config(['services.peppol.url' => 'https://peppol.exemple/factures', 'services.peppol.cle' => 'essai']);
+        $this->assertTrue(EnvoiPeppol::envoyer($facture));
+
+        Http::assertSent(fn ($r) => $r->url() === 'https://peppol.exemple/factures'
+            && $r->hasHeader('Authorization', 'Bearer essai')
+            && str_contains($r->body(), $facture->reference));
     }
 
     public function test_la_categorie_de_tva_suit_le_pays_du_preneur(): void

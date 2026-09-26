@@ -146,6 +146,16 @@ class FactureUbl
 
         $x->startElement('cac:PartyLegalEntity');
         self::texte($x, 'cbc:RegistrationName', (string) $partie['nom']);
+
+        // Numero d'entreprise belge (BCE, schema 0208) : exige pour une
+        // societe belge par les regles Peppol BIS de la Belgique.
+        if ($partie['pays'] === 'BE' && preg_match('/^BE(\d{10})$/', (string) $partie['tva'], $m)) {
+            $x->startElement('cbc:CompanyID');
+            $x->writeAttribute('schemeID', '0208');
+            $x->text($m[1]);
+            $x->endElement();
+        }
+
         $x->endElement();
 
         $x->endElement();
