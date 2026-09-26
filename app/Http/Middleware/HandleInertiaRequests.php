@@ -8,6 +8,7 @@ use App\Models\Translation;
 use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -54,7 +55,11 @@ class HandleInertiaRequests extends Middleware
             'paysDesservis' => fn () => $request->user() === null
                 ? Cache::remember('pays-desservis', 3600, fn () => TariffGrid::where('is_active', true)->distinct()->count('zone'))
                 : null,
-            'dictionnaire' => fn () => Traductions::pour(app()->getLocale()),
+            // Envoye une fois, puis garde par le navigateur d'une page a
+            // l'autre : il pesait jusqu'a 97 % de chaque reponse. Un
+            // changement de langue ou du dictionnaire le renvoie.
+            'dictionnaire' => Inertia::once(fn () => Traductions::pour(app()->getLocale()))
+                ->as('dictionnaire.'.app()->getLocale().'.'.Traductions::version()),
             // Pages de l'entreprise sur les reseaux (pied du site public).
             'reseaux' => array_filter(config('services.reseaux', [])),
             'pages_pied' => fn () => Cache::remember(

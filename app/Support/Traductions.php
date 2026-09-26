@@ -80,6 +80,17 @@ class Traductions
         foreach (array_keys(Translation::LANGUES) as $langue) {
             Cache::memo()->forget(self::cle($langue));
         }
+
+        Cache::memo()->forever('traductions.version', bin2hex(random_bytes(4)));
+    }
+
+    /**
+     * Change a chaque modification du dictionnaire : le navigateur garde
+     * le dictionnaire tant que la version et la langue ne changent pas.
+     */
+    public static function version(): string
+    {
+        return Cache::memo()->rememberForever('traductions.version', fn () => bin2hex(random_bytes(4)));
     }
 
     public static function estServie(?string $langue): bool
