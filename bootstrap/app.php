@@ -82,17 +82,21 @@ return Application::configure(basePath: dirname(__DIR__))
          * Faire confiance a X-Forwarded-Proto retablit aussi
          * $request->secure(), dont depend l'en-tete HSTS.
          */
-        $proxies = trim((string) env('TRUSTED_PROXIES', ''));
+        // La liste se lit a chaque requete dans config/trustedproxy.php :
+        // lue ici, avant le chargement du fichier .env, elle restait vide
+        // en production.
+        $middleware->trustProxies(
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
+        );
 
-        if ($proxies !== '') {
-            $middleware->trustProxies(
-                at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))),
-                headers: Request::HEADER_X_FORWARDED_FOR
-                    | Request::HEADER_X_FORWARDED_HOST
-                    | Request::HEADER_X_FORWARDED_PORT
-                    | Request::HEADER_X_FORWARDED_PROTO,
-            );
-        }
+        // Seuls le domaine de APP_URL et ses sous-domaines sont servis : un
+        // en-tete Host force ne se retrouve plus dans les liens absolus
+        // (robots.txt, plan du site, balises canoniques). Sans effet en
+        // developpement local et pendant les tests.
+        $middleware->trustHosts();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Une adresse inconnue (/nl/inexistant, /en/p/nope) echoue avant
