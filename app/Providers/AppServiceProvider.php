@@ -110,7 +110,9 @@ class AppServiceProvider extends ServiceProvider
         $contient = function (string $colonne, string $terme, string $booleen = 'and') {
             $motif = '%'.addcslashes($terme, '\\%_').'%';
 
-            return $this->whereRaw('unaccent(('.$this->getGrammar()->wrap($colonne).')::text) ILIKE unaccent(?)', [$motif], $booleen);
+            // f_unaccent (migration d'indexation) : la meme expression que
+            // les index par trigrammes, qui peuvent donc servir.
+            return $this->whereRaw('f_unaccent(('.$this->getGrammar()->wrap($colonne).')::text) ILIKE f_unaccent(?)', [$motif], $booleen);
         };
         QueryBuilder::macro('whereContient', $contient);
         QueryBuilder::macro('orWhereContient', fn (string $colonne, string $terme) => $this->whereContient($colonne, $terme, 'or'));
