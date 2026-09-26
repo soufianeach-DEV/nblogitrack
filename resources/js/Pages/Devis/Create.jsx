@@ -25,7 +25,7 @@ const ETAPES = [
 
 // Les adresses se reprennent dans la liste (coordonnees verifiees) et les
 // fichiers ne se gardent pas : le brouillon ne les contient pas.
-const HORS_BROUILLON = ['pickup_address', 'pickup_lat', 'pickup_lng', 'pickup_country', 'delivery_address', 'delivery_lat', 'delivery_lng', 'delivery_country', 'attachments', 'privacy'];
+const HORS_BROUILLON = ['trip_type', 'insurance_value', 'pickup_address', 'pickup_lat', 'pickup_lng', 'pickup_country', 'delivery_address', 'delivery_lat', 'delivery_lng', 'delivery_country', 'attachments', 'privacy'];
 
 // Horaires de quai les plus courants ; « Autres horaires » ouvre un champ libre.
 const OUVERTURES = ['Lun-ven 7 h - 16 h', 'Lun-ven 8 h - 17 h', 'Lun-ven 6 h - 22 h', 'Lun-sam 7 h - 16 h', '24 h/24, 7 j/7'];
@@ -54,7 +54,13 @@ function Bloc({ numero, titre, children }) {
     );
 }
 
-export default function Create({ choix, listes }) {
+// Champs a choix : leur libelle depend de la langue de la page.
+const CHAMPS_CHOIX = {
+    customer_type: 'clients', frequency: 'frequences', date_flexibility: 'flexibilites',
+    vehicle_type: 'vehicules', monthly_volume: 'volumes',
+};
+
+export default function Create({ choix, listes, equivalences = {} }) {
     const t = useTraduction();
     const langue = useLangue();
     const nomPays = useMemo(() => new Intl.DisplayNames([langue], { type: 'region' }), [langue]);
@@ -102,6 +108,16 @@ export default function Create({ choix, listes }) {
             const garde = JSON.parse(window.localStorage.getItem(BROUILLON) ?? 'null');
             if (garde && typeof garde === 'object') {
                 const repris = Object.fromEntries(Object.entries(garde).filter(([cle]) => cle in initial && ! HORS_BROUILLON.includes(cle)));
+                // Un choix enregistre dans une autre langue, ou sous un
+                // ancien libelle, est ramene au libelle de la page ; inconnu,
+                // il est oublie (la valeur par defaut reste).
+                Object.entries(CHAMPS_CHOIX).forEach(([champ, groupe]) => {
+                    if (! (champ in repris)) return;
+                    const rang = equivalences[groupe]?.[repris[champ]];
+                    if (rang === undefined) delete repris[champ];
+                    else repris[champ] = choix[groupe][rang];
+                });
+                if ('declared_value' in repris) repris.insurance_value = trancheAssurance(repris.declared_value);
                 setData((actuel) => ({ ...actuel, ...repris }));
                 setBrouillonRepris(Object.keys(repris).length > 0);
             }
@@ -801,6 +817,7 @@ export default function Create({ choix, listes }) {
                                 >
                                     {choix.frequences.map((f) => <option key={f} value={f}>{f}</option>)}
                                 </select>
+                                <InputError message={erreur('frequency')} className="mt-1" />
                             </div>
                             {data.frequency !== choix.frequences[0] && liste('monthly_volume', t('devis.volume_mensuel', 'Volume prévu'), choix.volumes.slice(1))}
                         </div>
@@ -815,6 +832,9 @@ export default function Create({ choix, listes }) {
                                             : t('devis.trajet_intracommunautaire', 'intracommunautaire')
                                 }
                             </p>
+                        )}
+                        {erreur('trip_type') && (
+                            <InputError message={erreur('trip_type')} className="mt-2" />
                         )}
                         {douane && (
                             <p className="mt-4 rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
@@ -846,7 +866,7 @@ export default function Create({ choix, listes }) {
                                 <p className="mt-1 text-xs text-slate-500">
                                     {t('devis.valeur_aide2', 'Facultatif. Assurance : :tranche', { tranche: data.insurance_value })}
                                 </p>
-                                <InputError message={erreur('declared_value')} className="mt-1" />
+                                <InputError message={erreur('declared_value') ?? erreur('insurance_value')} className="mt-1" />
                             </div>
                         </div>
 

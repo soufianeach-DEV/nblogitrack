@@ -7,6 +7,8 @@ use App\Models\Client;
 use App\Models\QuoteRequest;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\Traductions;
+use Database\Seeders\TranslationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -255,6 +257,21 @@ class DevisCompletTest extends TestCase
         $this->assertSame(12.0, QuoteRequest::volumeSaisi('12 m³'));
         $this->assertSame(7.5, QuoteRequest::volumeSaisi('environ 7,5'));
         $this->assertNull(QuoteRequest::volumeSaisi('beaucoup'));
+    }
+
+    /** Des choix saisis en neerlandais restent valables sur une page anglaise. */
+    public function test_les_choix_d_une_autre_langue_sont_reconnus(): void
+    {
+        $this->seed(TranslationSeeder::class);
+        Traductions::oublier();
+        app()->setLocale('en');
+
+        $this->post(route('devis.store'), $this->demande([
+            'customer_type' => 'Eerste aanvraag: ik ben nog geen klant',
+            'vehicle_type' => Traductions::pour('nl')['devis.choix_porteur'] ?? 'Porteur',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame('Nouvelle entreprise', QuoteRequest::firstOrFail()->customer_type);
     }
 
     /** La ligne de colis proposee par defaut, laissee telle quelle, n'est pas gardee. */

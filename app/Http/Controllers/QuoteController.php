@@ -6,6 +6,7 @@ use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\QuoteRequest;
+use App\Models\Translation;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Audience;
@@ -118,6 +119,7 @@ class QuoteController extends Controller
     {
         return Inertia::render('Devis/Create', [
             'choix' => self::choixTraduits(),
+            'equivalences' => self::equivalences(),
             'listes' => [
                 'colis' => self::COLIS,
                 'acces' => self::ACCES,
@@ -147,14 +149,42 @@ class QuoteController extends Controller
             ->all();
     }
 
+    /**
+     * Tout libelle connu d'un choix => son rang dans la liste, quelle que
+     * soit la langue : un visiteur qui change de langue en cours de
+     * saisie, ou reprend un brouillon, garde ses choix.
+     *
+     * @return array<string, array<string, int>>
+     */
+    private static function equivalences(): array
+    {
+        $equivalences = [];
+
+        foreach (array_unique(self::CHAMPS_CHOIX) as $groupe) {
+            foreach (self::CHOIX[$groupe] as $rang => $valeur) {
+                $equivalences[$groupe][$valeur] = $rang;
+
+                foreach (array_keys(Translation::LANGUES) as $langue) {
+                    $libelle = Traductions::pour($langue)['devis.choix_'.Traductions::cleDepuis($valeur)] ?? null;
+
+                    if ($libelle !== null) {
+                        $equivalences[$groupe][$libelle] = $rang;
+                    }
+                }
+            }
+        }
+
+        return $equivalences;
+    }
+
     public function store(Request $request): RedirectResponse
     {
-        $traduits = self::choixTraduits();
+        $equivalences = self::equivalences();
 
         foreach (self::CHAMPS_CHOIX as $champ => $groupe) {
-            $rang = array_search($request->input($champ), $traduits[$groupe], true);
+            $rang = $equivalences[$groupe][(string) $request->input($champ)] ?? null;
 
-            if ($rang !== false) {
+            if ($rang !== null) {
                 $request->merge([$champ => self::CHOIX[$groupe][$rang]]);
             }
         }
