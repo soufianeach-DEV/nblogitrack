@@ -156,6 +156,21 @@ class DevisCompletTest extends TestCase
             ->assertSessionHasErrors('status');
     }
 
+    public function test_une_panne_du_registre_suisse_n_accuse_pas_le_numero(): void
+    {
+        $inconnu = false;
+        Http::fake(function () use (&$inconnu) {
+            return $inconnu
+                ? Http::response('<s:Envelope><s:Body><s:Fault><faultstring>Data_validation_failed</faultstring></s:Fault></s:Body></s:Envelope>', 500)
+                : Http::response('<s:Envelope><s:Body><s:Fault><faultstring>Request_limit_exceeded</faultstring></s:Fault></s:Body></s:Envelope>', 429);
+        });
+
+        $this->getJson('/verification-tva?tva=CHE-116.281.710')->assertJsonPath('statut', 'indisponible');
+
+        $inconnu = true;
+        $this->getJson('/verification-tva?tva=CHE-116.281.710')->assertJsonPath('statut', 'invalide');
+    }
+
     public function test_les_registres_suisse_norvegien_et_britannique_sont_interroges(): void
     {
         Http::fake([
@@ -168,6 +183,7 @@ class DevisCompletTest extends TestCase
         $this->getJson('/verification-tva?tva=CHE-116.281.710')
             ->assertJsonPath('statut', 'valide')
             ->assertJsonPath('nom', 'Muster AG')
+            ->assertJsonPath('entreprise.forme_juridique', 'SA')
             ->assertJsonPath('adresse.ville', 'Zürich')
             ->assertJsonPath('adresse.pays', 'CH');
 

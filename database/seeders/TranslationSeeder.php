@@ -1605,6 +1605,11 @@ class TranslationSeeder extends Seeder
                 'Bestuurder overgenomen uit het nationale register, gelieve te controleren.',
                 'Director taken from the national register, please check it.',
             ],
+            'registre_sans_adresse' => [
+                'Ce pays ne publie ni le nom ni l\'adresse dans le registre européen : complétez-les ci-dessous.',
+                'Dit land publiceert naam noch adres in het Europese register: vul ze hieronder aan.',
+                'This country publishes neither the name nor the address in the European register: please fill them in below.',
+            ],
             'societe' => ['Société', 'Onderneming', 'Company'],
             'societe_ex' => ['Ex : Meubles Van Damme SPRL', 'Bv. Meubelen Van Damme bv', 'E.g. Van Damme Furniture Ltd'],
             'contact_ex' => ['Nom et prénom', 'Naam en voornaam', 'First and last name'],

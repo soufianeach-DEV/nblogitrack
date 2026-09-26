@@ -182,7 +182,10 @@ class VatController extends Controller
                 ->withBody($enveloppe, 'text/xml; charset=utf-8')
                 ->post('https://www.uid-wse.admin.ch/V5.0/PublicServices.svc');
 
-            if ($reponse->serverError() && ! str_contains($reponse->body(), 'Data_validation_failed')) {
+            // Seul un numero inconnu (reponse sans organisation, ou
+            // Data_validation_failed) est refuse ; toute autre erreur du
+            // service (quota, maintenance) n'accuse pas le numero.
+            if ($reponse->failed() && ! str_contains($reponse->body(), 'Data_validation_failed')) {
                 return $this->indisponible();
             }
 
@@ -209,7 +212,7 @@ class VatController extends Controller
                 'entreprise' => [
                     'dirigeant' => null,
                     'secteur' => null,
-                    'forme_juridique' => $valeur('legalForm') ?: null,
+                    'forme_juridique' => self::FORMES_SUISSES[$valeur('legalForm')] ?? ($valeur('legalForm') ?: null),
                     // 2 : inscrite ; 3 : radiee (eCH-0097).
                     'situation' => $valeur('uidregStatusEnterpriseDetail') === '3'
                         ? ['libelle' => 'Entreprise cessée', 'acceptable' => false]
@@ -338,6 +341,13 @@ class VatController extends Controller
         }
     }
 
+    /** Formes juridiques du registre UID (eCH-0097), en francais. */
+    private const FORMES_SUISSES = [
+        '0101' => 'Entreprise individuelle', '0103' => 'Société en nom collectif', '0104' => 'Société en commandite',
+        '0106' => 'SA', '0107' => 'Sàrl', '0108' => 'Société coopérative', '0109' => 'Association', '0110' => 'Fondation',
+        '0111' => 'Succursale étrangère', '0151' => 'Succursale suisse',
+    ];
+
     /** Categories juridiques INSEE les plus courantes. */
     private const FORMES_FRANCAISES = [
         '1000' => 'Entrepreneur individuel', '5410' => 'SARL', '5498' => 'EURL', '5499' => 'SARL',
@@ -346,6 +356,7 @@ class VatController extends Controller
 
     private const SECTEURS_NACE = [
         '01' => 'Agriculture', '02' => 'Agriculture', '03' => 'Agriculture',
+        '05' => 'Énergie', '06' => 'Énergie', '09' => 'Énergie',
         '10' => 'Agroalimentaire', '11' => 'Agroalimentaire', '12' => 'Agroalimentaire',
         '13' => 'Textile', '14' => 'Textile', '15' => 'Textile',
         '16' => 'Bois et papier', '17' => 'Bois et papier', '18' => 'Bois et papier',

@@ -156,6 +156,11 @@ export default function Create({ choix, listes }) {
     });
     const minuteurRelance = useRef(null);
 
+    const paysDuNumero = (tva) => {
+        const code = { EL: 'GR', XI: 'GB', CH: 'CH' }[tva.slice(0, 2)] ?? tva.slice(0, 2);
+        return PAYS.includes(code) ? code : '';
+    };
+
     const verifierTva = async (automatique = false) => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
 
@@ -193,10 +198,13 @@ export default function Create({ choix, listes }) {
                     billing_city: adresse.ville,
                     billing_country: adresse.pays,
                 });
-            } else if (['invalide', 'format'].includes(resultat.statut) || tva !== reprisPour.current) {
-                // Numero refuse, ou registre muet sur un autre numero : rien
-                // de l'ancienne entreprise ne reste sous le nouveau numero.
+            } else if (['invalide', 'format'].includes(resultat.statut)) {
+                // Numero refuse : rien de l'ancienne entreprise ne reste.
                 reprendreDuRegistre({});
+            } else if (tva !== reprisPour.current) {
+                // Registre muet sur un autre numero : l'ancienne entreprise
+                // s'efface, le pays se deduit du prefixe (EL -> Grece).
+                reprendreDuRegistre({ billing_country: paysDuNumero(tva) });
             }
 
             // Registre sature : nouvel essai automatique, trois fois au plus.
@@ -207,7 +215,7 @@ export default function Create({ choix, listes }) {
                 minuteurRelance.current = setTimeout(() => verifierTva(true), delai * 1000);
             }
         } catch {
-            if (tva !== reprisPour.current) reprendreDuRegistre({});
+            if (tva !== reprisPour.current) reprendreDuRegistre({ billing_country: paysDuNumero(tva) });
             setVies({ statut: 'indisponible', message: t('devis.registre_injoignable', 'Le registre européen est momentanément injoignable.') });
         } finally {
             setVerification(false);
@@ -529,6 +537,7 @@ export default function Create({ choix, listes }) {
                                 {vies.entreprise?.situation && ! vies.entreprise.situation.acceptable && <span className="font-semibold text-status-incident"> {vies.entreprise.situation.libelle}.</span>}
                                 {vies.peppol && <> {t('auth.peppol', 'Identifiant Peppol :')} <span className="font-mono text-brand-blue">{vies.peppol}</span>.</>}
                                 {vies.entreprise?.dirigeant && ' ' + t('devis.dirigeant', 'Dirigeant repris du registre national, vérifiez-le.')}
+                                {! vies.nom && ' ' + t('devis.registre_sans_adresse', 'Ce pays ne publie ni le nom ni l\'adresse dans le registre européen : complétez-les ci-dessous.')}
                             </p>
                         )}
                         {vies && vies.statut !== 'valide' && (
