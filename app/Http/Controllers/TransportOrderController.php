@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\InvoiceLine;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
@@ -84,7 +85,12 @@ class TransportOrderController extends Controller
             'driver.user:id,first_name,last_name',
             'tariffGrid:id,label,zone,service_level,delivery_days', 'invoiceLine:id,invoice_id,transport_order_id',
             'invoiceLine.invoice:id,reference,status,due_on,paid_on,amount_incl_tax',
+            'charges',
         ]);
+
+        $facturees = InvoiceLine::whereIn('order_charge_id', $transportOrder->charges->pluck('id'))
+            ->pluck('order_charge_id')
+            ->all();
 
         // La relation driver est chargee pour composer le nom ci-dessous,
         // mais elle ne part pas avec l'ordre : elle porterait toute la
@@ -94,6 +100,14 @@ class TransportOrderController extends Controller
 
         return Inertia::render('TransportOrders/Show', [
             'order' => $transportOrder,
+            'supplements' => $transportOrder->charges->map(fn ($c) => [
+                'id' => $c->id,
+                'libelle' => $c->label,
+                'montant' => (float) $c->amount,
+                'date' => $c->created_at->format('d/m/Y'),
+                'facture' => in_array($c->id, $facturees, true),
+            ])->all(),
+            'peutAjouterSupplement' => $request->user()->can('plan-orders'),
             'chauffeur' => $transportOrder->driver?->user
                 ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
                 : null,
@@ -107,6 +121,7 @@ class TransportOrderController extends Controller
                         'SENT' => Traductions::t('statut.envoyee', Invoice::STATUTS['SENT']),
                         'PAID' => Traductions::t('statut.payee', Invoice::STATUTS['PAID']),
                         'OVERDUE' => Traductions::t('statut.en_retard', Invoice::STATUTS['OVERDUE']),
+                        'CREDITED' => Traductions::t('facture.annulee_avoir', Invoice::STATUTS['CREDITED']),
                         default => Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status] ?? $transportOrder->invoiceLine->invoice->status,
                     },
                 'ttc' => (float) $transportOrder->invoiceLine->invoice->amount_incl_tax,

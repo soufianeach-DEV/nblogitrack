@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Driver;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -292,11 +293,12 @@ class DashboardController extends Controller
             return null;
         }
 
-        $impayees = (clone $requete)->where('status', '!=', 'PAID');
+        $impayees = (clone $requete)->where('type', Invoice::FACTURE)->where('status', 'SENT');
 
         return [
-            'paye' => round((float) (clone $requete)->where('status', 'PAID')->sum('amount_incl_tax'), 2),
-            'du' => round((float) (clone $impayees)->sum('amount_incl_tax'), 2),
+            'paye' => round((float) (clone $requete)->where('type', Invoice::FACTURE)->where('status', 'PAID')->sum('amount_incl_tax'), 2),
+            'du' => round((float) (clone $impayees)->sum('amount_incl_tax')
+                - (float) Payment::whereIn('invoice_id', (clone $impayees)->select('id'))->sum('amount'), 2),
             'en_retard' => (clone $impayees)->where('due_on', '<', now()->toDateString())->count(),
             'dernieres' => (clone $requete)
                 ->orderByDesc('issued_on')
@@ -307,7 +309,7 @@ class DashboardController extends Controller
                     'id' => $facture->id,
                     'reference' => $facture->reference,
                     'montant' => Formats::montant($facture->amount_incl_tax),
-                    'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
+                    'etat' => $facture->estAvoir() ? 'CREDIT_NOTE' : ($facture->estEnRetard() ? 'OVERDUE' : $facture->status),
                 ])
                 ->all(),
         ];

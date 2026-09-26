@@ -548,13 +548,11 @@ function Facturation({ facturation }) {
                                 <span className="ml-auto shrink-0 text-sm font-bold text-marine">{facture.montant}</span>
                                 {}
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                    facture.etat === 'Payée' ? 'bg-status-delivered/10 text-status-delivered'
-                                        : facture.etat === 'En retard' ? 'bg-status-incident/10 text-status-incident'
+                                    facture.etat === 'PAID' ? 'bg-status-delivered/10 text-status-delivered'
+                                        : facture.etat === 'OVERDUE' ? 'bg-status-incident/10 text-status-incident'
                                             : 'bg-slate-100 text-slate-700'
                                 }`}>
-                                    {facture.etat === 'Payée' ? t('statut.payee', 'Payée')
-                                        : facture.etat === 'En retard' ? t('statut.en_retard', 'En retard')
-                                            : t('statut.envoyee', 'Envoyée')}
+                                    {t(...(ETATS_FACTURE[facture.etat] ?? ETATS_FACTURE.SENT))}
                                 </span>
                                 </Link>
                             </li>
@@ -689,6 +687,15 @@ function DernieresTraces({ journal }) {
         </section>
     );
 }
+
+const ETATS_FACTURE = {
+    DRAFT: ['facture.brouillon', 'Brouillon'],
+    SENT: ['statut.envoyee', 'Envoyée'],
+    PAID: ['statut.payee', 'Payée'],
+    OVERDUE: ['statut.en_retard', 'En retard'],
+    CREDITED: ['facture.annulee_avoir', 'Annulée par avoir'],
+    CREDIT_NOTE: ['facture.avoir', 'Avoir'],
+};
 
 export default function Dashboard({
     stats,

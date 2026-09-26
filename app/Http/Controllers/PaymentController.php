@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\Payment;
+use App\Support\Encaissement;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +23,7 @@ class PaymentController extends Controller
     {
         $this->autoriserPaiement($request, $invoice);
 
-        if ($invoice->status !== 'SENT') {
+        if (! $invoice->estAPayer() || $invoice->solde() <= 0) {
             return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));
         }
 
@@ -54,7 +56,9 @@ class PaymentController extends Controller
                 'quantity' => 1,
                 'price_data' => [
                     'currency' => 'eur',
-                    'unit_amount' => (int) round((float) $invoice->amount_incl_tax * 100),
+                    // Le client regle ce qui reste du, deduction faite
+                    // d'un eventuel paiement partiel.
+                    'unit_amount' => (int) round($invoice->solde() * 100),
                     'product_data' => [
                         'name' => Traductions::t('msg.stripe_facture', 'Facture :reference', ['reference' => $invoice->reference]),
                         'description' => Traductions::t('msg.stripe_periode', 'Transport du :debut au :fin', [
@@ -141,22 +145,30 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Notification incohérente, sans effet.']);
         }
 
-        // Le passage a PAID se fait en une seule requete conditionnelle :
-        // deux notifications simultanees ne l'ecrivent qu'une fois. Celle
-        // qui arrive apres ne reste pas muette : une autre session payee
-        // pour une facture deja reglee est un double encaissement a
-        // rembourser.
-        $passee = Invoice::whereKey($invoice->id)
-            ->where('status', '!=', 'PAID')
-            ->update(['status' => 'PAID', 'paid_on' => now()]);
+        // L'encaissement verrouille la facture et la reference de session
+        // est unique : deux notifications simultanees ne l'ecrivent qu'une
+        // fois. Un paiement au-dela du solde (facture deja reglee par
+        // virement, seconde session) n'est pas perdu : il est journalise,
+        // a rembourser.
+        $paiement = Encaissement::enregistrer(
+            $invoice,
+            ((int) $session->amount_total) / 100,
+            now(),
+            'STRIPE',
+            (string) $session->id,
+        );
 
-        if ($passee === 0) {
+        if ($paiement === null) {
+            if (Payment::where('reference', (string) $session->id)->exists()) {
+                return response()->json(['message' => 'Déjà enregistré.']);
+            }
+
             ActivityLog::record(
                 'invoice.payment_duplicate',
                 'Paiement en ligne reçu pour '.$invoice->reference.', déjà réglée : à rembourser',
                 $invoice,
                 [
-                    'montant' => (string) $invoice->amount_incl_tax,
+                    'montant' => (string) (((int) $session->amount_total) / 100),
                     'session_stripe' => $session->id,
                 ],
             );
@@ -169,7 +181,7 @@ class PaymentController extends Controller
             'Paiement en ligne reçu pour '.$invoice->reference,
             $invoice,
             [
-                'montant' => (string) $invoice->amount_incl_tax,
+                'montant' => (string) $paiement->amount,
                 'session_stripe' => $session->id,
             ],
         );
@@ -186,10 +198,12 @@ class PaymentController extends Controller
                 .' alors que l\'application est en '.($reel ? 'réel' : 'test');
         }
 
-        $attendu = (int) round((float) $invoice->amount_incl_tax * 100);
+        // La session porte le solde du au moment du paiement : jamais plus
+        // que le montant TTC, jamais zero.
+        $plafond = (int) round((float) $invoice->amount_incl_tax * 100);
 
-        if ((int) $session->amount_total !== $attendu) {
-            return 'montant reçu '.$session->amount_total.' contre '.$attendu.' attendu';
+        if ((int) $session->amount_total <= 0 || (int) $session->amount_total > $plafond) {
+            return 'montant reçu '.$session->amount_total.' pour un total de '.$plafond;
         }
 
         if (strtolower((string) $session->currency) !== 'eur') {

@@ -137,7 +137,86 @@ function Annulation({ order, annulation, euros }) {
     );
 }
 
-export default function Show({ order, chauffeur, facture = null, annulation = null }) {
+function Supplements({ order, supplements, peutAjouter, euros }) {
+    const t = useTraduction();
+    const { data, setData, post, processing, errors, reset } = useForm({ libelle: '', montant: '' });
+    const retirer = useForm({});
+
+    if (supplements.length === 0 && ! peutAjouter) return null;
+
+    const ajouter = (e) => {
+        e.preventDefault();
+        post(route('transport-orders.charges.store', order.id), { preserveScroll: true, onSuccess: () => reset() });
+    };
+
+    const champ = 'block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
+
+    return (
+        <section className="rounded-2xl bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">{t('ordres.supplements', 'Suppléments')}</h2>
+            {supplements.length === 0 ? (
+                <p className="text-sm text-slate-600">{t('ordres.aucun_supplement', 'Aucun supplément.')}</p>
+            ) : (
+                <ul className="divide-y divide-slate-100 text-sm">
+                    {supplements.map((s) => (
+                        <li key={s.id} className="flex items-center justify-between gap-3 py-2">
+                            <span className="text-slate-700">
+                                {s.libelle}
+                                <span className="block text-xs text-slate-500">
+                                    {s.date} · {s.facture ? t('ordres.supplement_facture', 'facturé') : t('ordres.supplement_a_facturer', 'sur la prochaine facture')}
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <span className="font-semibold text-marine">{euros(s.montant)}</span>
+                                {peutAjouter && ! s.facture && (
+                                    <button
+                                        type="button"
+                                        onClick={() => retirer.delete(route('transport-orders.charges.destroy', [order.id, s.id]), { preserveScroll: true })}
+                                        className="text-xs font-semibold text-status-incident hover:underline"
+                                    >
+                                        {t('ordres.retirer', 'Retirer')}
+                                    </button>
+                                )}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {peutAjouter && (
+                <form onSubmit={ajouter} className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-[1fr_7rem_auto]">
+                    <input
+                        type="text"
+                        value={data.libelle}
+                        onChange={(e) => setData('libelle', e.target.value)}
+                        placeholder={t('ordres.supplement_libelle', 'Attente au quai 2 h, manutention…')}
+                        className={champ}
+                        minLength={3}
+                        maxLength={200}
+                        required
+                    />
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={data.montant}
+                        onChange={(e) => setData('montant', e.target.value)}
+                        placeholder={t('ordres.supplement_montant', '€ HT')}
+                        className={champ}
+                        required
+                    />
+                    <button type="submit" disabled={processing} className="rounded-lg bg-action px-3 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark disabled:opacity-60">
+                        {t('ordres.ajouter_supplement', 'Ajouter')}
+                    </button>
+                    {(errors.libelle || errors.montant) && (
+                        <p className="text-xs text-status-incident sm:col-span-3">{errors.libelle || errors.montant}</p>
+                    )}
+                </form>
+            )}
+        </section>
+    );
+}
+
+export default function Show({ order, chauffeur, facture = null, annulation = null, supplements = [], peutAjouterSupplement = false }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -287,6 +366,8 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         {order.special_instructions || t('ordres.aucune_consigne', 'Aucune consigne particulière.')}
                     </p>
                 ))}
+
+                <Supplements order={order} supplements={supplements} peutAjouter={peutAjouterSupplement} euros={euros} />
 
                 {annulation && <Annulation order={order} annulation={annulation} euros={euros} />}
             </div>

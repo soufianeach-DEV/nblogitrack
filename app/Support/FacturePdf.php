@@ -14,8 +14,8 @@ class FacturePdf
     public static function contenu(Invoice $facture): string
     {
         $facture->loadMissing([
-            'client:id,company_name,vat_number,billing_address,postal_code,city,country',
             'lines.transportOrder:id,tracking_number',
+            'creditedInvoice:id,reference',
         ]);
 
         return Pdf::loadView('pdf.facture', [
@@ -27,18 +27,18 @@ class FacturePdf
     }
 
     /**
-     * Le code QR de virement, absent d'une facture deja reglee.
+     * Le code QR de virement du solde, absent d'une facture reglee ou d'un avoir.
      */
     public static function qr(Invoice $facture): ?string
     {
-        if ($facture->status === 'PAID') {
+        if (! $facture->estAPayer() || $facture->solde() <= 0) {
             return null;
         }
 
         return QrPaiement::epc(
             config('entreprise.nom'),
             config('entreprise.iban'),
-            (float) $facture->amount_incl_tax,
+            $facture->solde(),
             $facture->payment_reference,
         );
     }

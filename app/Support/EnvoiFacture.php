@@ -34,8 +34,8 @@ class EnvoiFacture
         }
 
         $facture->loadMissing([
-            'client:id,company_name,vat_number,peppol_id,billing_address,postal_code,city,country',
             'lines.transportOrder:id,tracking_number',
+            'creditedInvoice:id,reference,issued_on',
         ]);
 
         try {

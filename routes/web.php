@@ -9,6 +9,7 @@ use App\Http\Controllers\GeoController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LangueController;
 use App\Http\Controllers\MissionController;
+use App\Http\Controllers\OrderChargeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PagePubliqueController;
 use App\Http\Controllers\PaymentController;
@@ -69,6 +70,15 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->middleware('throttle:10,1,annulation')
             ->name('transport-orders.cancel');
 
+        Route::middleware(['can:plan-orders', 'throttle:30,1,supplement'])->group(function () {
+            Route::post('/transport-orders/{transportOrder}/supplements', [OrderChargeController::class, 'store'])
+                ->whereNumber('transportOrder')
+                ->name('transport-orders.charges.store');
+            Route::delete('/transport-orders/{transportOrder}/supplements/{supplement}', [OrderChargeController::class, 'destroy'])
+                ->whereNumber(['transportOrder', 'supplement'])
+                ->name('transport-orders.charges.destroy');
+        });
+
         Route::middleware('can:plan-orders')->group(function () {
             Route::get('/planification', [PlanningController::class, 'index'])->name('planning.index');
             Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
@@ -102,6 +112,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
             ->middleware('can:control-payments')
             ->name('invoices.paid');
+        Route::post('/factures/{invoice}/avoir', [InvoiceController::class, 'avoir'])
+            ->whereNumber('invoice')
+            ->middleware(['can:control-payments', 'throttle:10,1,avoir'])
+            ->name('invoices.credit');
         Route::post('/factures/{invoice}/envoi', [InvoiceController::class, 'envoyer'])
             ->whereNumber('invoice')
             ->middleware(['can:control-payments', 'throttle:10,1,envoi-facture'])

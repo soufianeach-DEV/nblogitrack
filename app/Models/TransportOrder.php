@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -173,9 +174,17 @@ class TransportOrder extends Model
         return $this->belongsTo(TariffGrid::class);
     }
 
+    /** La ligne qui facture cette expedition, tant qu'aucun avoir ne l'a liberee. */
     public function invoiceLine(): HasOne
     {
-        return $this->hasOne(InvoiceLine::class);
+        return $this->hasOne(InvoiceLine::class)
+            ->where('active', true)
+            ->whereIn('kind', [InvoiceLine::TRANSPORT, InvoiceLine::ANNULATION]);
+    }
+
+    public function charges(): HasMany
+    {
+        return $this->hasMany(OrderCharge::class)->orderBy('id');
     }
 
     public function estEnAttenteDePaiement(): bool

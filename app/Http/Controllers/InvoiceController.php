@@ -4,15 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\User;
+use App\Support\Avoirs;
+use App\Support\Encaissement;
 use App\Support\EnvoiFacture;
 use App\Support\FacturePdf;
 use App\Support\FactureUbl;
+use App\Support\Formats;
 use App\Support\LigneFacture;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,6 +33,7 @@ class InvoiceController extends Controller
 
         $perimetre = fn () => Invoice::query()
             ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->id));
+        $aPayer = fn () => $perimetre()->where('type', Invoice::FACTURE)->where('status', 'SENT');
 
         return Inertia::render('Factures/Index', [
             'factures' => $perimetre()
@@ -44,17 +50,19 @@ class InvoiceController extends Controller
                     'emise_le' => $facture->issued_on->format('d/m/Y'),
                     'echeance' => $facture->due_on->format('d/m/Y'),
                     'ttc' => (float) $facture->amount_incl_tax,
+                    'avoir' => $facture->estAvoir(),
                     'autoliquidation' => (bool) $facture->reverse_charge,
-                    'etat' => $facture->estEnRetard() ? 'OVERDUE' : $facture->status,
+                    'etat' => $this->etat($facture),
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
-                    'peut_payer' => $estClient && $facture->status === 'SENT',
+                    'peut_payer' => $estClient && $facture->estAPayer(),
                 ]),
             'cartes' => [
-                'du' => (float) $perimetre()->where('status', '!=', 'PAID')->sum('amount_incl_tax'),
-                'paye' => (float) $perimetre()->where('status', 'PAID')->sum('amount_incl_tax'),
-                'en_retard' => $perimetre()->where('status', '!=', 'PAID')->where('due_on', '<', now())->count(),
+                'du' => round((float) $aPayer()->sum('amount_incl_tax')
+                    - (float) Payment::whereIn('invoice_id', $aPayer()->select('id'))->sum('amount'), 2),
+                'paye' => (float) $perimetre()->where('type', Invoice::FACTURE)->where('status', 'PAID')->sum('amount_incl_tax'),
+                'en_retard' => $aPayer()->where('due_on', '<', now())->count(),
             ],
-            'colonnePaiement' => $estClient && $perimetre()->where('status', 'SENT')->exists(),
+            'colonnePaiement' => $estClient && $aPayer()->exists(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
         ]);
     }
@@ -66,15 +74,24 @@ class InvoiceController extends Controller
         $this->autoriserLecture($utilisateur, $invoice);
 
         $invoice->load([
-            'client:id,company_name,vat_number,billing_address,postal_code,city,country',
             'lines.transportOrder:id,tracking_number',
+            'payments',
+            'creditedInvoice:id,reference',
+            'creditNote:id,reference,credited_invoice_id',
         ]);
+
+        $gestion = $utilisateur->can('control-payments');
+        $solde = $invoice->solde();
 
         return Inertia::render('Factures/Show', [
             'facture' => [
                 'id' => $invoice->id,
                 'reference' => $invoice->reference,
-                'etat' => $invoice->estEnRetard() ? 'OVERDUE' : $invoice->status,
+                'avoir' => $invoice->estAvoir(),
+                'motif_avoir' => $invoice->credit_reason,
+                'facture_annulee' => $invoice->creditedInvoice ? ['id' => $invoice->creditedInvoice->id, 'reference' => $invoice->creditedInvoice->reference] : null,
+                'annulee_par' => $invoice->creditNote ? ['id' => $invoice->creditNote->id, 'reference' => $invoice->creditNote->reference] : null,
+                'etat' => $this->etat($invoice),
                 'periode_debut' => $invoice->period_start->format('d/m/Y'),
                 'periode_fin' => $invoice->period_end->format('d/m/Y'),
                 'emise_le' => $invoice->issued_on->format('d/m/Y'),
@@ -85,32 +102,48 @@ class InvoiceController extends Controller
                 'taux' => (float) $invoice->vat_rate,
                 'tva' => (float) $invoice->vat_amount,
                 'ttc' => (float) $invoice->amount_incl_tax,
+                'paye' => $invoice->montantPaye(),
+                'solde' => $solde,
                 'autoliquidation' => (bool) $invoice->reverse_charge,
+                'categorie_tva' => $invoice->vat_category,
                 'communication' => $invoice->payment_reference,
                 'iban' => config('entreprise.iban'),
                 'qr' => FacturePdf::qr($invoice),
                 'client' => [
-                    'nom' => $invoice->client->company_name,
-                    'tva' => $invoice->client->vat_number,
-                    'adresse' => $invoice->client->billing_address,
-                    'localite' => trim($invoice->client->postal_code.' '.$invoice->client->city),
-                    'pays' => Pays::localise($invoice->client->country),
+                    'nom' => $invoice->buyer_name,
+                    'tva' => $invoice->buyer_vat_number,
+                    'adresse' => $invoice->buyer_address,
+                    'localite' => trim($invoice->buyer_postal_code.' '.$invoice->buyer_city),
+                    'pays' => $invoice->buyer_country ? Pays::libelle($invoice->buyer_country) : null,
                 ],
                 'lignes' => $invoice->lines->map(fn ($ligne) => [
                     'id' => $ligne->id,
                     'ordre_id' => $ligne->transport_order_id,
                     'numero' => $ligne->transportOrder?->tracking_number,
+                    'nature' => $ligne->kind,
                     'description' => LigneFacture::libelle($ligne->description),
                     'ht' => (float) $ligne->amount_excl_tax,
                 ])->all(),
+                'paiements' => $invoice->payments->map(fn (Payment $p) => [
+                    'id' => $p->id,
+                    'date' => $p->paid_on->format('d/m/Y'),
+                    'montant' => (float) $p->amount,
+                    'methode' => $p->method,
+                ])->all(),
             ],
-            'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
-            'peutEnvoyer' => $utilisateur->can('control-payments') && $invoice->status !== 'DRAFT',
-            'peutPayerEnLigne' => $invoice->status === 'SENT'
+            'peutMarquerPayee' => $gestion && $invoice->estAPayer(),
+            'peutEmettreAvoir' => $gestion && $invoice->estAPayer() && $invoice->montantPaye() == 0.0,
+            'peutEnvoyer' => $gestion && $invoice->status !== 'DRAFT',
+            'peutPayerEnLigne' => $invoice->estAPayer()
                 && ! empty(config('services.stripe.secret'))
                 && $utilisateur->cannot('view-all-orders')
                 && $invoice->client_id === $utilisateur->id,
         ]);
+    }
+
+    private function etat(Invoice $facture): string
+    {
+        return $facture->estEnRetard() ? 'OVERDUE' : $facture->status;
     }
 
     public function envoyer(Invoice $invoice): RedirectResponse
@@ -131,26 +164,75 @@ class InvoiceController extends Controller
 
     public function markPaid(Request $request, Invoice $invoice): RedirectResponse
     {
-        if ($invoice->status !== 'SENT') {
+        if (! $invoice->estAPayer()) {
             return back()->with('error', Traductions::t('msg.facture_pas_en_attente', 'Cette facture n\'est pas en attente de paiement.'));
         }
 
-        $invoice->update([
-            'status' => 'PAID',
-            'paid_on' => now(),
+        $donnees = $request->validate([
+            'montant' => 'required|numeric|min:0.01|max:'.$invoice->solde(),
+            'date' => 'required|date|before_or_equal:today|after_or_equal:'.$invoice->issued_on->toDateString(),
+            'methode' => 'required|in:TRANSFER,CASH,OTHER',
+        ], [
+            'montant.max' => Traductions::t('msg.paiement_trop_eleve', 'Le montant dépasse le solde dû (:solde).', ['solde' => Formats::montant($invoice->solde())]),
         ]);
+
+        $paiement = Encaissement::enregistrer(
+            $invoice,
+            (float) $donnees['montant'],
+            Carbon::parse($donnees['date']),
+            $donnees['methode'],
+            auteur: $request->user()->id,
+        );
+
+        if ($paiement === null) {
+            return back()->with('error', Traductions::t('msg.facture_pas_en_attente', 'Cette facture n\'est pas en attente de paiement.'));
+        }
 
         ActivityLog::record(
             'invoice.paid',
-            'Paiement enregistré pour '.$invoice->reference,
+            'Paiement de '.number_format((float) $paiement->amount, 2, ',', ' ').' € enregistré pour '.$invoice->reference,
             $invoice,
             [
-                'montant' => (string) $invoice->amount_incl_tax,
+                'montant' => (string) $paiement->amount,
+                'methode' => $paiement->method,
+                'solde' => (string) $invoice->solde(),
                 'client_id' => $invoice->client_id,
             ],
         );
 
-        return back()->with('success', Traductions::t('msg.paiement_enregistre', 'Paiement enregistré.'));
+        return back()->with('success', $invoice->status === 'PAID'
+            ? Traductions::t('msg.paiement_enregistre', 'Paiement enregistré.')
+            : Traductions::t('msg.paiement_partiel', 'Paiement partiel enregistré : reste :solde à payer.', ['solde' => Formats::montant($invoice->solde())]));
+    }
+
+    public function avoir(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $donnees = $request->validate([
+            'motif' => 'required|string|min:5|max:500',
+            'refacturer' => 'boolean',
+        ]);
+
+        try {
+            ['avoir' => $avoir, 'nouvelle' => $nouvelle] = Avoirs::emettre(
+                $invoice,
+                $donnees['motif'],
+                $request->boolean('refacturer'),
+                $request->user()->id,
+            );
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        ActivityLog::record(
+            'invoice.credited',
+            'Avoir '.$avoir->reference.' émis pour '.$invoice->reference.' : '.$donnees['motif'],
+            $invoice,
+            ['avoir' => $avoir->reference, 'nouvelle_facture' => $nouvelle?->reference, 'motif' => $donnees['motif']],
+        );
+
+        return redirect()->route('invoices.show', $avoir)->with('success', $nouvelle
+            ? Traductions::t('msg.avoir_refacture', 'Avoir :avoir émis ; les prestations sont refacturées sur :facture.', ['avoir' => $avoir->reference, 'facture' => $nouvelle->reference])
+            : Traductions::t('msg.avoir_emis', 'Avoir :avoir émis.', ['avoir' => $avoir->reference]));
     }
 
     public function pdf(Request $request, Invoice $invoice): \Illuminate\Http\Response
@@ -167,10 +249,7 @@ class InvoiceController extends Controller
     {
         $this->autoriserLecture($request->user(), $invoice);
 
-        $invoice->load([
-            'client:id,company_name,vat_number,peppol_id,billing_address,postal_code,city,country',
-            'lines',
-        ]);
+        $invoice->load(['lines', 'creditedInvoice:id,reference,issued_on']);
 
         return response(FactureUbl::pour($invoice), 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',

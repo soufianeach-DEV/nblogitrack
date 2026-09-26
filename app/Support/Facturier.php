@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
+use App\Models\OrderCharge;
 use App\Models\TransportOrder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -15,28 +16,34 @@ class Facturier
     /**
      * @return Collection<int, Invoice>
      */
-    public function facturer(?Carbon $periode = null): Collection
+    public function facturer(?Carbon $periode = null, ?int $clientId = null): Collection
     {
         $emises = collect();
 
-        foreach ($this->aFacturer($periode) as $cle => $expeditions) {
-            [$clientId, $mois] = explode('|', (string) $cle);
-            $client = Client::find((int) $clientId);
+        foreach ($this->aFacturer($periode, $clientId) as $cle => $elements) {
+            [$client, $mois] = explode('|', (string) $cle);
+            $client = Client::find((int) $client);
 
             if ($client === null) {
                 continue;
             }
 
-            $emises->push($this->emettre($client, $mois, $expeditions));
+            $emises->push($this->emettre($client, $mois, $elements));
         }
 
         return $emises;
     }
 
     /**
-     * @return Collection<string, Collection<int, TransportOrder>>
+     * Ce qui reste a facturer, par client et par mois. Trois choses se
+     * facturent : un transport livre, au mois de sa livraison ;
+     * l'indemnite d'une annulation tardive, au mois de l'annulation
+     * (article 8 bis des conditions generales) ; un supplement, une fois
+     * son expedition terminee, au plus tard des deux dates.
+     *
+     * @return Collection<string, Collection<int, array{date: Carbon, client_id: int, kind: string, transport_order_id: ?int, order_charge_id: ?int, description: string, montant: float}>>
      */
-    public function aFacturer(?Carbon $periode = null): Collection
+    public function aFacturer(?Carbon $periode = null, ?int $clientId = null): Collection
     {
         // Le mois en cours n'est jamais facture, meme avec --tout ou
         // --mois. Sa facture porterait une date d'emission future et
@@ -49,66 +56,70 @@ class Facturier
             $periode->copy()->endOfMonth()->endOfDay(),
         ];
 
-        // Deux choses se facturent : un transport livre, au mois de sa
-        // livraison, et l'indemnite d'une annulation tardive, au mois de
-        // l'annulation (article 8 bis des conditions generales).
-        $requete = TransportOrder::whereDoesntHave('invoiceLine')
+        $expeditions = TransportOrder::whereDoesntHave('invoiceLine')
+            ->when($clientId !== null, fn ($q) => $q->where('client_id', $clientId))
             ->where(fn ($q) => $q
-                ->where(function ($livre) use ($limite, $bornes) {
-                    $livre->where('status', 'DELIVERED')
-                        ->whereNotNull('actual_delivery_date')
-                        ->whereNotNull('estimated_cost')
-                        ->where('actual_delivery_date', '<', $limite->toDateString());
+                ->where(fn ($livre) => $livre->where('status', 'DELIVERED')
+                    ->whereNotNull('actual_delivery_date')
+                    ->whereNotNull('estimated_cost'))
+                ->orWhere(fn ($annule) => $annule->where('status', 'CANCELLED')
+                    ->where('cancellation_fee', '>', 0)))
+            ->get()
+            ->map(fn (TransportOrder $o) => [
+                'date' => Carbon::instance($o->dateFacturable()),
+                'client_id' => $o->client_id,
+                'kind' => $o->status === 'CANCELLED' ? InvoiceLine::ANNULATION : InvoiceLine::TRANSPORT,
+                'transport_order_id' => $o->id,
+                'order_charge_id' => null,
+                'description' => $o->status === 'CANCELLED'
+                    ? 'Indemnité d\'annulation '.$o->tracking_number
+                    : 'Transport '.$o->pickup_address.' vers '.$o->delivery_address,
+                'montant' => round($o->montantFacturable(), 2),
+            ]);
 
-                    if ($bornes !== null) {
-                        $livre->whereBetween('actual_delivery_date', [
-                            $bornes[0]->toDateString(), $bornes[1]->toDateString(),
-                        ]);
-                    }
-                })
-                ->orWhere(function ($annule) use ($limite, $bornes) {
-                    $annule->where('status', 'CANCELLED')
-                        ->where('cancellation_fee', '>', 0)
-                        ->where('cancelled_at', '<', $limite);
+        $supplements = OrderCharge::whereDoesntHave('invoiceLine')
+            ->whereHas('transportOrder', fn ($q) => $q->whereIn('status', ['DELIVERED', 'CANCELLED'])
+                ->when($clientId !== null, fn ($c) => $c->where('client_id', $clientId)))
+            ->with('transportOrder')
+            ->get()
+            ->map(fn (OrderCharge $c) => [
+                'date' => Carbon::instance($c->created_at)->max(
+                    Carbon::instance($c->transportOrder->dateFacturable() ?? $c->transportOrder->cancelled_at ?? $c->created_at)
+                ),
+                'client_id' => $c->transportOrder->client_id,
+                'kind' => InvoiceLine::SUPPLEMENT,
+                'transport_order_id' => $c->transport_order_id,
+                'order_charge_id' => $c->id,
+                'description' => $c->label.' — '.$c->transportOrder->tracking_number,
+                'montant' => round((float) $c->amount, 2),
+            ]);
 
-                    if ($bornes !== null) {
-                        $annule->whereBetween('cancelled_at', $bornes);
-                    }
-                }));
-
-        return $requete->get()
-            ->sortBy(fn (TransportOrder $o) => $o->dateFacturable()->getTimestamp())
+        return $expeditions->concat($supplements)
+            ->filter(fn (array $e) => $e['date']->lt($limite)
+                && ($bornes === null || $e['date']->between($bornes[0], $bornes[1])))
+            ->sortBy(fn (array $e) => $e['date']->getTimestamp())
             ->values()
-            ->groupBy(fn (TransportOrder $o) => $o->client_id.'|'.$o->dateFacturable()->format('Y-m'));
+            ->groupBy(fn (array $e) => $e['client_id'].'|'.$e['date']->format('Y-m'));
     }
 
     /**
-     * @param  Collection<int, TransportOrder>  $expeditions
+     * @param  Collection<int, array{kind: string, transport_order_id: ?int, order_charge_id: ?int, description: string, montant: float}>  $elements
      */
-    public function emettre(Client $client, string $mois, Collection $expeditions): Invoice
+    public function emettre(Client $client, string $mois, Collection $elements): Invoice
     {
-        return DB::transaction(function () use ($client, $mois, $expeditions) {
+        return DB::transaction(function () use ($client, $mois, $elements) {
             $periode = Carbon::createFromFormat('Y-m-d', $mois.'-01')->startOfMonth();
             $emission = $periode->copy()->addMonth()->startOfMonth();
+            $regime = RegimeTva::pour($client);
 
-            // Le pays est compare par son code et non par son libelle :
-            // une entreprise inscrite depuis l'interface neerlandaise ou
-            // anglaise porte « België » ou « Belgium », et la comparaison
-            // au seul « Belgique » la facturait sans TVA, en
-            // autoliquidation. A defaut de pays reconnu, le prefixe du
-            // numero de TVA tranche.
-            $pays = Pays::depuisNom($client->country)
-                ?? strtoupper(substr((string) $client->vat_number, 0, 2));
-            $autoliquidation = $pays !== 'BE';
-            $taux = $autoliquidation ? 0.00 : Invoice::TAUX_TVA;
-
-            $horsTva = round((float) $expeditions->sum(fn (TransportOrder $o) => round($o->montantFacturable(), 2)), 2);
-            $tva = round($horsTva * $taux / 100, 2);
+            $horsTva = round((float) $elements->sum('montant'), 2);
+            $tva = round($horsTva * $regime->taux / 100, 2);
 
             $rang = $this->prochainRang((int) $emission->format('Y'));
 
             $facture = Invoice::create([
                 'client_id' => $client->id,
+                'type' => Invoice::FACTURE,
                 'reference' => sprintf('FAC-%s-%04d', $emission->format('Y'), $rang),
                 'issued_on' => $emission,
                 // Emise en retard, une facture garde sa date du 1er du mois,
@@ -118,32 +129,55 @@ class Facturier
                 'period_start' => $periode,
                 'period_end' => $periode->copy()->endOfMonth(),
                 'amount_excl_tax' => $horsTva,
-                'vat_rate' => $taux,
+                'vat_rate' => $regime->taux,
+                'vat_category' => $regime->categorie,
                 'vat_amount' => $tva,
                 'amount_incl_tax' => round($horsTva + $tva, 2),
-                'reverse_charge' => $autoliquidation,
+                'reverse_charge' => $regime->autoliquidation(),
                 'status' => $emission->isFuture() ? 'DRAFT' : 'SENT',
+                ...self::acheteur($client, $regime),
             ]);
 
             // Construite sur l'identifiant de la facture, la communication
-            // est unique : derivee du rang et du client (modulo 1000), deux
-            // factures du meme client pouvaient partager la meme reference
-            // de paiement, et le rapprochement bancaire devenait ambigu.
+            // est unique : deux factures du meme client ne partagent jamais
+            // la meme reference de paiement.
             $facture->update(['payment_reference' => $this->communicationStructuree($facture->id)]);
 
-            foreach ($expeditions as $ordre) {
+            foreach ($elements as $element) {
                 InvoiceLine::create([
                     'invoice_id' => $facture->id,
-                    'transport_order_id' => $ordre->id,
-                    'description' => $ordre->status === 'CANCELLED'
-                        ? 'Indemnité d\'annulation '.$ordre->tracking_number
-                        : 'Transport '.$ordre->pickup_address.' vers '.$ordre->delivery_address,
-                    'amount_excl_tax' => round($ordre->montantFacturable(), 2),
+                    'kind' => $element['kind'],
+                    'transport_order_id' => $element['transport_order_id'],
+                    'order_charge_id' => $element['order_charge_id'],
+                    'description' => $element['description'],
+                    'quantity' => 1,
+                    'unit_price' => $element['montant'],
+                    'amount_excl_tax' => $element['montant'],
+                    'vat_category' => $regime->categorie,
+                    'vat_rate' => $regime->taux,
                 ]);
             }
 
             return $facture;
         });
+    }
+
+    /**
+     * L'identite de l'acheteur, figee sur la facture a l'emission.
+     *
+     * @return array<string, string|null>
+     */
+    public static function acheteur(Client $client, RegimeTva $regime): array
+    {
+        return [
+            'buyer_name' => $client->company_name,
+            'buyer_vat_number' => $client->vat_number,
+            'buyer_peppol_id' => $client->peppol_id,
+            'buyer_address' => $client->billing_address,
+            'buyer_postal_code' => $client->postal_code,
+            'buyer_city' => $client->city,
+            'buyer_country' => $regime->pays,
+        ];
     }
 
     public function prochainRang(int $annee): int

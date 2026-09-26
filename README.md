@@ -52,8 +52,8 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
-| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et fichier UBL au format Peppol BIS 3.0 (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes. La transmission sur le réseau Peppol demande un point d'accès certifié, pas encore raccordé | ✅ beta |
-| **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
+| **Facturation** | Une facture par client et par mois : transports, indemnités d'annulation et suppléments posés par le planificateur (attente, manutention). Identité de l'acheteur figée à l'émission, catégorie de TVA par ligne (21 %, autoliquidation intracommunautaire, hors champ hors Union), avoirs numérotés à part qui annulent une facture, avec ou sans refacturation immédiate, communication structurée belge, PDF et fichier UBL au format Peppol BIS 3.0 (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes. La transmission sur le réseau Peppol demande un point d'accès certifié, pas encore raccordé | ✅ beta |
+| **Paiement** | Paiements enregistrés un à un (virement, espèces, en ligne), paiements partiels et reste dû ; règlement en ligne du solde (Stripe), notification signée vérifiée ; rapport de TVA qui déduit les avoirs | ✅ alpha |
 | **Multilingue** | Français, néerlandais et anglais partout : écrans, messages, courriels et facture PDF, dans la langue de chaque utilisateur ; écran d'administration des traductions, et un test qui refuse toute clé sans ses trois traductions | ✅ beta |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
 | **Devis** | Demande de devis publique, traitement par le personnel | ✅ beta |
@@ -61,7 +61,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 183 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 193 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -123,6 +123,13 @@ Créez la base PostgreSQL, renseignez ses accès dans `.env`, puis créez les ta
 
 ```bash
 php artisan migrate --seed
+```
+
+Après une mise à jour du code, appliquez les migrations et rechargez le dictionnaire des traductions (les textes ajoutés s'affichent sinon en français) :
+
+```bash
+php artisan migrate
+php artisan db:seed --class=TranslationSeeder
 ```
 
 Importez enfin les codes postaux européens, indispensables à la saisie guidée des adresses (environ 610 000 entrées, quelques minutes) :
@@ -192,7 +199,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Cent quatre-vingt-trois tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Cent quatre-vingt-treize tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 

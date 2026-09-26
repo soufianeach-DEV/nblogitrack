@@ -162,7 +162,11 @@ class PurchaseInvoiceController extends Controller
     {
         $ventes = DB::table('invoices')
             ->where('status', '!=', 'DRAFT')
-            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois, sum(amount_excl_tax) AS ht, sum(vat_amount) AS collectee")
+            // Un avoir se deduit, au mois de son emission, de la TVA
+            // collectee ; la facture qu'il annule reste comptee a son mois.
+            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -amount_excl_tax ELSE amount_excl_tax END) AS ht,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -vat_amount ELSE vat_amount END) AS collectee")
             ->groupBy('mois')
             ->get()
             ->keyBy('mois');

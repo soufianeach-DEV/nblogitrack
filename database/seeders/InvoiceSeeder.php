@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Invoice;
+use App\Support\Encaissement;
 use App\Support\Facturier;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -24,10 +25,12 @@ class InvoiceSeeder extends Seeder
                 continue;
             }
 
-            $facture->update([
-                'status' => 'PAID',
-                'paid_on' => $facture->due_on->copy()->subDays(3)->max($facture->issued_on),
-            ]);
+            Encaissement::enregistrer(
+                $facture,
+                (float) $facture->amount_incl_tax,
+                $facture->due_on->copy()->subDays(3)->max($facture->issued_on),
+                'TRANSFER',
+            );
         }
     }
 }
