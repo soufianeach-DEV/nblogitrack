@@ -19,7 +19,9 @@ export default function GuestLayout({ children, large = false }) {
             <div className="absolute inset-0 bg-marine-deep/70" />
 
             {}
-            <div className={'relative z-10 flex w-full overflow-hidden rounded-2xl bg-white shadow-2xl ' + (large ? 'max-w-6xl' : 'max-w-4xl')}>
+            {/* La carte grandit avec l'ecran (voir .carte-connexion) : sur un
+                grand moniteur, elle restait une vignette au milieu de la photo. */}
+            <div className={'carte-connexion relative z-10 flex w-full overflow-hidden rounded-2xl bg-white shadow-2xl ' + (large ? 'max-w-6xl' : 'max-w-4xl')}>
                 <div className={'hidden flex-col justify-between bg-gradient-to-br from-marine to-marine-deep p-10 text-white md:flex ' + (large ? 'w-2/5' : 'w-1/2')}>
                     <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="w-full" />
                     <div>

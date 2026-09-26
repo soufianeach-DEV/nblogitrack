@@ -244,3 +244,26 @@
         animation: none;
     }
 }
+
+/*
+ * Pages de connexion et d'inscription : la carte s'agrandit avec l'ecran,
+ * texte, champs et boutons compris, tant que la hauteur le permet. Sur un
+ * ecran de 1920 px, elle restait a 900 px de large au milieu de la photo.
+ */
+@media (min-width: 1500px) and (min-height: 850px) {
+    .carte-connexion {
+        zoom: 1.15;
+    }
+}
+
+@media (min-width: 1800px) and (min-height: 950px) {
+    .carte-connexion {
+        zoom: 1.35;
+    }
+}
+
+@media (min-width: 2400px) and (min-height: 1200px) {
+    .carte-connexion {
+        zoom: 1.6;
+    }
+}
