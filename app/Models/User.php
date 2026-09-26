@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -40,6 +41,12 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    /** La fiche chauffeur d'un compte chauffeur. */
+    public function driver(): HasOne
+    {
+        return $this->hasOne(Driver::class);
     }
 
     /** L'entreprise pour laquelle travaille un compte client. */

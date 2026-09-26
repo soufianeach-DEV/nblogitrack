@@ -33,7 +33,7 @@ class ParcoursNavigateurTest extends TestCase
         $utilisateur = User::factory()->chauffeur()->create();
 
         return Driver::create([
-            'id' => $utilisateur->id,
+            'user_id' => $utilisateur->id,
             'license_number' => 'PERMIS-'.$utilisateur->id,
             'license_type' => 'CE',
             'license_expiry' => now()->addYears(3)->toDateString(),
@@ -466,7 +466,7 @@ class ParcoursNavigateurTest extends TestCase
         $ordre->forceFill(['updated_at' => now()->subDays(10)])->saveQuietly();
 
         ShipmentPosition::create([
-            'transport_order_id' => $ordre->id, 'driver_id' => $this->chauffeur()->id,
+            'transport_order_id' => $ordre->id, 'driver_id' => $this->chauffeur()->user_id,
             'type' => ShipmentPosition::ROUTE, 'lat' => 50.85, 'lng' => 4.35, 'recorded_at' => now()->subDays(10),
         ]);
 
@@ -482,12 +482,12 @@ class ParcoursNavigateurTest extends TestCase
         $ancien = $this->chauffeur();
         $ordre = TransportOrder::factory()->affectee()->create(['driver_id' => $this->chauffeur()->id]);
 
-        $this->actingAs(User::find($ancien->id))
+        $this->actingAs($ancien->user)
             ->patch(route('missions.status', $ordre), ['statut' => 'IN_PROGRESS'])
             ->assertRedirect(route('missions.index'))
             ->assertSessionHas('error');
 
-        $this->actingAs(User::find($ancien->id))
+        $this->actingAs($ancien->user)
             ->postJson(route('missions.position', $ordre), ['lat' => 50.85, 'lng' => 4.35])
             ->assertOk()
             ->assertJson(['suivi' => false, 'motif' => 'retiree']);
@@ -502,7 +502,7 @@ class ParcoursNavigateurTest extends TestCase
             'cancelled_at' => now(),
         ]);
 
-        $this->actingAs(User::find($chauffeur->id))
+        $this->actingAs($chauffeur->user)
             ->patch(route('missions.status', $ordre), ['statut' => 'IN_PROGRESS'])
             ->assertSessionHas('error', fn ($m) => str_contains($m, 'annulée'));
     }
@@ -521,7 +521,7 @@ class ParcoursNavigateurTest extends TestCase
         $recente = TransportOrder::factory()->livree()->create(['driver_id' => $chauffeur->id, 'delivered_at' => now()->subDay()]);
         $aFaire = TransportOrder::factory()->affectee()->create(['driver_id' => $chauffeur->id]);
 
-        $this->actingAs(User::find($chauffeur->id))
+        $this->actingAs($chauffeur->user)
             ->get(route('missions.index'))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('missions.0.id', $aFaire->id)
@@ -561,12 +561,12 @@ class ParcoursNavigateurTest extends TestCase
             ->patch(route('drivers.update', $chauffeur), $champs)
             ->assertSessionHasNoErrors();
 
-        $this->assertTrue(User::find($chauffeur->id)->is_active);
+        $this->assertTrue($chauffeur->user()->first()->is_active);
 
         $this->travelTo(now()->addMonth()->addDay());
         $this->artisan('chauffeurs:cloturer-departs')->assertSuccessful();
 
-        $this->assertFalse(User::find($chauffeur->id)->is_active);
+        $this->assertFalse($chauffeur->user()->first()->is_active);
     }
 
     public function test_un_binome_en_route_ne_part_pas_sur_une_autre_mission(): void

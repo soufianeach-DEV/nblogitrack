@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\Driver;
-use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +23,7 @@ class CloturerDeparts extends Command
 
         foreach ($partis as $chauffeur) {
             $chauffeur->update(['is_available' => false]);
-            $utilisateur = User::find($chauffeur->user_id ?? $chauffeur->id);
+            $utilisateur = $chauffeur->user;
 
             if ($utilisateur?->is_active) {
                 $utilisateur->forceFill(['is_active' => false, 'remember_token' => null])->save();

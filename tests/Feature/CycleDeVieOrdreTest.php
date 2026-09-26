@@ -26,7 +26,7 @@ class CycleDeVieOrdreTest extends TestCase
         $utilisateur = User::factory()->chauffeur()->create();
 
         return Driver::create([
-            'id' => $utilisateur->id,
+            'user_id' => $utilisateur->id,
             'license_number' => 'PERMIS-'.$utilisateur->id,
             'license_type' => 'CE',
             'license_expiry' => now()->addYears(3)->toDateString(),
@@ -146,7 +146,7 @@ class CycleDeVieOrdreTest extends TestCase
         $chauffeur = $this->chauffeur();
         $ordre = TransportOrder::factory()->enRoute()->create(['driver_id' => $chauffeur->id]);
 
-        $this->actingAs(User::find($chauffeur->id))
+        $this->actingAs($chauffeur->user)
             ->patch(route('missions.status', $ordre), [
                 'statut' => 'DELIVERED',
                 'receptionnaire' => '  Marie Dupont ',

@@ -14,8 +14,6 @@ class Driver extends Model
 
     protected $table = 'drivers';
 
-    public $incrementing = false;
-
     public $timestamps = false;
 
     public const STATUTS = [
@@ -32,7 +30,7 @@ class Driver extends Model
     ];
 
     protected $fillable = [
-        'id', 'employment_status', 'hired_on', 'birth_date', 'retirement_planned_on',
+        'user_id', 'employment_status', 'hired_on', 'birth_date', 'retirement_planned_on',
         'license_number', 'license_type', 'license_expiry', 'cpc_expiry', 'tacho_card_expiry',
         'is_available', 'adr_certified', 'medical_exam_date', 'daily_driving_hours',
         'left_on', 'departure_reason',
@@ -127,6 +125,6 @@ class Driver extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'id');
+        return $this->belongsTo(User::class);
     }
 }

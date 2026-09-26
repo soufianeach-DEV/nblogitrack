@@ -24,7 +24,7 @@ class PriseEnChargeTest extends TestCase
         $utilisateur = User::factory()->chauffeur()->create();
 
         return Driver::create([
-            'id' => $utilisateur->id,
+            'user_id' => $utilisateur->id,
             'license_number' => 'PERMIS-'.$utilisateur->id,
             'license_type' => 'CE',
             'license_expiry' => now()->addYears(3)->toDateString(),

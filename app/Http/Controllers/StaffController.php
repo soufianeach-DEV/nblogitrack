@@ -65,7 +65,7 @@ class StaffController extends Controller
             default => null,
         };
 
-        $chauffeurs = Driver::whereIn('id', (clone $requete)->pluck('id'))->get()->keyBy('id');
+        $chauffeurs = Driver::whereIn('user_id', (clone $requete)->pluck('id'))->get()->keyBy('user_id');
 
         return Inertia::render('Personnel/Index', [
             'comptes' => $requete->orderBy('last_name')->orderBy('first_name')->get()
@@ -132,7 +132,7 @@ class StaffController extends Controller
 
             if ($donnees['role'] === 'DRIVER') {
                 Driver::create([
-                    'id' => $utilisateur->id,
+                    'user_id' => $utilisateur->id,
                     'license_number' => $donnees['license_number'],
                     'license_type' => $donnees['license_type'],
                     'license_expiry' => $donnees['license_expiry'],
@@ -183,7 +183,7 @@ class StaffController extends Controller
 
         // Un chauffeur sorti des effectifs ne revient pas par ce bouton : sa
         // date de sortie se retire d'abord sur l'ecran Chauffeurs.
-        $sortie = $user->isDriver() ? Driver::find($user->id)?->left_on : null;
+        $sortie = $user->isDriver() ? $user->driver?->left_on : null;
 
         if (! $user->is_active && $sortie !== null && $sortie->lte(now())) {
             return back()->withErrors([
@@ -195,7 +195,7 @@ class StaffController extends Controller
 
         if ($user->is_active && $user->isDriver()) {
             $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
-                ->where('driver_id', $user->id)
+                ->where('driver_id', $user->driver?->id)
                 ->exists();
 
             if ($engage) {

@@ -38,14 +38,14 @@ class MissionController extends Controller
         // l'historique, du plus recent au plus ancien, limite aux trente
         // dernieres.
         $aFaire = TransportOrder::with($relations)
-            ->where('driver_id', $chauffeur->id)
+            ->where('driver_id', $chauffeur->driver?->id)
             ->whereIn('status', ['IN_PROGRESS', 'ASSIGNED'])
             ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END")
             ->orderBy('pickup_date')
             ->get();
 
         $terminees = TransportOrder::with($relations)
-            ->where('driver_id', $chauffeur->id)
+            ->where('driver_id', $chauffeur->driver?->id)
             ->whereIn('status', ['DELIVERED', 'CANCELLED'])
             ->orderByRaw('COALESCE(delivered_at, cancelled_at, updated_at) DESC')
             ->limit(30)
@@ -81,7 +81,7 @@ class MissionController extends Controller
         // Le planificateur a pu retirer ou reaffecter la mission pendant
         // que le chauffeur l'avait a l'ecran : il revient a sa liste avec
         // une explication, pas sur une erreur 404.
-        if ($transportOrder->driver_id !== $request->user()->id) {
+        if ($transportOrder->driver_id === null || $transportOrder->driver_id !== $request->user()->driver?->id) {
             return redirect()->route('missions.index')->with('error', Traductions::t('msg.mission_retiree', 'Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.'));
         }
 
@@ -171,7 +171,7 @@ class MissionController extends Controller
     public function position(Request $request, TransportOrder $transportOrder): JsonResponse
     {
         // Mission retiree en route : le telephone arrete de partager.
-        if ($transportOrder->driver_id !== $request->user()->id) {
+        if ($transportOrder->driver_id === null || $transportOrder->driver_id !== $request->user()->driver?->id) {
             return response()->json(['suivi' => false, 'motif' => 'retiree']);
         }
 
