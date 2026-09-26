@@ -8,7 +8,7 @@ class Translation extends Model
 {
     public const LANGUES = ['fr' => 'Français', 'nl' => 'Nederlands', 'en' => 'English'];
 
-    protected $fillable = ['cle', 'groupe', 'fr', 'nl', 'en'];
+    protected $fillable = ['cle', 'groupe', 'fr', 'nl', 'en', 'modifiee_a_la_main'];
 
     public function pour(string $langue): string
     {

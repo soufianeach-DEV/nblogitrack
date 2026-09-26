@@ -61,8 +61,11 @@ class DashboardController extends Controller
             'facturation' => $utilisateur->can('viewAny', Invoice::class) ? $this->facturation($utilisateur, $personnel) : null,
             'exploitation' => $personnel ? [
                 'entreprises_a_valider' => Client::where('is_validated', false)->whereNull('rejection_reason')->count(),
-                'chauffeurs_disponibles' => Driver::where('is_available', true)->count(),
-                'chauffeurs_total' => Driver::count(),
+                // Un chauffeur parti ou dont le compte est ferme n'est pas
+                // disponible, meme s'il l'etait au moment de son depart.
+                'chauffeurs_disponibles' => Driver::where('is_available', true)->whereNull('left_on')
+                    ->whereHas('user', fn ($u) => $u->where('is_active', true))->count(),
+                'chauffeurs_total' => Driver::whereNull('left_on')->count(),
                 'vehicules_disponibles' => Vehicle::where('is_available', true)->count(),
                 'vehicules_total' => Vehicle::count(),
             ] : null,
@@ -217,6 +220,7 @@ class DashboardController extends Controller
         $imminent = TransportOrder::where('status', 'PENDING')
             ->whereNull('vehicle_registration')
             ->whereNotNull('pickup_date')
+            ->where('pickup_date', '>=', today())
             ->where('pickup_date', '<=', now()->addDays(3))
             ->count();
 
@@ -263,7 +267,7 @@ class DashboardController extends Controller
             $alertes[] = [
                 'niveau' => 'attention',
                 'titre' => self::phrase($controle, 'alerte.controle_un', ':n contrôle technique dépassé', 'alerte.controle_n', ':n contrôles techniques dépassés'),
-                'detail' => Traductions::t('alerte.controle_detail', 'Dernier passage il y a plus d\'un an.'),
+                'detail' => Traductions::t('alerte.controle_detail', 'La validité du contrôle technique est dépassée.'),
                 'lien' => route('vehicles.index', ['etat' => 'controle']),
             ];
         }
@@ -447,8 +451,12 @@ class DashboardController extends Controller
             })
             ->all();
 
+        // Un camion en mission avec un controle echu roule bel et bien, meme
+        // s'il a ete retire du service entre-temps.
         $vehiculesAlerte = fn ($q) => $q
-            ->where('is_available', true)
+            ->where(fn ($r) => $r->where('is_available', true)
+                ->orWhereIn('registration', TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+                    ->whereNotNull('vehicle_registration')->select('vehicle_registration')))
             ->where('inspection_valid_until', '<', now()->toDateString());
 
         $vehicules = Vehicle::where($vehiculesAlerte)

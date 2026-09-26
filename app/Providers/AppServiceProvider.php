@@ -5,13 +5,19 @@ namespace App\Providers;
 use App\Listeners\JournaliserAuthentification;
 use App\Models\User;
 use App\Support\Traductions;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
                 ->subject(Traductions::t('courriel.mdp_sujet', 'Choisissez votre mot de passe NBLogiTrack'))
                 ->view('emails.lien-mot-de-passe', [
                     'destinataire' => $destinataire,
+                    // Jamais connecte : c'est une invitation, pas une
+                    // reinitialisation.
+                    'invitation' => $destinataire->email_verified_at === null,
                     'minutes' => config('auth.passwords.users.expire', 60),
                     'lien' => route('password.reset', [
                         'langue' => $langue,
@@ -75,5 +84,31 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-company', fn (User $user) => $user->gereEntreprise());
 
         Event::subscribe(JournaliserAuthentification::class);
+
+        // Les dates partent vers les pages a l'heure de Bruxelles, sans
+        // fuseau : un navigateur regle sur un autre fuseau n'affiche plus
+        // une livraison du 20 au 19, ni un chargement de 18 h a 16 h. L'API
+        // publique formate ses dates elle-meme.
+        $heureLocale = fn ($date) => $date->copy()->setTimezone(config('app.timezone'))->format('Y-m-d\\TH:i:s');
+        Carbon::serializeUsing($heureLocale);
+        CarbonImmutable::serializeUsing($heureLocale);
+
+        // Recherche « contient », insensible a la casse et aux accents ;
+        // % et _ tapes par l'utilisateur se cherchent tels quels.
+        $contient = function (string $colonne, string $terme, string $booleen = 'and') {
+            $motif = '%'.addcslashes($terme, '\\%_').'%';
+
+            return $this->whereRaw('unaccent(('.$this->getGrammar()->wrap($colonne).')::text) ILIKE unaccent(?)', [$motif], $booleen);
+        };
+        QueryBuilder::macro('whereContient', $contient);
+        QueryBuilder::macro('orWhereContient', fn (string $colonne, string $terme) => $this->whereContient($colonne, $terme, 'or'));
+
+        // Apres chaque migration, le dictionnaire suit le code : les textes
+        // ajoutes depuis le dernier deploiement sont traduits tout de suite.
+        Event::listen(MigrationsEnded::class, function (MigrationsEnded $evenement) {
+            if ($evenement->method === 'up' && ! $this->app->runningUnitTests() && Schema::hasTable('translations')) {
+                Artisan::call('traductions:synchroniser');
+            }
+        });
     }
 }

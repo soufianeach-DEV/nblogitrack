@@ -48,11 +48,11 @@ class StaffController extends Controller
         $requete = User::whereIn('role', array_keys(self::ROLES));
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('first_name', 'ilike', $terme)
-                ->orWhere('last_name', 'ilike', $terme)
-                ->orWhere('email', 'ilike', $terme));
+                ->whereContient('first_name', $terme)
+                ->orWhereContient('last_name', $terme)
+                ->orWhereContient('email', $terme));
         }
 
         if (! empty($filtres['role'])) {

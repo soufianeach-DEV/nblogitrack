@@ -57,7 +57,7 @@ class TranslationController extends Controller
 
         $avant = $translation->only(['fr', 'nl', 'en']);
 
-        $translation->update($data);
+        $translation->update([...$data, 'modifiee_a_la_main' => true]);
         Traductions::oublier();
 
         ActivityLog::record(

@@ -26,11 +26,11 @@ class PurchaseInvoiceController extends Controller
         $requete = PurchaseInvoice::with('vehicle:registration,brand,model');
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('supplier_name', 'ilike', $terme)
-                ->orWhere('reference', 'ilike', $terme)
-                ->orWhere('vehicle_registration', 'ilike', $terme));
+                ->whereContient('supplier_name', $terme)
+                ->orWhereContient('reference', $terme)
+                ->orWhereContient('vehicle_registration', $terme));
         }
 
         if (! empty($filtres['categorie'])) {
@@ -96,7 +96,7 @@ class PurchaseInvoiceController extends Controller
             'vehicle_registration' => 'required|exists:vehicles,registration',
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
-            'issued_on' => 'required|date',
+            'issued_on' => 'required|date|before_or_equal:today',
             'due_on' => 'required|date|after_or_equal:issued_on',
             'liters' => 'nullable|numeric|min:0|max:99999',
             'taxed_km' => 'nullable|numeric|min:0|max:999999',
@@ -104,6 +104,7 @@ class PurchaseInvoiceController extends Controller
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
+            'issued_on.before_or_equal' => Traductions::t('msg.achat_date_future', 'Une facture d\'achat ne peut pas être datée dans le futur.'),
             'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
             'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
         ]);

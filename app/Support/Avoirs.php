@@ -78,7 +78,9 @@ class Avoirs
 
             $facture->lines()->update(['active' => false]);
 
-            $nouvelle = $facturier->facturer($facture->period_start->copy(), $facture->client_id)->first();
+            // La facture corrigee est emise aujourd'hui, comme l'avoir : un
+            // numero plus grand ne porte jamais une date plus ancienne.
+            $nouvelle = $facturier->facturer($facture->period_start->copy(), $facture->client_id, now())->first();
 
             return ['avoir' => $avoir, 'nouvelle' => $nouvelle];
         });

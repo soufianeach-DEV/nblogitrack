@@ -242,7 +242,7 @@ function PlanDeCharge({ calendrier }) {
                 <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('tdb.restent', 'Restent à affecter')}</p>
                     <p className={`font-bold ${aAffecter > 0 ? 'text-status-incident' : 'text-status-delivered'}`}>
-                        {aAffecter > 0 ? `${aAffecter} ${t('commun.expeditions', 'expéditions')}` : t('tdb.tout_affecte', 'Tout est affecté')}
+                        {aAffecter > 0 ? `${aAffecter} ${aAffecter > 1 ? t('commun.expeditions', 'expéditions') : t('commun.expedition', 'expédition')}` : t('tdb.tout_affecte', 'Tout est affecté')}
                     </p>
                 </div>
             </div>
@@ -568,8 +568,8 @@ function Conformite({ conformite }) {
     const t = useTraduction();
 
     const colonne = (titre, lignes, total, adresse, rendu) => (
-        <div>
-            <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">{titre}</h3>
                 {total > 0 && (
                     <Link href={adresse} className="text-sm font-medium text-action hover:underline">
@@ -601,7 +601,7 @@ function Conformite({ conformite }) {
                 {t('tdb.conformite_sous_titre', 'Uniquement ce qui roule encore alors qu\'une échéance est passée')}
             </p>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-6 lg:grid-cols-2">
                 {colonne(
                     t('nav.chauffeurs', 'Chauffeurs'),
                     conformite.chauffeurs,

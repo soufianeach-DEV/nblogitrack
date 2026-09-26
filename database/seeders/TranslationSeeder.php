@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Translation;
+use App\Support\Traductions;
 use Illuminate\Database\Seeder;
 
 class TranslationSeeder extends Seeder
@@ -17,6 +18,14 @@ class TranslationSeeder extends Seeder
                 );
             }
         }
+
+        Traductions::oublier();
+    }
+
+    /** @return array<string, array<string, array{string, string, string}>> */
+    public static function textes(): array
+    {
+        return self::TEXTES;
     }
 
     /** @var array<string, array<string, array{string, string, string}>> */
@@ -565,9 +574,9 @@ class TranslationSeeder extends Seeder
                 ':n roadworthiness tests overdue',
             ],
             'controle_detail' => [
-                'Dernier passage il y a plus d\'un an.',
-                'Laatste beurt meer dan een jaar geleden.',
-                'Last inspection more than a year ago.',
+                'La validité du contrôle technique est dépassée.',
+                'De geldigheid van de technische keuring is verstreken.',
+                'The roadworthiness test validity has expired.',
             ],
         ],
 
@@ -1325,6 +1334,7 @@ class TranslationSeeder extends Seeder
                 'Geen enkel voertuig komt overeen met deze zoekopdracht.',
                 'No vehicle matches this search.',
             ],
+            'echu_le' => ['échu le', 'vervallen op', 'expired on'],
         ],
 
         'profil' => [
@@ -2204,6 +2214,7 @@ class TranslationSeeder extends Seeder
             'expiree' => ['Clé expirée', 'Vervallen sleutel', 'Expired key'],
             'adresse_refusee' => ['Adresse IP non autorisée', 'IP-adres niet toegestaan', 'IP address not allowed'],
             'permission_absente' => ['Permission absente', 'Recht ontbreekt', 'Missing permission'],
+            'entreprise_inactive' => ['Entreprise non validée ou désactivée', 'Onderneming niet gevalideerd of gedeactiveerd', 'Company not validated or deactivated'],
         ],
 
         'pages' => [
@@ -2282,6 +2293,7 @@ class TranslationSeeder extends Seeder
             'envoyer' => ['Envoyer aux conducteurs', 'Naar de chauffeurs sturen', 'Send to drivers'],
             'envoyer_aide' => ['Chaque conducteur la reçoit dans sa langue. L\'accusé de prise de connaissance reste demandé dans l\'application.', 'Elke chauffeur ontvangt ze in zijn taal. De bevestiging van kennisname blijft in de applicatie gevraagd.', 'Each driver receives it in their own language. The acknowledgement of receipt is still requested in the app.'],
             'onglet_erreur' => ['Erreur dans cette langue', 'Fout in deze taal', 'Error in this language'],
+            'confirmer_envoi' => ['Envoyer la note par courriel à tous les conducteurs actifs ?', 'De nota per e-mail naar alle actieve bestuurders sturen?', 'Email the note to all active drivers?'],
         ],
 
         'page' => [
@@ -2373,6 +2385,7 @@ class TranslationSeeder extends Seeder
             'avoir_sujet' => ['Votre avoir :reference - NBLogiTrack', 'Uw creditnota :reference - NBLogiTrack', 'Your credit note :reference - NBLogiTrack'],
             'avoir_titre' => ['Votre avoir :reference', 'Uw creditnota :reference', 'Your credit note :reference'],
             'avoir_texte' => ['voici l\'avoir de :montant qui annule la facture :facture. Vous le trouverez en pièce jointe au format PDF et au format XML Peppol. Rien n\'est à payer pour cette facture.', 'hierbij de creditnota van :montant die factuur :facture annuleert. U vindt ze in bijlage in PDF- en Peppol-XML-formaat. Voor deze factuur hoeft niets betaald te worden.', 'here is the credit note of :montant cancelling invoice :facture. You will find it attached in PDF and Peppol XML format. Nothing is payable for this invoice.'],
+            'invitation_texte' => ['un compte NBLogiTrack vient d\'être créé pour vous. Choisissez votre mot de passe pour l\'activer : le lien ci-dessous est valable :minutes minutes. Passé ce délai, utilisez « Mot de passe oublié » sur la page de connexion.', 'er werd net een NBLogiTrack-account voor u aangemaakt. Kies uw wachtwoord om het te activeren: de link hieronder is :minutes minuten geldig. Gebruik daarna « Wachtwoord vergeten » op de aanmeldpagina.', 'an NBLogiTrack account has just been created for you. Choose your password to activate it: the link below is valid for :minutes minutes. After that, use "Forgot password" on the sign-in page.'],
         ],
         'pdf' => [
             'slogan' => ['Logistique B2B', 'B2B-logistiek', 'B2B logistics'],
@@ -2603,6 +2616,11 @@ class TranslationSeeder extends Seeder
             'collegue_invite_sans_lien' => ['Le compte de :email est créé, mais le courriel n\'est pas parti. Il peut utiliser « Mot de passe oublié ».', 'Het account van :email is aangemaakt, maar de e-mail is niet vertrokken. Hij kan « Wachtwoord vergeten » gebruiken.', 'The account for :email is created, but the email was not sent. They can use "Forgot password".'],
             'collegue_modifie' => ['Droits enregistrés.', 'Rechten opgeslagen.', 'Permissions saved.'],
             'dernier_admin_societe' => ['L\'entreprise doit garder au moins un administrateur actif.', 'De onderneming moet minstens één actieve beheerder behouden.', 'The company must keep at least one active administrator.'],
+            'planif_reaffectation_identique' => ['Cette mission a déjà ce camion et ce chauffeur.', 'Deze opdracht heeft al deze vrachtwagen en bestuurder.', 'This job already has this truck and driver.'],
+            'planif_binome_en_route' => ['Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission.', 'Deze vrachtwagen en bestuurder zijn die dag nog onderweg voor een andere opdracht.', 'This truck and driver are still on the road that day for another job.'],
+            'achat_date_future' => ['Une facture d\'achat ne peut pas être datée dans le futur.', 'Een aankoopfactuur kan niet in de toekomst gedateerd zijn.', 'A purchase invoice cannot be dated in the future.'],
+            'cle_expiration_passee' => ['La date d\'expiration doit être postérieure à aujourd\'hui.', 'De vervaldatum moet na vandaag liggen.', 'The expiry date must be after today.'],
+            'note_brouillon' => ['Publiez la note avant de l\'envoyer aux conducteurs.', 'Publiceer de nota voordat u ze naar de bestuurders stuurt.', 'Publish the note before sending it to the drivers.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2649,6 +2667,12 @@ class TranslationSeeder extends Seeder
             'inviter' => ['Inviter un collègue', 'Een collega uitnodigen', 'Invite a colleague'],
             'inviter_aide' => ['Il reçoit un lien pour choisir son mot de passe.', 'Hij ontvangt een link om zijn wachtwoord te kiezen.', 'They receive a link to choose their password.'],
             'envoyer_invitation' => ['Envoyer l\'invitation', 'Uitnodiging versturen', 'Send the invitation'],
+        ],
+        'vocab.carburant' => [
+            'electrique' => ['Électrique', 'Elektrisch', 'Electric'],
+            'gnc' => ['GNC', 'CNG', 'CNG'],
+            'diesel' => ['Diesel', 'Diesel', 'Diesel'],
+            'diesel_hvo' => ['Diesel (HVO)', 'Diesel (HVO)', 'Diesel (HVO)'],
         ],
     ];
 }

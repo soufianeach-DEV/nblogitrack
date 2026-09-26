@@ -39,9 +39,12 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
+                // Choisir son mot de passe par le lien recu prouve l'adresse :
+                // le compte n'est plus affiche comme « en attente ».
                 $user->forceFill([
                     'password' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ])->save();
 
                 // Une reinitialisation ferme toutes les sessions ouvertes :

@@ -7,5 +7,7 @@
     "Service Unavailable": "Dienst tijdelijk niet beschikbaar",
     "Too Many Requests": "Te veel aanvragen",
     "Unauthorized": "Niet gemachtigd",
-    "This action is unauthorized.": "U hebt geen toegang tot deze actie."
+    "This action is unauthorized.": "U hebt geen toegang tot deze actie.",
+    "(and :count more error)": "(en nog :count fout)",
+    "(and :count more errors)": "(en nog :count fouten)"
 }

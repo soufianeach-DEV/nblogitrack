@@ -202,7 +202,7 @@ class QuoteController extends Controller
         if ($recherche !== '') {
             $requete->where(function ($q) use ($recherche) {
                 foreach (['reference', 'company_name', 'contact_name', 'email', 'vat_number'] as $colonne) {
-                    $q->orWhere($colonne, 'ilike', '%'.$recherche.'%');
+                    $q->orWhereContient($colonne, (string) $recherche);
                 }
             });
         }

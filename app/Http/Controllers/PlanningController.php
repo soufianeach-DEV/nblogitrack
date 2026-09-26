@@ -58,10 +58,10 @@ class PlanningController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         $recherche = fn ($requete) => $requete->where(fn ($w) => $w
-            ->where('tracking_number', 'ilike', '%'.$q.'%')
-            ->orWhere('pickup_address', 'ilike', '%'.$q.'%')
-            ->orWhere('delivery_address', 'ilike', '%'.$q.'%')
-            ->orWhereHas('client', fn ($c) => $c->where('company_name', 'ilike', '%'.$q.'%')));
+            ->whereContient('tracking_number', (string) $q)
+            ->orWhereContient('pickup_address', (string) $q)
+            ->orWhereContient('delivery_address', (string) $q)
+            ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', (string) $q)));
 
         $orders = TransportOrder::with([
             'client:id,company_name',
@@ -154,16 +154,16 @@ class PlanningController extends Controller
             return [];
         }
 
-        $filtre = '%'.$q.'%';
+        $filtre = (string) $q;
 
         $numeros = TransportOrder::where('status', $statut)
-            ->where('tracking_number', 'ilike', $filtre)
+            ->whereContient('tracking_number', $filtre)
             ->orderBy('tracking_number')
             ->limit(8)
             ->pluck('tracking_number');
 
         $entreprises = TransportOrder::where('status', $statut)
-            ->whereHas('client', fn ($c) => $c->where('company_name', 'ilike', $filtre))
+            ->whereHas('client', fn ($c) => $c->whereContient('company_name', $filtre))
             ->with('client:id,company_name')
             ->limit(40)
             ->get()
@@ -175,8 +175,8 @@ class PlanningController extends Controller
 
         $villes = TransportOrder::where('status', $statut)
             ->where(fn ($w) => $w
-                ->where('pickup_address', 'ilike', $filtre)
-                ->orWhere('delivery_address', 'ilike', $filtre))
+                ->whereContient('pickup_address', $filtre)
+                ->orWhereContient('delivery_address', $filtre))
             ->limit(60)
             ->get(['pickup_address', 'delivery_address'])
             ->flatMap(fn (TransportOrder $o) => [
@@ -226,8 +226,19 @@ class PlanningController extends Controller
         // Sans date d'enlevement, l'expedition part « des que possible » :
         // l'affecter, c'est la planifier aujourd'hui. Elle faisait tomber
         // l'affectation en erreur 500.
-        if ($transportOrder->pickup_date === null) {
+        // Une date d'enlevement deja passee aussi : sinon les documents du
+        // chauffeur et le controle technique etaient verifies a une date
+        // revolue, et la mission restait datee dans le passe.
+        if ($transportOrder->pickup_date === null
+            || ($transportOrder->status === 'PENDING' && $transportOrder->pickup_date->lt(today()))) {
             $transportOrder->pickup_date = now();
+        }
+
+        // Reaffecter au meme camion et au meme chauffeur ne change rien.
+        if ($reaffectation
+            && $transportOrder->vehicle_registration === $vehicle->registration
+            && $transportOrder->driver_id === $driver->id) {
+            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_reaffectation_identique', 'Cette mission a déjà ce camion et ce chauffeur.')]);
         }
 
         // En route, le nouveau camion et le nouveau chauffeur sont mobilises
@@ -290,6 +301,23 @@ class PlanningController extends Controller
         if ($conflitChauffeur) {
             return back()->withErrors([
                 'driver_id' => Traductions::t('msg.planif_chauffeur_occupe', 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.'),
+            ]);
+        }
+
+        // Le meme binome peut charger plusieurs envois le meme jour
+        // (groupage), mais pas partir sur une autre mission pendant qu'il
+        // roule encore : le deuxieme jour d'un Bruxelles-Lyon, il n'est pas
+        // a Namur.
+        $conflitBinome = $this->chevauche(
+            TransportOrder::where('driver_id', $driver->id)
+                ->where('vehicle_registration', $vehicle->registration)
+                ->whereDate('pickup_date', '!=', $debut->toDateString()),
+            $debut, $fin, $transportOrder->id,
+        );
+
+        if ($conflitBinome) {
+            return back()->withErrors([
+                'driver_id' => Traductions::t('msg.planif_binome_en_route', 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission.'),
             ]);
         }
 
@@ -414,6 +442,18 @@ class PlanningController extends Controller
             : Traductions::t('msg.planif_suivi_desactive', 'Suivi de position désactivé.'));
     }
 
+    private static function libelleStatut(string $statut): string
+    {
+        return match ($statut) {
+            'PENDING' => Traductions::t('statut.en_attente', 'En attente'),
+            'ASSIGNED' => Traductions::t('statut.affecte', 'Affecté'),
+            'IN_PROGRESS' => Traductions::t('statut.en_cours', 'En cours'),
+            'DELIVERED' => Traductions::t('statut.livre', 'Livré'),
+            'CANCELLED' => Traductions::t('statut.annule', 'Annulé'),
+            default => $statut,
+        };
+    }
+
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
         $data = $request->validate([
@@ -423,7 +463,7 @@ class PlanningController extends Controller
         $autorises = self::TRANSITIONS[$transportOrder->status] ?? [];
 
         if (! in_array($data['status'], $autorises, true)) {
-            return back()->withErrors(['status' => Traductions::t('msg.planif_transition_impossible', 'Transition impossible depuis le statut :statut.', ['statut' => $transportOrder->status])]);
+            return back()->with('error', Traductions::t('msg.planif_transition_impossible', 'Transition impossible depuis le statut :statut.', ['statut' => self::libelleStatut($transportOrder->status)]));
         }
 
         $ancien = $transportOrder->status;
@@ -433,7 +473,7 @@ class PlanningController extends Controller
                 ? OrderWorkflow::livrer($transportOrder)
                 : OrderWorkflow::annuler($transportOrder, OrderStatus::from($ancien), $request->user()->id);
         } catch (TransitionRefusee $e) {
-            return back()->withErrors(['status' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
         }
 
         ActivityLog::record(
@@ -458,11 +498,11 @@ class PlanningController extends Controller
         // Une marchandise chargee ne revient pas en attente : elle se
         // reaffecte a un autre camion (transbordement).
         if ($transportOrder->status === 'IN_PROGRESS') {
-            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_en_route', 'La marchandise est chargée : réaffectez la mission à un autre camion ou chauffeur au lieu de la remettre en attente.')]);
+            return back()->with('error', Traductions::t('msg.planif_desaffectation_en_route', 'La marchandise est chargée : réaffectez la mission à un autre camion ou chauffeur au lieu de la remettre en attente.'));
         }
 
         if ($transportOrder->status !== 'ASSIGNED') {
-            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée peut être désaffectée.')]);
+            return back()->with('error', Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée peut être désaffectée.'));
         }
 
         $ancien = $transportOrder->status;
@@ -472,7 +512,7 @@ class PlanningController extends Controller
         try {
             OrderWorkflow::desaffecter($transportOrder);
         } catch (TransitionRefusee $e) {
-            return back()->withErrors(['motif' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
         }
 
         ActivityLog::record(

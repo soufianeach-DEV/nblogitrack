@@ -68,14 +68,22 @@ class ActivityLogController extends Controller
 
     public function index(Request $request): Response
     {
+        // Un filtre transmis comme tableau (?ip[]=1) faisait tomber la page
+        // en erreur 500 : seuls les textes sont retenus.
+        foreach (['utilisateur', 'action', 'ip', 'du', 'au'] as $filtre) {
+            if (! is_string($request->query($filtre))) {
+                $request->query->remove($filtre);
+            }
+        }
+
         $query = ActivityLog::with('user:id,first_name,last_name,email,role')->latest('created_at');
 
         if ($request->filled('utilisateur')) {
             $recherche = $request->string('utilisateur')->toString();
             $query->whereHas('user', function ($q) use ($recherche) {
-                $q->where('email', 'ilike', '%'.$recherche.'%')
-                    ->orWhere('first_name', 'ilike', '%'.$recherche.'%')
-                    ->orWhere('last_name', 'ilike', '%'.$recherche.'%');
+                $q->whereContient('email', (string) $recherche)
+                    ->orWhereContient('first_name', (string) $recherche)
+                    ->orWhereContient('last_name', (string) $recherche);
             });
         }
 
@@ -84,7 +92,7 @@ class ActivityLogController extends Controller
         }
 
         if ($request->filled('ip')) {
-            $query->where('ip_address', 'ilike', '%'.$request->query('ip').'%');
+            $query->whereContient('ip_address', (string) $request->query('ip'));
         }
 
         // Une date mal formee dans l'adresse faisait tomber la page en

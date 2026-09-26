@@ -27,12 +27,12 @@ class VehicleController extends Controller
         $requete = Vehicle::query();
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('registration', 'ilike', $terme)
-                ->orWhere('brand', 'ilike', $terme)
-                ->orWhere('model', 'ilike', $terme)
-                ->orWhere('vin', 'ilike', $terme));
+                ->whereContient('registration', $terme)
+                ->orWhereContient('brand', $terme)
+                ->orWhereContient('model', $terme)
+                ->orWhereContient('vin', $terme));
         }
 
         if (! empty($filtres['type'])) {
@@ -134,8 +134,9 @@ class VehicleController extends Controller
             ]);
         }
 
-        // Le releve renvoye tel qu'affiche ne remplace pas la valeur exacte.
-        if ($donnees['mileage'] !== null && (float) $donnees['mileage'] === floor((float) $vehicle->mileage)) {
+        // Le releve renvoye tel qu'affiche ne remplace pas la valeur exacte ;
+        // un champ vide garde le releve actuel (il faisait une erreur 500).
+        if ($donnees['mileage'] === null || (float) $donnees['mileage'] === floor((float) $vehicle->mileage)) {
             unset($donnees['mileage']);
         }
 

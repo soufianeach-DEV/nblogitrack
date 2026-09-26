@@ -74,7 +74,7 @@ function FormulaireAvoir({ facture, onFermer }) {
 
     const envoyer = (e) => {
         e.preventDefault();
-        post(route('invoices.credit', facture.id), { preserveScroll: true });
+        post(route('invoices.credit', facture.id), { onSuccess: onFermer });
     };
 
     return (

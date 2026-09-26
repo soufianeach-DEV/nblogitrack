@@ -10,6 +10,7 @@ use App\Models\Driver;
 use App\Models\Invoice;
 use App\Models\QuoteRequest;
 use App\Models\ShipmentPosition;
+use App\Models\Translation;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -448,7 +449,7 @@ class ParcoursNavigateurTest extends TestCase
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->post(route('planning.desaffecter', $ordre), ['motif' => 'Panne moteur'])
-            ->assertSessionHasErrors('motif');
+            ->assertSessionHas('error');
 
         $ordre->refresh();
         $this->assertSame('IN_PROGRESS', $ordre->status);
@@ -526,5 +527,104 @@ class ParcoursNavigateurTest extends TestCase
                 ->where('missions.0.id', $aFaire->id)
                 ->where('missions.1.id', $recente->id)
                 ->where('missions.2.id', $ancienne->id));
+    }
+
+    // --- Administrateur et planificateur (deuxieme parcours) ---------------
+
+    public function test_un_kilometrage_vide_garde_le_releve(): void
+    {
+        $camion = $this->camion('1-KMS-002', ['mileage' => 120000]);
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->patch(route('vehicles.update', $camion->registration), ['mileage' => null, 'is_available' => true])
+            ->assertSessionHasNoErrors();
+
+        $this->assertEquals(120000, (float) $camion->fresh()->mileage);
+    }
+
+    public function test_un_filtre_du_journal_en_tableau_ne_fait_pas_d_erreur(): void
+    {
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->get(route('activity-logs.index', ['du' => ['1'], 'ip' => ['1'], 'utilisateur' => ['x']]))
+            ->assertOk();
+    }
+
+    public function test_un_depart_futur_ne_ferme_le_compte_qu_a_sa_date(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $champs = [
+            'is_available' => true, 'adr_certified' => false, 'employment_status' => array_key_first(Driver::STATUTS),
+            'left_on' => now()->addMonth()->toDateString(), 'departure_reason' => array_key_first(Driver::MOTIFS_SORTIE),
+        ];
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->patch(route('drivers.update', $chauffeur), $champs)
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue(User::find($chauffeur->id)->is_active);
+
+        $this->travelTo(now()->addMonth()->addDay());
+        $this->artisan('chauffeurs:cloturer-departs')->assertSuccessful();
+
+        $this->assertFalse(User::find($chauffeur->id)->is_active);
+    }
+
+    public function test_un_binome_en_route_ne_part_pas_sur_une_autre_mission(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $camion = $this->camion();
+        TransportOrder::factory()->affectee()->create([
+            'driver_id' => $chauffeur->id, 'vehicle_registration' => $camion->registration,
+            'pickup_date' => now()->addDays(5)->setTime(8, 0), 'distance_km' => 708, 'weight' => 1000,
+        ]);
+        $namur = TransportOrder::factory()->create([
+            'pickup_date' => now()->addDays(6)->setTime(8, 0), 'distance_km' => 70, 'weight' => 1000,
+        ]);
+
+        $this->affecter($namur, $camion, $chauffeur)->assertSessionHasErrors('driver_id');
+        $this->assertSame('PENDING', $namur->fresh()->status);
+    }
+
+    public function test_une_date_d_enlevement_passee_est_ramenee_a_aujourd_hui(): void
+    {
+        $ordre = TransportOrder::factory()->create(['pickup_date' => now()->subDays(15), 'weight' => 1000, 'distance_km' => 80]);
+
+        $this->affecter($ordre, $this->camion(), $this->chauffeur())->assertSessionHasNoErrors();
+
+        $this->assertTrue($ordre->fresh()->pickup_date->isToday());
+    }
+
+    public function test_la_recherche_ignore_les_accents_et_trouve_les_entreprises(): void
+    {
+        $client = Client::factory()->create(['company_name' => 'Brasserie Liégeoise SA']);
+        $ordre = TransportOrder::factory()->create(['client_id' => $client->id, 'delivery_address' => 'Rue Neuve 1, 4000 Liège, Belgique']);
+        $planificateur = User::factory()->planificateur()->create();
+
+        $this->actingAs($planificateur)
+            ->get(route('transport-orders.index', ['q' => 'liege']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.data.0.id', $ordre->id));
+
+        $this->actingAs($planificateur)
+            ->get(route('transport-orders.index', ['q' => 'brasserie liegeoise']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.data.0.id', $ordre->id));
+
+        $this->actingAs($planificateur)
+            ->get(route('transport-orders.index', ['q' => '%']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.total', 0));
+    }
+
+    public function test_une_page_inconnue_parle_la_langue_de_l_adresse(): void
+    {
+        $this->get('/nl/inexistant')->assertNotFound()->assertSee('Pagina niet gevonden');
+    }
+
+    public function test_la_synchronisation_ajoute_les_traductions_sans_ecraser_les_retouches(): void
+    {
+        Translation::create(['cle' => 'nav.services', 'groupe' => 'nav', 'fr' => 'Nos services', 'nl' => 'x', 'en' => 'y', 'modifiee_a_la_main' => true]);
+
+        $this->artisan('traductions:synchroniser')->assertSuccessful();
+
+        $this->assertSame('Nos services', Translation::where('cle', 'nav.services')->value('fr'));
+        $this->assertSame('Tarieven', Translation::where('cle', 'nav.tarifs')->value('nl'));
     }
 }

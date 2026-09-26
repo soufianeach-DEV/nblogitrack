@@ -34,11 +34,11 @@ class RechercheController extends Controller
     /** @return array<int, array<string, string>> */
     private function pourLePersonnel(string $terme): array
     {
-        $filtre = '%'.$terme.'%';
+        $filtre = (string) $terme;
 
         $entreprises = Client::where(fn ($q) => $q
-            ->where('company_name', 'ilike', $filtre)
-            ->orWhere('vat_number', 'ilike', $filtre))
+            ->whereContient('company_name', $filtre)
+            ->orWhereContient('vat_number', $filtre))
             ->orderBy('company_name')
             ->limit(self::MAXIMUM)
             ->get(['id', 'company_name', 'vat_number', 'city'])
@@ -67,14 +67,14 @@ class RechercheController extends Controller
      */
     private function expeditions(string $terme, ?int $client): array
     {
-        $filtre = '%'.$terme.'%';
+        $filtre = (string) $terme;
 
         return TransportOrder::with('client:id,company_name')
             ->when($client !== null, fn ($q) => $q->where('client_id', $client))
             ->where(fn ($q) => $q
-                ->where('tracking_number', 'ilike', $filtre)
-                ->orWhere('pickup_address', 'ilike', $filtre)
-                ->orWhere('delivery_address', 'ilike', $filtre))
+                ->whereContient('tracking_number', $filtre)
+                ->orWhereContient('pickup_address', $filtre)
+                ->orWhereContient('delivery_address', $filtre))
             ->orderByDesc('id')
             ->limit(self::MAXIMUM)
             ->get()

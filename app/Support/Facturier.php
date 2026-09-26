@@ -16,7 +16,12 @@ class Facturier
     /**
      * @return Collection<int, Invoice>
      */
-    public function facturer(?Carbon $periode = null, ?int $clientId = null): Collection
+    /**
+     * @param  Carbon|null  $emission  date d'emission imposee (refacturation
+     *                                 apres avoir : aujourd'hui, pour garder
+     *                                 la numerotation chronologique)
+     */
+    public function facturer(?Carbon $periode = null, ?int $clientId = null, ?Carbon $emission = null): Collection
     {
         $emises = collect();
 
@@ -28,7 +33,7 @@ class Facturier
                 continue;
             }
 
-            $emises->push($this->emettre($client, $mois, $elements));
+            $emises->push($this->emettre($client, $mois, $elements, $emission));
         }
 
         return $emises;
@@ -105,11 +110,11 @@ class Facturier
     /**
      * @param  Collection<int, array{kind: string, transport_order_id: ?int, order_charge_id: ?int, description: string, montant: float}>  $elements
      */
-    public function emettre(Client $client, string $mois, Collection $elements): Invoice
+    public function emettre(Client $client, string $mois, Collection $elements, ?Carbon $emissionImposee = null): Invoice
     {
-        return DB::transaction(function () use ($client, $mois, $elements) {
+        return DB::transaction(function () use ($client, $mois, $elements, $emissionImposee) {
             $periode = Carbon::createFromFormat('Y-m-d', $mois.'-01')->startOfMonth();
-            $emission = $periode->copy()->addMonth()->startOfMonth();
+            $emission = $emissionImposee?->copy()->startOfDay() ?? $periode->copy()->addMonth()->startOfMonth();
             $regime = RegimeTva::pour($client);
 
             $horsTva = round((float) $elements->sum('montant'), 2);

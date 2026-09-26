@@ -61,7 +61,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 204 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 212 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -125,12 +125,7 @@ Créez la base PostgreSQL, renseignez ses accès dans `.env`, puis créez les ta
 php artisan migrate --seed
 ```
 
-Après une mise à jour du code, appliquez les migrations et rechargez le dictionnaire des traductions (les textes ajoutés s'affichent sinon en français) :
-
-```bash
-php artisan migrate
-php artisan db:seed --class=TranslationSeeder
-```
+Après une mise à jour du code, `php artisan migrate` suffit : il synchronise aussi le dictionnaire des traductions (nouvelles clés ajoutées, textes retouchés à la main dans l'écran Traductions conservés) et vide son cache. La commande `php artisan traductions:synchroniser` fait la même chose seule.
 
 Importez enfin les codes postaux européens, indispensables à la saisie guidée des adresses (environ 610 000 entrées, quelques minutes) :
 
@@ -158,7 +153,7 @@ L'application répond sur `http://127.0.0.1:8000`, la boîte de réception de d�
 
 ### Tâches planifiées
 
-Trois traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
+Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
 
 ```bash
 * * * * * cd /chemin/vers/nblogitrack && php artisan schedule:run >> /dev/null 2>&1
@@ -169,8 +164,9 @@ Trois traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit êtr
 | Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture les transports livrés du mois écoulé et envoie chaque facture par courriel |
 | Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route au-delà de sept jours |
 | Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
+| Chaque nuit à 0 h 15 | `chauffeurs:cloturer-departs` | Ferme le compte d'un chauffeur le jour de son départ enregistré à l'avance |
 
-Les trois restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout`, `--essai` et `--sans-envoi` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
+Tous restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout`, `--essai` et `--sans-envoi` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
 
 ### Comptes de démonstration
 
@@ -199,7 +195,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Deux cent quatre tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Deux cent douze tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 

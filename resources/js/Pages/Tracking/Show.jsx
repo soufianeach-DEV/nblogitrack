@@ -443,8 +443,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                                                     </p>
                                                     {}
                                                     {[
-                                                        [order.vehicle.vehicle_type, order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
-                                                        [order.vehicle.euro_standard, order.vehicle.fuel_type],
+                                                        [v('vehicule', order.vehicle.vehicle_type), order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
+                                                        [order.vehicle.euro_standard, v('carburant', order.vehicle.fuel_type)],
                                                     ].map((ligne, i) => {
                                                         const texte = ligne.filter(Boolean).join(' · ');
 

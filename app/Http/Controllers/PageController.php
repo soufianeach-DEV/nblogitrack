@@ -118,6 +118,11 @@ class PageController extends Controller
             return back()->with('error', Traductions::t('msg.note_seule_envoyable', 'Seule la note aux conducteurs peut être envoyée.'));
         }
 
+        // Un brouillon ne part pas chez les conducteurs.
+        if (! $page->publiee) {
+            return back()->with('error', Traductions::t('msg.note_brouillon', 'Publiez la note avant de l\'envoyer aux conducteurs.'));
+        }
+
         $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
 
         // Un envoi qui echoue n'arrete pas les suivants, et le journal

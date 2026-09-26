@@ -135,7 +135,10 @@ export default function Index({ pages, documents, types }) {
                                 {p.slug === 'information-chauffeurs' && (
                                     <button
                                         type="button"
-                                        onClick={() => router.post(route('pages.notice.send', p.id), {}, { preserveScroll: true })}
+                                        onClick={() => {
+                                            if (! window.confirm(t('pages.confirmer_envoi', 'Envoyer la note par courriel à tous les conducteurs actifs ?'))) return;
+                                            router.post(route('pages.notice.send', p.id), {}, { preserveScroll: true });
+                                        }}
                                         className="rounded-lg border border-brand-blue px-3 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue/5"
                                         title={t('pages.envoyer_aide', 'Chaque conducteur la reçoit dans sa langue. L\'accusé de prise de connaissance reste demandé dans l\'application.')}
                                     >

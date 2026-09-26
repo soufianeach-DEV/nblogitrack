@@ -39,25 +39,28 @@ class TransportOrderController extends Controller
         }
 
         if ($request->filled('tracking')) {
-            $query->where('tracking_number', 'ilike', '%'.$request->tracking.'%');
+            $query->whereContient('tracking_number', (string) $request->tracking);
         }
         // La recherche globale (touche Entree) cherche comme ses
         // suggestions : numero, depart ou destination.
         if ($request->filled('q')) {
-            $terme = '%'.$request->q.'%';
+            $terme = (string) $request->q;
             $query->where(fn ($q) => $q
-                ->where('tracking_number', 'ilike', $terme)
-                ->orWhere('pickup_address', 'ilike', $terme)
-                ->orWhere('delivery_address', 'ilike', $terme));
+                ->whereContient('tracking_number', $terme)
+                ->orWhereContient('pickup_address', $terme)
+                ->orWhereContient('delivery_address', $terme)
+                // Les suggestions proposent aussi les entreprises : la
+                // touche Entree les cherche de meme.
+                ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', $terme)));
         }
         if ($request->filled('destination')) {
-            $query->where('delivery_address', 'ilike', '%'.$request->destination.'%');
+            $query->whereContient('delivery_address', (string) $request->destination);
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         if ($request->filled('client')) {
-            $query->whereHas('client', fn ($q) => $q->where('company_name', 'ilike', '%'.$request->client.'%'));
+            $query->whereHas('client', fn ($q) => $q->whereContient('company_name', (string) $request->client));
         }
 
         $orders = $query->with('invoiceLine.invoice:id,status')

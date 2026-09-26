@@ -7,7 +7,11 @@
     <h1 style="margin:0 0 8px; color:#14324F; font-size:22px;">{{ $t::t('courriel.mdp_titre', 'Choisissez votre mot de passe') }}</h1>
     <p style="margin:0 0 24px; color:#1A202C; font-size:14px; line-height:1.6;">
         {{ $t::t('courriel.bonjour', 'Bonjour :prenom,', ['prenom' => $destinataire->first_name]) }}<br>
+        @if ($invitation ?? false)
+        {{ $t::t('courriel.invitation_texte', 'un compte NBLogiTrack vient d\'être créé pour vous. Choisissez votre mot de passe pour l\'activer : le lien ci-dessous est valable :minutes minutes. Passé ce délai, utilisez « Mot de passe oublié » sur la page de connexion.', ['minutes' => $minutes]) }}
+        @else
         {{ $t::t('courriel.mdp_texte', 'une demande a été faite pour choisir le mot de passe de votre compte NBLogiTrack. Le lien ci-dessous est valable :minutes minutes.', ['minutes' => $minutes]) }}
+        @endif
     </p>
 
     @include('emails.bouton', [
@@ -16,7 +20,9 @@
         'aide' => $t::t('courriel.ou_lien', 'ou ouvrez ce lien dans votre navigateur'),
     ])
 
+    @unless ($invitation ?? false)
     <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.6;">
         {{ $t::t('courriel.mdp_ignorer', 'Si vous n\'êtes pas à l\'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.') }}
     </p>
+    @endunless
 @endsection

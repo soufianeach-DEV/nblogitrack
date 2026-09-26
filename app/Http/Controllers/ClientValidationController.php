@@ -44,7 +44,7 @@ class ClientValidationController extends Controller
         if ($filtres['q'] !== '') {
             $query->where(function ($q) use ($filtres) {
                 foreach (['company_name', 'vat_number', 'peppol_id', 'city'] as $colonne) {
-                    $q->orWhere($colonne, 'ilike', '%'.$filtres['q'].'%');
+                    $q->orWhereContient($colonne, (string) $filtres['q']);
                 }
             });
         }

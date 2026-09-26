@@ -249,7 +249,7 @@ class CorrectionsAuditTest extends TestCase
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->patch(route('planning.status', $ordre), ['status' => 'IN_PROGRESS'])
-            ->assertSessionHasErrors('status');
+            ->assertSessionHas('error');
 
         $this->assertSame('PENDING', $ordre->refresh()->status);
     }

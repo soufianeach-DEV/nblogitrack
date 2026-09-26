@@ -80,6 +80,19 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Une adresse inconnue (/nl/inexistant, /en/p/nope) echoue avant
+        // que la langue soit fixee : la page d'erreur sortait en francais.
+        // On la lit dans le premier segment de l'adresse.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            $langue = $request->segment(1);
+
+            if (Traductions::estServie($langue)) {
+                app()->setLocale($langue);
+            }
+
+            return null;
+        });
+
         // Une session dure deux heures. Passe ce delai, le jeton du
         // formulaire ne correspond plus et Laravel repond « 419 PAGE
         // EXPIRED » : une page nue qui ne dit rien et ou l'utilisateur reste

@@ -7,5 +7,7 @@
     "Service Unavailable": "Service momentanément indisponible",
     "Too Many Requests": "Trop de demandes",
     "Unauthorized": "Non autorisé",
-    "This action is unauthorized.": "Vous n'avez pas accès à cette action."
+    "This action is unauthorized.": "Vous n'avez pas accès à cette action.",
+    "(and :count more error)": "(et :count autre erreur)",
+    "(and :count more errors)": "(et :count autres erreurs)"
 }

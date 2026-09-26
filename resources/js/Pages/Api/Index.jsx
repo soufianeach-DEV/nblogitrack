@@ -373,6 +373,7 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                             <p className="mt-1 text-xs text-slate-600">
                                 {t('api.entreprise_aide', 'Une clé rattachée ne voit que les expéditions de cette entreprise.')}
                             </p>
+                            {errors.client_id && <p className="mt-1 text-xs text-status-incident">{errors.client_id}</p>}
                         </div>
 
                         <div>

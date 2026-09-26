@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Support\Traductions;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,13 +25,13 @@ class DriverController extends Controller
         $requete = Driver::with('user:id,first_name,last_name,email,phone,is_active');
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('license_number', 'ilike', $terme)
+                ->whereContient('license_number', $terme)
                 ->orWhereHas('user', fn ($u) => $u
-                    ->where('first_name', 'ilike', $terme)
-                    ->orWhere('last_name', 'ilike', $terme)
-                    ->orWhere('email', 'ilike', $terme)));
+                    ->whereContient('first_name', $terme)
+                    ->orWhereContient('last_name', $terme)
+                    ->orWhereContient('email', $terme)));
         }
 
         if (! empty($filtres['permis'])) {
@@ -165,8 +166,17 @@ class DriverController extends Controller
                 ]);
             }
 
-            $donnees['is_available'] = false;
-            $driver->user?->update(['is_active' => false]);
+            // Un depart date dans le futur ferme le compte a cette date
+            // (tache chauffeurs:cloturer-departs), pas des aujourd'hui.
+            if (Carbon::parse($donnees['left_on'])->lte(today())) {
+                $donnees['is_available'] = false;
+                $driver->user?->update(['is_active' => false]);
+            }
+        } elseif ($driver->left_on !== null) {
+            // Depart annule : le motif part avec la date et le compte
+            // retrouve son acces.
+            $donnees['departure_reason'] = null;
+            $driver->user?->update(['is_active' => true]);
         }
 
         if ($donnees['is_available'] === false || $donnees['adr_certified'] === false) {

@@ -83,6 +83,7 @@ class ApiKeyController extends Controller
             'ips' => 'nullable|string|max:500',
             'expire_le' => 'nullable|date|after:today',
         ], [
+            'expire_le.after' => Traductions::t('msg.cle_expiration_passee', 'La date d\'expiration doit être postérieure à aujourd\'hui.'),
             'client_id.required' => Traductions::t('msg.cle_ecriture_sans_entreprise', 'Une clé qui dépose des expéditions doit être rattachée à une entreprise.'),
         ]);
 

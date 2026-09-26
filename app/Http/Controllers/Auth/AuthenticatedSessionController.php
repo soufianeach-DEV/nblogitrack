@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // L'utilisateur retrouve la langue qu'il a choisie, quelle que soit
+        // celle de la page de connexion.
+        $langue = $request->user()->locale;
+        $langue = Traductions::estServie($langue) ? $langue : app()->getLocale();
+
+        return redirect()->intended(route('dashboard', ['langue' => $langue], absolute: false));
     }
 
     public function destroy(Request $request): RedirectResponse
