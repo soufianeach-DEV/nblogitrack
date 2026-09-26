@@ -25,6 +25,6 @@ class TransportOrderSeeder extends Seeder
         });
 
         (new CoherenceDesAffectations)();
-        (new ScenarioFretRetour)();
+        $this->call(ScenarioFretRetour::class);
     }
 }

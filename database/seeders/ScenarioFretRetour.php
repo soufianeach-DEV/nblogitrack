@@ -11,6 +11,7 @@ use App\Support\Chronologie;
 use App\Support\ControleAffectation;
 use App\Support\FretRetour;
 use App\Support\Tarificateur;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -19,11 +20,21 @@ use Illuminate\Support\Facades\DB;
  * Bruxelles -> Lyon affecte, un import Villeurbanne -> Anvers vendu au
  * tarif fret retour sur son retour, et un import Lille -> Liege sans camion
  * a proximite (depart du depot a prevoir).
+ *
+ * Lance avec les autres donnees de demonstration, ou seul sur une base
+ * deja remplie : php artisan db:seed --class=ScenarioFretRetour.
  */
-final class ScenarioFretRetour
+final class ScenarioFretRetour extends Seeder
 {
-    public function __invoke(): void
+    public function run(): void
     {
+        // Deja present : relance sans doublon.
+        if (TransportOrder::where('pickup_address', 'Rue Francis de Pressensé 10, 69100 Villeurbanne, France')->exists()) {
+            $this->command?->info('Le scénario fret retour est déjà en place.');
+
+            return;
+        }
+
         // Le fichier SQL insere ses identifiants : la sequence reprend apres.
         DB::statement("SELECT setval('transport_orders_id_seq', (SELECT COALESCE(MAX(id), 1) FROM transport_orders))");
 
