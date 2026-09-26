@@ -16,11 +16,11 @@ const STATUTS = {
 const memeJour = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 /** « 09:00 » aujourd'hui, « mar. 29/09 · 09:00 » un autre jour, dans la langue de l'ecran. */
-function quand(iso, locale, { avecHeure = true } = {}) {
+function quand(iso, locale, { avecHeure = true, toujoursDate = false } = {}) {
     if (! iso) return null;
     const d = new Date(iso);
     const heure = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-    if (avecHeure && memeJour(d, new Date())) return heure;
+    if (avecHeure && ! toujoursDate && memeJour(d, new Date())) return heure;
     const jour = d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
 
     return avecHeure ? `${jour} · ${heure}` : jour;
@@ -61,7 +61,7 @@ function CarteMission({ mission, active, onClick }) {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                    <Etape intitule={t('ordres.chargement', 'Chargement')} heure={quand(mission.enlevement_iso, locale)} lieu={mission.enlevement} />
+                    <Etape intitule={t('commun.enlevement', 'enlèvement')} heure={quand(mission.enlevement_iso, locale)} lieu={mission.enlevement} />
                     <Etape intitule={t('commun.livraison', 'livraison')} heure={quand(mission.date_livraison, locale, { avecHeure: false })} lieu={mission.livraison} />
                     {mission.annulee_le && (
                         <p className="text-xs font-semibold text-status-incident">
@@ -322,6 +322,8 @@ function Fiche({ mission, onRetour }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
+    // Espace avant les deux-points en francais seulement.
+    const deuxPoints = locale.startsWith('fr') ? ' : ' : ': ';
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
     const nombre = (valeur, unite) => valeur === null || valeur === undefined
@@ -420,12 +422,12 @@ function Fiche({ mission, onRetour }) {
 
                 {mission.livree_le && (
                     <div className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm text-status-delivered">
-                        <p className="font-semibold">{t('mission.livree_le', 'Livrée le')} {quand(mission.livree_le, locale)}</p>
+                        <p className="font-semibold">{t('mission.livree_le', 'Livrée le')} {quand(mission.livree_le, locale, { toujoursDate: true })}</p>
                         {mission.receptionnaire && (
-                            <p className="mt-1 text-marine">{t('mission.receptionnaire', 'Réceptionné par')} : {mission.receptionnaire}</p>
+                            <p className="mt-1 text-marine">{t('mission.receptionnaire', 'Réceptionné par')}{deuxPoints}{mission.receptionnaire}</p>
                         )}
                         {mission.reserves && (
-                            <p className="mt-1 text-marine">{t('ordres.reserves', 'Réserves à la livraison')} : {mission.reserves}</p>
+                            <p className="mt-1 text-marine">{t('ordres.reserves', 'Réserves à la livraison')}{deuxPoints}{mission.reserves}</p>
                         )}
                     </div>
                 )}
@@ -460,7 +462,7 @@ export default function Missions({ missions = [], mission = null, introuvable = 
     useEffect(() => {
         const minuteur = setInterval(() => {
             if (document.visibilityState === 'visible') {
-                router.reload({ only: ['missions', 'mission', 'note'] });
+                router.reload({ only: ['missions', 'mission', 'note', 'introuvable'] });
             }
         }, 60 * 1000);
 
@@ -494,7 +496,7 @@ export default function Missions({ missions = [], mission = null, introuvable = 
 
                     {introuvable && (
                         <p className="mb-3 rounded-lg bg-status-incident/10 p-3 text-sm text-status-incident">
-                            {t('mission.pas_affectee', 'Cette mission ne vous est pas affectée.')}
+                            {t('mission.plus_affectee', 'Cette mission ne vous est pas ou plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.')}
                         </p>
                     )}
 

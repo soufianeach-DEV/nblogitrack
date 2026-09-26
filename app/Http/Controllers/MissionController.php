@@ -102,6 +102,21 @@ class MissionController extends Controller
         $vise = $donnees['statut'];
         $attendu = self::TRANSITIONS[$vise];
 
+        // Le planificateur a deja marque la livraison : ce que le chauffeur
+        // a saisi (receptionnaire, reserves) n'est pas perdu pour autant.
+        if ($vise === 'DELIVERED' && $transportOrder->status === 'DELIVERED') {
+            $complements = array_filter([
+                'received_by' => $transportOrder->received_by === null ? trim((string) ($donnees['receptionnaire'] ?? '')) : '',
+                'delivery_reserves' => $transportOrder->delivery_reserves === null ? trim((string) ($donnees['reserves'] ?? '')) : '',
+            ]);
+
+            if ($complements !== []) {
+                $transportOrder->update($complements);
+            }
+
+            return back()->with('success', Traductions::t('msg.mission_deja_livree', 'La livraison était déjà enregistrée par le planificateur : vos informations y ont été ajoutées.'));
+        }
+
         if ($transportOrder->status !== $attendu) {
             return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
         }

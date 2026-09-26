@@ -37,6 +37,14 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Un visiteur non connecte revient a l'ecran de connexion dans la
+        // langue de l'adresse demandee (/nl/missions -> /nl/login).
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $langue = $request->segment(1);
+
+            return route('login', ['langue' => Traductions::estServie($langue) ? $langue : 'fr']);
+        });
+
         // Stripe notifie le paiement depuis ses serveurs : aucune session,
         // donc aucun jeton de formulaire a presenter. L'appel est authentifie
         // par la signature de son en-tete, verifiee dans le controleur.

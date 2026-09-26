@@ -1202,6 +1202,7 @@ class TranslationSeeder extends Seeder
             'relire_note' => ['Relire la note d\'information', 'Informatienota herlezen', 'Read the information note again'],
             'fermer' => ['Fermer', 'Sluiten', 'Close'],
             'localisation' => ['Localisation…', 'Locatie bepalen…', 'Locating…'],
+            'plus_affectee' => ['Cette mission ne vous est pas ou plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.', 'Deze opdracht is u niet (meer) toegewezen: de planner heeft ze aan een andere bestuurder gegeven of terug in wacht gezet.', 'This job is not (or no longer) assigned to you: the planner gave it to another driver or put it back on hold.'],
         ],
 
         'journal' => [
@@ -2623,6 +2624,7 @@ class TranslationSeeder extends Seeder
             'achat_date_future' => ['Une facture d\'achat ne peut pas être datée dans le futur.', 'Een aankoopfactuur kan niet in de toekomst gedateerd zijn.', 'A purchase invoice cannot be dated in the future.'],
             'cle_expiration_passee' => ['La date d\'expiration doit être postérieure à aujourd\'hui.', 'De vervaldatum moet na vandaag liggen.', 'The expiry date must be after today.'],
             'note_brouillon' => ['Publiez la note avant de l\'envoyer aux conducteurs.', 'Publiceer de nota voordat u ze naar de bestuurders stuurt.', 'Publish the note before sending it to the drivers.'],
+            'mission_deja_livree' => ['La livraison était déjà enregistrée par le planificateur : vos informations y ont été ajoutées.', 'De levering was al geregistreerd door de planner: uw gegevens zijn toegevoegd.', 'The delivery had already been recorded by the planner: your details have been added.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
