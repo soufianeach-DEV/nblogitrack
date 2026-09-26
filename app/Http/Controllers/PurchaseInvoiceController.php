@@ -94,7 +94,10 @@ class PurchaseInvoiceController extends Controller
             'reference' => 'required|string|max:50',
             'category' => 'required|in:'.implode(',', array_keys(PurchaseInvoice::CATEGORIES)),
             'vehicle_registration' => 'required|exists:vehicles,registration',
-            'period_start' => 'required|date',
+            // Un mois qui n'a pas encore commence n'a rien pu consommer :
+            // une periode 2027-03 est une faute de frappe, qui fausserait
+            // le suivi du parc et la declaration de TVA.
+            'period_start' => 'required|date|before_or_equal:today',
             'period_end' => 'required|date|after_or_equal:period_start',
             'issued_on' => 'required|date|before_or_equal:today',
             'due_on' => 'required|date|after_or_equal:issued_on',
@@ -104,6 +107,7 @@ class PurchaseInvoiceController extends Controller
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
+            'period_start.before_or_equal' => Traductions::t('msg.achat_periode_future', 'La période facturée ne peut pas être dans le futur.'),
             'issued_on.before_or_equal' => Traductions::t('msg.achat_date_future', 'Une facture d\'achat ne peut pas être datée dans le futur.'),
             'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
             'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
@@ -185,7 +189,10 @@ class PurchaseInvoiceController extends Controller
             ->sortDesc()
             ->values()
             ->map(function (string $mois) use ($ventes, $achats) {
-                $date = Carbon::createFromFormat('Y-m', $mois);
+                // Sans « ! », Carbon complete la date avec le jour courant :
+                // un 30 octobre, « 2026-02 » devenait le 30 fevrier, soit
+                // le 2 mars, et la ligne de fevrier s'affichait en mars.
+                $date = Carbon::createFromFormat('!Y-m', $mois);
                 $collectee = (float) ($ventes[$mois]->collectee ?? 0);
                 $deductible = (float) ($achats[$mois]->deductible ?? 0);
 

@@ -345,6 +345,7 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                     { libelle: t('chauffeurs.aptes', 'Aptes'), valeur: 'disponibles', nombre: compteurs.disponibles },
                     { libelle: t('chauffeurs.certifies_adr', 'Certifiés ADR'), valeur: 'adr', nombre: compteurs.adr },
                     { libelle: t('chauffeurs.inaptes', 'Ne peuvent pas rouler'), valeur: 'inaptes', nombre: compteurs.inaptes, alerte: true },
+                    { libelle: t('parc.a_mettre_en_regle', 'À mettre en règle'), valeur: 'conformite', nombre: compteurs.conformite, alerte: true },
                     { libelle: t('chauffeurs.visite_renouveler', 'Visite à renouveler'), valeur: 'visite', nombre: compteurs.visite, alerte: true },
                     { libelle: t('chauffeurs.sortis', 'Sortis'), valeur: 'sortis', nombre: compteurs.sortis },
                 ]}

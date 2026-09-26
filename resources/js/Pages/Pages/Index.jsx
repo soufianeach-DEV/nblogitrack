@@ -82,7 +82,7 @@ export default function Index({ pages, documents, types }) {
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-lg font-bold text-marine">{p.titre_fr}</h2>
+                                    <h2 className="text-lg font-bold text-marine">{p.titre}</h2>
                                     <span className={
                                         'rounded-full px-3 py-0.5 text-xs font-semibold ' +
                                         (p.publiee
@@ -363,7 +363,7 @@ export default function Index({ pages, documents, types }) {
                     <h2 className="text-lg font-bold text-marine">{t('action.supprimer', 'Supprimer')}</h2>
                     <p className="mt-2 text-sm text-slate-600">
                         {t('pages.supprimer_aide', 'La page « :titre » et son contenu seront perdus. Pour la retirer du site sans l\'effacer, utilisez plutôt « Retirer ».', {
-                            titre: aSupprimer?.titre_fr ?? '',
+                            titre: aSupprimer?.titre ?? '',
                         })}
                     </p>
                     <div className="mt-6 flex justify-end gap-2">

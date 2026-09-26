@@ -24,11 +24,21 @@ class VatController extends Controller
         if ($identifiant['tva'] === null) {
             return response()->json([
                 'statut' => 'format',
-                'message' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.'),
+                'message' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
             ]);
         }
 
         $tva = $identifiant['tva'];
+
+        // Un numero belge dont le controle modulo 97 echoue n'existe pas :
+        // inutile de le demander a VIES.
+        if (! IdentifiantEntreprise::controleLocal($tva)) {
+            return response()->json([
+                'statut' => 'format',
+                'message' => Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'),
+            ]);
+        }
+
         $cle = 'vies:'.$tva;
 
         if ($cache = Cache::get($cle)) {

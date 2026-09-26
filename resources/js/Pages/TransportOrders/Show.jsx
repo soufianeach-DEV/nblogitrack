@@ -142,7 +142,12 @@ function Supplements({ order, supplements, peutAjouter, euros }) {
     const { data, setData, post, processing, errors, reset } = useForm({ libelle: '', montant: '' });
     const retirer = useForm({});
 
-    if (supplements.length === 0 && ! peutAjouter) return null;
+    // Une expedition annulee sans indemnite ne sera jamais facturee : le
+    // serveur refuse tout supplement, le formulaire n'a pas a le proposer.
+    const annuleeSansFrais = order.status === 'CANCELLED' && ! (Number(order.cancellation_fee) > 0);
+    const formulaire = peutAjouter && ! annuleeSansFrais;
+
+    if (supplements.length === 0 && ! formulaire) return null;
 
     const ajouter = (e) => {
         e.preventDefault();
@@ -182,7 +187,7 @@ function Supplements({ order, supplements, peutAjouter, euros }) {
                     ))}
                 </ul>
             )}
-            {peutAjouter && (
+            {formulaire && (
                 <form onSubmit={ajouter} className="mt-3 grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-[1fr_7rem_auto]">
                     <input
                         type="text"
@@ -198,6 +203,7 @@ function Supplements({ order, supplements, peutAjouter, euros }) {
                         type="number"
                         step="0.01"
                         min="0.01"
+                        max="100000"
                         value={data.montant}
                         onChange={(e) => setData('montant', e.target.value)}
                         placeholder={t('ordres.supplement_montant', '€ HT')}

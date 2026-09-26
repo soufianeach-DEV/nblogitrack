@@ -19,7 +19,7 @@ class DriverController extends Controller
         $filtres = $request->validate([
             'q' => 'nullable|string|max:60',
             'permis' => 'nullable|string|max:8',
-            'etat' => 'nullable|in:disponibles,indisponibles,adr,visite,permis,inaptes,sortis',
+            'etat' => 'nullable|in:disponibles,indisponibles,adr,visite,permis,inaptes,sortis,conformite',
         ]);
 
         $requete = Driver::with('user:id,first_name,last_name,email,phone,is_active');
@@ -62,6 +62,9 @@ class DriverController extends Controller
             'permis' => $requete->where('license_expiry', '<=', $permisLimite),
             'inaptes' => $requete->whereNot($parti)->where($inapte),
             'sortis' => $requete->where($parti),
+            // Le lien « Voir les N » du tableau de bord arrive ici : meme
+            // critere que son widget, donc meme nombre.
+            'conformite' => $requete->where(DashboardController::chauffeursAMettreEnRegle()),
             default => null,
         };
 
@@ -127,6 +130,7 @@ class DriverController extends Controller
                 'visite' => Driver::where('medical_exam_date', '<', $visiteLimite)->count(),
                 'inaptes' => Driver::whereNot($parti)->where($inapte)->count(),
                 'sortis' => Driver::where($parti)->count(),
+                'conformite' => Driver::where(DashboardController::chauffeursAMettreEnRegle())->count(),
             ],
             'filtres' => $filtres,
             'peutModifier' => $request->user()->can('manage-fleet'),

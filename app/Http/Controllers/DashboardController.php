@@ -14,6 +14,7 @@ use App\Support\Adresse;
 use App\Support\Formats;
 use App\Support\JoursFeries;
 use App\Support\Traductions;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -171,20 +172,17 @@ class DashboardController extends Controller
     private function alertes(Builder $query, bool $personnel): array
     {
         $alertes = [];
-        $aujourdhui = now()->toDateString();
 
-        $retard = (clone $query)
-            ->whereIn('status', TransportOrder::ACTIFS)
-            ->whereNotNull('requested_delivery_date')
-            ->where('requested_delivery_date', '<', $aujourdhui)
-            ->count();
+        $retard = (clone $query)->where(self::expeditionsEnRetard())->count();
 
         if ($retard > 0) {
             $alertes[] = [
                 'niveau' => 'grave',
                 'titre' => self::phrase($retard, 'alerte.retard_un', ':n expédition en retard', 'alerte.retard_n', ':n expéditions en retard'),
                 'detail' => Traductions::t('alerte.retard_detail', 'La date de livraison souhaitée est dépassée et la marchandise n\'est pas arrivée.'),
-                'lien' => route('transport-orders.index'),
+                // La liste filtree montre les memes expeditions que le
+                // nombre annonce, pour le client comme pour le personnel.
+                'lien' => route('transport-orders.index', ['retard' => 1]),
             ];
         }
 
@@ -196,7 +194,7 @@ class DashboardController extends Controller
                     'niveau' => 'info',
                     'titre' => self::phrase($attente, 'alerte.attente_un', ':n expédition en attente d\'affectation', 'alerte.attente_n', ':n expéditions en attente d\'affectation'),
                     'detail' => Traductions::t('alerte.attente_detail', 'Un véhicule leur sera affecté par la planification.'),
-                    'lien' => route('transport-orders.index'),
+                    'lien' => route('transport-orders.index', ['status' => 'PENDING']),
                 ];
             }
 
@@ -213,7 +211,7 @@ class DashboardController extends Controller
                 'niveau' => 'grave',
                 'titre' => self::phrase($adr, 'alerte.adr_un', ':n matière dangereuse sans chauffeur', 'alerte.adr_n', ':n matières dangereuses sans chauffeur'),
                 'detail' => Traductions::t('alerte.adr_detail', 'Ces expéditions exigent un chauffeur certifié ADR.'),
-                'lien' => route('planning.index'),
+                'lien' => route('planning.index', ['contrainte' => 'adr']),
             ];
         }
 
@@ -229,7 +227,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => self::phrase($imminent, 'alerte.imminent_un', ':n enlèvement sous trois jours sans véhicule', 'alerte.imminent_n', ':n enlèvements sous trois jours sans véhicule'),
                 'detail' => Traductions::t('alerte.imminent_detail', 'À affecter avant la date d\'enlèvement prévue.'),
-                'lien' => route('planning.index'),
+                'lien' => route('planning.index', ['status' => 'PENDING']),
             ];
         }
 
@@ -414,18 +412,8 @@ class DashboardController extends Controller
      */
     private function conformite(): array
     {
-        $visite = now()->subYear()->toDateString();
         $echeance = now()->addDays(60)->toDateString();
-
-        $chauffeursAlerte = fn ($q) => $q
-            ->where('is_available', true)
-            ->whereNull('left_on')
-            ->where(fn ($e) => $e
-                ->where('medical_exam_date', '<', $visite)
-                ->orWhereNull('medical_exam_date')
-                ->orWhere('license_expiry', '<=', $echeance)
-                ->orWhere('cpc_expiry', '<', now()->toDateString())
-                ->orWhere('tacho_card_expiry', '<', now()->toDateString()));
+        $chauffeursAlerte = self::chauffeursAMettreEnRegle();
 
         $chauffeurs = Driver::with('user:id,first_name,last_name')
             ->where($chauffeursAlerte)
@@ -451,13 +439,7 @@ class DashboardController extends Controller
             })
             ->all();
 
-        // Un camion en mission avec un controle echu roule bel et bien, meme
-        // s'il a ete retire du service entre-temps.
-        $vehiculesAlerte = fn ($q) => $q
-            ->where(fn ($r) => $r->where('is_available', true)
-                ->orWhereIn('registration', TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
-                    ->whereNotNull('vehicle_registration')->select('vehicle_registration')))
-            ->where('inspection_valid_until', '<', now()->toDateString());
+        $vehiculesAlerte = self::vehiculesControleRoulant();
 
         $vehicules = Vehicle::where($vehiculesAlerte)
             ->orderBy('inspection_valid_until')
@@ -478,6 +460,58 @@ class DashboardController extends Controller
             'total_chauffeurs' => Driver::where($chauffeursAlerte)->count(),
             'total_vehicules' => Vehicle::where($vehiculesAlerte)->count(),
         ];
+    }
+
+    // Les criteres ci-dessous sont partages avec les listes vers lesquelles
+    // renvoient les liens du tableau de bord : le nombre annonce ici est
+    // celui que la liste filtree affiche, sans derive possible.
+
+    /**
+     * Expeditions encore actives dont la livraison souhaitee est passee
+     * (liste des ordres, retard=1).
+     */
+    public static function expeditionsEnRetard(): Closure
+    {
+        return fn ($q) => $q
+            ->whereIn('status', TransportOrder::ACTIFS)
+            ->whereNotNull('requested_delivery_date')
+            ->where('requested_delivery_date', '<', now()->toDateString());
+    }
+
+    /**
+     * Chauffeurs encore en service dont une piece est echue ou le permis
+     * proche de l'echeance (liste des chauffeurs, etat=conformite).
+     */
+    public static function chauffeursAMettreEnRegle(): Closure
+    {
+        $aujourdhui = now()->toDateString();
+
+        return fn ($q) => $q
+            ->where('is_available', true)
+            // Un depart programme n'a pas encore eu lieu : le chauffeur
+            // roule jusque-la et ses documents doivent rester en regle.
+            ->where(fn ($d) => $d->whereNull('left_on')->orWhere('left_on', '>', $aujourdhui))
+            ->where(fn ($e) => $e
+                ->where('medical_exam_date', '<', now()->subYear()->toDateString())
+                ->orWhereNull('medical_exam_date')
+                ->orWhere('license_expiry', '<=', now()->addDays(60)->toDateString())
+                ->orWhere('cpc_expiry', '<', $aujourdhui)
+                ->orWhere('tacho_card_expiry', '<', $aujourdhui));
+    }
+
+    /**
+     * Vehicules au controle echu qui roulent encore (liste des vehicules,
+     * etat=controle_roulant).
+     */
+    public static function vehiculesControleRoulant(): Closure
+    {
+        // Un camion en mission avec un controle echu roule bel et bien, meme
+        // s'il a ete retire du service entre-temps.
+        return fn ($q) => $q
+            ->where(fn ($r) => $r->where('is_available', true)
+                ->orWhereIn('registration', TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+                    ->whereNotNull('vehicle_registration')->select('vehicle_registration')))
+            ->where('inspection_valid_until', '<', now()->toDateString());
     }
 
     /**

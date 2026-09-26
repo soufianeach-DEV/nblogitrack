@@ -11,7 +11,7 @@ const COULEUR = {
     CLOSED: 'bg-slate-100 text-slate-600',
 };
 
-export default function Index({ demandes, statut, recherche, statuts, compteurs }) {
+export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {} }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -50,6 +50,11 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
             onSuccess: () => setTraitement(null),
         });
     };
+
+    // Les choix du formulaire sont ranges en francais : le serveur fournit
+    // leur libelle dans la langue de l'ecran. Une ancienne valeur hors
+    // liste s'affiche telle quelle.
+    const choix = (valeur) => (valeur ? libelles[valeur] ?? valeur : valeur);
 
     const date = (valeur) => valeur
         ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -119,7 +124,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                 </div>
                                 <h2 className="mt-1 text-lg font-bold text-marine">{d.company_name}</h2>
                                 <p className="text-xs text-slate-600">
-                                    {t('demandes.recue_le', 'Reçue le')} {date(d.created_at)} · {d.customer_type}
+                                    {t('demandes.recue_le', 'Reçue le')} {date(d.created_at)} · {choix(d.customer_type)}
                                 </p>
                             </div>
 
@@ -161,12 +166,12 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                             {ligne(t('compte.numero_tva', 'Numéro de TVA'), d.vat_number)}
                             {ligne(t('demandes.enlevement', 'Enlèvement'), d.pickup_address)}
                             {ligne(t('demandes.livraison', 'Livraison'), d.delivery_address)}
-                            {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + d.date_flexibility)}
-                            {ligne(t('devis.trajet', 'Trajet'), d.trip_type + ' · ' + d.frequency)}
+                            {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + choix(d.date_flexibility))}
+                            {ligne(t('devis.trajet', 'Trajet'), choix(d.trip_type) + ' · ' + choix(d.frequency))}
                             {ligne(t('devis.marchandise', 'Marchandise'), v('marchandise', d.goods_type) + (d.weight ? ' · ' + Number(d.weight).toLocaleString(locale) + ' kg' : ''))}
                             {ligne(t('commande.volume', 'Volume'), d.volume)}
-                            {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), d.vehicle_type)}
-                            {ligne(t('demandes.assurance', 'Assurance'), d.insurance_value)}
+                            {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), choix(d.vehicle_type))}
+                            {ligne(t('demandes.assurance', 'Assurance'), choix(d.insurance_value))}
                         </dl>
 
                         {(d.needs_tail_lift || d.is_hazardous || d.needs_express || d.needs_ecmr) && (

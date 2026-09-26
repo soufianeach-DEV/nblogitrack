@@ -21,7 +21,7 @@ class VehicleController extends Controller
             'charge' => 'nullable|in:1,3,6,12,24',
             'norme' => 'nullable|string|max:10',
             'hayon' => 'nullable|in:1',
-            'etat' => 'nullable|in:disponibles,indisponibles,controle',
+            'etat' => 'nullable|in:disponibles,indisponibles,controle,controle_roulant',
         ]);
 
         $requete = Vehicle::query();
@@ -57,6 +57,9 @@ class VehicleController extends Controller
             'disponibles' => $requete->where('is_available', true),
             'indisponibles' => $requete->where('is_available', false),
             'controle' => $requete->where('inspection_valid_until', '<', $aujourdhui),
+            // Le lien « Voir les N » du tableau de bord arrive ici : les
+            // vehicules hors service a l'arret n'y sont pas comptes.
+            'controle_roulant' => $requete->where(DashboardController::vehiculesControleRoulant()),
             default => null,
         };
 
@@ -93,6 +96,7 @@ class VehicleController extends Controller
                 'total' => Vehicle::count(),
                 'disponibles' => Vehicle::where('is_available', true)->count(),
                 'controle' => Vehicle::where('inspection_valid_until', '<', $aujourdhui)->count(),
+                'controle_roulant' => Vehicle::where(DashboardController::vehiculesControleRoulant())->count(),
             ],
             'filtres' => $filtres,
             'peutModifier' => $request->user()->can('manage-fleet'),
@@ -128,8 +132,10 @@ class VehicleController extends Controller
         // compteur.
         if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
             return back()->withErrors([
+                // Arrondi, le message annoncait 175 662 la ou le controle et
+                // le champ retiennent 175 661 : on tronque comme eux.
                 'mileage' => Traductions::t('msg.kilometrage_inferieur', 'Le kilométrage ne peut pas descendre sous le relevé actuel (:km km).', [
-                    'km' => number_format((float) $vehicle->mileage, 0, ',', ' '),
+                    'km' => number_format(floor((float) $vehicle->mileage), 0, ',', ' '),
                 ]),
             ]);
         }

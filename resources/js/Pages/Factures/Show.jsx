@@ -47,7 +47,7 @@ function FormulairePaiement({ facture, onFermer }) {
             </label>
             <label className="text-sm font-medium text-marine">
                 {t('facture.date_paiement', 'Date du paiement')}
-                <input type="date" value={data.date} onChange={(e) => setData('date', e.target.value)} className={champ} required />
+                <input type="date" min={facture.emise_iso} max={`${aujourdhui.getFullYear()}-${pad(aujourdhui.getMonth() + 1)}-${pad(aujourdhui.getDate())}`} value={data.date} onChange={(e) => setData('date', e.target.value)} className={champ} required />
                 {errors.date && <span className="mt-1 block text-xs text-status-incident">{errors.date}</span>}
             </label>
             <label className="text-sm font-medium text-marine">
@@ -55,6 +55,7 @@ function FormulairePaiement({ facture, onFermer }) {
                 <select value={data.methode} onChange={(e) => setData('methode', e.target.value)} className={champ}>
                     {['TRANSFER', 'CASH', 'OTHER'].map((m) => <option key={m} value={m}>{t(...METHODES[m])}</option>)}
                 </select>
+                {errors.methode && <span className="mt-1 block text-xs text-status-incident">{errors.methode}</span>}
             </label>
             <div className="flex gap-2">
                 <button type="submit" disabled={processing} className="rounded-lg bg-status-delivered px-4 py-2 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60">

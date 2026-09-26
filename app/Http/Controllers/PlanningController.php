@@ -14,8 +14,10 @@ use App\Support\TempsDeConduite;
 use App\Support\Traductions;
 use App\Support\TransitionRefusee;
 use Carbon\CarbonInterface;
+use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -55,6 +57,17 @@ class PlanningController extends Controller
 
         $colonneContrainte = ['adr' => 'is_hazardous', 'hayon' => 'needs_tail_lift'];
 
+        // Un jour d'enlevement precis, venu du calendrier du tableau de
+        // bord. Une date mal formee ou impossible (31 fevrier) est ignoree
+        // plutot que de vider la liste.
+        $jour = $request->query('jour');
+        $date = is_string($jour) ? DateTimeImmutable::createFromFormat('!Y-m-d', $jour) : false;
+        if ($date === false || $date->format('Y-m-d') !== $jour) {
+            $jour = null;
+        }
+
+        $duJour = fn ($requete) => $requete->whereDate('pickup_date', $jour);
+
         $q = trim((string) $request->query('q', ''));
 
         $recherche = fn ($requete) => $requete->where(fn ($w) => $w
@@ -71,6 +84,7 @@ class PlanningController extends Controller
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
             ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($jour, $duJour)
             ->when($q !== '', $recherche)
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
@@ -85,6 +99,7 @@ class PlanningController extends Controller
 
         $parPriorite = TransportOrder::where('status', $statut)
             ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($jour, $duJour)
             ->when($q !== '', $recherche)
             ->selectRaw('priority, count(*) AS total')
             ->groupBy('priority')
@@ -92,6 +107,7 @@ class PlanningController extends Controller
 
         $parContrainte = TransportOrder::where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
+            ->when($jour, $duJour)
             ->when($q !== '', $recherche)
             ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
             ->first();
@@ -137,9 +153,11 @@ class PlanningController extends Controller
                 ['valeur' => 'hayon', 'nombre' => (int) $parContrainte->hayon],
             ],
             'compteurs' => TransportOrder::when($q !== '', $recherche)
+                ->when($jour, $duJour)
                 ->selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
+            'jour' => $jour,
             'q' => $q,
             'suggestions' => $this->suggestions($q, $statut),
         ]);
@@ -155,6 +173,12 @@ class PlanningController extends Controller
         }
 
         $filtre = (string) $q;
+
+        // La base cherche sans accents ni casse (unaccent, ILIKE) : le tri
+        // des localites doit comparer de meme, sinon « liege » trouve les
+        // ordres de Liege mais ne propose pas la ville.
+        $normaliser = fn (string $texte) => mb_strtolower(Str::ascii($texte));
+        $cherche = $normaliser($q);
 
         $numeros = TransportOrder::where('status', $statut)
             ->whereContient('tracking_number', $filtre)
@@ -183,7 +207,7 @@ class PlanningController extends Controller
                 Adresse::localite($o->pickup_address),
                 Adresse::localite($o->delivery_address),
             ])
-            ->filter(fn (string $ville) => mb_stripos($ville, $q) !== false)
+            ->filter(fn (string $ville) => str_contains($normaliser($ville), $cherche))
             ->unique()
             ->sort()
             ->take(6);
@@ -199,6 +223,20 @@ class PlanningController extends Controller
         // attente », c'est un transbordement.
         $reaffectation = in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true);
 
+        // Un ordre livre ou annule a quitte l'onglet de la planification :
+        // une erreur rattachee aux champs de sa carte ne s'afficherait
+        // nulle part apres le retour. Le refus passe par le bandeau.
+        if ($transportOrder->status !== 'PENDING' && ! $reaffectation) {
+            return back()->with('error', Traductions::t('msg.planif_ordre_non_attente', 'Seul un ordre en attente peut être affecté.'));
+        }
+
+        // Le formulaire dit ce qu'il voulait faire : un planificateur qui
+        // affecte un ordre qu'un collegue vient d'affecter ne se retrouve
+        // pas, sans le savoir, a le reaffecter.
+        if ($request->has('reaffectation') && $request->boolean('reaffectation') !== $reaffectation) {
+            return back()->with('error', Traductions::t('msg.ordre_etat_change', 'Cet ordre vient de changer d\'état : actualisez la page.'));
+        }
+
         $data = $request->validate([
             'vehicle_registration' => 'required|exists:vehicles,registration',
             'driver_id' => 'required|exists:drivers,id',
@@ -207,10 +245,6 @@ class PlanningController extends Controller
             'motif.required' => Traductions::t('msg.planif_motif_reaffectation', 'Indiquez le motif du changement d\'affectation.'),
             'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
-
-        if ($transportOrder->status !== 'PENDING' && ! $reaffectation) {
-            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_ordre_non_attente', 'Seul un ordre en attente peut être affecté.')]);
-        }
 
         $vehicle = Vehicle::find($data['vehicle_registration']);
         $driver = Driver::find($data['driver_id']);
@@ -357,7 +391,9 @@ class PlanningController extends Controller
                 ? OrderWorkflow::reaffecter($transportOrder, $vehicle, $driver)
                 : OrderWorkflow::affecter($transportOrder, $vehicle, $driver, $transportOrder->pickup_date);
         } catch (TransitionRefusee $e) {
-            return back()->withErrors(['vehicle_registration' => $e->getMessage()]);
+            // L'ordre a change d'etat entre-temps : sa carte change
+            // d'onglet au retour, le message doit rester visible.
+            return back()->with('error', $e->getMessage());
         }
 
         if ($reaffectation) {

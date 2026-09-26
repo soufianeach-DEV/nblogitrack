@@ -96,6 +96,7 @@ class InvoiceController extends Controller
                 'periode_debut' => $invoice->period_start->format('d/m/Y'),
                 'periode_fin' => $invoice->period_end->format('d/m/Y'),
                 'emise_le' => $invoice->issued_on->format('d/m/Y'),
+                'emise_iso' => $invoice->issued_on->format('Y-m-d'),
                 'echeance' => $invoice->due_on->format('d/m/Y'),
                 'payee_le' => $invoice->paid_on?->format('d/m/Y'),
                 'envoyee_le' => $invoice->sent_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
@@ -181,6 +182,18 @@ class InvoiceController extends Controller
             'methode' => 'required|in:TRANSFER,CASH,OTHER',
         ], [
             'montant.max' => Traductions::t('msg.paiement_trop_eleve', 'Le montant dépasse le solde dû (:solde).', ['solde' => Formats::montant($invoice->solde())]),
+            // Le message par defaut citait la regle telle quelle : « today »
+            // et une date ISO, illisibles pour le comptable.
+            'date.before_or_equal' => Traductions::t('msg.paiement_date_future', 'Un paiement ne peut pas être daté dans le futur.'),
+            'date.after_or_equal' => Traductions::t('msg.paiement_avant_emission', 'Le paiement ne peut pas être antérieur au :date, date d\'émission de la facture.', [
+                'date' => Formats::date($invoice->issued_on),
+            ]),
+        ], [
+            // « date » ou « montant » servent dans plusieurs formulaires : la
+            // table commune des attributs n'en donne qu'un nom generique.
+            'montant' => Traductions::t('champ.montant_paiement', 'montant du paiement'),
+            'date' => Traductions::t('champ.date_paiement', 'date du paiement'),
+            'methode' => Traductions::t('champ.moyen_paiement', 'moyen de paiement'),
         ]);
 
         $paiement = Encaissement::enregistrer(

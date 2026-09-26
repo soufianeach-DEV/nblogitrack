@@ -48,6 +48,7 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
         vehicle_registration: reaffectation ? (ordre.vehicle?.registration ?? '') : '',
         driver_id: reaffectation ? String(ordre.driver_id ?? '') : '',
         motif: '',
+        reaffectation,
     });
 
     const affecter = (e) => {
@@ -68,10 +69,27 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
         return '';
     };
     const chauffeurApte = (d) => (d.empechements ?? []).length === 0;
-    const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified);
+    const vehiculeChoisi = vehicles.find((v) => v.registration === data.vehicle_registration);
+    // Meme regle que Driver::motifPermis : le serveur refuserait
+    // l'affectation, autant griser le chauffeur des le choix du camion.
+    const permisRequis = (d) => {
+        if (! vehiculeChoisi) return null;
+
+        const permis = String(d.license_type ?? '');
+        const charge = Number(vehiculeChoisi.capacity_tonnes);
+
+        if (vehiculeChoisi.vehicle_type === 'Semi-remorque' && permis !== 'CE') return 'CE';
+        if (charge > 3.5 && ['B', 'C1', 'C1E'].includes(permis)) return 'C';
+        if (charge > 1.5 && permis === 'B') return 'C1';
+
+        return null;
+    };
+    const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified) && permisRequis(d) === null;
     const motifChauffeur = (d) => {
         if (! chauffeurApte(d)) return ' (' + d.empechements[0] + ')';
         if (ordre.is_hazardous && ! d.adr_certified) return ' (' + t('planif.adr_requis', 'ADR requis') + ')';
+        const permis = permisRequis(d);
+        if (permis) return ' (' + t('planif.permis_requis', 'permis :permis requis', { permis }) + ')';
 
         return '';
     };
@@ -87,8 +105,10 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
             <span className="font-semibold uppercase tracking-wide text-slate-600">{t('planif.besoins', 'Besoins')}</span>
 
+            {/* Tronque au centieme : arrondi au dixieme, 850 kg s'affichaient
+                0,9 t et semblaient ecarter un camion de 0,85 t qui convient. */}
             <span className={pastille + ' bg-surface text-marine'}>
-                {t('planif.charge_utile', 'Charge utile ≥')} {(Number(ordre.weight) / 1000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t
+                {t('planif.charge_utile', 'Charge utile ≥')} {(Math.floor(Number(ordre.weight) / 10) / 100).toLocaleString(locale, { maximumFractionDigits: 2 })} t
             </span>
 
             {ordre.conduite && (
@@ -215,7 +235,7 @@ function BoutonsStatut({ ordre, onReaffecter }) {
             {ordre.status === 'IN_PROGRESS' && (
                 <button
                     type="button"
-                    onClick={() => changer('DELIVERED')}
+                    onClick={() => changer('DELIVERED', t('planif.confirmer_livre', 'Marquer l\'ordre :numero comme livré aujourd\'hui ? Ce changement est définitif.', { numero: ordre.tracking_number }))}
                     className="rounded-lg bg-status-delivered px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 >
                     {t('planif.marquer_livre', 'Marquer livré')}
@@ -261,6 +281,7 @@ export default function Index({
     orders, vehicles, drivers, statut, compteurs,
     priorite = null, priorites = [],
     contrainte = null, contraintes = [],
+    jour = null,
     q = '', suggestions = [],
 }) {
     const t = useTraduction();
@@ -279,6 +300,7 @@ export default function Index({
                 status: statut,
                 priorite,
                 contrainte,
+                jour: jour || undefined,
                 q: valeur || undefined,
             }, {
                 only: ['orders', 'priorites', 'contraintes', 'compteurs', 'suggestions', 'q'],
@@ -292,6 +314,10 @@ export default function Index({
     const dateCourte = (valeur) => valeur
         ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '—';
+
+    // Le jour arrive en AAAA-MM-JJ : new Date() le lirait en UTC et
+    // afficherait la veille sous un fuseau a l'ouest de Greenwich.
+    const jourCourt = (valeur) => valeur.split('-').reverse().join('/');
 
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.planification', 'Planification')}</h1>}>
@@ -323,11 +349,28 @@ export default function Index({
                 )}
             </div>
 
+            {jour && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-marine py-1 pl-3 pr-1.5 text-sm font-medium text-white">
+                        {t('planif.enlevement_le', 'Enlèvement le :date', { date: jourCourt(jour) })}
+                        <Link
+                            href={route('planning.index', { status: statut, priorite, contrainte, q: champs || undefined })}
+                            preserveScroll
+                            aria-label={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            title={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            className="flex h-5 w-5 items-center justify-center rounded-full leading-none text-white/80 transition hover:bg-white/20 hover:text-white"
+                        >
+                            ×
+                        </Link>
+                    </span>
+                </div>
+            )}
+
             <div className="mb-5 flex flex-wrap gap-2">
                 {Object.keys(LIBELLE_STATUT).map((cle) => (
                     <Link
                         key={cle}
-                        href={route('planning.index', { status: cle, q: champs || undefined })}
+                        href={route('planning.index', { status: cle, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-lg px-4 py-2 text-sm font-medium transition ' +
@@ -343,7 +386,7 @@ export default function Index({
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('commande.priorite', 'Priorité')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, contrainte, q: champs || undefined })}
+                    href={route('planning.index', { status: statut, contrainte, jour: jour || undefined, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -355,7 +398,7 @@ export default function Index({
                 {priorites.map((p) => (
                     <Link
                         key={p.valeur}
-                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte, q: champs || undefined })}
+                        href={route('planning.index', { status: statut, priorite: p.valeur, contrainte, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -375,7 +418,7 @@ export default function Index({
             <div className="mb-5 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('planif.contrainte', 'Contrainte')}</span>
                 <Link
-                    href={route('planning.index', { status: statut, priorite, q: champs || undefined })}
+                    href={route('planning.index', { status: statut, priorite, jour: jour || undefined, q: champs || undefined })}
                     preserveScroll
                     className={
                         'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -387,7 +430,7 @@ export default function Index({
                 {contraintes.map((c) => (
                     <Link
                         key={c.valeur}
-                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur, q: champs || undefined })}
+                        href={route('planning.index', { status: statut, priorite, contrainte: c.valeur, jour: jour || undefined, q: champs || undefined })}
                         preserveScroll
                         className={
                             'rounded-full px-3 py-1 text-sm font-medium transition ' +
@@ -416,7 +459,12 @@ export default function Index({
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-semibold text-marine">{ordre.tracking_number}</span>
+                                    <Link
+                                        href={route('transport-orders.show', ordre.id)}
+                                        className="font-semibold text-marine hover:underline"
+                                    >
+                                        {ordre.tracking_number}
+                                    </Link>
                                     <span className={'rounded-full px-2.5 py-0.5 text-xs font-medium ' + COULEUR_STATUT[ordre.status]}>
                                         {t(...LIBELLE_STATUT[ordre.status])}
                                     </span>

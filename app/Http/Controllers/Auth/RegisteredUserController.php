@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
 use App\Support\Traductions;
+use Closure;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -172,7 +173,17 @@ class RegisteredUserController extends Controller
 
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
-            'vat_number' => ['required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/'],
+            'vat_number' => [
+                'bail', 'required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/',
+                // Un numero belge porte sa propre cle de controle : un
+                // chiffre de trop ou mal tape se refuse ici, sans attendre
+                // la reponse du registre europeen.
+                function (string $attribut, mixed $valeur, Closure $echec) {
+                    if (! IdentifiantEntreprise::controleLocal((string) $valeur)) {
+                        $echec(Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'));
+                    }
+                },
+            ],
             'billing_address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:10',
             'city' => 'required|string|max:100',
@@ -187,7 +198,7 @@ class RegisteredUserController extends Controller
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
         ], [
-            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.'),
+            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
             'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionne l\'adresse du siège dans les listes proposées.'),
             'marque_declaree.accepted' => Traductions::t('msg.marque_non_confirmee', 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.'),
             'conditions_acceptees.accepted' => Traductions::t('msg.conditions_non_acceptees', 'Vous devez accepter les conditions générales et la politique de confidentialité.'),

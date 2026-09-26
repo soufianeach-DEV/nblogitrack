@@ -7,6 +7,7 @@ use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
+use App\Support\Formats;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -427,18 +428,73 @@ class TrackingController extends Controller
     }
 
     /**
-     * @return array<int, array<string, string>>
+     * La description du journal est ecrite en francais au moment de
+     * l'action. L'historique montre plutot le libelle traduit de
+     * l'action, complete des seuls details qui ne dependent d'aucune
+     * langue. Les identifiants internes restent dans le journal.
+     *
+     * @return array<int, array<string, ?string>>
      */
     private function historique(TransportOrder $ordre): array
     {
         return ActivityLog::where('subject_type', 'TransportOrder')
             ->where('subject_id', (string) $ordre->id)
             ->orderBy('created_at')
-            ->get(['description', 'created_at'])
-            ->map(fn ($ligne) => [
-                'description' => $ligne->description,
+            ->get(['action', 'description', 'properties', 'created_at'])
+            ->map(fn (ActivityLog $ligne) => [
+                // Une action inconnue du journal garde sa description :
+                // mieux vaut du francais qu'un code technique.
+                'libelle' => isset(ActivityLogController::ACTIONS[$ligne->action])
+                    ? Traductions::t(
+                        'journal.action_'.str_replace('.', '_', $ligne->action),
+                        ActivityLogController::ACTIONS[$ligne->action],
+                    )
+                    : $ligne->description,
+                'detail' => $this->detailHistorique($ligne->action, $ligne->properties ?? []),
                 'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
             ])
             ->all();
+    }
+
+    /**
+     * Les proprietes utiles a la lecture : camion, statuts, montants. Le
+     * motif d'une (des)affectation est une saisie libre du planificateur,
+     * montree telle qu'il l'a ecrite.
+     *
+     * @param  array<string, mixed>  $proprietes
+     */
+    private function detailHistorique(string $action, array $proprietes): ?string
+    {
+        $statut = fn (mixed $code) => match ($code) {
+            'PENDING' => Traductions::t('statut.en_attente', 'En attente'),
+            'ASSIGNED' => Traductions::t('statut.affecte', 'Affecté'),
+            'IN_PROGRESS' => Traductions::t('statut.en_cours', 'En cours'),
+            'DELIVERED' => Traductions::t('statut.livre', 'Livré'),
+            'CANCELLED' => Traductions::t('statut.annule', 'Annulé'),
+            default => (string) $code,
+        };
+
+        $details = match ($action) {
+            'order.assigned' => [$proprietes['vehicule'] ?? null],
+            'order.reassigned' => [
+                implode(' → ', array_filter([$proprietes['ancien_camion'] ?? null, $proprietes['vehicule'] ?? null])),
+                $proprietes['motif'] ?? null,
+            ],
+            'order.unassigned' => [$proprietes['camion'] ?? null, $proprietes['motif'] ?? null],
+            'order.status_changed' => [isset($proprietes['avant'], $proprietes['apres'])
+                ? $statut($proprietes['avant']).' → '.$statut($proprietes['apres'])
+                : null],
+            'order.charge_added', 'order.charge_removed' => [isset($proprietes['montant'])
+                ? Formats::montant($proprietes['montant'])
+                : null],
+            'order.cancelled_by_client' => [($proprietes['indemnite'] ?? 0) > 0
+                ? Formats::montant($proprietes['indemnite'])
+                : null],
+            default => [],
+        };
+
+        $details = array_filter($details, fn ($detail) => is_string($detail) && trim($detail) !== '');
+
+        return $details === [] ? null : implode(' · ', $details);
     }
 }

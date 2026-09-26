@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\InvoiceLine;
 use App\Models\OrderCharge;
 use App\Models\TransportOrder;
+use App\Support\Formats;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,11 +18,23 @@ use Illuminate\Http\Request;
  */
 class OrderChargeController extends Controller
 {
+    /** Au-dela, c'est une faute de frappe plutot qu'un temps d'attente. */
+    private const PLAFOND = 100000;
+
     public function store(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
         $donnees = $request->validate([
             'libelle' => 'required|string|min:3|max:200',
-            'montant' => 'required|numeric|min:0.01|max:100000',
+            'montant' => 'required|numeric|min:0.01|max:'.self::PLAFOND,
+        ], [
+            'montant.max' => Traductions::t('msg.supplement_trop_eleve', 'Un supplément ne peut pas dépasser :max HT.', [
+                'max' => Formats::montant(self::PLAFOND),
+            ]),
+        ], [
+            // « libelle » et « montant » servent aussi ailleurs : le nom
+            // generique de la table des attributs ne dirait pas lequel.
+            'libelle' => Traductions::t('champ.libelle_supplement', 'libellé du supplément'),
+            'montant' => Traductions::t('champ.montant_supplement', 'montant du supplément'),
         ]);
 
         // Une expedition annulee sans indemnite ne donne lieu a aucune

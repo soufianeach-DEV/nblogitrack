@@ -53,6 +53,12 @@ class TranslationController extends Controller
             'fr' => 'required|string|max:2000',
             'nl' => 'nullable|string|max:2000',
             'en' => 'nullable|string|max:2000',
+        ], [], [
+            // Sans ces noms, le message citait le code de langue brut :
+            // « Le champ fr est obligatoire ».
+            'fr' => Traductions::t('champ.texte_fr', 'texte en français'),
+            'nl' => Traductions::t('champ.texte_nl', 'texte en néerlandais'),
+            'en' => Traductions::t('champ.texte_en', 'texte en anglais'),
         ]);
 
         $avant = $translation->only(['fr', 'nl', 'en']);

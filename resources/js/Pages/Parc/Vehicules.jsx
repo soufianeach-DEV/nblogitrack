@@ -189,6 +189,7 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                     { libelle: t('parc.disponibles', 'Disponibles'), valeur: 'disponibles', nombre: compteurs.disponibles },
                     { libelle: t('parc.hors_service', 'Hors service'), valeur: 'indisponibles', nombre: compteurs.total - compteurs.disponibles },
                     { libelle: t('parc.controle_depasse', 'Contrôle dépassé'), valeur: 'controle', nombre: compteurs.controle, alerte: true },
+                    { libelle: t('parc.a_mettre_en_regle', 'À mettre en règle'), valeur: 'controle_roulant', nombre: compteurs.controle_roulant, alerte: true },
                 ]}
             />
 

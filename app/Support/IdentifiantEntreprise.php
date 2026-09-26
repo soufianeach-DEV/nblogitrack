@@ -23,7 +23,9 @@ class IdentifiantEntreprise
      */
     public static function analyser(string $saisie): array
     {
-        $valeur = strtoupper(preg_replace('/[^0-9A-Z]/', '', $saisie));
+        // Les minuscules se mettent en capitales avant le nettoyage : un
+        // « be0123... » tape tel quel perdait sinon son prefixe.
+        $valeur = preg_replace('/[^0-9A-Z]/', '', strtoupper($saisie));
 
         if ($valeur === '') {
             return self::vide();
@@ -53,7 +55,12 @@ class IdentifiantEntreprise
         if ($prefixe === 'BE') {
             $entreprise = str_pad($numero, 10, '0', STR_PAD_LEFT);
 
-            return ['pays' => 'BE', 'tva' => $valeur, 'national' => $entreprise, 'peppol' => '0208:'.$entreprise];
+            // Un ancien numero a neuf chiffres se range sous sa forme
+            // actuelle : sinon BE123456749 et BE0123456749 passeraient
+            // pour deux entreprises differentes.
+            $tva = preg_match('/^\d{9}$/', $numero) ? 'BE'.$entreprise : $valeur;
+
+            return ['pays' => 'BE', 'tva' => $tva, 'national' => $entreprise, 'peppol' => '0208:'.$entreprise];
         }
 
         if ($prefixe === 'FR' && preg_match('/(\d{9})$/', $numero, $s)) {
@@ -65,6 +72,37 @@ class IdentifiantEntreprise
         }
 
         return ['pays' => $pays, 'tva' => $valeur, 'national' => null, 'peppol' => $schema.':'.$valeur];
+    }
+
+    /**
+     * Controle local, avant tout appel au registre europeen. Seuls les
+     * numeros belges sont verifies : dix chiffres (un ancien numero a
+     * neuf chiffres se lit precede d'un 0), le premier valant 0 ou 1, et
+     * les deux derniers egaux a 97 moins le reste des huit premiers par
+     * 97. Les autres pays restent a l'appreciation de VIES.
+     */
+    public static function controleLocal(string $saisie): bool
+    {
+        $identifiant = self::analyser($saisie);
+
+        if ($identifiant['pays'] !== 'BE') {
+            return true;
+        }
+
+        return self::numeroBelgeValide(substr((string) $identifiant['tva'], 2));
+    }
+
+    public static function numeroBelgeValide(string $numero): bool
+    {
+        if (preg_match('/^\d{9}$/', $numero)) {
+            $numero = '0'.$numero;
+        }
+
+        if (! preg_match('/^[01]\d{9}$/', $numero)) {
+            return false;
+        }
+
+        return 97 - ((int) substr($numero, 0, 8) % 97) === (int) substr($numero, 8, 2);
     }
 
     private static function tvaFrancaise(string $siren): string

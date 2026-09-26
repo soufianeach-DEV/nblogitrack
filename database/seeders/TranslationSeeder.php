@@ -274,14 +274,14 @@ class TranslationSeeder extends Seeder
                 'Your account will be activated once our team has verified your company.',
             ],
             'tva_format' => [
-                'Saisis le numéro complet, code pays inclus (ex. BE0123456789).',
-                'Voer het volledige nummer in, landcode inbegrepen (bv. BE0123456789).',
-                'Enter the full number, country code included (e.g. BE0123456789).',
+                'Saisis le numéro complet, code pays inclus (ex. BE0123456749).',
+                'Voer het volledige nummer in, landcode inbegrepen (bv. BE0123456749).',
+                'Enter the full number, country code included (e.g. BE0123456749).',
             ],
             'tva_exemple' => [
-                'ex. BE0123456789 ou SIRET 34119222700013',
-                'bv. BE0123456789 of SIRET 34119222700013',
-                'e.g. BE0123456789 or SIRET 34119222700013',
+                'ex. BE0123456749 ou SIRET 34119222700013',
+                'bv. BE0123456749 of SIRET 34119222700013',
+                'e.g. BE0123456749 or SIRET 34119222700013',
             ],
             'verifier' => ['Vérifier', 'Controleren', 'Verify'],
             'verification' => ['Vérification…', 'Controle…', 'Verifying…'],
@@ -643,6 +643,7 @@ class TranslationSeeder extends Seeder
             'supplement_libelle' => ['Attente au quai 2 h, manutention…', 'Wachttijd aan de kade 2 u, behandeling…', 'Dock waiting time 2 h, handling…'],
             'supplement_montant' => ['€ HT', '€ excl. btw', '€ excl. VAT'],
             'supplements' => ['Suppléments', 'Toeslagen', 'Surcharges'],
+            'filtre_retard' => ['Seulement les expéditions en retard', 'Enkel de te late zendingen', 'Overdue shipments only'],
         ],
 
         'planif' => [
@@ -713,6 +714,10 @@ class TranslationSeeder extends Seeder
             'transbordement_aide' => ['La marchandise est chargée : choisissez le camion ou le chauffeur qui prend le relais. La mission reste en cours.', 'De goederen zijn geladen: kies de vrachtwagen of bestuurder die het overneemt. De opdracht blijft lopend.', 'The goods are loaded: choose the truck or driver taking over. The job stays in progress.'],
             'reaffectation_aide' => ['Changez de camion ou de chauffeur sans remettre la mission en attente.', 'Wijzig vrachtwagen of bestuurder zonder de opdracht terug in wacht te zetten.', 'Change truck or driver without putting the job back on hold.'],
             'motif_reaffectation' => ['Motif (panne, accident, relais de chauffeur…)', 'Reden (panne, ongeval, aflossing bestuurder…)', 'Reason (breakdown, accident, driver relay…)'],
+            'permis_requis' => ['permis :permis requis', 'rijbewijs :permis vereist', ':permis licence required'],
+            'confirmer_livre' => ['Marquer l\'ordre :numero comme livré aujourd\'hui ? Ce changement est définitif.', 'Opdracht :numero vandaag als geleverd markeren? Deze wijziging is definitief.', 'Mark order :numero as delivered today? This change is final.'],
+            'enlevement_le' => ['Enlèvement le :date', 'Ophaling op :date', 'Pickup on :date'],
+            'retirer_filtre' => ['Retirer ce filtre', 'Deze filter verwijderen', 'Remove this filter'],
         ],
 
         'personnel' => [
@@ -1338,6 +1343,7 @@ class TranslationSeeder extends Seeder
                 'No vehicle matches this search.',
             ],
             'echu_le' => ['échu le', 'vervallen op', 'expired on'],
+            'a_mettre_en_regle' => ['À mettre en règle', 'In orde te brengen', 'To bring into compliance'],
         ],
 
         'profil' => [
@@ -1532,14 +1538,14 @@ class TranslationSeeder extends Seeder
             'bloc_marchandise' => ['La marchandise', 'De goederen', 'The goods'],
             'bloc_precisions' => ['Précisions', 'Toelichting', 'Further details'],
             'tva_format' => [
-                'Saisissez le numéro complet, code pays inclus (ex. BE0123456789).',
-                'Voer het volledige nummer in, landcode inbegrepen (bv. BE0123456789).',
-                'Enter the full number, country code included (e.g. BE0123456789).',
+                'Saisissez le numéro complet, code pays inclus (ex. BE0123456749).',
+                'Voer het volledige nummer in, landcode inbegrepen (bv. BE0123456749).',
+                'Enter the full number, country code included (e.g. BE0123456749).',
             ],
             'tva_exemple' => [
-                'BE0123456789 — ou un SIREN / SIRET français',
-                'BE0123456789 — of een Frans SIREN / SIRET',
-                'BE0123456789 — or a French SIREN / SIRET',
+                'BE0123456749 — ou un SIREN / SIRET français',
+                'BE0123456749 — of een Frans SIREN / SIRET',
+                'BE0123456749 — or a French SIREN / SIRET',
             ],
             'registre_injoignable' => [
                 'Le registre européen est momentanément injoignable.',
@@ -2467,7 +2473,7 @@ class TranslationSeeder extends Seeder
             'document_taille' => ['Le fichier ne peut pas dépasser 10 Mo.', 'Het bestand mag niet groter zijn dan 10 MB.', 'The file cannot exceed 10 MB.'],
             'document_depose' => ['Document déposé.', 'Document geüpload.', 'Document uploaded.'],
             'document_supprime' => ['Document supprimé.', 'Document verwijderd.', 'Document deleted.'],
-            'tva_format' => ['Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.', 'Voer een btw-nummer in (bv. BE0123456789) of een Frans SIREN/SIRET-nummer.', 'Enter a VAT number (e.g. BE0123456789) or a French SIREN/SIRET number.'],
+            'tva_format' => ['Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.', 'Voer een btw-nummer in (bv. BE0123456749) of een Frans SIREN/SIRET-nummer.', 'Enter a VAT number (e.g. BE0123456749) or a French SIREN/SIRET number.'],
             'tva_inactive' => ['Ce numéro n\'est pas actif dans le registre européen.', 'Dit nummer is niet actief in het Europese register.', 'This number is not active in the European register.'],
             'tva_registre_sature' => ['Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.', 'Het Europese register is tijdelijk overbelast. Probeer het zo meteen opnieuw of vul de gegevens handmatig in.', 'The European register is temporarily overloaded. Try again in a moment or enter the details manually.'],
             'entreprise_active' => ['Entreprise active', 'Actieve onderneming', 'Active company'],
@@ -2634,6 +2640,11 @@ class TranslationSeeder extends Seeder
             'note_brouillon' => ['Publiez la note avant de l\'envoyer aux conducteurs.', 'Publiceer de nota voordat u ze naar de bestuurders stuurt.', 'Publish the note before sending it to the drivers.'],
             'mission_deja_livree' => ['La livraison était déjà enregistrée par le planificateur : vos informations y ont été ajoutées.', 'De levering was al geregistreerd door de planner: uw gegevens zijn toegevoegd.', 'The delivery had already been recorded by the planner: your details have been added.'],
             'paiement_deja_en_cours' => ['Un paiement en ligne de cette facture est en cours de traitement par la banque depuis le :date : il sera enregistré dès sa réception.', 'Een online betaling van deze factuur wordt sinds :date door de bank verwerkt: ze wordt geregistreerd zodra ze ontvangen is.', 'An online payment for this invoice has been processed by the bank since :date: it will be recorded as soon as it is received.'],
+            'achat_periode_future' => ['La période facturée ne peut pas être dans le futur.', 'De gefactureerde periode kan niet in de toekomst liggen.', 'The billing period cannot be in the future.'],
+            'paiement_date_future' => ['Un paiement ne peut pas être daté dans le futur.', 'Een betaling kan niet in de toekomst gedateerd zijn.', 'A payment cannot be dated in the future.'],
+            'paiement_avant_emission' => ['Le paiement ne peut pas être antérieur au :date, date d\'émission de la facture.', 'De betaling kan niet vóór :date liggen, de uitgiftedatum van de factuur.', 'The payment cannot be dated before :date, the invoice issue date.'],
+            'supplement_trop_eleve' => ['Un supplément ne peut pas dépasser :max HT.', 'Een toeslag kan niet hoger zijn dan :max excl. btw.', 'A surcharge cannot exceed :max excl. VAT.'],
+            'tva_belge_invalide' => ['Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).', 'Dit Belgische btw-nummer is niet geldig: controleer het. Het telt 10 cijfers na BE en begint met 0 of 1 (bv. BE0123456749).', 'This Belgian VAT number is not valid: please check it. It has 10 digits after BE and starts with 0 or 1 (e.g. BE0123456749).'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2686,6 +2697,16 @@ class TranslationSeeder extends Seeder
             'gnc' => ['GNC', 'CNG', 'CNG'],
             'diesel' => ['Diesel', 'Diesel', 'Diesel'],
             'diesel_hvo' => ['Diesel (HVO)', 'Diesel (HVO)', 'Diesel (HVO)'],
+        ],
+        'champ' => [
+            'montant_paiement' => ['montant du paiement', 'bedrag van de betaling', 'payment amount'],
+            'date_paiement' => ['date du paiement', 'betaaldatum', 'payment date'],
+            'moyen_paiement' => ['moyen de paiement', 'betaalmiddel', 'payment method'],
+            'libelle_supplement' => ['libellé du supplément', 'omschrijving van de toeslag', 'surcharge description'],
+            'montant_supplement' => ['montant du supplément', 'bedrag van de toeslag', 'surcharge amount'],
+            'texte_fr' => ['texte en français', 'Franse tekst', 'French text'],
+            'texte_nl' => ['texte en néerlandais', 'Nederlandse tekst', 'Dutch text'],
+            'texte_en' => ['texte en anglais', 'Engelse tekst', 'English text'],
         ],
     ];
 }

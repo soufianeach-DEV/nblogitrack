@@ -162,71 +162,81 @@ function PlanDeCharge({ calendrier }) {
 
             {}
             <div className="mt-5 grid flex-1 content-start grid-cols-7 gap-1.5">
-                {jours.map((j) => (
-                    <Link
-                        key={j.date}
-                        href={route('planning.index', { status: 'PENDING' })}
-                        title={`${j.jour} ${j.numero} ${j.mois}`
-                            + (j.ferie ? ` — ${j.ferie}, ${t('tdb.quai_ferme', 'quai fermé')}` : '')
-                            + ` — ${j.enlevements} ${j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}`
-                            + `, ${j.livraisons} ${j.livraisons > 1 ? t('tdb.livraisons_promises', 'livraisons promises') : t('tdb.livraison_promise', 'livraison promise')}`
-                            + (j.a_affecter > 0 ? ` — ${j.a_affecter} ${t('tdb.sans_vehicule', 'sans véhicule')}` : '')
-                            + (j.sature ? ` — ${t('tdb.au_dela', 'au-delà de la capacité de')} ${capacite}` : '')}
-                        className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
-                            j.aujourdhui ? 'border-action bg-action/5'
-                                : j.sature ? 'border-status-incident/40 bg-status-incident/5'
-                                : j.chome ? 'border-slate-200 bg-slate-100 hover:bg-slate-200'
-                                : 'border-slate-100 hover:bg-surface'
-                        }`}
-                    >
-                        <span className="flex items-baseline justify-between gap-1">
-                            <span className={`truncate text-[11px] capitalize ${
-                                j.aujourdhui ? 'font-bold text-action-dark' : 'text-slate-500'
-                            }`}>
-                                {j.jour}
-                            </span>
-                            <span className={`text-sm font-bold leading-none ${
-                                j.aujourdhui ? 'text-action-dark' : 'text-marine'
-                            }`}>
-                                {j.numero}
-                            </span>
-                        </span>
+                {jours.map((j) => {
+                    // La planification filtre sur le jour d'enlevement : un jour
+                    // sans enlevement menerait a une liste vide, il ne se clique
+                    // donc pas. Un jour tout affecte ouvre les missions affectees.
+                    const lien = j.enlevements > 0
+                        ? route('planning.index', { status: j.a_affecter > 0 ? 'PENDING' : 'ASSIGNED', jour: j.date })
+                        : null;
+                    const Tuile = lien ? Link : 'div';
 
-                        {}
-                        {j.enlevements > 0 && (
-                            <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
-                                j.sature ? 'bg-status-incident' : 'bg-marine'
-                            }`}>
-                                {j.enlevements} {j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}
+                    return (
+                        <Tuile
+                            key={j.date}
+                            href={lien ?? undefined}
+                            title={`${j.jour} ${j.numero} ${j.mois}`
+                                + (j.ferie ? ` — ${j.ferie}, ${t('tdb.quai_ferme', 'quai fermé')}` : '')
+                                + ` — ${j.enlevements} ${j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}`
+                                + `, ${j.livraisons} ${j.livraisons > 1 ? t('tdb.livraisons_promises', 'livraisons promises') : t('tdb.livraison_promise', 'livraison promise')}`
+                                + (j.a_affecter > 0 ? ` — ${j.a_affecter} ${t('tdb.sans_vehicule', 'sans véhicule')}` : '')
+                                + (j.sature ? ` — ${t('tdb.au_dela', 'au-delà de la capacité de')} ${capacite}` : '')}
+                            className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
+                                j.aujourdhui ? 'border-action bg-action/5'
+                                    : j.sature ? 'border-status-incident/40 bg-status-incident/5'
+                                    : j.chome ? `border-slate-200 bg-slate-100 ${lien ? 'hover:bg-slate-200' : ''}`
+                                    : `border-slate-100 ${lien ? 'hover:bg-surface' : ''}`
+                            }`}
+                        >
+                            <span className="flex items-baseline justify-between gap-1">
+                                <span className={`truncate text-[11px] capitalize ${
+                                    j.aujourdhui ? 'font-bold text-action-dark' : 'text-slate-500'
+                                }`}>
+                                    {j.jour}
+                                </span>
+                                <span className={`text-sm font-bold leading-none ${
+                                    j.aujourdhui ? 'text-action-dark' : 'text-marine'
+                                }`}>
+                                    {j.numero}
+                                </span>
                             </span>
-                        )}
 
-                        {j.livraisons > 0 && (
-                            <span className="rounded bg-brand-blue/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-marine">
-                                {j.livraisons} {j.livraisons > 1 ? t('commun.livraisons', 'livraisons') : t('commun.livraison', 'livraison')}
-                            </span>
-                        )}
+                            {}
+                            {j.enlevements > 0 && (
+                                <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
+                                    j.sature ? 'bg-status-incident' : 'bg-marine'
+                                }`}>
+                                    {j.enlevements} {j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}
+                                </span>
+                            )}
 
-                        {}
-                        {j.enlevements > 0 && (
-                            <span className={`truncate text-[10px] font-semibold ${
-                                j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
-                            }`}>
-                                {j.enlevements - j.a_affecter}/{j.enlevements} {j.enlevements > 1 ? t('tdb.affectes', 'affectés') : t('tdb.affecte', 'affecté')}
-                            </span>
-                        )}
+                            {j.livraisons > 0 && (
+                                <span className="rounded bg-brand-blue/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-marine">
+                                    {j.livraisons} {j.livraisons > 1 ? t('commun.livraisons', 'livraisons') : t('commun.livraison', 'livraison')}
+                                </span>
+                            )}
 
-                        {j.ferie && (
-                            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                                {j.ferie}
-                            </span>
-                        )}
+                            {}
+                            {j.enlevements > 0 && (
+                                <span className={`truncate text-[10px] font-semibold ${
+                                    j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
+                                }`}>
+                                    {j.enlevements - j.a_affecter}/{j.enlevements} {j.enlevements > 1 ? t('tdb.affectes', 'affectés') : t('tdb.affecte', 'affecté')}
+                                </span>
+                            )}
 
-                        {j.enlevements === 0 && j.livraisons === 0 && ! j.ferie && (
-                            <span className="text-[11px] text-slate-400">{t('tdb.rien_prevu', 'Rien de prévu')}</span>
-                        )}
-                    </Link>
-                ))}
+                            {j.ferie && (
+                                <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                    {j.ferie}
+                                </span>
+                            )}
+
+                            {j.enlevements === 0 && j.livraisons === 0 && ! j.ferie && (
+                                <span className="text-[11px] text-slate-400">{t('tdb.rien_prevu', 'Rien de prévu')}</span>
+                            )}
+                        </Tuile>
+                    );
+                })}
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
@@ -606,7 +616,7 @@ function Conformite({ conformite }) {
                     t('nav.chauffeurs', 'Chauffeurs'),
                     conformite.chauffeurs,
                     conformite.total_chauffeurs,
-                    route('drivers.index', { etat: 'visite' }),
+                    route('drivers.index', { etat: 'conformite' }),
                     (c) => (
                         <li key={c.id} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
                             <span className="min-w-0 flex-1">
@@ -622,7 +632,7 @@ function Conformite({ conformite }) {
                     t('nav.vehicules', 'Véhicules'),
                     conformite.vehicules,
                     conformite.total_vehicules,
-                    route('vehicles.index', { etat: 'controle' }),
+                    route('vehicles.index', { etat: 'controle_roulant' }),
                     (v) => (
                         <li key={v.immatriculation} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
                             <span className="min-w-0 flex-1">

@@ -511,7 +511,10 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                                         {historique.map((ligne, i) => (
                                             <li key={i} className="border-l-2 border-slate-200 pl-2.5">
                                                 <p className="text-[11px] text-slate-600">{ligne.horodatage}</p>
-                                                <p className="text-xs text-marine">{ligne.description}</p>
+                                                <p className="text-xs text-marine">
+                                                    {ligne.libelle}
+                                                    {ligne.detail && <span className="text-slate-600"> · {ligne.detail}</span>}
+                                                </p>
                                             </li>
                                         ))}
                                     </ol>

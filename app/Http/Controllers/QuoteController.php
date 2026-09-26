@@ -220,7 +220,28 @@ class QuoteController extends Controller
             'compteurs' => QuoteRequest::selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
+            'libelles' => self::libellesChoix(),
         ]);
+    }
+
+    /**
+     * Les choix d'une demande sont ranges en francais. L'ecran de
+     * traitement les montre dans la langue de l'utilisateur, avec les
+     * memes traductions que le formulaire : valeur francaise => libelle.
+     * Une valeur absente de la liste (ancienne saisie) reste telle quelle.
+     *
+     * @return array<string, string>
+     */
+    private static function libellesChoix(): array
+    {
+        $traduits = self::choixTraduits();
+        $libelles = [];
+
+        foreach (array_unique(self::CHAMPS_CHOIX) as $groupe) {
+            $libelles += array_combine(self::CHOIX[$groupe], $traduits[$groupe]);
+        }
+
+        return $libelles;
     }
 
     public function updateStatus(Request $request, QuoteRequest $quoteRequest): RedirectResponse

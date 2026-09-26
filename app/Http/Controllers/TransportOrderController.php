@@ -49,9 +49,11 @@ class TransportOrderController extends Controller
                 ->whereContient('tracking_number', $terme)
                 ->orWhereContient('pickup_address', $terme)
                 ->orWhereContient('delivery_address', $terme)
-                // Les suggestions proposent aussi les entreprises : la
-                // touche Entree les cherche de meme.
-                ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', $terme)));
+                // Les suggestions proposent aussi les entreprises, par nom ou
+                // par numero de TVA : la touche Entree les cherche de meme.
+                ->orWhereHas('client', fn ($c) => $c
+                    ->whereContient('company_name', $terme)
+                    ->orWhereContient('vat_number', $terme)));
         }
         if ($request->filled('destination')) {
             $query->whereContient('delivery_address', (string) $request->destination);
@@ -62,6 +64,10 @@ class TransportOrderController extends Controller
         if ($request->filled('client')) {
             $query->whereHas('client', fn ($q) => $q->whereContient('company_name', (string) $request->client));
         }
+        // L'alerte du tableau de bord renvoie ici : meme critere, meme nombre.
+        if ($request->boolean('retard')) {
+            $query->where(DashboardController::expeditionsEnRetard());
+        }
 
         $orders = $query->with('invoiceLine.invoice:id,status')
             ->paginate(15)
@@ -71,7 +77,10 @@ class TransportOrderController extends Controller
 
         return Inertia::render('TransportOrders/Index', [
             'orders' => $orders,
-            'filters' => $request->only(['tracking', 'client', 'destination', 'status', 'q']),
+            'filters' => [
+                ...$request->only(['tracking', 'client', 'destination', 'status', 'q']),
+                'retard' => $request->boolean('retard') ? '1' : null,
+            ],
         ]);
     }
 
@@ -107,7 +116,9 @@ class TransportOrderController extends Controller
                 'date' => $c->created_at->format('d/m/Y'),
                 'facture' => in_array($c->id, $facturees, true),
             ])->all(),
-            'peutAjouterSupplement' => $request->user()->can('plan-orders'),
+            // Une expedition annulee sans indemnite ne sera jamais facturee.
+            'peutAjouterSupplement' => $request->user()->can('plan-orders')
+                && ! ($transportOrder->status === 'CANCELLED' && ! ($transportOrder->cancellation_fee > 0)),
             'chauffeur' => $transportOrder->driver?->user
                 ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
                 : null,

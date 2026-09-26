@@ -40,6 +40,7 @@ export default function Index({ orders, filters }) {
         destination: filters.destination ?? '',
         status: filters.status ?? '',
         q: filters.q ?? '',
+        retard: filters.retard ?? '',
     });
     const timeout = useRef();
 
@@ -83,6 +84,17 @@ export default function Index({ orders, filters }) {
                 <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
                     {t('ordres.recherche_active', 'Recherche : « :terme »', { terme: search.q })}
                     <button type="button" onClick={() => update('q', '')} className="font-semibold text-brand-blue hover:text-marine">
+                        {t('ordres.effacer_recherche', 'Effacer')}
+                    </button>
+                </p>
+            )}
+
+            {/* Filtre pose par l'alerte du tableau de bord : il reste visible
+                pour pouvoir le retirer. */}
+            {search.retard && (
+                <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                    {t('ordres.filtre_retard', 'Seulement les expéditions en retard')}
+                    <button type="button" onClick={() => update('retard', '')} className="font-semibold text-brand-blue hover:text-marine">
                         {t('ordres.effacer_recherche', 'Effacer')}
                     </button>
                 </p>

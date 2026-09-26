@@ -27,6 +27,10 @@ class PageController extends Controller
                 ->map(fn (Page $p) => [
                     'id' => $p->id,
                     'slug' => $p->slug,
+                    // La liste suit la langue de l'interface, avec le
+                    // francais en repli comme sur le site public. Les
+                    // trois titres restent envoyes pour le formulaire.
+                    'titre' => $p->titre(app()->getLocale()),
                     'titre_fr' => $p->titre_fr,
                     'titre_nl' => $p->titre_nl,
                     'titre_en' => $p->titre_en,

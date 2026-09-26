@@ -38,7 +38,7 @@ export default function Register({ secteurs, fonctions }) {
     const verifierTva = async () => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
         if (tva.length < 6) {
-            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisis le numéro complet, code pays inclus (ex. BE0123456789).') });
+            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisis le numéro complet, code pays inclus (ex. BE0123456749).') });
             return;
         }
 
@@ -153,7 +153,7 @@ export default function Register({ secteurs, fonctions }) {
                                 <TextInput
                                     id="vat_number"
                                     value={data.vat_number}
-                                    placeholder={t('auth.tva_exemple', 'ex. BE0123456789 ou SIRET 34119222700013')}
+                                    placeholder={t('auth.tva_exemple', 'ex. BE0123456749 ou SIRET 34119222700013')}
                                     className="block w-full py-1 text-sm"
                                     onChange={(e) => { setData('vat_number', e.target.value.toUpperCase()); setVies(null); }}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
