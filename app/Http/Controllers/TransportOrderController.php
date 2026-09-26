@@ -11,6 +11,7 @@ use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\GeocodageIndisponible;
 use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\OrderWorkflow;
@@ -210,10 +211,19 @@ class TransportOrderController extends Controller
     {
         $ecartMax = 30;
 
-        $points = [
-            'pickup' => Localite::coordonnees(Adresse::localite($data['pickup_address']), 'BE'),
-            'delivery' => Localite::coordonnees(Adresse::localite($data['delivery_address']), $data['delivery_country']),
-        ];
+        try {
+            $points = [
+                'pickup' => Localite::coordonnees(Adresse::localite($data['pickup_address']), 'BE'),
+                'delivery' => Localite::coordonnees(
+                    Adresse::localite($data['delivery_address']),
+                    $data['delivery_country'],
+                    (float) $data['delivery_lat'],
+                    (float) $data['delivery_lng'],
+                ),
+            ];
+        } catch (GeocodageIndisponible) {
+            return Traductions::t('msg.verification_adresse_indisponible', 'La vérification de l\'adresse est momentanément indisponible. Réessayez dans quelques minutes.');
+        }
 
         foreach ($points as $cle => $point) {
             if ($point === null) {

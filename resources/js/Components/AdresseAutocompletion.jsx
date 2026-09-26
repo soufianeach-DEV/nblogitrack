@@ -10,9 +10,9 @@ const CODES_EUROPE = ['AT', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI'
 // usePays le retrouvent sous cette forme. Seul l'affichage suit la langue.
 const nomRegion = new Intl.DisplayNames(['fr'], { type: 'region' });
 
-const CP_NUMERIQUE = { BE: 4, LU: 4, FR: 5, DE: 5, IT: 5, ES: 5, AT: 4, CH: 4, DK: 4, HU: 4, SI: 4, BG: 4, NO: 4, FI: 5, EE: 5, HR: 5, RO: 6, LT: 5 };
+const CP_NUMERIQUE = { BE: 4, LU: 4, FR: 5, DE: 5, IT: 5, ES: 5, AT: 4, CH: 4, DK: 4, HU: 4, SI: 4, BG: 4, NO: 4, FI: 5, EE: 5, HR: 5, RO: 6, LT: 5, GR: 5 };
 
-const CP_EXEMPLE = { BE: '1000', FR: '75001', DE: '10115', NL: '1012 AB', GB: 'SW1A 1AA', PL: '00-950', PT: '1000-001', CZ: '110 00' };
+const CP_EXEMPLE = { BE: '1000', FR: '75001', DE: '10115', NL: '1012 AB', GB: 'SW1A 1AA', PL: '00-950', PT: '1000-001', CZ: '110 00', GR: '10557' };
 
 const GRANDES_VILLES = {
     AT: [['Vienne', 48.2082, 16.3738], ['Graz', 47.0707, 15.4395], ['Linz', 48.3069, 14.2858], ['Salzbourg', 47.8095, 13.0550]],

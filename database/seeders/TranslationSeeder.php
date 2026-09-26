@@ -2648,6 +2648,7 @@ class TranslationSeeder extends Seeder
             'paiement_avant_emission' => ['Le paiement ne peut pas être antérieur au :date, date d\'émission de la facture.', 'De betaling kan niet vóór :date liggen, de uitgiftedatum van de factuur.', 'The payment cannot be dated before :date, the invoice issue date.'],
             'supplement_trop_eleve' => ['Un supplément ne peut pas dépasser :max HT.', 'Een toeslag kan niet hoger zijn dan :max excl. btw.', 'A surcharge cannot exceed :max excl. VAT.'],
             'tva_belge_invalide' => ['Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).', 'Dit Belgische btw-nummer is niet geldig: controleer het. Het telt 10 cijfers na BE en begint met 0 of 1 (bv. BE0123456749).', 'This Belgian VAT number is not valid: please check it. It has 10 digits after BE and starts with 0 or 1 (e.g. BE0123456749).'],
+            'verification_adresse_indisponible' => ['La vérification de l\'adresse est momentanément indisponible. Réessayez dans quelques minutes.', 'De controle van het adres is tijdelijk niet beschikbaar. Probeer het over enkele minuten opnieuw.', 'Address verification is temporarily unavailable. Please try again in a few minutes.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

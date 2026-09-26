@@ -8,6 +8,7 @@ use App\Models\ApiKey;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\GeocodageIndisponible;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
@@ -81,7 +82,13 @@ class ExpeditionController extends Controller
         $pays = strtoupper($donnees['pays_livraison'] ?? '')
             ?: (Pays::depuisNom(Adresse::pays($donnees['livraison'])) ?? 'BE');
 
-        $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+        try {
+            $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+        } catch (GeocodageIndisponible) {
+            return response()->json([
+                'message' => 'La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.',
+            ], 503)->header('Retry-After', '120');
+        }
 
         if (is_string($points)) {
             return response()->json(['message' => $points], 422);

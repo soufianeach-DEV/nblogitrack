@@ -9,7 +9,10 @@ import { useLangue, useTraduction } from '@/traduire';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU' };
+const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU', 'Grèce': 'EL' };
+// VIES code la Grece « EL » et l'Irlande du Nord « XI » ; Intl ne connait
+// que GR et GB.
+const PAYS_DE_TVA = { EL: 'GR', XI: 'GB' };
 
 export default function Register({ secteurs, fonctions }) {
     const t = useTraduction();
@@ -62,7 +65,7 @@ export default function Register({ secteurs, fonctions }) {
                     billing_address: resultat.adresse.rue,
                     postal_code: resultat.adresse.code_postal,
                     city: resultat.adresse.ville,
-                    country: nomRegion.of((resultat.tva ?? tva).slice(0, 2)) ?? '',
+                    country: nomRegion.of(PAYS_DE_TVA[(resultat.tva ?? tva).slice(0, 2)] ?? (resultat.tva ?? tva).slice(0, 2)) ?? '',
                     business_sector: resultat.entreprise?.secteur || data.business_sector,
                     first_name: d?.prenom || data.first_name,
                     last_name: d?.nom || data.last_name,

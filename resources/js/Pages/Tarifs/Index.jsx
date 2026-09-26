@@ -4,7 +4,21 @@ import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
 import { useState, useRef } from 'react';
 
-function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
+// Pays sans codes postaux (la Grece) : le serveur n'a pas de liste de
+// localites, Photon propose les siennes, que le serveur sait verifier.
+const villesPhoton = async (q, pays) => {
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=fr&limit=10&layer=city&layer=district&layer=locality`);
+
+    if (! r.ok) return [];
+
+    const { features = [] } = await r.json();
+
+    return features
+        .filter((f) => f.properties?.name && (f.properties.countrycode || '').toUpperCase() === pays)
+        .map((f) => ({ ville: f.properties.name, region: f.properties.state || null, code: null }));
+};
+
+function ChoixVille({ id, pays, enLigne = false, valeur, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [minuteur, setMinuteur] = useState(null);
     // Une reponse qui arrive apres que le champ a perdu le focus ne doit
@@ -21,11 +35,19 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
             return;
         }
 
-        setMinuteur(setTimeout(() => {
-            fetch(route('geo.villes', { pays, q: texte.trim() }), { headers: { Accept: 'application/json' } })
+        setMinuteur(setTimeout(async () => {
+            const q = texte.trim();
+            let villes = await fetch(route('geo.villes', { pays, q }), { headers: { Accept: 'application/json' } })
                 .then((r) => (r.ok ? r.json() : []))
-                .then((villes) => actif.current && setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []))
-                .catch(() => setSuggestions([]));
+                .catch(() => []);
+
+            if (enLigne && (! Array.isArray(villes) || villes.length === 0)) {
+                villes = await villesPhoton(q, pays).catch(() => []);
+            }
+
+            if (actif.current) {
+                setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []);
+            }
         }, 200));
     };
 
@@ -47,8 +69,8 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
             />
             {suggestions.length > 0 && (
                 <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {suggestions.map((ville) => (
-                        <li key={ville.ville + ville.code}>
+                    {suggestions.map((ville, i) => (
+                        <li key={`${i}-${ville.ville}-${ville.code ?? ''}`}>
                             <button
                                 type="button"
                                 onMouseDown={(e) => e.preventDefault()}
@@ -172,6 +194,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <ChoixVille
                                     id="destination"
                                     pays={pays}
+                                    enLigne={destinations.find((d) => d.code === pays)?.en_ligne === true}
                                     valeur={destination}
                                     onChange={setDestination}
                                     placeholder={t('tarifs.taper', 'Commencez à taper…')}
