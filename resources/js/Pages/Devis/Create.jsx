@@ -598,7 +598,10 @@ export default function Create({ choix, listes }) {
                         </div>
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                            {liste('customer_type', t('devis.vous_etes', 'Vous êtes'), choix.clients)}
+                            <div>
+                                {liste('customer_type', t('devis.vous_etes', 'Vous êtes'), choix.clients)}
+                                <p className="mt-1 text-xs text-slate-500">{t('devis.vous_etes_aide', 'Commissionnaire ou transitaire : précisez le client final à l\'étape « Précisions ».')}</p>
+                            </div>
                             {liste('correspondence_language', t('devis.langue', 'Langue de correspondance'), ['fr', 'nl', 'en'], (l) => ({ fr: 'Français', nl: 'Nederlands', en: 'English' })[l])}
                         </div>
                     </Bloc>

@@ -29,9 +29,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class QuoteController extends Controller
 {
     private const CHOIX = [
+        // Valeurs rangees en base ; le libelle affiche vient des
+        // traductions (devis.choix_...). Le cas le plus courant d'abord.
         'clients' => [
-            'Client régulier / entreprise',
             'Nouvelle entreprise',
+            'Client régulier / entreprise',
             'Intermédiaire / commissionnaire',
         ],
         'trajets' => [
