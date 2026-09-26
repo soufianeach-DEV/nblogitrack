@@ -3,11 +3,15 @@
 namespace Tests\Unit;
 
 use App\Support\JoursFeries;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class JoursFeriesTest extends TestCase
 {
+    // Les messages et les feries belges passent par les traductions en base.
+    use RefreshDatabase;
+
     public function test_chaque_pays_a_son_calendrier(): void
     {
         $this->assertTrue(JoursFeries::chome(Carbon::parse('2027-07-14'), 'FR'));

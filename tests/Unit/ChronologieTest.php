@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\Chronologie;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
@@ -14,6 +15,9 @@ use Tests\TestCase;
  */
 class ChronologieTest extends TestCase
 {
+    // Les messages et les feries belges passent par les traductions en base.
+    use RefreshDatabase;
+
     private function premier(string $pays, float $lat, float $lng, string $commande = '2026-10-06 10:00'): string
     {
         return Chronologie::premierEnlevement($pays, $lat, $lng, Carbon::parse($commande))->format('D d/m H:i');
