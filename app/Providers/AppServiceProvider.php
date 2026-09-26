@@ -66,6 +66,18 @@ class AppServiceProvider extends ServiceProvider
             default => Limit::perMinute(10)->by($r->ip()),
         });
 
+        // Registres d'entreprises et serveurs de numeros de rue : services
+        // publics qui bloquent l'adresse du serveur s'il abuse. Une limite
+        // par visiteur, et une limite commune a tous les visiteurs.
+        RateLimiter::for('tva', fn (Request $r) => [
+            Limit::perMinute(20)->by('ip'.$r->ip()),
+            Limit::perMinute(300)->by('tous'),
+        ]);
+        RateLimiter::for('geo-numeros', fn (Request $r) => [
+            Limit::perMinute(15)->by('ip'.$r->ip()),
+            Limit::perMinute(120)->by('tous'),
+        ]);
+
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));
 
         Gate::define('view-all-orders', fn (User $user) => $user->isStaff());

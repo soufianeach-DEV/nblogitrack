@@ -29,7 +29,7 @@
         @endforeach
         <meta name="twitter:card" content="summary_large_image">
         @if ($page['component'] === 'Welcome')
-            <script type="application/ld+json" nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">@json(App\Support\Referencement::organisation(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
+            <script type="application/ld+json" nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">@json(App\Support\Referencement::organisation(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
         @endif
 
         <meta name="theme-color" content="#14324F">

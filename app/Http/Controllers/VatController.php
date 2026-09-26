@@ -47,6 +47,15 @@ class VatController extends Controller
             ]);
         }
 
+        // Prefixe inconnu : aucun registre ne le connait, inutile de
+        // solliciter VIES a chaque essai.
+        if (! array_key_exists(substr($tva, 0, 2), IdentifiantEntreprise::FORMATS)) {
+            return response()->json([
+                'statut' => 'format',
+                'message' => Traductions::t('msg.tva_pays_inconnu', 'Ce préfixe de pays n\'est pas reconnu : saisissez un numéro de TVA européen, suisse, norvégien ou britannique (ex. BE0123456749).'),
+            ]);
+        }
+
         $cle = 'vies:'.$tva;
 
         if ($cache = Cache::get($cle)) {

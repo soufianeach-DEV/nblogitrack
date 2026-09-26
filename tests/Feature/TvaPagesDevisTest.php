@@ -300,4 +300,29 @@ class TvaPagesDevisTest extends TestCase
         $this->assertSame('Import vers la Belgique', $devis->trip_type);
         $this->assertSame('FR', $devis->pickup_country);
     }
+
+    /** Un prefixe inconnu ne sollicite aucun registre. */
+    public function test_un_prefixe_inconnu_n_interroge_pas_vies(): void
+    {
+        Http::fake();
+
+        $this->getJson(route('vat.verify', ['tva' => 'ZZ123456789']))->assertJsonPath('statut', 'format');
+
+        Http::assertNothingSent();
+    }
+
+    /** Au-dela de 300 verifications par minute, tous visiteurs confondus, le serveur refuse. */
+    public function test_une_limite_commune_protege_les_registres(): void
+    {
+        Http::fake();
+
+        for ($i = 0; $i < 300; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '10.0.'.intdiv($i, 250).'.'.($i % 250)])
+                ->getJson(route('vat.verify', ['tva' => 'ZZ1']));
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])
+            ->getJson(route('vat.verify', ['tva' => 'ZZ1']))
+            ->assertStatus(429);
+    }
 }

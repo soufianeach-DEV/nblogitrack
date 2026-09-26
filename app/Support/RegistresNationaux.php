@@ -122,7 +122,9 @@ final class RegistresNationaux
 
         $krs = $fisc->ok() ? $fisc->json('result.subject.krs') : null;
 
-        if (! $krs) {
+        // Le numero KRS vient d'une reponse externe : dix chiffres, rien
+        // d'autre, avant de le placer dans une adresse.
+        if (! is_string($krs) || ! preg_match('/^\d{10}$/', $krs)) {
             return null;
         }
 

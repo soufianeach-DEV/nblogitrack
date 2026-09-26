@@ -255,14 +255,14 @@ Route::middleware('throttle:120,1,geo')->group(function () {
 });
 
 Route::get('/geo/numeros', [GeoController::class, 'numeros'])
-    ->middleware('throttle:15,1,geo-numeros')
+    ->middleware('throttle:geo-numeros')
     ->name('geo.numeros');
 
 Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
     ->name('payments.webhook');
 
 Route::get('/verification-tva', [VatController::class, 'verifier'])
-    ->middleware('throttle:20,1,tva')
+    ->middleware('throttle:tva')
     ->name('vat.verify');
 
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])

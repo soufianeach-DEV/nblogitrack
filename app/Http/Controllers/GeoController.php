@@ -83,8 +83,11 @@ class GeoController extends Controller
             'cp' => 'nullable|string|max:16',
         ]);
 
-        $lat = round((float) $data['lat'], 4);
-        $lng = round((float) $data['lng'], 4);
+        // Centre arrondi a 0,01° (environ 1 km) : un point voisin de la
+        // meme rue reprend le cache au lieu de relancer trois serveurs
+        // Overpass. Le rayon de recherche couvre l'ecart (2 km).
+        $lat = round((float) $data['lat'], 2);
+        $lng = round((float) $data['lng'], 2);
         $cle = 'numeros:'.md5(mb_strtolower($data['rue']).":{$lat}:{$lng}");
 
         $numeros = Cache::get($cle);
@@ -115,7 +118,7 @@ class GeoController extends Controller
     private const OVERPASS = ['overpass-api.de', 'overpass.kumi.systems', 'overpass.private.coffee'];
 
     /**
-     * Les numéros de la rue dans un rayon de 1,5 km. Les trois serveurs
+     * Les numéros de la rue dans un rayon de 2 km. Les trois serveurs
      * sont interrogés ensemble et le premier qui répond l'emporte : un
      * serveur lent ou saturé ne fait plus attendre la réponse des autres.
      * Null si aucun n'a répondu.
@@ -126,8 +129,8 @@ class GeoController extends Controller
     {
         $motif = preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
         $requete = '[out:json][timeout:5];('
-            .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
-            .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
+            .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:2000,'.$lat.','.$lng.');'
+            .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:2000,'.$lat.','.$lng.');'
             .');out tags center 400;';
 
         $boucle = new CurlMultiHandler(['select_timeout' => 0.05]);
