@@ -14,6 +14,7 @@ use App\Support\Localite;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -210,8 +211,46 @@ class TransportOrderController extends Controller
         abort_unless($request->user()->isClient(), 403);
 
         return Inertia::render('TransportOrders/Create', [
-            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'base_rate', 'price_per_kg', 'price_per_km', 'adr_coefficient', 'delivery_days', 'service_level']),
-            'pricing' => config('pricing'),
+            'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'delivery_days', 'service_level']),
+        ]);
+    }
+
+    /**
+     * Le prix de chaque formule de la zone, calcule par le serveur : le
+     * formulaire affiche exactement le prix qui sera enregistre, sans
+     * refaire la formule dans le navigateur.
+     */
+    public function estimation(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isClient(), 403);
+
+        $data = $request->validate([
+            'delivery_country' => 'required|string|size:2|exists:tariff_grids,zone',
+            'pickup_lat' => 'required|numeric|between:-90,90',
+            'pickup_lng' => 'required|numeric|between:-180,180',
+            'delivery_lat' => 'required|numeric|between:-90,90',
+            'delivery_lng' => 'required|numeric|between:-180,180',
+            'weight' => 'nullable|numeric|min:1|max:44000',
+            'is_hazardous' => 'boolean',
+        ]);
+
+        $km = Tarificateur::distanceRoutiere(
+            (float) $data['pickup_lat'],
+            (float) $data['pickup_lng'],
+            (float) $data['delivery_lat'],
+            (float) $data['delivery_lng'],
+        );
+
+        $grilles = TariffGrid::where('zone', $data['delivery_country'])->where('is_active', true)->get();
+        $poids = $data['weight'] ?? null;
+
+        $prix = $poids === null
+            ? []
+            : Tarificateur::parFormule($grilles, $km, (float) $poids, $data['delivery_country'], $request->boolean('is_hazardous'));
+
+        return response()->json([
+            'distance_km' => round($km, 1),
+            'prix' => (object) $prix,
         ]);
     }
 

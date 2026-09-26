@@ -1467,6 +1467,7 @@ class TranslationSeeder extends Seeder
                 'Groepage met andere zendingen, tegen het laagste tarief.',
                 'Groupage with other shipments, at the lowest rate.',
             ],
+            'groupage' => ['Groupage', 'Groepage', 'Groupage'],
         ],
 
         'devis' => [
