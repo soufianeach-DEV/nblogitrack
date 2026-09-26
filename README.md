@@ -61,7 +61,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 212 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 218 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -151,6 +151,24 @@ mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
 
 L'application répond sur `http://127.0.0.1:8000`, la boîte de réception de développement sur `http://localhost:8025`.
 
+### Paiement en ligne (Stripe)
+
+Le client règle une facture, ou son solde après un paiement partiel, par Stripe Checkout : carte, Bancontact et les autres moyens activés dans le tableau de bord Stripe. La page de paiement s'affiche dans sa langue.
+
+1. Renseignez dans `.env` les clés du compte Stripe (`sk_test_…` pour les essais, `sk_live_…` en production) :
+
+   ```bash
+   STRIPE_KEY=pk_test_...
+   STRIPE_SECRET=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+
+2. Dans le tableau de bord Stripe (Développeurs > Webhooks), déclarez l'adresse `https://votre-domaine/stripe/webhook` avec les événements `checkout.session.completed` et `checkout.session.async_payment_succeeded`, puis copiez son secret de signature dans `STRIPE_WEBHOOK_SECRET`. En local, `stripe listen --forward-to localhost:8000/stripe/webhook` affiche ce secret.
+
+Le paiement s'enregistre dès le retour du client sur le site, et par la notification signée même s'il ferme son navigateur ; il n'est jamais compté deux fois. Un paiement différé (virement SEPA) n'est compté qu'à son arrivée. Sans clé, le bouton « Payer en ligne » est masqué et le virement avec communication structurée reste proposé. Carte d'essai : `4242 4242 4242 4242`, date future, n'importe quel code.
+
+`STRIPE_API_BASE`, vide en production, permet de pointer vers un émulateur (stripe-mock) pour les tests de bout en bout.
+
 ### Tâches planifiées
 
 Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
@@ -195,7 +213,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Deux cent douze tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Deux cent dix-huit tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), l'annulation par le client, la traduction complète de l'application, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 

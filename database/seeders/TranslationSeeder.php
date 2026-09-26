@@ -2018,6 +2018,8 @@ class TranslationSeeder extends Seeder
             'refacturer' => ['Refacturer aussitôt les prestations', 'De diensten meteen opnieuw factureren', 'Re-invoice the services immediately'],
             'refacturer_aide' => ['Une nouvelle facture est émise avec les données actuelles du client et des expéditions. Décochez pour un geste commercial.', 'Er wordt een nieuwe factuur uitgereikt met de huidige gegevens van de klant en de zendingen. Vink uit voor een commerciële geste.', 'A new invoice is issued with the current customer and shipment data. Untick for a goodwill gesture.'],
             'reste_du' => ['Reste dû', 'Nog verschuldigd', 'Balance due'],
+            'paiement_en_cours' => ['Paiement en cours', 'Betaling in behandeling', 'Payment in progress'],
+            'paiement_differe' => ['Votre banque traite le paiement de :montant (par exemple un virement SEPA). La facture :reference sera marquée payée dès sa réception, en général sous quelques jours ouvrables.', 'Uw bank verwerkt de betaling van :montant (bijvoorbeeld een SEPA-overschrijving). Factuur :reference wordt als betaald gemarkeerd zodra ze ontvangen is, meestal binnen enkele werkdagen.', 'Your bank is processing the payment of :montant (for example a SEPA transfer). Invoice :reference will be marked as paid as soon as it is received, usually within a few business days.'],
         ],
 
         'action' => [
