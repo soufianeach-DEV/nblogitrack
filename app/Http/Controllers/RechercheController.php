@@ -46,7 +46,11 @@ class RechercheController extends Controller
                 'type' => 'entreprise',
                 'libelle' => $c->company_name,
                 'detail' => trim($c->vat_number.' · '.Traductions::vocabulaire('ville', (string) $c->city), ' ·'),
-                'url' => route('clients.index', ['etat' => 'tout', 'q' => $c->company_name]),
+                // L'ecran Entreprises est reserve a l'administrateur ; le
+                // planificateur arrive sur les expeditions de l'entreprise.
+                'url' => request()->user()->can('validate-clients')
+                    ? route('clients.index', ['etat' => 'tout', 'q' => $c->company_name])
+                    : route('transport-orders.index', ['client' => $c->company_name]),
             ])->all();
 
         return array_merge($entreprises, $this->expeditions($terme, null));

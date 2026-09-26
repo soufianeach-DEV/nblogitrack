@@ -19,12 +19,15 @@ class TranslationController extends Controller
 
         $traductions = Translation::query()
             ->when($groupe, fn ($q) => $q->where('groupe', $groupe))
-            ->when($recherche !== '', fn ($q) => $q->where(
-                fn ($w) => $w->where('cle', 'ilike', "%{$recherche}%")
-                    ->orWhere('fr', 'ilike', "%{$recherche}%")
-                    ->orWhere('nl', 'ilike', "%{$recherche}%")
-                    ->orWhere('en', 'ilike', "%{$recherche}%"),
-            ))
+            // « % » et « _ » se cherchent tels quels, pas comme jokers.
+            ->when($recherche !== '', fn ($q) => $q->where(function ($w) use ($recherche) {
+                $motif = '%'.addcslashes($recherche, '\\%_').'%';
+
+                $w->where('cle', 'ilike', $motif)
+                    ->orWhere('fr', 'ilike', $motif)
+                    ->orWhere('nl', 'ilike', $motif)
+                    ->orWhere('en', 'ilike', $motif);
+            }))
             ->orderBy('groupe')->orderBy('cle')
             ->paginate(30)
             ->withQueryString();

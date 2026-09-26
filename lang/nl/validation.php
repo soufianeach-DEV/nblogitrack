@@ -128,6 +128,13 @@ return [
      * de la colonne, pas celui du formulaire.
      */
     'attributes' => [
+        'slug' => 'adres van de pagina',
+        'titre_fr' => 'Franse titel',
+        'titre_nl' => 'Nederlandse titel',
+        'titre_en' => 'Engelse titel',
+        'corps_fr' => 'Franse tekst',
+        'corps_nl' => 'Nederlandse tekst',
+        'corps_en' => 'Engelse tekst',
         'adr' => 'gevaarlijke stof',
         'adr_certified' => 'ADR-certificering',
         'billing_address' => 'facturatieadres',

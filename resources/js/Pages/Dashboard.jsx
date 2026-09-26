@@ -806,8 +806,8 @@ export default function Dashboard({
             )}
 
             {}
-            <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
                     <section className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
                             <h2 className="font-semibold text-marine">{t('tdb.derniers_ordres', 'Derniers ordres')}</h2>
@@ -869,32 +869,32 @@ export default function Dashboard({
                     </section>
                 </div>
 
-                <div className="flex flex-col gap-4 lg:col-start-3 lg:row-start-1">
+                <div className="flex min-w-0 flex-col gap-4 lg:col-start-3 lg:row-start-1">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
                 </div>
 
                 {}
                 {volume.some((mois) => mois.nombre > 0) && (
-                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
+                    <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
                         <VolumeMensuel volume={volume} />
                     </div>
                 )}
 
                 {facturation && (
-                    <div className="flex flex-col lg:col-start-3 lg:row-start-2">
+                    <div className="flex min-w-0 flex-col lg:col-start-3 lg:row-start-2">
                         <Facturation facturation={facturation} />
                     </div>
                 )}
 
                 {journal && (
-                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
+                    <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
                         <DernieresTraces journal={journal} />
                     </div>
                 )}
 
                 {validations && (
-                    <div className="flex flex-col lg:col-start-3 lg:row-start-3">
+                    <div className="flex min-w-0 flex-col lg:col-start-3 lg:row-start-3">
                         <ValidationsEnAttente validations={validations} />
                     </div>
                 )}
@@ -902,8 +902,8 @@ export default function Dashboard({
                 {}
                 {conformite && (
                     <div className={journal
-                        ? 'lg:col-span-3 lg:col-start-1 lg:row-start-4'
-                        : 'flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3'}>
+                        ? 'min-w-0 lg:col-span-3 lg:col-start-1 lg:row-start-4'
+                        : 'flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3'}>
                         <Conformite conformite={conformite} />
                     </div>
                 )}

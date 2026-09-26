@@ -61,8 +61,16 @@ class LoginRequest extends FormRequest
             Auth::logout();
             $this->session()->invalidate();
 
+            // Une entreprise refusee n'a pas d'administrateur a contacter :
+            // on lui dit que sa demande n'a pas ete retenue, comme dans le
+            // courriel qu'elle a recu.
+            $refusee = $user->isClient()
+                && Client::where('id', $user->id)->whereNotNull('rejection_reason')->exists();
+
             throw ValidationException::withMessages([
-                'email' => Traductions::t('msg.compte_desactive', 'Ce compte est désactivé. Contactez votre administrateur.'),
+                'email' => $refusee
+                    ? Traductions::t('msg.inscription_refusee', 'Votre demande d\'inscription n\'a pas été retenue. Le motif vous a été envoyé par e-mail.')
+                    : Traductions::t('msg.compte_desactive', 'Ce compte est désactivé. Contactez votre administrateur.'),
             ]);
         }
 

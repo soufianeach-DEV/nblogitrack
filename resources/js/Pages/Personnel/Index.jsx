@@ -188,7 +188,7 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
             />
 
             <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="overflow-x-auto">
+                <div className="relative overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">

@@ -58,6 +58,12 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
     );
 }
 
+const NOM_FORMULE = {
+    'Éco': ['commande.offre_eco', 'Éco'],
+    Standard: ['commande.offre_standard', 'Standard'],
+    Express: ['commande.offre_express', 'Express'],
+};
+
 export default function Index({ destinations = [], formules = [] }) {
     const t = useTraduction();
     const locale = useLocale();
@@ -229,7 +235,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 {resultat.formules.map((f) => (
                                     <div key={f.formule} className="rounded-xl border border-slate-200 p-5 text-center">
                                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            {f.formule}
+                                            {NOM_FORMULE[f.formule] ? t(...NOM_FORMULE[f.formule]) : f.formule}
                                         </p>
                                         <p className="mt-2 text-2xl font-bold text-marine">{euros(f.prix)}</p>
                                         <p className="mt-1 text-sm text-slate-600">
@@ -270,7 +276,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                     <Icone nom="camion" className="h-5 w-5" />
                                 </span>
                                 <p className="text-sm text-slate-600">
-                                    <span className="block font-semibold text-marine">{formule}</span>
+                                    <span className="block font-semibold text-marine">{NOM_FORMULE[formule] ? t(...NOM_FORMULE[formule]) : formule}</span>
                                     {formule === 'Express'
                                         ? t('tarifs.express_texte', 'Un véhicule pour vous seul, au plus court.')
                                         : formule === 'Standard'

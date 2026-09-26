@@ -220,7 +220,7 @@ class PageController extends Controller
             'au_pied' => 'boolean',
             'rang' => 'nullable|integer|min:0|max:999',
         ], [
-            'slug.regex' => 'L\'adresse ne peut contenir que des minuscules, des chiffres et des tirets.',
+            'slug.regex' => Traductions::t('msg.page_slug', 'L\'adresse ne peut contenir que des minuscules, des chiffres et des tirets.'),
         ]);
     }
 

@@ -123,12 +123,20 @@ class VehicleController extends Controller
             }
         }
 
-        if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < (float) $vehicle->mileage) {
+        // Le formulaire montre le releve au kilometre pres : renvoyer la
+        // valeur affichee (458 099 pour 458 099,64) ne fait pas reculer le
+        // compteur.
+        if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
             return back()->withErrors([
                 'mileage' => Traductions::t('msg.kilometrage_inferieur', 'Le kilométrage ne peut pas descendre sous le relevé actuel (:km km).', [
                     'km' => number_format((float) $vehicle->mileage, 0, ',', ' '),
                 ]),
             ]);
+        }
+
+        // Le releve renvoye tel qu'affiche ne remplace pas la valeur exacte.
+        if ($donnees['mileage'] !== null && (float) $donnees['mileage'] === floor((float) $vehicle->mileage)) {
+            unset($donnees['mileage']);
         }
 
         $vehicle->update($donnees);

@@ -4,6 +4,13 @@
 // nom lisible des champs, comme ses equivalents francais et neerlandais.
 return [
     'attributes' => [
+        'slug' => 'page address',
+        'titre_fr' => 'French title',
+        'titre_nl' => 'Dutch title',
+        'titre_en' => 'English title',
+        'corps_fr' => 'French text',
+        'corps_nl' => 'Dutch text',
+        'corps_en' => 'English text',
         'adr' => 'hazardous goods',
         'adr_certified' => 'ADR certification',
         'billing_address' => 'billing address',

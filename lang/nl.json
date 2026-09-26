@@ -1,0 +1,11 @@
+{
+    "Forbidden": "Toegang geweigerd",
+    "Not Found": "Pagina niet gevonden",
+    "Page Expired": "Pagina verlopen",
+    "Payment Required": "Betaling vereist",
+    "Server Error": "Serverfout",
+    "Service Unavailable": "Dienst tijdelijk niet beschikbaar",
+    "Too Many Requests": "Te veel aanvragen",
+    "Unauthorized": "Niet gemachtigd",
+    "This action is unauthorized.": "U hebt geen toegang tot deze actie."
+}

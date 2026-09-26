@@ -122,6 +122,13 @@ return [
      * de la colonne, pas celui du formulaire.
      */
     'attributes' => [
+        'slug' => 'adresse de la page',
+        'titre_fr' => 'titre en français',
+        'titre_nl' => 'titre en néerlandais',
+        'titre_en' => 'titre en anglais',
+        'corps_fr' => 'texte en français',
+        'corps_nl' => 'texte en néerlandais',
+        'corps_en' => 'texte en anglais',
         'adr' => 'matière dangereuse',
         'adr_certified' => 'certification ADR',
         'billing_address' => 'adresse de facturation',

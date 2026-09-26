@@ -99,7 +99,7 @@ export default function Index({ pages, documents, types }) {
                                         </span>
                                     )}
                                 </div>
-                                <p className="mt-1 font-mono text-xs text-brand-blue">/{p.slug}</p>
+                                <p className="mt-1 font-mono text-xs text-brand-blue">/p/{p.slug}</p>
                                 <p className="mt-2 text-xs text-slate-600">
                                     {}
                                     {['nl', 'en'].filter((l) => ! p.traduite[l]).length === 0
@@ -297,8 +297,11 @@ export default function Index({ pages, documents, types }) {
                                 }
                             >
                                 {l}
-                                {l !== 'fr' && ! data[`titre_${l}`] && (
+                                {l !== 'fr' && ! data[`titre_${l}`] && ! errors[`titre_${l}`] && ! errors[`corps_${l}`] && (
                                     <span className="ml-1 text-xs opacity-70">•</span>
+                                )}
+                                {(errors[`titre_${l}`] || errors[`corps_${l}`]) && (
+                                    <span className="ml-1 inline-block h-2 w-2 rounded-full bg-status-incident" aria-label={t('pages.onglet_erreur', 'Erreur dans cette langue')} />
                                 )}
                             </button>
                         ))}

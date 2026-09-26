@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Client;
 use App\Models\Driver;
 use App\Models\QuoteRequest;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
@@ -210,5 +213,105 @@ class ParcoursNavigateurTest extends TestCase
         $this->actingAs($client)
             ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
             ->assertSessionHas('success');
+    }
+
+    // --- Deuxieme serie : back-office ---------------------------------------
+
+    public function test_un_vehicule_s_enregistre_sans_toucher_au_kilometrage(): void
+    {
+        $camion = $this->camion('1-KMS-001', ['mileage' => 458099.64]);
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->patch(route('vehicles.update', $camion->registration), [
+                'mileage' => 458099,
+                'is_available' => false,
+                'inspection_date' => now()->subMonth()->toDateString(),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $camion->refresh();
+        $this->assertFalse((bool) $camion->is_available);
+        $this->assertEquals(458099.64, (float) $camion->mileage);
+    }
+
+    public function test_un_second_lien_dans_la_minute_n_est_pas_annonce_comme_envoye(): void
+    {
+        $admin = User::factory()->administrateur()->create();
+        $planificateur = User::factory()->planificateur()->create();
+
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('staff.reset-link', $planificateur))
+            ->assertSessionHas('success');
+
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('staff.reset-link', $planificateur))
+            ->assertSessionHas('error');
+    }
+
+    public function test_un_chauffeur_sorti_ne_se_reactive_pas_par_le_personnel(): void
+    {
+        $chauffeur = $this->chauffeur(['left_on' => now()->subDays(3)->toDateString()]);
+        $chauffeur->user->update(['is_active' => false]);
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch(route('staff.toggle', $chauffeur->user))
+            ->assertSessionHasErrors('is_active');
+
+        $this->assertFalse((bool) $chauffeur->user->refresh()->is_active);
+    }
+
+    public function test_le_planificateur_ne_voit_pas_les_validations_d_entreprises(): void
+    {
+        Client::factory()->enAttente()->create(['company_name' => 'Attente SRL']);
+        $planificateur = User::factory()->planificateur()->create();
+
+        $this->actingAs($planificateur)
+            ->get(route('dashboard'))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('validations', null));
+
+        $suggestions = $this->actingAs($planificateur)
+            ->getJson(route('recherche.suggestions', ['q' => 'Attente']))
+            ->json('suggestions');
+
+        foreach ($suggestions as $suggestion) {
+            $this->assertStringNotContainsString('/entreprises', $suggestion['url']);
+        }
+    }
+
+    public function test_une_date_illisible_dans_le_journal_est_ignoree(): void
+    {
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->get(route('activity-logs.index', ['du' => 'abc', 'au' => '2026-99-99']))
+            ->assertOk();
+    }
+
+    public function test_une_cle_d_ecriture_doit_avoir_une_entreprise(): void
+    {
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post(route('api-keys.store'), ['nom' => 'Sans entreprise', 'permissions' => ['ecriture']])
+            ->assertSessionHasErrors('client_id');
+    }
+
+    public function test_une_entreprise_refusee_apprend_que_sa_demande_n_est_pas_retenue(): void
+    {
+        $client = Client::factory()->create(['is_validated' => false, 'rejection_reason' => 'Numéro de TVA inactif']);
+        User::find($client->id)->update(['is_active' => false]);
+
+        $this->post(route('login'), ['email' => User::find($client->id)->email, 'password' => 'password'])
+            ->assertSessionHasErrors(['email' => 'Votre demande d\'inscription n\'a pas été retenue. Le motif vous a été envoyé par e-mail.']);
+    }
+
+    public function test_un_refus_pendant_la_navigation_reste_sur_la_page(): void
+    {
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->from(route('dashboard'))
+            ->get(route('clients.index'), [
+                'X-Inertia' => 'true',
+                'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+            ])
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('error');
     }
 }

@@ -150,7 +150,7 @@ class StaffController extends Controller
         // Le compte existe deja : une panne du serveur de courriel ne doit
         // pas se changer en erreur cinq cents, qui laisserait croire a un
         // echec et bloquerait le nouvel essai sur « adresse deja utilisee ».
-        $envoye = $this->envoyerLien($utilisateur);
+        $envoye = $this->envoyerLien($utilisateur) === 'envoye';
 
         ActivityLog::record(
             'staff.created',
@@ -178,6 +178,18 @@ class StaffController extends Controller
         if ($user->id === $request->user()->id) {
             return back()->withErrors([
                 'is_active' => Traductions::t('msg.desactiver_soi_meme', 'Vous ne pouvez pas désactiver votre propre compte.'),
+            ]);
+        }
+
+        // Un chauffeur sorti des effectifs ne revient pas par ce bouton : sa
+        // date de sortie se retire d'abord sur l'ecran Chauffeurs.
+        $sortie = $user->isDriver() ? Driver::find($user->id)?->left_on : null;
+
+        if (! $user->is_active && $sortie !== null && $sortie->lte(now())) {
+            return back()->withErrors([
+                'is_active' => Traductions::t('msg.chauffeur_sorti', 'Ce chauffeur a quitté l\'entreprise le :date : retirez sa date de sortie sur l\'écran Chauffeurs avant de réactiver son compte.', [
+                    'date' => $sortie->format('d/m/Y'),
+                ]),
             ]);
         }
 
@@ -218,16 +230,22 @@ class StaffController extends Controller
             : Traductions::t('msg.compte_ferme', 'Compte désactivé.'));
     }
 
-    private function envoyerLien(User $user): bool
+    /**
+     * @return 'envoye'|'attente'|'panne'
+     */
+    private function envoyerLien(User $user): string
     {
         try {
-            Password::sendResetLink(['email' => $user->email]);
-
-            return true;
+            // Le courtier refuse un second lien dans la minute : il le dit
+            // par son statut, sans exception. L'ignorer annoncait « Lien
+            // envoye » alors que rien n'etait parti.
+            return Password::sendResetLink(['email' => $user->email]) === Password::RESET_THROTTLED
+                ? 'attente'
+                : 'envoye';
         } catch (\Throwable $e) {
             report($e);
 
-            return false;
+            return 'panne';
         }
     }
 
@@ -246,7 +264,17 @@ class StaffController extends Controller
     {
         abort_if(! array_key_exists($user->role, self::ROLES), 404);
 
-        if (! $this->envoyerLien($user)) {
+        if (! $user->is_active) {
+            return back()->with('error', Traductions::t('msg.lien_compte_ferme', 'Ce compte est fermé : réactivez-le avant d\'envoyer un lien.'));
+        }
+
+        $resultat = $this->envoyerLien($user);
+
+        if ($resultat === 'attente') {
+            return back()->with('error', Traductions::t('msg.lien_deja_envoye', 'Un lien vient déjà de partir vers cette adresse. Réessayez dans une minute.'));
+        }
+
+        if ($resultat === 'panne') {
             return back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'));
         }
 

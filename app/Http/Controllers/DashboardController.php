@@ -65,7 +65,9 @@ class DashboardController extends Controller
                 'vehicules_total' => Vehicle::count(),
             ] : null,
             'calendrier' => $utilisateur->can('plan-orders') ? $this->calendrier() : null,
-            'validations' => $personnel ? $this->validations() : null,
+            // Seul l'administrateur valide les entreprises : le planificateur
+            // voyait le widget, et chacun de ses liens menait a un refus.
+            'validations' => $utilisateur->can('validate-clients') ? $this->validations() : null,
             'conformite' => $personnel ? $this->conformite() : null,
             'journal' => $utilisateur->can('view-logs') ? $this->journal() : null,
         ]);

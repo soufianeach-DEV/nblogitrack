@@ -123,4 +123,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 'secondes' => max(1, $secondes),
             ]));
         });
+
+        // Un refus pendant la navigation (lien vers un ecran d'un autre
+        // role) s'ouvrait dans une fenetre d'erreur brute, en anglais. On
+        // reste sur la page, avec un message dans la langue de l'ecran.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 403 || ! $request->header('X-Inertia')) {
+                return null;
+            }
+
+            return back()->with('error', Traductions::t('msg.acces_refuse', 'Vous n\'avez pas accès à cet écran.'));
+        });
     })->create();
