@@ -35,6 +35,18 @@ export default function Edit({ mustVerifyEmail, status, peutSupprimer }) {
                         <UpdatePasswordForm className="max-w-xl" />
                     </div>
 
+                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
+                        <section className="max-w-xl">
+                            <h2 className="text-lg font-medium text-gray-900">{t('profil.export_titre', 'Exporter mes données')}</h2>
+                            <p className="mt-1 text-sm text-gray-600">
+                                {t('profil.export_texte', 'Un fichier JSON avec les données de votre compte et, selon vos droits, celles de votre entreprise, de ses expéditions et de ses factures.')}
+                            </p>
+                            <a href={route('profile.export')} className="mt-4 inline-flex rounded-md bg-marine px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-marine-deep">
+                                {t('profil.export_bouton', 'Télécharger mes données')}
+                            </a>
+                        </section>
+                    </div>
+
                     {peutSupprimer && (
                         <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                             <DeleteUserForm className="max-w-xl" />

@@ -50,6 +50,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::get('/profile/export', [ProfileController::class, 'exporter'])
+            ->middleware('throttle:6,1,profil-export')
+            ->name('profile.export');
         Route::delete('/profile', [ProfileController::class, 'destroy'])
             ->middleware('throttle:6,1,profil-suppression')
             ->name('profile.destroy');
@@ -108,6 +111,8 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::patch('/demandes-de-devis/{quoteRequest}/statut', [QuoteController::class, 'updateStatus'])->name('quotes.status');
             Route::get('/demandes-de-devis/{quoteRequest}/pieces/{rang}', [QuoteController::class, 'piece'])->whereNumber('rang')->name('quotes.piece');
             Route::post('/demandes-de-devis/{quoteRequest}/commande', [QuoteController::class, 'commander'])->name('quotes.order');
+            // Droit a l'effacement d'un demandeur : reserve a l'administrateur.
+            Route::delete('/demandes-de-devis/{quoteRequest}', [QuoteController::class, 'destroy'])->middleware('can:view-logs')->name('quotes.destroy');
         });
 
         Route::middleware('can:drive')->group(function () {

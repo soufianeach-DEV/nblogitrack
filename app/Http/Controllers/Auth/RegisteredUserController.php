@@ -7,6 +7,7 @@ use App\Http\Controllers\VatController;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientContact;
+use App\Models\Page;
 use App\Models\User;
 use App\Support\Audience;
 use App\Support\IdentifiantEntreprise;
@@ -223,6 +224,10 @@ class RegisteredUserController extends Controller
                 'country' => $data['country'],
                 'business_sector' => $data['business_sector'] ?? null,
                 'is_validated' => false,
+                // Ce qui a ete accepte, et quand : les conditions opposables
+                // sont celles de cette version.
+                'conditions_acceptees_le' => now(),
+                'conditions_version' => Page::where('slug', 'conditions-generales')->first()?->updated_at?->toIso8601String(),
             ]);
 
             $user = User::create([

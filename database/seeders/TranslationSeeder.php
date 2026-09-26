@@ -879,6 +879,8 @@ class TranslationSeeder extends Seeder
             'statut_processing' => ['Prise en charge', 'In behandeling', 'In progress'],
             'statut_quoted' => ['Devis transmis', 'Offerte verstuurd', 'Quote sent'],
             'statut_closed' => ['Sans suite', 'Zonder gevolg', 'No follow-up'],
+            'effacer' => ['Effacer', 'Wissen', 'Erase'],
+            'effacer_confirmer' => ['Effacer définitivement cette demande et ses pièces jointes (demande d\'effacement de la personne) ?', 'Deze aanvraag en haar bijlagen definitief wissen (verzoek tot wissing van de betrokkene)?', 'Permanently erase this request and its attachments (erasure request from the person)?'],
             'commander_explication' => ['La commande est créée pour l\'entreprise choisie et tarifée comme au formulaire de commande. Ses responsables reçoivent un e-mail et peuvent l\'annuler depuis leur espace.', 'De bestelling wordt aangemaakt voor de gekozen klant en geprijsd zoals in het bestelformulier. De verantwoordelijken krijgen een e-mail en kunnen ze annuleren vanuit hun omgeving.', 'The order is created for the chosen company and priced as in the order form. Its managers receive an email and can cancel it from their area.'],
             'entreprise_commande' => ['Entreprise cliente', 'Klantbedrijf', 'Client company'],
             'entreprise_choisir' => ['Choisir une entreprise validée', 'Kies een gevalideerd bedrijf', 'Choose a validated company'],
@@ -1360,6 +1362,8 @@ class TranslationSeeder extends Seeder
             'action_staff_reset_link' => ['Lien de mot de passe', 'Wachtwoordlink', 'Password link'],
             'action_driver_updated' => ['Fiche chauffeur modifiée', 'Chauffeursfiche gewijzigd', 'Driver record updated'],
             'action_driver_left' => ['Sortie d\'un chauffeur', 'Uitdiensttreding chauffeur', 'Driver departure'],
+            'action_profile_exported' => ['Export des données d\'un compte', 'Export van accountgegevens', 'Account data export'],
+            'action_quote_deleted' => ['Demande de devis effacée', 'Offerteaanvraag gewist', 'Quotation request erased'],
             'action_schedule_failed' => ['Échec d\'une tâche planifiée', 'Geplande taak mislukt', 'Scheduled task failed'],
             'action_invoice_peppol_sent' => ['Facture transmise sur Peppol', 'Factuur via Peppol verzonden', 'Invoice sent via Peppol'],
             'action_invoice_peppol_failed' => ['Échec de transmission Peppol', 'Peppol-verzending mislukt', 'Peppol transmission failed'],
@@ -1451,6 +1455,9 @@ class TranslationSeeder extends Seeder
         ],
 
         'profil' => [
+            'export_titre' => ['Exporter mes données', 'Mijn gegevens exporteren', 'Export my data'],
+            'export_texte' => ['Un fichier JSON avec les données de votre compte et, selon vos droits, celles de votre entreprise, de ses expéditions et de ses factures.', 'Een JSON-bestand met de gegevens van uw account en, volgens uw rechten, die van uw onderneming, haar zendingen en haar facturen.', 'A JSON file with your account data and, depending on your rights, your company, its shipments and its invoices.'],
+            'export_bouton' => ['Télécharger mes données', 'Mijn gegevens downloaden', 'Download my data'],
             'infos_titre' => ['Informations personnelles', 'Persoonlijke gegevens', 'Personal information'],
             'infos_texte' => [
                 'Modifiez votre nom et l\'adresse électronique de votre compte.',
@@ -1650,6 +1657,7 @@ class TranslationSeeder extends Seeder
             'devis' => ['Demande de devis :reference.', 'Offerteaanvraag :reference.', 'Quotation request :reference.'],
         ],
         'devis' => [
+            'confidentialite_information' => ['Vos informations servent uniquement à répondre à votre demande (mesures précontractuelles). Elles sont effacées après deux ans si la demande reste sans suite. Détails et droits :', 'Uw gegevens dienen enkel om uw aanvraag te beantwoorden (precontractuele maatregelen). Ze worden na twee jaar gewist als de aanvraag zonder gevolg blijft. Details en rechten:', 'Your information is used only to answer your request (pre-contractual measures). It is erased after two years if the request is not followed up. Details and rights:'],
             'onu' => ['ONU', 'UN', 'UN'],
             'ouverture_lun_ven_7_h_16_h' => ['Lun-ven 7 h - 16 h', 'Ma-vr 7-16 u', 'Mon-Fri 7am-4pm'],
             'ouverture_lun_ven_8_h_17_h' => ['Lun-ven 8 h - 17 h', 'Ma-vr 8-17 u', 'Mon-Fri 8am-5pm'],
@@ -3024,6 +3032,8 @@ class TranslationSeeder extends Seeder
             'tva_pays_inconnu' => ['Ce préfixe de pays n\'est pas reconnu : saisissez un numéro de TVA européen, suisse, norvégien ou britannique (ex. BE0123456749).', 'Dit landvoorvoegsel wordt niet herkend: voer een Europees, Zwitsers, Noors of Brits btw-nummer in (bv. BE0123456749).', 'This country prefix is not recognised: enter a European, Swiss, Norwegian or British VAT number (e.g. BE0123456749).'],
             'note_en_cours' => ['Envoi de la note en cours à :n conducteur(s). Le journal d\'activité indiquera les éventuels échecs.', 'De nota wordt verzonden naar :n bestuurder(s). Het activiteitenlogboek toont eventuele mislukkingen.', 'The notice is being sent to :n driver(s). The activity log will show any failures.'],
             'devis_piece_non_recue' => ['Une pièce jointe n\'a pas pu être reçue : elle dépasse la taille acceptée par le serveur.', 'Een bijlage kon niet worden ontvangen: ze overschrijdt de grootte die de server aanvaardt.', 'An attachment could not be received: it exceeds the size accepted by the server.'],
+            'devis_commande_non_effacable' => ['Cette demande est devenue une commande : elle se conserve avec la commande et la facture.', 'Deze aanvraag werd een bestelling: ze wordt bewaard met de bestelling en de factuur.', 'This request became an order: it is kept with the order and the invoice.'],
+            'devis_efface' => ['Demande :reference effacée, pièces jointes comprises.', 'Aanvraag :reference gewist, bijlagen inbegrepen.', 'Request :reference erased, attachments included.'],
             'devis_sans_client' => ['Aucune entreprise cliente n\'a ce numéro de TVA ni cette adresse e-mail : créez d\'abord son compte.', 'Geen klant heeft dit btw-nummer of dit e-mailadres: maak eerst het account aan.', 'No client company has this VAT number or email address: create its account first.'],
             'devis_sans_grille' => ['Aucune formule n\'est ouverte pour ce trajet.', 'Voor dit traject is geen formule beschikbaar.', 'No service is available for this route.'],
             'devis_sans_poids' => ['Renseignez le poids avant de transformer la demande en commande.', 'Vul het gewicht in voordat u de aanvraag omzet in een bestelling.', 'Enter the weight before converting the request into an order.'],

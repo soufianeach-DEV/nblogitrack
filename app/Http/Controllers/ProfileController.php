@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\ActivityLog;
 use App\Models\ClientContact;
 use App\Models\Invoice;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Traductions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +57,45 @@ class ProfileController extends Controller
         }
 
         return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Portabilite (RGPD, art. 20) : les donnees du compte, et pour un
+     * responsable de l'entreprise celles de l'entreprise, dans un fichier
+     * JSON lisible par une autre application.
+     */
+    public function exporter(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $donnees = [
+            'exporte_le' => now()->toIso8601String(),
+            'compte' => $user->only(['first_name', 'last_name', 'email', 'phone', 'role', 'company_role', 'locale', 'created_at']),
+        ];
+
+        $client = $user->client;
+
+        if ($client !== null) {
+            $donnees['entreprise'] = $client->only(['company_name', 'vat_number', 'enterprise_number', 'peppol_id', 'billing_address', 'postal_code', 'city', 'country', 'business_sector', 'conditions_acceptees_le']);
+            $donnees['contacts'] = $client->contacts()->get(['first_name', 'last_name', 'position', 'email', 'phone'])->toArray();
+
+            if ($user->peutCommander() || $user->voitFacturesEntreprise()) {
+                $donnees['expeditions'] = TransportOrder::where('client_id', $client->id)->orderBy('id')
+                    ->get(['tracking_number', 'status', 'pickup_address', 'delivery_address', 'pickup_date', 'requested_delivery_date', 'actual_delivery_date', 'weight', 'volume', 'goods_type', 'estimated_cost', 'created_date'])
+                    ->toArray();
+            }
+
+            if ($user->voitFacturesEntreprise()) {
+                $donnees['factures'] = $client->invoices()->orderBy('id')
+                    ->get(['reference', 'type', 'issued_on', 'due_on', 'amount_excl_tax', 'vat_amount', 'amount_incl_tax', 'status', 'paid_on'])
+                    ->toArray();
+            }
+        }
+
+        ActivityLog::record('profile.exported', 'Export des données du compte '.$user->email, $user);
+
+        return response()->json($donnees, 200, [
+            'Content-Disposition' => 'attachment; filename="nblogitrack-donnees-'.now()->format('Y-m-d').'.json"',
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     public function destroy(Request $request): RedirectResponse

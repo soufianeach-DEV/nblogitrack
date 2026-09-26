@@ -119,7 +119,8 @@ class DevisCompletTest extends TestCase
         // Plus de cinq envois : sans la limite de debit du formulaire public.
         $this->withoutMiddleware(ThrottleRequests::class);
 
-        $this->post(route('devis.store'), $this->demande(['privacy' => false]))->assertSessionHasErrors('privacy');
+        // La confidentialite est une information, pas une case a cocher.
+        $this->post(route('devis.store'), $this->demande(['privacy' => false]))->assertSessionDoesntHaveErrors('privacy');
         $this->post(route('devis.store'), $this->demande(['needs_temperature' => '1']))->assertSessionHasErrors(['temperature_min', 'temperature_max']);
         $this->post(route('devis.store'), $this->demande(['needs_temperature' => '1', 'temperature_min' => 8, 'temperature_max' => 2]))->assertSessionHasErrors('temperature_max');
         $this->post(route('devis.store'), $this->demande(['is_hazardous' => '1']))->assertSessionHasErrors(['un_number', 'adr_class']);
@@ -130,7 +131,8 @@ class DevisCompletTest extends TestCase
         $this->post(route('devis.store'), $this->demande($suisse))->assertSessionHasErrors('eori_number');
         $this->post(route('devis.store'), $this->demande([...$suisse, 'eori_number' => 'BE0123456749']))->assertSessionHasNoErrors();
 
-        $this->assertSame(1, QuoteRequest::count());
+        // La demande sans case cochee et la demande suisse complete.
+        $this->assertSame(2, QuoteRequest::count());
     }
 
     public function test_les_fichiers_hors_format_sont_refuses(): void

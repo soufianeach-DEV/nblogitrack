@@ -409,7 +409,7 @@ Les données sont traitées au sein de l'Union européenne. Font exception :
 - Journaux d'activité de l'application, qui enregistrent la date, l'utilisateur, l'action et l'adresse IP : douze mois.
 - Demandes de devis restées sans suite, pièces jointes comprises : deux ans ; transformées en commande : cinq ans.
 - Mesure d'audience, sans donnée permettant d'identifier un visiteur : treize mois.
-- Compte client : la durée de la relation commerciale, puis les délais de prescription applicables.
+- Compte client : la durée de la relation commerciale, puis les délais de prescription applicables ; inscription refusée : six mois après la décision.
 
 ## Sécurité
 L'accès à l'application est nominatif et limité par le rôle de chacun. Les mots de passe ne sont jamais conservés en clair. Les échanges avec le serveur sont chiffrés. Les actions sensibles sont journalisées, et ces journaux sont effacés automatiquement passé leur durée de conservation.
@@ -518,7 +518,7 @@ Gegevens worden binnen de Europese Unie verwerkt. Uitzonderingen:
 - Activiteitenlogboeken van de toepassing, met datum, gebruiker, actie en IP-adres: twaalf maanden.
 - Offerteaanvragen zonder gevolg, bijlagen inbegrepen: twee jaar; omgezet in een bestelling: vijf jaar.
 - Bezoekersmeting, zonder gegevens die een bezoeker identificeren: dertien maanden.
-- Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen.
+- Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen; geweigerde inschrijving: zes maanden na de beslissing.
 
 ## Beveiliging
 De toegang tot de toepassing is persoonsgebonden en beperkt tot de rol van elkeen. Wachtwoorden worden nooit in leesbare vorm bewaard. Het verkeer met de server is versleuteld. Gevoelige handelingen worden gelogd, en die logboeken worden automatisch gewist na hun bewaartermijn.
@@ -627,7 +627,7 @@ Data is processed within the European Union, with these exceptions:
 - Application activity logs, recording date, user, action and IP address: twelve months.
 - Quotation requests left without follow-up, attachments included: two years; converted into an order: five years.
 - Audience measurement, without data identifying a visitor: thirteen months.
-- Customer account: the duration of the commercial relationship, then the applicable limitation periods.
+- Customer account: the duration of the commercial relationship, then the applicable limitation periods; rejected registration: six months after the decision.
 
 ## Security
 Access to the application is personal and limited by each person's role. Passwords are never stored in readable form. Traffic with the server is encrypted. Sensitive actions are logged, and those logs are erased automatically once their retention period expires.

@@ -41,6 +41,7 @@ const LIBELLES_CRENEAU = {
 
 export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {}, entreprises = [] }) {
     const t = useTraduction();
+    const { auth } = usePage().props;
     const v = useVocabulaire();
     const ouverture = useOuverture();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -211,6 +212,16 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                                         className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark"
                                     >
                                         {t('demandes.transformer', 'Transformer en commande')}
+                                    </button>
+                                )}
+                                {auth.canViewLogs && ! d.commande && (
+                                    <button
+                                        type="button"
+                                        onClick={() => window.confirm(t('demandes.effacer_confirmer', 'Effacer définitivement cette demande et ses pièces jointes (demande d\'effacement de la personne) ?'))
+                                            && router.delete(route('quotes.destroy', d.id), { preserveScroll: true })}
+                                        className="rounded-lg border border-status-incident px-4 py-2 text-sm font-semibold text-status-incident transition hover:bg-status-incident/10"
+                                    >
+                                        {t('demandes.effacer', 'Effacer')}
                                     </button>
                                 )}
                                 {d.commande && (

@@ -11,6 +11,8 @@ use Inertia\Response;
 class ActivityLogController extends Controller
 {
     public const ACTIONS = [
+        'profile.exported' => 'Export des données d\'un compte',
+        'quote.deleted' => 'Demande de devis effacée',
         'schedule.failed' => 'Échec d\'une tâche planifiée',
         'invoice.peppol_sent' => 'Facture transmise sur Peppol',
         'invoice.peppol_failed' => 'Échec de transmission Peppol',

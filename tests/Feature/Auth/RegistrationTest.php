@@ -64,6 +64,8 @@ class RegistrationTest extends TestCase
         $this->assertSame('CLIENT', $utilisateur->role);
         $this->assertNotNull($utilisateur->client);
         $this->assertSame('ADMIN', $utilisateur->company_role);
+        // Preuve de l'acceptation des conditions generales.
+        $this->assertNotNull($utilisateur->client->conditions_acceptees_le);
     }
 
     public function test_le_role_ne_se_choisit_pas_dans_le_formulaire(): void

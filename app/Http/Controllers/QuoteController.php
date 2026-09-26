@@ -311,7 +311,6 @@ class QuoteController extends Controller
             'response_deadline' => 'nullable|date|after_or_equal:today',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => 'file|max:10240|mimes:pdf,jpg,jpeg,png,xlsx,xls,docx,doc,csv',
-            'privacy' => 'accepted',
 
             'special_instructions' => 'nullable|string|max:2000',
         ], [
@@ -332,7 +331,6 @@ class QuoteController extends Controller
             'attachments.*.uploaded' => Traductions::t('msg.devis_piece_non_recue', 'Une pièce jointe n\'a pas pu être reçue : elle dépasse la taille acceptée par le serveur.'),
             'attachments.*.max' => Traductions::t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
             'attachments.*.mimes' => Traductions::t('msg.devis_piece_format', 'Pièces jointes acceptées : PDF, images, tableurs et documents Word.'),
-            'privacy.accepted' => Traductions::t('msg.devis_confidentialite', 'Acceptez la politique de confidentialité pour envoyer votre demande.'),
         ]);
 
         $data['goods_type'] = Traductions::vocabulaireEnFrancais('marchandise', trim($data['goods_type']));
@@ -384,6 +382,8 @@ class QuoteController extends Controller
 
         $fichiers = $data['attachments'] ?? [];
         unset($data['attachments'], $data['privacy']);
+        // Date de l'information donnee au demandeur (mention sous le
+        // formulaire) ; la base du traitement est precontractuelle.
         $data['privacy_accepted_at'] = now();
         $data['billing_country'] = isset($data['billing_country']) ? strtoupper($data['billing_country']) : null;
 
@@ -531,6 +531,26 @@ class QuoteController extends Controller
         );
 
         return back()->with('success', Traductions::t('msg.devis_mis_a_jour', 'Demande :reference mise à jour.', ['reference' => $quoteRequest->reference]));
+    }
+
+    /**
+     * Effacement a la demande de la personne (RGPD, art. 17), pieces
+     * jointes comprises. Une demande devenue commande reste : la commande
+     * et sa facture relevent d'une obligation legale de conservation.
+     */
+    public function destroy(QuoteRequest $quoteRequest): RedirectResponse
+    {
+        if ($quoteRequest->converted_order_id !== null) {
+            return back()->with('error', Traductions::t('msg.devis_commande_non_effacable', 'Cette demande est devenue une commande : elle se conserve avec la commande et la facture.'));
+        }
+
+        Storage::disk('local')->deleteDirectory('devis/'.$quoteRequest->reference);
+        $reference = $quoteRequest->reference;
+        $quoteRequest->delete();
+
+        ActivityLog::record('quote.deleted', 'Demande '.$reference.' effacée à la demande de la personne');
+
+        return back()->with('success', Traductions::t('msg.devis_efface', 'Demande :reference effacée, pièces jointes comprises.', ['reference' => $reference]));
     }
 
     /** Une piece jointe, pour le personnel seulement. */

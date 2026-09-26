@@ -566,7 +566,6 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
             if (data.is_hazardous && (! /^\d{4}$/.test(data.un_number) || ! data.adr_class)) m.un_number = t('msg.devis_onu_requis', 'Pour une marchandise dangereuse, indiquez le numéro ONU (4 chiffres) et la classe ADR.');
             if (data.needs_temperature && (data.temperature_min === '' || data.temperature_max === '')) m.temperature_min = t('msg.devis_temperature_requise', 'Indiquez la plage de température à respecter.');
         }
-        if (n === 4 && ! data.privacy) m.privacy = t('msg.devis_confidentialite', 'Acceptez la politique de confidentialité pour envoyer votre demande.');
         return m;
     };
 
@@ -1106,15 +1105,12 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                             </dl>
                         </div>
 
-                        <label className="mt-6 flex items-start gap-3 text-sm text-slate-700">
-                            <input type="checkbox" checked={data.privacy} onChange={(e) => setData('privacy', e.target.checked)} className="mt-0.5 rounded border-slate-300 text-action focus:ring-action" />
-                            <span>
-                                {t('devis.confidentialite_accepte', 'J\'accepte que NBLogiTrack traite ces informations pour répondre à ma demande, selon sa')}{' '}
-                                <a href={route('pages.show', 'confidentialite')} target="_blank" rel="noreferrer" className="font-semibold text-brand-blue underline">{t('devis.politique_confidentialite', 'politique de confidentialité')}</a>.
-                                <span className="text-status-incident"> *</span>
-                            </span>
-                        </label>
-                        <InputError message={erreur('privacy')} className="mt-1" />
+                        {/* Une information, pas un consentement : la demande de devis
+                            se traite comme une mesure precontractuelle. */}
+                        <p className="mt-6 text-sm text-slate-600">
+                            {t('devis.confidentialite_information', 'Vos informations servent uniquement à répondre à votre demande (mesures précontractuelles). Elles sont effacées après deux ans si la demande reste sans suite. Détails et droits :')}{' '}
+                            <a href={route('pages.show', 'confidentialite')} target="_blank" rel="noreferrer" className="font-semibold text-brand-blue underline">{t('devis.politique_confidentialite', 'politique de confidentialité')}</a>.
+                        </p>
                     </Bloc>
                 )}
 

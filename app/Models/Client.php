@@ -23,6 +23,7 @@ class Client extends Model
         'billing_address', 'city', 'postal_code', 'country',
         'is_validated', 'business_sector', 'credit_limit', 'payment_terms',
         'validated_at', 'validated_by', 'rejection_reason',
+        'conditions_acceptees_le', 'conditions_version',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class Client extends Model
         return [
             'is_validated' => 'boolean',
             'validated_at' => 'datetime',
+            'conditions_acceptees_le' => 'datetime',
         ];
     }
 

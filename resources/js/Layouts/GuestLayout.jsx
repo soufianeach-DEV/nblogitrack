@@ -1,5 +1,5 @@
 import MessagesFlash from '@/Components/MessagesFlash';
-import BandeauTemoins from '@/Components/BandeauTemoins';
+import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
 import { usePage } from '@inertiajs/react';
@@ -58,6 +58,11 @@ export default function GuestLayout({ children, large = false }) {
                     {children}
                 </div>
             </div>
+
+            {/* Le choix des cookies se modifie aussi depuis ces pages, qui sont mesurees. */}
+            <button type="button" onClick={ouvrirTemoins} className="relative z-10 mt-4 text-xs text-white/80 underline-offset-2 hover:text-white hover:underline">
+                {t('temoins.gerer', 'Gérer les cookies')}
+            </button>
 
             <BandeauTemoins />
         </div>

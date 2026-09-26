@@ -37,7 +37,7 @@ class ProcessingRecordSeeder extends Seeder
                 'personnes' => 'Personnes de contact des entreprises clientes.',
                 'donnees' => 'Nom, prénom, fonction, adresse électronique, téléphone, langue, numéro de TVA de l\'entreprise, adresse de facturation.',
                 'destinataires' => $registres.' '.$adresses,
-                'conservation' => 'Durée de la relation commerciale, puis les délais de prescription applicables.',
+                'conservation' => 'Durée de la relation commerciale, puis les délais de prescription applicables. Inscription refusée : six mois après la décision, puis effacement automatique. Acceptation des conditions générales : date et version conservées avec le compte.',
                 'mesures' => $securite,
                 'transferts' => $transfertsRegistres,
             ],
