@@ -8,6 +8,7 @@ use App\Models\PageView;
 use App\Models\QuoteRequest;
 use App\Support\Audience;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 class PurgerJournaux extends Command
 {
@@ -29,10 +30,15 @@ class PurgerJournaux extends Command
         $appels = ApiRequest::where('created_at', '<', $limite);
         $nombreAppels = $appels->count();
 
-        // Registre RGPD : une demande de devis restee sans suite se garde
-        // deux ans (nom, adresse, telephone du demandeur), puis s'efface.
-        $devis = QuoteRequest::whereIn('status', ['PENDING', 'PROCESSING', 'CLOSED'])
-            ->where('created_at', '<', now()->subYears(2));
+        // Registre RGPD : une demande de devis restee sans suite (devis
+        // transmis sans reponse compris) se garde deux ans, puis s'efface
+        // avec ses pieces jointes. Transformee en commande, elle suit la
+        // commande : cinq ans.
+        $devis = QuoteRequest::where(fn ($q) => $q
+            ->where(fn ($q) => $q->whereIn('status', ['PENDING', 'PROCESSING', 'QUOTED', 'CLOSED'])
+                ->where('created_at', '<', now()->subYears(2)))
+            ->orWhere(fn ($q) => $q->where('status', 'ORDERED')
+                ->where('created_at', '<', now()->subYears(5))));
         $nombreDevis = $devis->count();
 
         // Mesure d'audience : treize mois au plus.
@@ -51,6 +57,12 @@ class PurgerJournaux extends Command
 
         $requete->delete();
         $appels->delete();
+        // Les fichiers d'abord : une ligne effacee ne dirait plus ou ils sont.
+        $devis->clone()->select(['id', 'reference'])->chunkById(200, function ($lot) {
+            foreach ($lot as $demande) {
+                Storage::disk('local')->deleteDirectory('devis/'.$demande->reference);
+            }
+        });
         $devis->delete();
         $vues->delete();
 

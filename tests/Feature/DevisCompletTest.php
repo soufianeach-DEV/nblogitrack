@@ -259,6 +259,25 @@ class DevisCompletTest extends TestCase
         $this->assertNull(QuoteRequest::volumeSaisi('beaucoup'));
     }
 
+    /** Passe deux ans, une demande sans suite s'efface avec ses fichiers. */
+    public function test_la_purge_efface_les_pieces_jointes_des_devis(): void
+    {
+        Storage::fake('local');
+        $this->post(route('devis.store'), $this->demande([
+            'attachments' => [UploadedFile::fake()->create('bon.pdf', 200, 'application/pdf')],
+        ]))->assertSessionHasNoErrors();
+        $devis = QuoteRequest::firstOrFail();
+        $devis->update(['status' => 'QUOTED']);
+        Storage::disk('local')->assertExists('devis/'.$devis->reference);
+
+        $this->travel(2)->years();
+        $this->travel(1)->day();
+        $this->artisan('journaux:purger')->assertSuccessful();
+
+        $this->assertSame(0, QuoteRequest::count());
+        Storage::disk('local')->assertMissing('devis/'.$devis->reference);
+    }
+
     /** Des choix saisis en neerlandais restent valables sur une page anglaise. */
     public function test_les_choix_d_une_autre_langue_sont_reconnus(): void
     {
