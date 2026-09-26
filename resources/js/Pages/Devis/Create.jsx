@@ -571,7 +571,7 @@ export default function Create({ choix, listes }) {
 
     return (
         <VitrineLayout>
-            <Head title={t('devis.titre', 'Demander un devis de transport')} />
+            <Head title={t('referencement.devis_titre', 'Demander un devis de transport')} />
 
             <div className="bg-marine-deep">
                 <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">

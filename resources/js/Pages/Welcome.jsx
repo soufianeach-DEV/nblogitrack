@@ -72,7 +72,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
     return (
         <>
-            <Head title={t('accueil.titre_page', 'Transport et logistique B2B')} />
+            <Head title={t('referencement.accueil_titre', 'Transport et logistique B2B en Belgique et en Europe')} />
 
             <div className="min-h-screen bg-surface">
                 {}

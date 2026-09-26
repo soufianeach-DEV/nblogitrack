@@ -6,7 +6,7 @@ import { useTraduction } from '@/traduire';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function VitrineLayout({ children }) {
-    const { auth, pages_pied: pagesPied = [] } = usePage().props;
+    const { auth, pages_pied: pagesPied = [], reseaux = {} } = usePage().props;
     const utilisateur = auth?.user;
     const t = useTraduction();
     const lienNav = 'text-[15px] font-bold text-marine transition hover:text-brand-blue';
@@ -73,6 +73,11 @@ export default function VitrineLayout({ children }) {
                         <button type="button" onClick={ouvrirTemoins} className="transition-colors hover:text-action">
                             {t('temoins.gerer', 'Gérer les cookies')}
                         </button>
+                        {Object.entries(reseaux).map(([nom, lien]) => (
+                            <a key={nom} href={lien} target="_blank" rel="noopener noreferrer" className="capitalize transition-colors hover:text-action">
+                                {{ linkedin: 'LinkedIn', facebook: 'Facebook', instagram: 'Instagram' }[nom] ?? nom}
+                            </a>
+                        ))}
                     </nav>
                 </div>
             </footer>

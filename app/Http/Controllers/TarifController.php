@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TariffGrid;
+use App\Support\Audience;
 use App\Support\GeocodageIndisponible;
 use App\Support\Localite;
 use App\Support\Pays;
@@ -92,6 +93,8 @@ class TarifController extends Controller
                 'dedie' => $grille->service_level === 'EXPRESS',
             ])
             ->all();
+
+        Audience::noterEvenement($request, 'simulation');
 
         return response()->json([
             'depart' => Traductions::vocabulaire('ville', $depart->ville),

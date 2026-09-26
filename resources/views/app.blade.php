@@ -4,7 +4,29 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        @php
+            $seo = App\Support\Referencement::pour($page['component'], $page['props'], app()->getLocale());
+        @endphp
+        {{-- Titre, description et apercu de partage poses par le serveur :
+             les robots des reseaux sociaux ne lisent pas le JavaScript. --}}
+        <title inertia>{{ $seo['titre'] }}</title>
+        <meta name="description" content="{{ $seo['description'] }}">
+        @unless ($seo['indexable'])
+            <meta name="robots" content="noindex, nofollow">
+        @endunless
+        <meta property="og:site_name" content="{{ config('app.name') }}">
+        <meta property="og:type" content="{{ $seo['type'] }}">
+        <meta property="og:title" content="{{ $seo['titre'] }}">
+        <meta property="og:description" content="{{ $seo['description'] }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ $seo['image'] }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:locale" content="{{ $seo['locale'] }}">
+        <meta name="twitter:card" content="summary_large_image">
+        @if ($page['component'] === 'Welcome')
+            <script type="application/ld+json" nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">@json(App\Support\Referencement::organisation(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
+        @endif
 
         <meta name="theme-color" content="#14324F">
 

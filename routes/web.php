@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ApiKeyController;
+use App\Http\Controllers\AudienceController;
 use App\Http\Controllers\ClientValidationController;
 use App\Http\Controllers\CompanyUserController;
 use App\Http\Controllers\DashboardController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\OrderChargeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PagePubliqueController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlanDuSiteController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\ProcessingRecordController;
 use App\Http\Controllers\ProfileController;
@@ -208,6 +210,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->middleware('can:view-logs')
             ->name('activity-logs.index');
 
+        Route::get('/audience', [AudienceController::class, 'index'])
+            ->middleware('can:view-logs')
+            ->name('audience.index');
+
         Route::middleware('can:validate-clients')->group(function () {
             Route::get('/entreprises', [ClientValidationController::class, 'index'])->name('clients.index');
             Route::post('/entreprises/{client}/validation', [ClientValidationController::class, 'approve'])->name('clients.approve');
@@ -262,6 +268,9 @@ Route::get('/verification-tva', [VatController::class, 'verifier'])
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])
     ->whereNumber('pageDocument')
     ->name('pages.documents.show');
+
+Route::get('/robots.txt', [PlanDuSiteController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [PlanDuSiteController::class, 'sitemap'])->name('sitemap');
 
 Route::get('/langue/{vers}', LangueController::class)->name('langue');
 

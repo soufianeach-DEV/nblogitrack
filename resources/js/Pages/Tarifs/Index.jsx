@@ -152,7 +152,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
 
     return (
         <VitrineLayout>
-            <Head title={t('nav.tarifs', 'Tarifs')} />
+            <Head title={t('referencement.tarifs_titre', 'Tarifs de transport et simulateur de prix')} />
 
             <section className="bg-marine py-16 text-white">
                 <div className="mx-auto max-w-4xl px-4 text-center">

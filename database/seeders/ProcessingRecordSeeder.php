@@ -115,6 +115,17 @@ class ProcessingRecordSeeder extends Seeder
                 'mesures' => 'Clés jamais conservées en clair, comparaison à temps constant, restriction par adresse IP, permissions déclarées sur chaque route, journalisation des refus.',
                 'transferts' => $aucunTransfert,
             ],
+            [
+                'nom' => 'Mesure d\'audience du site public',
+                'finalite' => 'Connaître les pages consultées, la provenance des visites et les conversions (devis, inscriptions, simulations) pour améliorer le site.',
+                'base_legale' => 'Consentement (art. 6.1.a), recueilli par le bandeau des témoins et retirable à tout moment.',
+                'personnes' => 'Visiteurs non connectés du site public ayant accepté la mesure d\'audience.',
+                'donnees' => 'Date, page, langue, type d\'appareil, provenance de l\'arrivée (domaine d\'origine, paramètres de campagne). Aucun identifiant, aucune adresse IP, aucun témoin de suivi.',
+                'destinataires' => 'Aucun. La mesure est faite par l\'application elle-même.',
+                'conservation' => 'Treize mois, puis effacement automatique.',
+                'mesures' => 'Données agrégeables seulement, sans lien entre deux pages d\'un même visiteur ; comptes connectés et robots exclus ; consultation réservée aux administrateurs.',
+                'transferts' => $aucunTransfert,
+            ],
         ];
     }
 }

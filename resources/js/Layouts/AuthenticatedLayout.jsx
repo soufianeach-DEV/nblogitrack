@@ -174,6 +174,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
                         {t('nav.journaux', 'Journaux')}
                     </LienMenu>
+                    <LienMenu href={route('audience.index')} active={route().current('audience.index')} icone="dashboard" onClick={fermer}>
+                        {t('nav.audience', 'Audience du site')}
+                    </LienMenu>
                     {canManageUsers && (
                         <>
                             <LienMenu href={route('translations.index')} active={route().current('translations.index')} icone="journal" onClick={fermer}>
