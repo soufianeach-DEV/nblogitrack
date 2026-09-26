@@ -21,7 +21,7 @@ class RegistrationTest extends TestCase
             'postal_code' => '1050',
             'city' => 'Bruxelles',
             'country' => 'Belgique',
-            'business_sector' => 'Transport',
+            'business_sector' => 'Transport routier et ferroviaire',
             'first_name' => 'Soufiane',
             'last_name' => 'Achraa',
             'phone' => '+32 470 00 00 00',

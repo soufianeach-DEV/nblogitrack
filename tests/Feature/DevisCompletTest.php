@@ -29,7 +29,7 @@ class DevisCompletTest extends TestCase
         return [
             'company_name' => 'Essai SRL', 'contact_name' => 'Nadia Peeters', 'email' => 'nadia@exemple.be',
             'phone' => '+32 470 00 00 00', 'customer_type' => 'Nouvelle entreprise',
-            'vat_number' => 'BE0123456749', 'legal_form' => 'SRL', 'contact_function' => 'Responsable logistique',
+            'vat_number' => 'BE0123456749', 'legal_form' => 'SRL', 'sector' => 'Commerce de gros', 'contact_function' => 'Responsable logistique',
             'billing_street' => 'Rue Neuve 43', 'billing_postal_code' => '1000', 'billing_city' => 'Bruxelles', 'billing_country' => 'BE',
             'correspondence_language' => 'nl', 'preferred_channel' => 'phone', 'callback_slot' => 'matin',
             'pickup_address' => 'Rue Neuve 43, 1000 Bruxelles, Belgique', 'pickup_country' => 'BE',
@@ -79,6 +79,21 @@ class DevisCompletTest extends TestCase
             ->get(route('quotes.piece', ['quoteRequest' => $devis->id, 'rang' => 0]))
             ->assertOk()
             ->assertDownload('bon.pdf');
+    }
+
+    public function test_ce_que_le_registre_ne_donne_pas_le_client_le_renseigne(): void
+    {
+        $this->withoutMiddleware(ThrottleRequests::class);
+
+        $this->post(route('devis.store'), $this->demande(['legal_form' => '', 'sector' => '', 'billing_street' => '', 'billing_postal_code' => '', 'billing_city' => '']))
+            ->assertSessionHasErrors(['legal_form', 'sector', 'billing_street', 'billing_postal_code', 'billing_city']);
+
+        // Le secteur se choisit dans la nomenclature, pas en texte libre.
+        $this->post(route('devis.store'), $this->demande(['sector' => 'Un peu de tout']))->assertSessionHasErrors('sector');
+
+        // Irlande : l'Eircode n'est pas obligatoire dans une adresse.
+        $this->post(route('devis.store'), $this->demande(['billing_country' => 'IE', 'billing_postal_code' => '', 'billing_city' => 'Dublin 4']))
+            ->assertSessionHasNoErrors();
     }
 
     public function test_les_champs_conditionnels_sont_exiges(): void
@@ -191,7 +206,7 @@ class DevisCompletTest extends TestCase
             ->assertJsonPath('statut', 'valide')
             ->assertJsonPath('nom', 'NORSK FRAKT AS')
             ->assertJsonPath('adresse.code_postal', '0154')
-            ->assertJsonPath('entreprise.secteur', 'Transport');
+            ->assertJsonPath('entreprise.secteur', 'Transport routier et ferroviaire');
 
         // Sans application declaree chez HMRC : format seulement.
         $this->getJson('/verification-tva?tva=GB123456789')->assertJsonPath('statut', 'non_verifie');

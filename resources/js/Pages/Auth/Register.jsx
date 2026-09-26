@@ -1,5 +1,6 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
 import ChampMotDePasse from '@/Components/ChampMotDePasse';
+import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -191,7 +192,11 @@ export default function Register({ secteurs, fonctions }) {
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                             {champ('company_name', t('auth.raison_sociale', 'Raison sociale'), { large: true, exemple: t('auth.raison_sociale_ex', 'ex. Transports Dupont SA') })}
-                            {liste('business_sector', t('auth.secteur', 'Secteur d\'activité'), secteurs, t('auth.secteur_ex', 'ex. Construction'), { large: true })}
+                            <div className="sm:col-span-2">
+                                {etiquette('business_sector', t('auth.secteur', 'Secteur d\'activité'))}
+                                <ListeSecteurs id="business_sector" value={data.business_sector} onChange={(v) => setData('business_sector', v)} groupes={secteurs} className={selectCls} />
+                                <InputError message={errors.business_sector} className="mt-1" />
+                            </div>
                         </div>
 
                         <div className="mt-3">

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Translation;
+use App\Support\Secteurs;
 use App\Support\Traductions;
 use Illuminate\Database\Seeder;
 
@@ -10,7 +11,7 @@ class TranslationSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (self::TEXTES as $groupe => $cles) {
+        foreach (self::textes() as $groupe => $cles) {
             foreach ($cles as $cle => [$fr, $nl, $en]) {
                 Translation::updateOrCreate(
                     ['cle' => $groupe.'.'.$cle],
@@ -25,7 +26,11 @@ class TranslationSeeder extends Seeder
     /** @return array<string, array<string, array{string, string, string}>> */
     public static function textes(): array
     {
-        return self::TEXTES;
+        // Les secteurs de la nomenclature NACE, tenus dans App\Support\Secteurs.
+        $textes = self::TEXTES;
+        $textes['vocab.secteur'] = [...$textes['vocab.secteur'], ...Secteurs::vocabulaire()];
+
+        return $textes;
     }
 
     /** @var array<string, array<string, array{string, string, string}>> */
@@ -1080,6 +1085,10 @@ class TranslationSeeder extends Seeder
             'responsable_transport' => ['Responsable transport', 'Transportverantwoordelijke', 'Transport manager'],
             'secretaire_de_direction' => ['Secrétaire de direction', 'Directiesecretaris', 'Executive assistant'],
             'travailleur_independant' => ['Travailleur indépendant', 'Zelfstandige', 'Self-employed'],
+        ],
+
+        'secteur' => [
+            'choisir' => ['Choisissez un secteur…', 'Kies een sector…', 'Choose a sector…'],
         ],
 
         'vocab.secteur' => [

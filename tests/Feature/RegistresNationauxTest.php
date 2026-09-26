@@ -39,7 +39,7 @@ class RegistresNationauxTest extends TestCase
 
         $this->getJson('/verification-tva?tva=CZ00177041')
             ->assertJsonPath('entreprise.forme_juridique', 'a.s.')
-            ->assertJsonPath('entreprise.secteur', 'Automobile')
+            ->assertJsonPath('entreprise.secteur', 'Industrie automobile')
             ->assertJsonMissingPath('entreprise.forme_deduite');
 
         Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/ekonomicke-subjekty/00177041'));
@@ -57,7 +57,7 @@ class RegistresNationauxTest extends TestCase
 
         $this->getJson('/verification-tva?tva=FI01120389')
             ->assertJsonPath('entreprise.forme_juridique', 'Oyj')
-            ->assertJsonPath('entreprise.secteur', 'Électronique');
+            ->assertJsonPath('entreprise.secteur', 'Électronique et informatique (fabrication)');
 
         // Le numero de TVA devient l'identifiant finlandais 0112038-9.
         Http::assertSent(fn (Request $r) => str_contains($r->url(), 'businessId=0112038-9'));
@@ -76,7 +76,7 @@ class RegistresNationauxTest extends TestCase
 
         $this->getJson('/verification-tva?tva=PL7740001454')
             ->assertJsonPath('entreprise.forme_juridique', 'S.A.')
-            ->assertJsonPath('entreprise.secteur', 'Énergie');
+            ->assertJsonPath('entreprise.secteur', 'Raffinage du pétrole');
 
         Http::assertSent(fn (Request $r) => str_contains($r->url(), '/OdpisAktualny/0000028860'));
     }
@@ -93,7 +93,7 @@ class RegistresNationauxTest extends TestCase
 
         $this->getJson('/verification-tva?tva=RO160796')
             ->assertJsonPath('entreprise.forme_juridique', 'SA')
-            ->assertJsonPath('entreprise.secteur', 'Automobile')
+            ->assertJsonPath('entreprise.secteur', 'Industrie automobile')
             ->assertJsonPath('adresse.rue', 'Str. Uzinei Nr. 1')
             ->assertJsonPath('adresse.code_postal', '115400')
             ->assertJsonPath('adresse.ville', 'Mioveni');

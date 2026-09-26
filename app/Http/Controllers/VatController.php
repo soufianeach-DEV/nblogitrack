@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\FormeJuridique;
 use App\Support\IdentifiantEntreprise;
 use App\Support\RegistresNationaux;
+use App\Support\Secteurs;
 use App\Support\Traductions;
 use App\Support\Translitteration;
 use Illuminate\Http\JsonResponse;
@@ -98,9 +99,8 @@ class VatController extends Controller
             $resultat['entreprise']['situation']['libelle'] = Traductions::t('msg.entreprise_cessee', 'Entreprise cessée');
         }
 
-        if (isset($resultat['entreprise']['secteur'])) {
-            $resultat['entreprise']['secteur'] = Traductions::vocabulaire('secteur', $resultat['entreprise']['secteur']);
-        }
+        // Le secteur reste en francais : c'est la valeur de la liste, que
+        // le formulaire affiche dans la langue de l'interface.
 
         if (isset($resultat['entreprise']['dirigeant']['fonction'])) {
             $resultat['entreprise']['dirigeant']['fonction'] = Traductions::vocabulaire('fonction', $resultat['entreprise']['dirigeant']['fonction']);
@@ -388,26 +388,6 @@ class VatController extends Controller
         '5599' => 'SA', '5710' => 'SAS', '5720' => 'SASU', '6540' => 'SCI', '9220' => 'Association',
     ];
 
-    private const SECTEURS_NACE = [
-        '01' => 'Agriculture', '02' => 'Agriculture', '03' => 'Agriculture',
-        '05' => 'Énergie', '06' => 'Énergie', '09' => 'Énergie',
-        '10' => 'Agroalimentaire', '11' => 'Agroalimentaire', '12' => 'Agroalimentaire',
-        '13' => 'Textile', '14' => 'Textile', '15' => 'Textile',
-        '16' => 'Bois et papier', '17' => 'Bois et papier', '18' => 'Bois et papier',
-        '19' => 'Énergie', '20' => 'Chimie', '21' => 'Pharmaceutique', '22' => 'Plasturgie',
-        '23' => 'Matériaux de construction', '24' => 'Métallurgie', '25' => 'Métallurgie',
-        '26' => 'Électronique', '27' => 'Électronique', '28' => 'Machines et équipements',
-        '29' => 'Automobile', '30' => 'Automobile', '31' => 'Mobilier', '32' => 'Cosmétique',
-        '35' => 'Énergie', '36' => 'Énergie', '37' => 'Recyclage', '38' => 'Recyclage', '39' => 'Recyclage',
-        '41' => 'Construction', '42' => 'Construction', '43' => 'Construction',
-        '45' => 'Automobile', '46' => 'Distribution', '47' => 'Grande distribution',
-        '49' => 'Transport', '50' => 'Transport', '51' => 'Transport',
-        '52' => 'Logistique', '53' => 'Logistique',
-        '61' => 'Télécommunications', '62' => 'Informatique', '63' => 'Informatique',
-        '64' => 'Finance et assurance', '65' => 'Finance et assurance', '66' => 'Finance et assurance',
-        '86' => 'Santé', '87' => 'Santé', '88' => 'Santé',
-    ];
-
     /**
      * @return array{dirigeant: ?array{prenom: string, nom: string, fonction: string}, secteur: ?string}|null
      */
@@ -574,11 +554,7 @@ class VatController extends Controller
 
     private function secteurDepuisNace(?string $code): ?string
     {
-        if ($code === null) {
-            return null;
-        }
-
-        return self::SECTEURS_NACE[substr(preg_replace('/\D/', '', $code), 0, 2)] ?? null;
+        return Secteurs::depuisNace($code);
     }
 
     /**
@@ -586,13 +562,8 @@ class VatController extends Controller
      */
     private function premierSecteurConnu(array $divisions): ?string
     {
-        foreach ($divisions as $division) {
-            if (isset(self::SECTEURS_NACE[$division])) {
-                return self::SECTEURS_NACE[$division];
-            }
-        }
-
-        return null;
+        // La BCE liste d'abord l'activite principale.
+        return Secteurs::depuisNace($divisions[0] ?? null);
     }
 
     private function casseNom(string $valeur): string

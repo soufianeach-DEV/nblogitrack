@@ -34,7 +34,7 @@ class TvaPagesDevisTest extends TestCase
             'postal_code' => '1050',
             'city' => 'Bruxelles',
             'country' => 'Belgique',
-            'business_sector' => 'Transport',
+            'business_sector' => 'Transport routier et ferroviaire',
             'first_name' => 'Soufiane',
             'last_name' => 'Achraa',
             'phone' => '+32 470 00 00 00',
@@ -272,6 +272,8 @@ class TvaPagesDevisTest extends TestCase
         $this->post(route('devis.store'), [
             'company_name' => 'Essai SRL', 'contact_name' => 'Nadia Peeters', 'email' => 'nadia@exemple.be',
             'phone' => '+32 470 00 00 00', 'customer_type' => 'Nouvelle entreprise',
+            'legal_form' => 'SRL', 'sector' => 'Commerce de gros',
+            'billing_street' => 'Rue Neuve 43', 'billing_postal_code' => '1000', 'billing_city' => 'Bruxelles', 'billing_country' => 'BE',
             'pickup_address' => 'Rue Nationale 1, 59000 Lille, France', 'pickup_country' => 'FR',
             'pickup_lat' => 50.6292, 'pickup_lng' => 3.0573,
             'delivery_address' => 'Meir 50, 2000 Anvers, Belgique', 'delivery_country' => 'BE',

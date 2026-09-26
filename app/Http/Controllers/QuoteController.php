@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\Chronologie;
 use App\Support\FretRetour;
 use App\Support\IdentifiantEntreprise;
+use App\Support\Secteurs;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
 use App\Support\Trajet;
@@ -113,6 +114,7 @@ class QuoteController extends Controller
                 'creneaux' => self::CRENEAUX,
                 'classesAdr' => self::CLASSES_ADR,
                 'paysDouane' => QuoteRequest::PAYS_DOUANE,
+                'secteurs' => Secteurs::groupes(app()->getLocale()),
             ],
         ]);
     }
@@ -158,15 +160,17 @@ class QuoteController extends Controller
             'phone' => 'required|string|max:20',
             'vat_number' => 'nullable|string|max:30',
             'customer_type' => 'required|in:'.implode(',', self::CHOIX['clients']),
-            'legal_form' => 'nullable|string|max:100',
-            'sector' => 'nullable|string|max:100',
+            // Ce que le registre ne donne pas, le client le renseigne.
+            'legal_form' => 'required|string|max:100',
+            'sector' => ['required', Rule::in(Secteurs::valeurs())],
             // EORI : 2 lettres puis 15 caracteres au plus ; exige par la
             // douane pour la Suisse, le Royaume-Uni et la Norvege.
             'eori_number' => [$douane ? 'required' : 'nullable', 'string', 'regex:/^[A-Z]{2}[A-Z0-9]{1,15}$/'],
-            'billing_street' => 'nullable|string|max:255',
-            'billing_postal_code' => 'nullable|string|max:20',
-            'billing_city' => 'nullable|string|max:120',
-            'billing_country' => 'nullable|string|size:2',
+            'billing_street' => 'required|string|max:255',
+            // L'Irlande n'impose pas l'Eircode dans une adresse.
+            'billing_postal_code' => [strtoupper((string) $request->input('billing_country')) === 'IE' ? 'nullable' : 'required', 'string', 'max:20'],
+            'billing_city' => 'required|string|max:120',
+            'billing_country' => 'required|string|size:2',
             'correspondence_language' => 'required|in:fr,nl,en',
 
             // Contact

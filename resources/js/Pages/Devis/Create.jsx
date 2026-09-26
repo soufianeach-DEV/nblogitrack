@@ -1,4 +1,5 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLangue, useTraduction } from '@/traduire';
@@ -400,7 +401,11 @@ export default function Create({ choix, listes }) {
         const requis = t('devis.champ_requis', 'Champ obligatoire.');
         const m = {};
         if (n === 0) {
-            if (! data.company_name.trim()) m.company_name = requis;
+            // Ce que le registre n'a pas rempli, le client le renseigne.
+            for (const cle of ['company_name', 'legal_form', 'sector', 'billing_street', 'billing_city']) {
+                if (! String(data[cle] ?? '').trim()) m[cle] = requis;
+            }
+            if (data.billing_country !== 'IE' && ! data.billing_postal_code.trim()) m.billing_postal_code = requis;
             if (douane && ! data.eori_number.trim()) m.eori_number = t('msg.devis_eori_requis', 'Pour la Suisse, le Royaume-Uni et la Norvège, la douane exige votre numéro EORI.');
         }
         if (n === 1) {
@@ -563,8 +568,12 @@ export default function Create({ choix, listes }) {
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
                             {champ('company_name', t('devis.societe', 'Raison sociale'), { obligatoire: true, exemple: t('devis.societe_ex', 'Ex : Meubles Van Damme SPRL'), autocomplete: 'organization' })}
-                            {champ('legal_form', t('devis.forme_juridique', 'Forme juridique'), { exemple: t('devis.forme_ex', 'Ex : SRL, SA, SAS, GmbH') })}
-                            {champ('sector', t('devis.secteur', 'Secteur d\'activité'), { exemple: t('devis.secteur_ex', 'Ex : Distribution, Construction') })}
+                            {champ('legal_form', t('devis.forme_juridique', 'Forme juridique'), { obligatoire: true, exemple: t('devis.forme_ex', 'Ex : SRL, SA, SAS, GmbH') })}
+                            <div>
+                                {etiquette('sector', t('devis.secteur', 'Secteur d\'activité'), true)}
+                                <ListeSecteurs id="sector" value={data.sector} onChange={(v) => setData('sector', v)} groupes={listes.secteurs} className={CHAMP} />
+                                <InputError message={erreur('sector')} className="mt-1" />
+                            </div>
                             {champ('eori_number', t('devis.eori', 'Numéro EORI'), {
                                 obligatoire: douane,
                                 majuscules: true,
@@ -577,9 +586,9 @@ export default function Create({ choix, listes }) {
 
                         <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-600">{t('devis.adresse_facturation', 'Adresse de facturation')}</p>
                         <div className="mt-2 grid gap-5 sm:grid-cols-4">
-                            <div className="sm:col-span-4">{champ('billing_street', t('devis.rue_numero', 'Rue et numéro'), { autocomplete: 'street-address' })}</div>
-                            {champ('billing_postal_code', t('devis.code_postal', 'Code postal'), { autocomplete: 'postal-code' })}
-                            <div className="sm:col-span-2">{champ('billing_city', t('devis.ville', 'Ville'), { autocomplete: 'address-level2' })}</div>
+                            <div className="sm:col-span-4">{champ('billing_street', t('devis.rue_numero', 'Rue et numéro'), { obligatoire: true, autocomplete: 'street-address' })}</div>
+                            {champ('billing_postal_code', t('devis.code_postal', 'Code postal'), { obligatoire: data.billing_country !== 'IE', autocomplete: 'postal-code' })}
+                            <div className="sm:col-span-2">{champ('billing_city', t('devis.ville', 'Ville'), { obligatoire: true, autocomplete: 'address-level2' })}</div>
                             {liste('billing_country', t('auth.pays', 'Pays'), PAYS, (c) => nomPays.of(c))}
                         </div>
 

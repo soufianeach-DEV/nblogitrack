@@ -10,6 +10,7 @@ use App\Models\ClientContact;
 use App\Models\User;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
+use App\Support\Secteurs;
 use App\Support\Traductions;
 use Closure;
 use Illuminate\Auth\Events\Registered;
@@ -17,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -62,38 +64,10 @@ class RegisteredUserController extends Controller
         'Travailleur indépendant',
     ];
 
-    private const SECTEURS_METIER = [
-        'Agriculture',
-        'Agroalimentaire',
-        'Automobile',
-        'Aéronautique',
-        'Bois et papier',
-        'Chimie',
-        'Construction',
-        'Cosmétique',
-        'Distribution',
-        'E-commerce',
-        'Emballage',
-        'Énergie',
-        'Grande distribution',
-        'Logistique',
-        'Machines et équipements',
-        'Matériaux de construction',
-        'Mobilier',
-        'Métallurgie',
-        'Pharmaceutique',
-        'Plasturgie',
-        'Recyclage',
-        'Santé',
-        'Textile',
-        'Transport',
-        'Électronique',
-    ];
-
     public function create(): Response
     {
         return Inertia::render('Auth/Register', [
-            'secteurs' => $this->referentiel('clients', 'business_sector', self::SECTEURS_METIER, 'secteur'),
+            'secteurs' => Secteurs::groupes(app()->getLocale()),
             'fonctions' => $this->referentiel('client_contacts', 'position', self::FONCTIONS_METIER, 'fonction'),
         ]);
     }
@@ -188,7 +162,7 @@ class RegisteredUserController extends Controller
             'postal_code' => 'required|string|max:10',
             'city' => 'required|string|max:100',
             'country' => 'required|string|max:60',
-            'business_sector' => 'nullable|string|max:100',
+            'business_sector' => ['required', Rule::in(Secteurs::valeurs())],
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'position' => 'nullable|string|max:100',
