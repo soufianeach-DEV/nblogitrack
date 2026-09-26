@@ -7,9 +7,10 @@ class Adresse
     /**
      * Le segment « code postal et localite » : « 1000 Bruxelles », « 105 57
      * Athènes », « 1012 LG Amsterdam », « 00-950 Varsovie », « 1000-001
-     * Lisbonne », « LV-1050 Riga ».
+     * Lisbonne », « LV-1050 Riga », « SW1A 2AA Londres » (ou « SW1A
+     * Londres », seule partie que publie GeoNames), « D02 X285 Dublin ».
      */
-    private const SEGMENT = '/^((?:[A-Z]{1,2}-)?(?:\d{4}\s?[A-Z]{2}|\d{2}-\d{3}|\d{4}-\d{3}|\d{3}\s\d{2}|\d{4,6}))\s+(.+)$/u';
+    private const SEGMENT = '/^((?:[A-Z]{1,2}-)?(?:\d{4}\s?[A-Z]{2}|\d{2}-\d{3}|\d{4}-\d{3}|\d{3}\s\d{2}|\d{4,6})|[A-Z]\d[\dW]\s[A-Z\d]{4}|[A-Z]{1,2}\d[A-Z\d]?(?:\s\d[A-Z]{2})?)\s+(.+)$/u';
 
     public static function localite(string $adresse): string
     {

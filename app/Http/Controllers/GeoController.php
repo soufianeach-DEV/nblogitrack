@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Support\Localite;
-use Illuminate\Http\Client\Pool;
+use GuzzleHttp\Handler\CurlMultiHandler;
+use GuzzleHttp\Promise\Is;
+use GuzzleHttp\Promise\Utils as PromiseUtils;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -89,6 +91,13 @@ class GeoController extends Controller
 
         if ($numeros === null) {
             $numeros = $this->interrogerOverpass($data['rue'], $lat, $lng);
+
+            // Un echec (serveurs saturés) n'est pas une rue sans numéros :
+            // il n'est pas retenu, la prochaine demande réessaie.
+            if ($numeros === null) {
+                return response()->json([]);
+            }
+
             Cache::put($cle, $numeros, $numeros === [] ? now()->addHours(6) : now()->addDays(7));
         }
 
@@ -102,63 +111,82 @@ class GeoController extends Controller
         return response()->json($numeros);
     }
 
-    private function interrogerOverpass(string $rue, float $lat, float $lng): array
+    /** Les serveurs Overpass publics, interrogés ensemble. */
+    private const OVERPASS = ['overpass-api.de', 'overpass.kumi.systems', 'overpass.private.coffee'];
+
+    /**
+     * Les numéros de la rue dans un rayon de 1,5 km. Les trois serveurs
+     * sont interrogés ensemble et le premier qui répond l'emporte : un
+     * serveur lent ou saturé ne fait plus attendre la réponse des autres.
+     * Null si aucun n'a répondu.
+     *
+     * @return list<array{numero: string, lat: float, lng: float, cp: string}>|null
+     */
+    private function interrogerOverpass(string $rue, float $lat, float $lng): ?array
     {
         $motif = preg_replace('/[^\p{L}\p{N} \'\-]/u', ' ', $rue);
-        $requete = '[out:json][timeout:4];('
+        $requete = '[out:json][timeout:5];('
             .'node["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:1500,'.$lat.','.$lng.');'
             .');out tags center 400;';
 
-        $reponses = Http::pool(fn (Pool $pool) => [
-            $pool->as('de')->timeout(6)->connectTimeout(2)
-                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
-                ->asForm()->post('https://overpass-api.de/api/interpreter', ['data' => $requete]),
-            $pool->as('kumi')->timeout(6)->connectTimeout(2)
-                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
-                ->asForm()->post('https://overpass.kumi.systems/api/interpreter', ['data' => $requete]),
-            $pool->as('coffee')->timeout(6)->connectTimeout(2)
-                ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
-                ->asForm()->post('https://overpass.private.coffee/api/interpreter', ['data' => $requete]),
-        ]);
-
-        foreach (['de', 'kumi', 'coffee'] as $hote) {
-            $reponse = $reponses[$hote] ?? null;
-            try {
-                if (! $reponse instanceof Response || ! $reponse->ok()) {
-                    continue;
+        $boucle = new CurlMultiHandler(['select_timeout' => 0.05]);
+        $promesses = array_map(fn (string $hote) => Http::setHandler($boucle)->async()
+            ->timeout(6)->connectTimeout(2)
+            ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
+            ->asForm()->post("https://{$hote}/api/interpreter", ['data' => $requete])
+            ->buildPromise()
+            ->then(function ($reponse) {
+                $elements = $reponse instanceof Response && $reponse->ok() ? $reponse->json('elements') : null;
+                if (! is_array($elements)) {
+                    throw new \RuntimeException('Overpass indisponible');
                 }
 
-                $liste = [];
-                foreach ($reponse->json('elements', []) as $element) {
-                    $tags = $element['tags'] ?? [];
-                    $brut = $tags['addr:housenumber'] ?? null;
-                    $nlat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                    $nlng = $element['lon'] ?? ($element['center']['lon'] ?? null);
-                    if (! $brut || $nlat === null || $nlng === null) {
-                        continue;
-                    }
-                    foreach (preg_split('/[;,]/', $brut) as $part) {
-                        $part = trim($part);
-                        if ($part !== '' && ! isset($liste[$part])) {
-                            $liste[$part] = [
-                                'numero' => $part,
-                                'lat' => (float) $nlat,
-                                'lng' => (float) $nlng,
-                                'cp' => $tags['addr:postcode'] ?? '',
-                            ];
-                        }
-                    }
-                }
+                return $this->numerosDe($elements);
+            }), self::OVERPASS);
 
-                uksort($liste, fn ($a, $b) => ((int) $a <=> (int) $b) ?: strcmp($a, $b));
+        $premier = PromiseUtils::any($promesses);
+        $limite = microtime(true) + 9;
 
-                return array_values($liste);
-            } catch (\Throwable $e) {
+        PromiseUtils::queue()->run();
+        while (Is::pending($premier) && microtime(true) < $limite) {
+            $boucle->tick();
+            PromiseUtils::queue()->run();
+        }
+
+        return Is::fulfilled($premier) ? $premier->wait() : null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $elements
+     * @return list<array{numero: string, lat: float, lng: float, cp: string}>
+     */
+    private function numerosDe(array $elements): array
+    {
+        $liste = [];
+        foreach ($elements as $element) {
+            $tags = $element['tags'] ?? [];
+            $brut = $tags['addr:housenumber'] ?? null;
+            $nlat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+            $nlng = $element['lon'] ?? ($element['center']['lon'] ?? null);
+            if (! $brut || $nlat === null || $nlng === null) {
                 continue;
+            }
+            foreach (preg_split('/[;,]/', $brut) as $part) {
+                $part = trim($part);
+                if ($part !== '' && ! isset($liste[$part])) {
+                    $liste[$part] = [
+                        'numero' => $part,
+                        'lat' => (float) $nlat,
+                        'lng' => (float) $nlng,
+                        'cp' => $tags['addr:postcode'] ?? '',
+                    ];
+                }
             }
         }
 
-        return [];
+        uksort($liste, fn ($a, $b) => ((int) $a <=> (int) $b) ?: strcmp((string) $a, (string) $b));
+
+        return array_values($liste);
     }
 }
