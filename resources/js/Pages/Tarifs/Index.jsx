@@ -164,6 +164,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
             </section>
 
             <section className="bg-surface py-12">
+                <h2 className="sr-only">{t('referencement.tarifs_titre', 'Tarifs de transport et simulateur de prix')}</h2>
                 <div className="mx-auto max-w-4xl px-4">
                     <form onSubmit={simuler} className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
                         <div className="grid gap-5 sm:grid-cols-2">

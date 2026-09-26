@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 final class Referencement
 {
     /** Pages publiques, indexables. */
-    private const PUBLIQUES = ['Welcome', 'Tarifs/Index', 'Devis/Create', 'Pages/Show', 'Auth/Register', 'Tracking/Show'];
+    private const PUBLIQUES = ['Welcome', 'Tarifs/Index', 'Devis/Create', 'Pages/Show', 'Auth/Register', 'Auth/Login', 'Tracking/Show'];
 
     /**
      * @param  array<string, mixed>  $props
@@ -25,7 +25,7 @@ final class Referencement
 
         [$titre, $description] = match ($composant) {
             'Welcome' => [
-                Traductions::t('referencement.accueil_titre', 'Transport et logistique B2B en Belgique et en Europe'),
+                Traductions::t('referencement.accueil_titre', 'Transport B2B en Belgique et en Europe'),
                 Traductions::t('referencement.accueil_description', 'Transport de marchandises pour les entreprises : enlèvement en Belgique et dans 21 pays européens, prix en ligne, suivi en temps réel et facturation Peppol.'),
             ],
             'Tarifs/Index' => [
@@ -40,6 +40,10 @@ final class Referencement
                 Traductions::t('referencement.inscription_titre', 'Créer un espace client'),
                 Traductions::t('referencement.inscription_description', 'Ouvrez un compte entreprise pour commander vos transports en ligne, suivre vos expéditions et retrouver vos factures.'),
             ],
+            'Auth/Login' => [
+                Traductions::t('referencement.connexion_titre', 'Connexion à l\'espace client'),
+                Traductions::t('referencement.connexion_description', 'Accédez à votre espace client NBLogiTrack : commandes de transport, suivi des expéditions et factures.'),
+            ],
             'Pages/Show' => [
                 (string) ($props['page']['titre'] ?? $marque),
                 self::extrait((string) ($props['page']['corps'] ?? '')),
@@ -52,7 +56,7 @@ final class Referencement
 
         return [
             'titre' => $titre.' - '.$marque,
-            'description' => Str::limit($description, 160),
+            'description' => Str::limit($description, 157),
             'image' => url('/images/partage.png'),
             // Une page publique ouverte avec des parametres (resultat de
             // suivi, filtre, campagne) n'est pas une page a indexer.

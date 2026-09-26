@@ -13,7 +13,7 @@ export default function GuestLayout({ children, large = false }) {
             {}
             <div
                 className="absolute inset-0 scale-105 bg-cover bg-center blur-sm"
-                style={{ backgroundImage: "url('/images/login-bg.jpg')" }}
+                style={{ backgroundImage: "url('/images/login-bg.webp')" }}
             />
             {}
             <div className="absolute inset-0 bg-marine-deep/70" />

@@ -9,7 +9,7 @@
         @endphp
         {{-- Titre, description et apercu de partage poses par le serveur :
              les robots des reseaux sociaux ne lisent pas le JavaScript. --}}
-        <title inertia>{{ $seo['titre'] }}</title>
+        <title data-inertia>{{ $seo['titre'] }}</title>
         <meta name="description" content="{{ $seo['description'] }}">
         @unless ($seo['indexable'])
             <meta name="robots" content="noindex, nofollow">
@@ -22,7 +22,11 @@
         <meta property="og:image" content="{{ $seo['image'] }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="{{ $seo['titre'] }}">
         <meta property="og:locale" content="{{ $seo['locale'] }}">
+        @foreach (array_diff(['fr_BE', 'nl_BE', 'en_GB'], [$seo['locale']]) as $autre)
+            <meta property="og:locale:alternate" content="{{ $autre }}">
+        @endforeach
         <meta name="twitter:card" content="summary_large_image">
         @if ($page['component'] === 'Welcome')
             <script type="application/ld+json" nonce="{{ Illuminate\Support\Facades\Vite::cspNonce() }}">@json(App\Support\Referencement::organisation(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>

@@ -73,7 +73,7 @@ export default function BandeauTemoins() {
                             href={route('pages.show', 'politique-cookies')}
                             className="font-semibold text-action underline-offset-2 hover:underline"
                         >
-                            {t('temoins.savoir_plus', 'En savoir plus')}
+                            {t('temoins.politique', 'Lire la politique de cookies')}
                         </Link>
                     </p>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">

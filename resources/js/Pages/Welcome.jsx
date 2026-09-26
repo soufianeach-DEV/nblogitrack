@@ -72,7 +72,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
     return (
         <>
-            <Head title={t('referencement.accueil_titre', 'Transport et logistique B2B en Belgique et en Europe')} />
+            <Head title={t('referencement.accueil_titre', 'Transport B2B en Belgique et en Europe')} />
 
             <div className="min-h-screen bg-surface">
                 {}
@@ -115,12 +115,16 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
                 <section className="relative isolate flex flex-1 flex-col overflow-hidden">
                     {}
-                    <img
-                        src="/images/login-bg.jpg"
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full origin-center scale-100 animate-[zoom_28s_ease-in-out_infinite_alternate] object-cover"
-                    />
+                    <picture>
+                        <source srcSet="/images/login-bg.webp" type="image/webp" />
+                        <img
+                            src="/images/login-bg.jpg"
+                            alt=""
+                            aria-hidden="true"
+                            fetchpriority="high"
+                            className="absolute inset-0 h-full w-full origin-center scale-100 animate-[zoom_28s_ease-in-out_infinite_alternate] object-cover"
+                        />
+                    </picture>
                     <div className="absolute inset-0 bg-gradient-to-r from-marine-deep via-marine-deep/85 to-marine-deep/30" />
                     <div className="absolute -left-24 top-1/4 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
 
@@ -239,12 +243,16 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </div>
 
                         <div className="group relative isolate overflow-hidden rounded-2xl shadow-lg transition-shadow duration-500 hover:shadow-2xl">
-                            <img
-                                src="/images/login-bg.jpg"
-                                alt=""
-                                aria-hidden="true"
-                                className="h-80 w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                            />
+                            <picture>
+                                <source srcSet="/images/login-bg.webp" type="image/webp" />
+                                <img
+                                    src="/images/login-bg.jpg"
+                                    alt=""
+                                    aria-hidden="true"
+                                    loading="lazy"
+                                    className="h-80 w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                />
+                            </picture>
                             <div className="absolute inset-0 bg-gradient-to-t from-marine-deep via-marine-deep/40 to-transparent" />
                             <div className="absolute inset-x-0 bottom-0 p-8 transition-transform duration-500 group-hover:-translate-y-1">
                                 <p className="text-xl font-bold text-white">{t('accueil.appel_action', 'Prêt à optimiser vos flux ?')}</p>

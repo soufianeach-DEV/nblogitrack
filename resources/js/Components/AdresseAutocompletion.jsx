@@ -670,6 +670,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <button
                             type="button"
                             tabIndex={-1}
+                            aria-label={t('adresse.afficher_liste', 'Afficher les propositions')}
                             onMouseDown={(e) => {
                                 e.preventDefault();
                                 if (suggVilles.length > 0) { setSuggVilles([]); return; }
@@ -719,6 +720,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             <button
                                 type="button"
                                 tabIndex={-1}
+                                aria-label={t('adresse.afficher_liste', 'Afficher les propositions')}
                                 onMouseDown={(e) => {
                                     e.preventDefault();
                                     if (suggCps.length > 0) { setSuggCps([]); return; }
@@ -798,6 +800,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                                 <button
                                     type="button"
                                     tabIndex={-1}
+                                    aria-label={t('adresse.afficher_liste', 'Afficher les propositions')}
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         if (suggNums.length > 0) { setSuggNums([]); return; }

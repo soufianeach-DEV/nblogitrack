@@ -100,7 +100,7 @@ class AudienceReferencementTest extends TestCase
     {
         $html = $this->get('/fr/tarifs')->assertOk()->getContent();
 
-        $this->assertStringContainsString('<title inertia>Tarifs de transport et simulateur de prix - ', $html);
+        $this->assertStringContainsString('<title data-inertia>Tarifs de transport et simulateur de prix - ', $html);
         $this->assertStringContainsString('<meta name="description" content="Simulez le prix', $html);
         $this->assertStringContainsString('<meta property="og:image" content="'.url('/images/partage.png').'">', $html);
         $this->assertStringNotContainsString('noindex', $html);

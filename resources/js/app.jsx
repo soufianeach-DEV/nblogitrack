@@ -23,4 +23,9 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+    // Balises de <head> marquees data-inertia (HTML valide) plutot que
+    // par un attribut « inertia » que le validateur du W3C refuse.
+    defaults: {
+        future: { useDataInertiaHeadAttribute: true },
+    },
 });

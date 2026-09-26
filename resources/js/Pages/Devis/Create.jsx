@@ -600,7 +600,7 @@ export default function Create({ choix, listes }) {
                                     type="button"
                                     onClick={() => i < etape && allerA(i)}
                                     aria-current={i === etape ? 'step' : undefined}
-                                    className={'rounded-full px-3 py-1 font-semibold ' + (i === etape ? 'bg-marine text-white' : i < etape ? 'bg-surface text-marine hover:bg-slate-200' : 'text-slate-400')}
+                                    className={'rounded-full px-3 py-1 font-semibold ' + (i === etape ? 'bg-marine text-white' : i < etape ? 'bg-surface text-marine hover:bg-slate-200' : 'text-slate-600')}
                                 >
                                     {i + 1}. {titre}
                                 </button>
@@ -686,7 +686,7 @@ export default function Create({ choix, listes }) {
 
                         <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-slate-600">{t('devis.adresse_facturation', 'Adresse de facturation')}</p>
                         <div className="mt-2 grid gap-5 sm:grid-cols-4">
-                            <div className="sm:col-span-4">{champ('billing_street', t('devis.rue_numero', 'Rue et numéro'), { obligatoire: true, autocomplete: 'street-address' })}</div>
+                            <div className="sm:col-span-4">{champ('billing_street', t('devis.rue_numero', 'Rue et numéro'), { obligatoire: true, autocomplete: 'address-line1' })}</div>
                             {champ('billing_postal_code', t('devis.code_postal', 'Code postal'), { obligatoire: data.billing_country !== 'IE', autocomplete: 'postal-code' })}
                             <div className="sm:col-span-2">{champ('billing_city', t('devis.ville', 'Ville'), { obligatoire: true, autocomplete: 'address-level2' })}</div>
                             <div>
