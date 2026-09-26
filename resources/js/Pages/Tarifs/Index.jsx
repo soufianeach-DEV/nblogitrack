@@ -1,4 +1,5 @@
 import Icone from '@/Components/Icone';
+import ListeRecherche from '@/Components/ListeRecherche';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
@@ -170,16 +171,13 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                 <label htmlFor="pays_depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     {t('tarifs.pays_enlevement', 'Pays d\'enlèvement')}
                                 </label>
-                                <select
+                                <ListeRecherche
                                     id="pays_depart"
                                     value={paysDepart}
-                                    onChange={(e) => changerDepart(e.target.value)}
+                                    onChange={(code) => code && changerDepart(code)}
+                                    options={departs.map((d) => ({ valeur: d.code, libelle: d.nom }))}
                                     className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                                >
-                                    {departs.map((d) => (
-                                        <option key={d.code} value={d.code}>{d.nom}</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
 
                             <div>
@@ -200,17 +198,14 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                 <label htmlFor="pays" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     {t('tarifs.pays_destination', 'Pays de destination')}
                                 </label>
-                                <select
+                                <ListeRecherche
                                     id="pays"
                                     value={pays}
                                     disabled={paysDepart !== 'BE'}
-                                    onChange={(e) => { setPays(e.target.value); setDestination(''); }}
+                                    onChange={(code) => { if (code) { setPays(code); setDestination(''); } }}
+                                    options={destinations.map((d) => ({ valeur: d.code, libelle: d.nom }))}
                                     className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                                >
-                                    {destinations.map((d) => (
-                                        <option key={d.code} value={d.code}>{d.nom}</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
 
                             <div>

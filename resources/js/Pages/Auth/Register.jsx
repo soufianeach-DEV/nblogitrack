@@ -1,4 +1,5 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ChampRecherche from '@/Components/ChampRecherche';
 import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
@@ -117,17 +118,7 @@ export default function Register({ secteurs, fonctions }) {
     const liste = (nom, libelle, valeurs, exemple, options = {}) => (
         <div className={options.large ? 'sm:col-span-2' : ''}>
             {etiquette(nom, libelle, true)}
-            <input
-                id={nom}
-                list={nom + '-liste'}
-                value={data[nom]}
-                placeholder={exemple}
-                onChange={(e) => setData(nom, e.target.value)}
-                className={selectCls}
-            />
-            <datalist id={nom + '-liste'}>
-                {valeurs.map((v) => <option key={v} value={v} />)}
-            </datalist>
+            <ChampRecherche id={nom} value={data[nom]} onChange={(v) => setData(nom, v)} suggestions={valeurs} local placeholder={exemple} className={selectCls} />
             <InputError message={errors[nom]} className="mt-1" />
         </div>
     );

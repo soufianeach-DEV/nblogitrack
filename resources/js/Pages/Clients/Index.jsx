@@ -1,4 +1,6 @@
 import Modal from '@/Components/Modal';
+import ListeRecherche from '@/Components/ListeRecherche';
+import ChampRecherche from '@/Components/ChampRecherche';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, usePays, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
@@ -110,42 +112,36 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
             <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                        <input
-                            list="liste-entreprises"
+                        <ChampRecherche
                             value={champs.q}
-                            onChange={(e) => filtrer('q', e.target.value)}
+                            onChange={(valeur) => filtrer('q', valeur)}
+                            suggestions={champs.q.trim().length >= 2 ? suggestions.entreprises : []}
+                            local
                             placeholder={t('entreprises.filtre', 'Entreprise, numéro de TVA, Peppol ou localité')}
                             className={champCls}
                         />
-                        <datalist id="liste-entreprises">
-                            {suggestions.entreprises.map((nom) => <option key={nom} value={nom} />)}
-                        </datalist>
                     </div>
 
                     <div>
-                        <input
-                            list="liste-pays"
+                        <ListeRecherche
                             value={champs.pays}
-                            onChange={(e) => filtrer('pays', e.target.value)}
-                            placeholder={t('auth.pays', 'Pays')}
+                            onChange={(valeur) => filtrer('pays', valeur)}
+                            vide={t('entreprises.tous_pays', 'Tous les pays')}
+                            aria-label={t('auth.pays', 'Pays')}
+                            options={suggestions.pays.map((nom) => ({ valeur: nom, libelle: nom }))}
                             className={champCls}
                         />
-                        <datalist id="liste-pays">
-                            {suggestions.pays.map((p) => <option key={p} value={p} />)}
-                        </datalist>
                     </div>
 
                     <div>
-                        <input
-                            list="liste-secteurs"
+                        <ListeRecherche
                             value={champs.secteur}
-                            onChange={(e) => filtrer('secteur', e.target.value)}
-                            placeholder={t('auth.secteur', 'Secteur d\'activité')}
+                            onChange={(valeur) => filtrer('secteur', valeur)}
+                            vide={t('entreprises.tous_secteurs', 'Tous les secteurs')}
+                            aria-label={t('auth.secteur', 'Secteur d\'activité')}
+                            options={suggestions.secteurs.map((nom) => ({ valeur: nom, libelle: nom }))}
                             className={champCls}
                         />
-                        <datalist id="liste-secteurs">
-                            {suggestions.secteurs.map((s) => <option key={s} value={s} />)}
-                        </datalist>
                     </div>
                 </div>
 

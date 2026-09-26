@@ -799,6 +799,8 @@ class TranslationSeeder extends Seeder
         ],
 
         'entreprises' => [
+            'tous_pays' => ['Tous les pays', 'Alle landen', 'All countries'],
+            'tous_secteurs' => ['Tous les secteurs', 'Alle sectoren', 'All sectors'],
             'titre' => ['Entreprises inscrites', 'Geregistreerde ondernemingen', 'Registered companies'],
             'tout' => ['Tout', 'Alles', 'All'],
             'validees' => ['Validées', 'Goedgekeurd', 'Approved'],
@@ -1089,6 +1091,12 @@ class TranslationSeeder extends Seeder
 
         'secteur' => [
             'choisir' => ['Choisissez un secteur…', 'Kies een sector…', 'Choose a sector…'],
+        ],
+
+        'liste' => [
+            'choisir' => ['Tapez pour chercher…', 'Typ om te zoeken…', 'Type to search…'],
+            'aucun' => ['Aucun résultat', 'Geen resultaten', 'No results'],
+            'suggestions' => ['Suggestions', 'Suggesties', 'Suggestions'],
         ],
 
         'vocab.secteur' => [

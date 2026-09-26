@@ -135,7 +135,7 @@ function Creation({ roles, permis, statuts, onFermer }) {
     );
 }
 
-export default function Index({ comptes = [], roles = {}, permis = [], statuts = {}, compteurs, filtres = {} }) {
+export default function Index({ suggestions = [], comptes = [], roles = {}, permis = [], statuts = {}, compteurs, filtres = {} }) {
     const t = useTraduction();
     const [creer, setCreer] = useState(false);
     const { errors } = usePage().props;
@@ -172,6 +172,7 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
             )}
 
             <BarreFiltres
+                suggestions={suggestions}
                 adresse={route('staff.index')}
                 filtres={filtres}
                 placeholder={t('personnel.filtre', 'Nom, prénom, adresse électronique…')}

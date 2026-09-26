@@ -188,7 +188,7 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
     );
 }
 
-export default function Vehicules({ vehicules = [], types = [], normes = [], compteurs, filtres = {}, peutModifier = false }) {
+export default function Vehicules({ suggestions = [], vehicules = [], types = [], normes = [], compteurs, filtres = {}, peutModifier = false }) {
     const t = useTraduction();
     const voc = useVocabulaire();
     const locale = useLocale();
@@ -227,13 +227,14 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
             <Head title={t('parc.titre_vehicules', 'Parc de véhicules')} />
 
             <BarreFiltres
+                suggestions={suggestions}
                 adresse={route('vehicles.index')}
                 filtres={filtres}
                 placeholder={t('parc.filtre_vehicule', 'Immatriculation, marque, châssis…')}
                 listes={[
                     { champ: 'type', intitule: t('parc.toutes_carrosseries', 'Toutes les carrosseries'), options: types.map((x) => ({ valeur: x, libelle: voc('vehicule', x) })) },
-                    { champ: 'charge', intitule: t('parc.toutes_charges', 'Toutes les charges'), options: CHARGES },
-                    { champ: 'norme', intitule: t('parc.toutes_normes', 'Toutes les normes'), options: normes },
+                    { champ: 'charge', intitule: t('parc.toutes_charges', 'Toutes les charges'), options: CHARGES, trier: false },
+                    { champ: 'norme', intitule: t('parc.toutes_normes', 'Toutes les normes'), options: normes, trier: false },
                     { champ: 'hayon', intitule: t('parc.hayon_indifferent', 'Hayon indifférent'), options: [{ valeur: '1', libelle: t('parc.avec_hayon', 'Avec hayon') }] },
                 ]}
                 compteurs={[

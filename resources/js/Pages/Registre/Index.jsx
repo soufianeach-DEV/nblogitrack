@@ -1,4 +1,5 @@
 import Modal from '@/Components/Modal';
+import ChampRecherche from '@/Components/ChampRecherche';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTraduction } from '@/traduire';
 import { Head, useForm, usePage } from '@inertiajs/react';
@@ -153,16 +154,7 @@ export default function Index({ traitements, bases, responsable, information }) 
                             <label htmlFor="base" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                 {t('registre.base', 'Base légale')}
                             </label>
-                            <input
-                                id="base"
-                                list="bases-legales"
-                                value={data.base_legale ?? ''}
-                                onChange={(e) => setData('base_legale', e.target.value)}
-                                className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                            />
-                            <datalist id="bases-legales">
-                                {Object.values(bases).map((b) => <option key={b} value={b} />)}
-                            </datalist>
+                            <ChampRecherche id="base" value={data.base_legale ?? ''} onChange={(v) => setData('base_legale', v)} suggestions={Object.values(bases)} local className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine" />
                             {errors.base_legale && <p className="mt-1 text-sm text-status-incident">{errors.base_legale}</p>}
                         </div>
 

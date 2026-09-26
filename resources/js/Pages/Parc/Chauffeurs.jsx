@@ -352,7 +352,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
     );
 }
 
-export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {}, motifsSortie = {}, compteurs, filtres = {}, peutModifier = false }) {
+export default function Chauffeurs({ suggestions = [], chauffeurs = [], permis = [], statuts = {}, motifsSortie = {}, compteurs, filtres = {}, peutModifier = false }) {
     const t = useTraduction();
     // La fiche garde l'identifiant, pas une copie : apres un ajout
     // (indisponibilite, echeance), elle montre les donnees rechargees.
@@ -377,10 +377,11 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
             <Head title={t('nav.chauffeurs', 'Chauffeurs')} />
 
             <BarreFiltres
+                suggestions={suggestions}
                 adresse={route('drivers.index')}
                 filtres={filtres}
                 placeholder={t('chauffeurs.filtre', 'Nom, adresse électronique, numéro de permis…')}
-                listes={[{ champ: 'permis', intitule: t('chauffeurs.tous_permis', 'Tous les permis'), options: permis }]}
+                listes={[{ champ: 'permis', intitule: t('chauffeurs.tous_permis', 'Tous les permis'), options: permis, trier: false }]}
                 compteurs={[
                     { libelle: t('parc.tous', 'Tous'), valeur: null, nombre: compteurs.total },
                     { libelle: t('chauffeurs.aptes', 'Aptes'), valeur: 'disponibles', nombre: compteurs.disponibles },

@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ListeRecherche from '@/Components/ListeRecherche';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -243,21 +244,14 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                     </div>
                     <div>
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
-                        <select
+                        <ListeRecherche
                             id="goods_type"
                             value={data.goods_type}
-                            onChange={(e) => {
-                                const type = e.target.value;
-                                setData({ ...data, goods_type: type, is_hazardous: marchandisesAdr.includes(type) ? null : Boolean(data.is_hazardous) });
-                            }}
+                            onChange={(type) => setData({ ...data, goods_type: type, is_hazardous: marchandisesAdr.includes(type) ? null : Boolean(data.is_hazardous) })}
+                            placeholder={t('commande.choisir', '— Choisir —')}
+                            options={MARCHANDISES.map((m) => ({ valeur: m, libelle: v('marchandise', m) }))}
                             className={selectCls}
-                        >
-                            <option value="">{t('commande.choisir', '— Choisir —')}</option>
-                            {}
-                            {MARCHANDISES.map((m) => (
-                                <option key={m} value={m}>{v('marchandise', m)}</option>
-                            ))}
-                        </select>
+                        />
                         <InputError message={(soumis && manque.goods) || errors.goods_type} className="mt-2" />
                     </div>
                     <div>

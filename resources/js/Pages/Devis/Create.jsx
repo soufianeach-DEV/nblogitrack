@@ -1,4 +1,6 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ChampRecherche from '@/Components/ChampRecherche';
+import ListeRecherche from '@/Components/ListeRecherche';
 import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import VitrineLayout from '@/Layouts/VitrineLayout';
@@ -244,6 +246,9 @@ export default function Create({ choix, listes }) {
     const champ = (nom, libelle, options = {}) => (
         <div className={options.large ? 'sm:col-span-2' : ''}>
             {etiquette(nom, libelle, options.obligatoire)}
+            {options.suggestions ? (
+                <ChampRecherche id={nom} value={data[nom]} onChange={(v) => setData(nom, v)} suggestions={options.suggestions} local placeholder={options.exemple} className={CHAMP} />
+            ) : (
             <input
                 id={nom}
                 type={options.type ?? 'text'}
@@ -253,16 +258,12 @@ export default function Create({ choix, listes }) {
                 value={data[nom]}
                 placeholder={options.exemple}
                 autoComplete={options.autocomplete}
-                list={options.suggestions ? nom + '-liste' : undefined}
                 onChange={(e) => setData(nom, options.majuscules ? e.target.value.toUpperCase() : e.target.value)}
                 className={CHAMP}
             />
-            {options.aide && <p className="mt-1 text-xs text-slate-500">{options.aide}</p>}
-            {options.suggestions && (
-                <datalist id={nom + '-liste'}>
-                    {options.suggestions.map((v) => <option key={v} value={v} />)}
-                </datalist>
             )}
+            {options.aide && <p className="mt-1 text-xs text-slate-500">{options.aide}</p>}
+
             <InputError message={erreur(nom)} className="mt-1" />
         </div>
     );
@@ -589,7 +590,11 @@ export default function Create({ choix, listes }) {
                             <div className="sm:col-span-4">{champ('billing_street', t('devis.rue_numero', 'Rue et numéro'), { obligatoire: true, autocomplete: 'street-address' })}</div>
                             {champ('billing_postal_code', t('devis.code_postal', 'Code postal'), { obligatoire: data.billing_country !== 'IE', autocomplete: 'postal-code' })}
                             <div className="sm:col-span-2">{champ('billing_city', t('devis.ville', 'Ville'), { obligatoire: true, autocomplete: 'address-level2' })}</div>
-                            {liste('billing_country', t('auth.pays', 'Pays'), PAYS, (c) => nomPays.of(c))}
+                            <div>
+                                {etiquette('billing_country', t('auth.pays', 'Pays'))}
+                                <ListeRecherche id="billing_country" value={data.billing_country} onChange={(v) => setData('billing_country', v)} options={PAYS.map((c) => ({ valeur: c, libelle: nomPays.of(c) }))} className={CHAMP} />
+                                <InputError message={erreur('billing_country')} className="mt-1" />
+                            </div>
                         </div>
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">

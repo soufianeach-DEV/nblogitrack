@@ -68,6 +68,7 @@ class StaffController extends Controller
         $chauffeurs = Driver::whereIn('user_id', (clone $requete)->pluck('id'))->get()->keyBy('user_id');
 
         return Inertia::render('Personnel/Index', [
+            'suggestions' => DriverController::noms(fn () => User::whereIn('role', array_keys(self::ROLES)), $filtres['q'] ?? null),
             'comptes' => $requete->orderBy('last_name')->orderBy('first_name')->get()
                 ->map(function (User $u) use ($chauffeurs, $request) {
                     $chauffeur = $chauffeurs->get($u->id);

@@ -1,4 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ChampRecherche from '@/Components/ChampRecherche';
+import ListeRecherche from '@/Components/ListeRecherche';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -223,43 +225,41 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
         )}
         <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
-                <select
+                <ListeRecherche
                     value={data.vehicle_registration}
-                    onChange={(e) => setData('vehicle_registration', e.target.value)}
+                    onChange={(v) => setData('vehicle_registration', v)}
+                    placeholder={'— ' + t('ordres.vehicule', 'Véhicule') + ' —'}
+                    aria-label={t('ordres.vehicule', 'Véhicule')}
                     className={selectCls}
-                    required
-                >
-                    <option value="">— {t('ordres.vehicule', 'Véhicule')} —</option>
-                    {vehicles.map((v) => (
-                        <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
-                            {v.registration} · {voc('vehicule', v.vehicle_type)} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
-                            {v.capacity_volume ? ` · ${Number(v.capacity_volume).toLocaleString(locale)} m³` : ''}
-                            {' · ' + t('suivi.permis', 'Permis').toLowerCase() + ' ' + v.permis_requis}
-                            {v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : ''}
-                            {v.adr_equipe ? ' · ADR' : ''}
-                            {motifRefus(v)}
-                        </option>
-                    ))}
-                </select>
+                    options={vehicles.map((v) => ({
+                        valeur: v.registration,
+                        desactive: ! vehiculeCompatible(v),
+                        libelle: `${v.registration} · ${voc('vehicule', v.vehicle_type)} · ${v.brand} ${v.model} · ${Number(v.capacity_tonnes).toLocaleString(locale)} t`
+                            + (v.capacity_volume ? ` · ${Number(v.capacity_volume).toLocaleString(locale)} m³` : '')
+                            + ' · ' + t('suivi.permis', 'Permis').toLowerCase() + ' ' + v.permis_requis
+                            + (v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : '')
+                            + (v.adr_equipe ? ' · ADR' : '')
+                            + motifRefus(v),
+                    }))}
+                />
                 {errors.vehicle_registration && <p className="mt-1 text-xs text-status-incident">{errors.vehicle_registration}</p>}
             </div>
             <div className="flex-1">
-                <select
+                <ListeRecherche
                     value={data.driver_id}
-                    onChange={(e) => setData('driver_id', e.target.value)}
+                    onChange={(v) => setData('driver_id', v)}
+                    placeholder={'— ' + t('suivi.chauffeur', 'Chauffeur') + ' —'}
+                    aria-label={t('suivi.chauffeur', 'Chauffeur')}
                     className={selectCls}
-                    required
-                >
-                    <option value="">— {t('suivi.chauffeur', 'Chauffeur')} —</option>
-                    {drivers.map((d) => (
-                        <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
-                            {d.nom} · {t('suivi.permis', 'Permis').toLowerCase()} {d.license_type}{d.adr_certified ? ' · ADR' : ''}
-                            {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} ${t('planif.cette_semaine', 'cette semaine')}` : ''}
-                            {d.retraite_passee ? ' · ' + t('planif.retraite_passee', 'retraite prévue le :date, fiche à revoir', { date: d.retraite_passee }) : ''}
-                            {motifChauffeur(d)}
-                        </option>
-                    ))}
-                </select>
+                    options={drivers.map((d) => ({
+                        valeur: d.id,
+                        desactive: ! chauffeurCompatible(d),
+                        libelle: `${d.nom} · ${t('suivi.permis', 'Permis').toLowerCase()} ${d.license_type}${d.adr_certified ? ' · ADR' : ''}`
+                            + (d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} ${t('planif.cette_semaine', 'cette semaine')}` : '')
+                            + (d.retraite_passee ? ' · ' + t('planif.retraite_passee', 'retraite prévue le :date, fiche à revoir', { date: d.retraite_passee }) : '')
+                            + motifChauffeur(d),
+                    }))}
+                />
                 {errors.driver_id && <p className="mt-1 text-xs text-status-incident">{errors.driver_id}</p>}
             </div>
             <button
@@ -398,17 +398,15 @@ export default function Index({
 
             {}
             <div className="mb-4">
-                <input
-                    list="suggestions-planification"
-                    value={champs}
-                    onChange={(e) => chercher(e.target.value)}
-                    placeholder={t('planif.chercher', 'Numéro, entreprise, ville de départ ou d\'arrivée…')}
-                    aria-label={t('planif.chercher', 'Numéro, entreprise, ville de départ ou d\'arrivée…')}
-                    className="w-full rounded-lg border-slate-200 bg-white py-2.5 px-4 text-sm shadow-sm focus:border-marine focus:ring-marine sm:max-w-xl"
-                />
-                <datalist id="suggestions-planification">
-                    {suggestions.map((s) => <option key={s} value={s} />)}
-                </datalist>
+                <div className="sm:max-w-xl">
+                    <ChampRecherche
+                        value={champs}
+                        onChange={chercher}
+                        suggestions={suggestions}
+                        placeholder={t('planif.chercher', 'Numéro, entreprise, ville de départ ou d\'arrivée…')}
+                        className="w-full rounded-lg border-slate-200 bg-white py-2.5 px-4 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                    />
+                </div>
 
                 {champs !== '' && (
                     <button
