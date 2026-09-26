@@ -192,7 +192,7 @@ export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvo
                             </p>
                         )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
                             {t(etat.cle, etat.libelle)}
                         </span>
@@ -279,10 +279,16 @@ export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvo
                     <p className="text-3xl font-bold">{euros(facture.ttc)}</p>
                     <p className="mt-3 text-sm text-slate-300">{t('facture.avoir_rien_a_payer', 'La facture annulée n\'est plus due.')}</p>
                 </section>
+                ) : facture.etat === 'CREDITED' ? (
+                <section className="rounded-2xl bg-slate-100 p-5 text-slate-700 shadow-sm">
+                    <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">{t('facture.annulee_avoir', 'Annulée par avoir')}</h2>
+                    <p className="text-3xl font-bold line-through decoration-2">{euros(facture.ttc)}</p>
+                    <p className="mt-3 text-sm">{t('facture.annulee_rien_a_payer', 'Cette facture est annulée : il n\'y a rien à payer.')}</p>
+                </section>
                 ) : (
                 <section className="rounded-2xl bg-marine p-5 text-white shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
+                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+                        <div className="min-w-0 break-words">
                             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-300">
                                 {facture.etat === 'PAID'
                                     ? t('facture.paiement_recu', 'Paiement reçu')

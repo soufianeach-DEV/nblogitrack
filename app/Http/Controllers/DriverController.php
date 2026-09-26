@@ -42,8 +42,12 @@ class DriverController extends Controller
         $permisLimite = now()->addDays(60)->toDateString();
         $aujourdhui = now()->toDateString();
 
+        // Un depart date dans le futur n'a pas encore eu lieu : le
+        // chauffeur roule jusque-la.
+        $parti = fn ($q) => $q->whereNotNull('left_on')->where('left_on', '<=', $aujourdhui);
+
         $inapte = fn ($q) => $q
-            ->whereNotNull('left_on')
+            ->where($parti)
             ->orWhere('license_expiry', '<', $aujourdhui)
             ->orWhereNull('medical_exam_date')
             ->orWhere('medical_exam_date', '<', $visiteLimite)
@@ -56,8 +60,8 @@ class DriverController extends Controller
             'adr' => $requete->where('adr_certified', true),
             'visite' => $requete->where('medical_exam_date', '<', $visiteLimite),
             'permis' => $requete->where('license_expiry', '<=', $permisLimite),
-            'inaptes' => $requete->whereNull('left_on')->where($inapte),
-            'sortis' => $requete->whereNotNull('left_on'),
+            'inaptes' => $requete->whereNot($parti)->where($inapte),
+            'sortis' => $requete->where($parti),
             default => null,
         };
 
@@ -102,6 +106,7 @@ class DriverController extends Controller
                 'retraite_prevue' => $d->retirement_planned_on?->format('Y-m-d'),
                 'retraite_affichee' => $d->retirement_planned_on?->format('d/m/Y'),
                 'sorti_le' => $d->left_on?->format('d/m/Y'),
+                'depart_futur' => $d->left_on !== null && $d->left_on->gt(today()),
                 'motif_sortie' => $d->departure_reason !== null
                     ? (self::motifsSortie()[$d->departure_reason] ?? $d->departure_reason)
                     : null,
@@ -120,8 +125,8 @@ class DriverController extends Controller
                 'disponibles' => Driver::where('is_available', true)->whereNot($inapte)->count(),
                 'adr' => Driver::where('adr_certified', true)->count(),
                 'visite' => Driver::where('medical_exam_date', '<', $visiteLimite)->count(),
-                'inaptes' => Driver::whereNull('left_on')->where($inapte)->count(),
-                'sortis' => Driver::whereNotNull('left_on')->count(),
+                'inaptes' => Driver::whereNot($parti)->where($inapte)->count(),
+                'sortis' => Driver::where($parti)->count(),
             ],
             'filtres' => $filtres,
             'peutModifier' => $request->user()->can('manage-fleet'),
@@ -173,10 +178,14 @@ class DriverController extends Controller
                 $driver->user?->update(['is_active' => false]);
             }
         } elseif ($driver->left_on !== null) {
-            // Depart annule : le motif part avec la date et le compte
-            // retrouve son acces.
+            // Depart annule : le motif part avec la date. Le compte ne
+            // retrouve son acces que si c'est ce depart qui l'avait ferme ;
+            // un compte ferme a part depuis l'ecran Personnel le reste.
             $donnees['departure_reason'] = null;
-            $driver->user?->update(['is_active' => true]);
+
+            if ($driver->left_on->lte(today())) {
+                $driver->user?->update(['is_active' => true]);
+            }
         }
 
         if ($donnees['is_available'] === false || $donnees['adr_certified'] === false) {

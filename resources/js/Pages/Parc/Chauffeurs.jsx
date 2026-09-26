@@ -76,10 +76,15 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
             {chauffeur.sorti_le && (
                 <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
-                    {t('chauffeurs.parti_le', 'Parti le :date — :motif. La fiche est conservée pour que les missions passées gardent un nom.', {
-                        date: chauffeur.sorti_le,
-                        motif: chauffeur.motif_sortie,
-                    })}
+                    {chauffeur.depart_futur
+                        ? t('chauffeurs.depart_prevu_le', 'Départ prévu le :date — :motif. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', {
+                            date: chauffeur.sorti_le,
+                            motif: chauffeur.motif_sortie,
+                        })
+                        : t('chauffeurs.parti_le', 'Parti le :date — :motif. La fiche est conservée pour que les missions passées gardent un nom.', {
+                            date: chauffeur.sorti_le,
+                            motif: chauffeur.motif_sortie,
+                        })}
                 </p>
             )}
 
@@ -275,18 +280,17 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                             <p className="rounded-lg bg-surface px-3 py-2 text-xs text-slate-600">
                                 {t('chauffeurs.fiche_conservee', 'La fiche n\'est jamais supprimée : le compte est fermé, les missions passées gardent leur conducteur.')}
                             </p>
-                            {! chauffeur.sorti_le && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSortie(false);
-                                        setData((p) => ({ ...p, left_on: '', departure_reason: '' }));
-                                    }}
-                                    className="text-xs font-semibold text-slate-600 transition hover:text-marine"
-                                >
-                                    {t('chauffeurs.annuler_depart', 'Annuler le départ')}
-                                </button>
-                            )}
+                            {/* Un depart, meme passe, s'annule : le compte retrouve son acces. */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSortie(false);
+                                    setData((p) => ({ ...p, left_on: '', departure_reason: '' }));
+                                }}
+                                className="text-xs font-semibold text-slate-600 transition hover:text-marine"
+                            >
+                                {t('chauffeurs.annuler_depart', 'Annuler le départ')}
+                            </button>
                         </div>
                     )}
                 </div>
@@ -392,18 +396,18 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                                     <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">{c.missions}</td>
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                                            c.sorti_le ? 'bg-slate-100 text-slate-700'
+                                            c.sorti_le && ! c.depart_futur ? 'bg-slate-100 text-slate-700'
                                                 : c.empechements.length > 0 ? 'bg-status-incident/10 text-status-incident'
                                                     : c.engage ? 'bg-brand-blue/10 text-brand-blue'
                                                         : c.disponible ? 'bg-status-delivered/10 text-status-delivered'
                                                             : 'bg-slate-100 text-slate-700'
                                         }`}>
-                                            {c.sorti_le ? t('chauffeurs.parti', 'Parti')
+                                            {c.sorti_le && ! c.depart_futur ? t('chauffeurs.parti', 'Parti')
                                                 : c.empechements.length > 0 ? t('chauffeurs.ne_peut_rouler', 'Ne peut pas rouler')
                                                     : c.engage ? t('parc.en_mission', 'En mission')
                                                         : c.disponible ? t('parc.disponible', 'Disponible') : t('chauffeurs.indisponible', 'Indisponible')}
                                         </span>
-                                        {c.empechements.length > 0 && ! c.sorti_le && (
+                                        {c.empechements.length > 0 && (! c.sorti_le || c.depart_futur) && (
                                             <span className="mt-1 block max-w-[16rem] truncate text-xs text-slate-600" title={c.empechements.join(' · ')}>
                                                 {c.empechements[0]}
                                             </span>

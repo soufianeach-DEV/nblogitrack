@@ -765,6 +765,7 @@ class TranslationSeeder extends Seeder
                 'Geen enkel account komt overeen met deze zoekopdracht.',
                 'No account matches this search.',
             ],
+            'depart_prevu_le' => ['départ prévu le', 'vertrek gepland op', 'departure planned on'],
         ],
 
         'entreprises' => [
@@ -921,6 +922,7 @@ class TranslationSeeder extends Seeder
             'sortie_licenciement' => ['Licenciement', 'Ontslag door de werkgever', 'Dismissal'],
             'sortie_inaptitude' => ['Inaptitude médicale', 'Medische ongeschiktheid', 'Medical unfitness'],
             'sortie_decheance' => ['Déchéance du permis', 'Verval van het rijbewijs', 'Driving ban'],
+            'depart_prevu_le' => ['Départ prévu le :date — :motif. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', 'Vertrek gepland op :date — :motif. Het account wordt die dag afgesloten; tot dan rijdt de bestuurder gewoon.', 'Departure planned on :date — :motif. The account will close on that day; until then, the driver drives as usual.'],
         ],
 
         'facturation' => [
@@ -2026,6 +2028,7 @@ class TranslationSeeder extends Seeder
             'a_rembourser_aide' => ['Remboursez-les depuis le tableau de bord Stripe (Paiements), en cherchant la session indiquée.', 'Betaal ze terug via het Stripe-dashboard (Betalingen), door de vermelde sessie op te zoeken.', 'Refund them from the Stripe dashboard (Payments), by searching for the session shown.'],
             'paiement_double' => ['Facture déjà réglée', 'Factuur al betaald', 'Invoice already paid'],
             'paiement_double_texte' => ['La facture :reference était déjà payée : ce paiement de :montant vous sera remboursé, sans démarche de votre part.', 'Factuur :reference was al betaald: deze betaling van :montant wordt u terugbetaald, zonder dat u iets hoeft te doen.', 'Invoice :reference was already paid: this payment of :montant will be refunded to you, with nothing for you to do.'],
+            'annulee_rien_a_payer' => ['Cette facture est annulée : il n\'y a rien à payer.', 'Deze factuur is geannuleerd: er valt niets te betalen.', 'This invoice has been cancelled: there is nothing to pay.'],
         ],
 
         'action' => [

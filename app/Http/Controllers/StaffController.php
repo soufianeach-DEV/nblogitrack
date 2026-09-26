@@ -85,6 +85,7 @@ class StaffController extends Controller
                         'permis' => $chauffeur?->license_type,
                         'empechements' => $chauffeur?->empechements() ?? [],
                         'sorti_le' => $chauffeur?->left_on?->format('d/m/Y'),
+                        'depart_futur' => $chauffeur?->left_on !== null && $chauffeur->left_on->gt(today()),
                     ];
                 })->all(),
             'roles' => self::roles(),

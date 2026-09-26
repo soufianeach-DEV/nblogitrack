@@ -220,7 +220,7 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
                                             {c.actif ? t('personnel.actif', 'Actif') : t('personnel.desactive', 'Désactivé')}
                                         </span>
                                         {c.sorti_le && (
-                                            <span className="mt-1 block text-xs text-slate-600">{t('personnel.parti_le', 'parti le')} {c.sorti_le}</span>
+                                            <span className="mt-1 block text-xs text-slate-600">{c.depart_futur ? t('personnel.depart_prevu_le', 'départ prévu le') : t('personnel.parti_le', 'parti le')} {c.sorti_le}</span>
                                         )}
                                         {! c.confirme && c.actif && (
                                             <span className="mt-1 block text-xs text-slate-600">{t('personnel.mdp_pas_choisi', 'mot de passe pas encore choisi')}</span>
