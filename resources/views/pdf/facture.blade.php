@@ -119,7 +119,7 @@
                             @if (str_starts_with($ligne->description, 'Transport ') && str_contains($ligne->description, ' vers '))
                                 @php([$depart, $arrivee] = explode(' vers ', substr($ligne->description, 10), 2))
                                 <span class="gras">{{ $t::t('pdf.transport', 'Transport') }}</span>
-                                {{ $t::t('pdf.trajet', ':depart vers :arrivee', ['depart' => $depart, 'arrivee' => $arrivee]) }}
+                                {{ $t::t('pdf.trajet', ':depart vers :arrivee', ['depart' => \App\Support\Adresse::localiser($depart), 'arrivee' => \App\Support\Adresse::localiser($arrivee)]) }}
                             @elseif (str_starts_with($ligne->description, 'Indemnité d\'annulation '))
                                 {{ $t::t('pdf.indemnite_annulation', 'Indemnité d\'annulation :numero', ['numero' => substr($ligne->description, strlen('Indemnité d\'annulation '))]) }}
                             @else

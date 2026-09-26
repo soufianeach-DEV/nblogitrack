@@ -80,7 +80,7 @@ class ClientValidationController extends Controller
     public function approve(Client $client): RedirectResponse
     {
         if ($client->is_validated) {
-            return back()->withErrors(['client' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
+            return back()->with('error', Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.'));
         }
 
         $utilisateur = $client->compte();

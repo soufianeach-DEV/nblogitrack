@@ -1,6 +1,6 @@
 import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -224,6 +224,7 @@ function Supplements({ order, supplements, peutAjouter, peutRetirer = false, eur
 
 export default function Show({ order, chauffeur, facture = null, annulation = null, supplements = [], peutAjouterSupplement = false, peutRetirerSupplement = false }) {
     const t = useTraduction();
+    const adresse = useAdresse();
     const v = useVocabulaire();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
@@ -296,8 +297,8 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
 
                 {carte(t('devis.trajet', 'Trajet'), (
                     <dl>
-                        {ligne(t('suivi.depart', 'Départ'), order.pickup_address)}
-                        {ligne(t('suivi.destination', 'Destination'), order.delivery_address)}
+                        {ligne(t('suivi.depart', 'Départ'), adresse(order.pickup_address))}
+                        {ligne(t('suivi.destination', 'Destination'), adresse(order.delivery_address))}
                         {ligne(t('suivi.distance_routiere', 'Distance routière'), nombre(order.distance_km, 'km'))}
                         {ligne(t('ordres.chargement', 'Chargement'), date(order.pickup_date, true))}
                         {order.shipper_name && ligne(t('commande.expediteur', 'Expéditeur au lieu de chargement'), order.shipper_name + (order.shipper_phone ? ' · ' + order.shipper_phone : ''))}

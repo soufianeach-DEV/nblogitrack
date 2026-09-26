@@ -4,7 +4,7 @@ import ListeRecherche from '@/Components/ListeRecherche';
 import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import VitrineLayout from '@/Layouts/VitrineLayout';
-import { useLangue, useTraduction } from '@/traduire';
+import { useLangue, useTraduction, useOuverture } from '@/traduire';
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -65,6 +65,7 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
     const MAX_PIECE = Math.min(10 * 1048576, limites.fichier ?? 10 * 1048576);
     const MAX_ENVOI = limites.envoi ?? 50 * 1048576;
     const t = useTraduction();
+    const ouverture = useOuverture();
     const langue = useLangue();
     const nomPays = useMemo(() => new Intl.DisplayNames([langue], { type: 'region' }), [langue]);
 
@@ -445,7 +446,7 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                             className={CHAMP}
                         >
                             <option value="">{t('devis.ne_sait_pas', 'Je ne sais pas')}</option>
-                            {OUVERTURES.map((o) => <option key={o} value={o}>{o}</option>)}
+                            {OUVERTURES.map((o) => <option key={o} value={o}>{ouverture(o)}</option>)}
                             <option value={AUTRE}>{t('devis.autres_horaires', 'Autres horaires…')}</option>
                         </select>
                         {data[lieu + '_opening_hours'] !== '' && ! OUVERTURES.includes(data[lieu + '_opening_hours']) && (

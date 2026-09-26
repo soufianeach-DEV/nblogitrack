@@ -2,7 +2,7 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, usePays, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, usePays, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -726,6 +726,7 @@ export default function Dashboard({
 }) {
     const { auth } = usePage().props;
     const t = useTraduction();
+    const adresse = useAdresse();
     const locale = useLocale();
     const personnel = Boolean(exploitation);
 
@@ -866,8 +867,8 @@ export default function Dashboard({
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-slate-600">
-                                                <span className="block max-w-[16rem] truncate" title={order.delivery_address}>
-                                                    {order.delivery_address}
+                                                <span className="block max-w-[16rem] truncate" title={adresse(order.delivery_address)}>
+                                                    {adresse(order.delivery_address)}
                                                 </span>
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-3">

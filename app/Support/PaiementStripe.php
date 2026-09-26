@@ -86,7 +86,7 @@ class PaiementStripe
             'locale' => in_array(app()->getLocale(), ['fr', 'nl', 'en'], true) ? app()->getLocale() : 'auto',
             'metadata' => ['facture' => $facture->reference, 'facture_id' => (string) $facture->id],
             'payment_intent_data' => [
-                'description' => 'Facture '.$facture->reference,
+                'description' => Traductions::t('msg.stripe_facture', 'Facture :reference', ['reference' => $facture->reference]),
                 'metadata' => ['facture' => $facture->reference, 'facture_id' => (string) $facture->id],
             ],
             'line_items' => [[

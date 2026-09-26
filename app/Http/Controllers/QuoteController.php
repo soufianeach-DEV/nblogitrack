@@ -11,6 +11,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Audience;
 use App\Support\Chronologie;
+use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\IdentifiantEntreprise;
 use App\Support\JoursFeries;
@@ -418,7 +419,7 @@ class QuoteController extends Controller
 
         $marchandise = array_filter([
             $devis->volume,
-            $devis->weight ? number_format($devis->weight, 0, ',', ' ').' kg' : null,
+            $devis->weight ? Formats::nombre($devis->weight).' kg' : null,
             Traductions::vocabulaire('marchandise', $devis->goods_type),
         ]);
 
@@ -672,7 +673,7 @@ class QuoteController extends Controller
             'distance_km' => (int) round($km),
         ]);
 
-        $ordre = DB::transaction(function () use ($quoteRequest, $trajet, $demande, $km, $grille, $marchandise, $pays, $priorite, $livraison) {
+        $ordre = DB::transaction(function () use ($quoteRequest, $client, $trajet, $demande, $km, $grille, $marchandise, $pays, $priorite, $livraison) {
             DB::statement('select pg_advisory_xact_lock(?)', [FretRetour::VERROU]);
 
             // Deux clics, ou deux agents, en meme temps : le second voit la
@@ -694,7 +695,7 @@ class QuoteController extends Controller
                 'priority' => $priorite,
                 'requested_delivery_date' => $livraison,
                 'tariff_grid_id' => $grille->id,
-                'special_instructions' => $this->consignes($quoteRequest),
+                'special_instructions' => $this->consignes($quoteRequest, $client),
                 'shipper_name' => $quoteRequest->pickup_contact_name ?? ($pays !== 'BE' ? $quoteRequest->company_name : null),
                 'shipper_phone' => $quoteRequest->pickup_contact_phone ?? ($pays !== 'BE' ? $quoteRequest->phone : null),
                 'status' => 'PENDING',
@@ -753,45 +754,67 @@ class QuoteController extends Controller
         return redirect()->route('transport-orders.show', $ordre)->with('success', $message);
     }
 
-    /** Ce que le chauffeur et le planificateur doivent savoir, en une note. */
-    private function consignes(QuoteRequest $d): ?string
+    /** Codes des creneaux et des acces => cle de traduction (memes libelles que le formulaire). */
+    private const LIBELLES_CRENEAU = ['matin' => 'devis.creneau_matin', 'apres_midi' => 'devis.creneau_apres_midi', 'journee' => 'devis.creneau_journee', 'indifferent' => 'devis.indifferent'];
+
+    private const LIBELLES_ACCES = ['centre_ville' => 'devis.acces_centre_ville', 'zone_basses_emissions' => 'devis.acces_zbe', 'limite_tonnage' => 'devis.acces_tonnage', 'rue_etroite' => 'devis.acces_rue_etroite', 'sans_stationnement' => 'devis.acces_stationnement'];
+
+    /**
+     * Ce que le chauffeur et le planificateur doivent savoir, en une note,
+     * dans la langue de l'entreprise cliente : elle la lit dans son espace.
+     */
+    private function consignes(QuoteRequest $d, ?Client $client = null): ?string
     {
-        $lignes = [];
+        return Traductions::dans($client?->compte()?->locale ?? 'fr', function () use ($d) {
+            $t = fn (string $cle, string $defaut, array $valeurs = []) => Traductions::t($cle, $defaut, $valeurs);
+            $lignes = [];
 
-        foreach (['pickup' => 'Enlèvement', 'delivery' => 'Livraison'] as $lieu => $titre) {
-            $details = array_filter([
-                $d->{$lieu.'_contact_name'} ? 'contact '.$d->{$lieu.'_contact_name'}.($d->{$lieu.'_contact_phone'} ? ' ('.$d->{$lieu.'_contact_phone'}.')' : '') : null,
-                $d->{$lieu.'_opening_hours'} ? 'ouvert '.$d->{$lieu.'_opening_hours'} : null,
-                $d->{$lieu.'_time_slot'} ? 'créneau '.str_replace('_', '-', $d->{$lieu.'_time_slot'}) : null,
-                $d->{$lieu.'_has_dock'} === false ? 'sans quai' : null,
-                $d->{$lieu.'_appointment'} ? 'sur rendez-vous' : null,
-                $d->{$lieu.'_access'} ? 'accès : '.implode(', ', array_map(fn ($a) => str_replace('_', ' ', $a), $d->{$lieu.'_access'})) : null,
-                $d->{$lieu.'_access_notes'},
-            ]);
+            foreach (['pickup' => $t('consignes.enlevement', 'Enlèvement'), 'delivery' => $t('consignes.livraison', 'Livraison')] as $lieu => $titre) {
+                $creneau = $d->{$lieu.'_time_slot'};
+                $details = array_filter([
+                    $d->{$lieu.'_contact_name'} ? $t('consignes.contact', 'contact :nom', ['nom' => $d->{$lieu.'_contact_name'}.($d->{$lieu.'_contact_phone'} ? ' ('.$d->{$lieu.'_contact_phone'}.')' : '')]) : null,
+                    $d->{$lieu.'_opening_hours'} ? $t('consignes.ouvert', 'ouvert :horaires', ['horaires' => self::ouverture($d->{$lieu.'_opening_hours'})]) : null,
+                    $creneau ? mb_strtolower(Traductions::t(self::LIBELLES_CRENEAU[$creneau] ?? 'devis.indifferent', $creneau)) : null,
+                    $d->{$lieu.'_has_dock'} === false ? mb_strtolower($t('devis.quai_non', 'Non : hayon nécessaire')) : null,
+                    $d->{$lieu.'_appointment'} ? mb_strtolower($t('devis.rendez_vous', 'Prise de rendez-vous obligatoire')) : null,
+                    $d->{$lieu.'_access'} ? $t('consignes.acces', 'accès : :acces', ['acces' => implode(', ', array_map(
+                        fn ($a) => mb_strtolower(Traductions::t(self::LIBELLES_ACCES[$a] ?? $a, $a)),
+                        $d->{$lieu.'_access'},
+                    ))]) : null,
+                    $d->{$lieu.'_access_notes'},
+                ]);
 
-            if ($details !== []) {
-                $lignes[] = $titre.' : '.implode(' ; ', $details).'.';
+                if ($details !== []) {
+                    $lignes[] = $titre.' : '.implode(' ; ', $details).'.';
+                }
             }
-        }
 
-        if ($d->needs_temperature) {
-            $lignes[] = 'Température dirigée : de '.$d->temperature_min.' à '.$d->temperature_max.' °C.';
-        }
+            if ($d->needs_temperature) {
+                $lignes[] = $t('consignes.temperature', 'Température dirigée : de :min à :max °C.', ['min' => $d->temperature_min, 'max' => $d->temperature_max]);
+            }
 
-        if ($d->is_hazardous && $d->un_number) {
-            $lignes[] = 'ADR : ONU '.$d->un_number.', classe '.$d->adr_class.($d->packing_group ? ', groupe '.$d->packing_group : '').'.';
-        }
+            if ($d->is_hazardous && $d->un_number) {
+                $lignes[] = $t('consignes.adr', 'ADR : ONU :onu, classe :classe', ['onu' => $d->un_number, 'classe' => $d->adr_class])
+                    .($d->packing_group ? $t('consignes.groupe', ', groupe :groupe', ['groupe' => $d->packing_group]) : '').'.';
+            }
 
-        if ($d->end_client_name) {
-            $lignes[] = 'Demande faite pour le compte de : '.$d->end_client_name.'.';
-        }
+            if ($d->end_client_name) {
+                $lignes[] = $t('consignes.pour_le_compte', 'Demande faite pour le compte de : :client.', ['client' => $d->end_client_name]);
+            }
 
-        if ($d->special_instructions) {
-            $lignes[] = $d->special_instructions;
-        }
+            if ($d->special_instructions) {
+                $lignes[] = $d->special_instructions;
+            }
 
-        $lignes[] = 'Demande de devis '.$d->reference.'.';
+            $lignes[] = $t('consignes.devis', 'Demande de devis :reference.', ['reference' => $d->reference]);
 
-        return implode("\n", $lignes);
+            return implode("\n", $lignes);
+        });
+    }
+
+    /** Horaire courant du formulaire (« Lun-ven 7 h - 16 h ») dans la langue en cours. */
+    public static function ouverture(string $horaire): string
+    {
+        return Traductions::t('devis.ouverture_'.Traductions::cleDepuis($horaire), $horaire);
     }
 }

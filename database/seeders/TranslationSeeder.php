@@ -661,6 +661,7 @@ class TranslationSeeder extends Seeder
         ],
 
         'planif' => [
+            'motif_longueur' => ['Le motif compte de 5 à 200 caractères.', 'De reden telt 5 tot 200 tekens.', 'The reason must be 5 to 200 characters long.'],
             'besoins' => ['Besoins', 'Vereisten', 'Requirements'],
 
             'chercher' => [
@@ -1630,7 +1631,28 @@ class TranslationSeeder extends Seeder
             'pays_enlevement' => ['Pays d\'enlèvement', 'Land van ophaling', 'Pickup country'],
         ],
 
+        'unite' => [
+            'ko' => ['Ko', 'kB', 'KB'],
+        ],
+        'consignes' => [
+            'enlevement' => ['Enlèvement', 'Ophaling', 'Pickup'],
+            'livraison' => ['Livraison', 'Levering', 'Delivery'],
+            'contact' => ['contact :nom', 'contact :nom', 'contact :nom'],
+            'ouvert' => ['ouvert :horaires', 'open :horaires', 'open :horaires'],
+            'acces' => ['accès : :acces', 'toegang: :acces', 'access: :acces'],
+            'temperature' => ['Température dirigée : de :min à :max °C.', 'Geconditioneerd vervoer: van :min tot :max °C.', 'Temperature-controlled: from :min to :max °C.'],
+            'adr' => ['ADR : ONU :onu, classe :classe', 'ADR: UN :onu, klasse :classe', 'ADR: UN :onu, class :classe'],
+            'groupe' => [', groupe :groupe', ', verpakkingsgroep :groupe', ', packing group :groupe'],
+            'pour_le_compte' => ['Demande faite pour le compte de : :client.', 'Aanvraag voor rekening van: :client.', 'Request made on behalf of: :client.'],
+            'devis' => ['Demande de devis :reference.', 'Offerteaanvraag :reference.', 'Quotation request :reference.'],
+        ],
         'devis' => [
+            'onu' => ['ONU', 'UN', 'UN'],
+            'ouverture_lun_ven_7_h_16_h' => ['Lun-ven 7 h - 16 h', 'Ma-vr 7-16 u', 'Mon-Fri 7am-4pm'],
+            'ouverture_lun_ven_8_h_17_h' => ['Lun-ven 8 h - 17 h', 'Ma-vr 8-17 u', 'Mon-Fri 8am-5pm'],
+            'ouverture_lun_ven_6_h_22_h' => ['Lun-ven 6 h - 22 h', 'Ma-vr 6-22 u', 'Mon-Fri 6am-10pm'],
+            'ouverture_lun_sam_7_h_16_h' => ['Lun-sam 7 h - 16 h', 'Ma-za 7-16 u', 'Mon-Sat 7am-4pm'],
+            'ouverture_24_h_24_7_j_7' => ['24 h/24, 7 j/7', '24/7', '24/7'],
             'pieces_cinq' => ['Cinq fichiers au plus : seuls les cinq premiers sont gardés.', 'Hoogstens vijf bestanden: alleen de eerste vijf worden behouden.', 'Five files at most: only the first five are kept.'],
             'pieces_total' => ['Les pièces jointes dépassent :max Mo au total : retirez-en une.', 'De bijlagen overschrijden in totaal :max MB: verwijder er een.', 'The attachments exceed :max MB in total: remove one.'],
             'titre' => ['Demander un devis de transport', 'Transportofferte aanvragen', 'Request a transport quote'],
@@ -1934,6 +1956,9 @@ class TranslationSeeder extends Seeder
         ],
 
         'commande' => [
+            'estimation_indisponible' => ['Le prix n\'a pas pu être calculé (service momentanément indisponible).', 'De prijs kon niet worden berekend (dienst tijdelijk niet beschikbaar).', 'The price could not be calculated (service temporarily unavailable).'],
+            'reessayer' => ['Réessayer', 'Opnieuw proberen', 'Try again'],
+            'distance_km' => ['Distance : :km km', 'Afstand: :km km', 'Distance: :km km'],
             'titre' => ['Nouvelle expédition', 'Nieuwe zending', 'New shipment'],
             'enlevement' => ['Adresse d\'enlèvement', 'Ophaaladres', 'Pickup address'],
             'livraison' => ['Adresse de livraison', 'Leveringsadres', 'Delivery address'],
@@ -2059,6 +2084,7 @@ class TranslationSeeder extends Seeder
         ],
 
         'suivi' => [
+            'itineraire_indisponible' => ['Itinéraire momentanément indisponible.', 'Route tijdelijk niet beschikbaar.', 'Route temporarily unavailable.'],
             'titre' => ['Suivre un envoi', 'Een zending volgen', 'Track a shipment'],
             'reference' => ['Numéro de suivi', 'Volgnummer', 'Tracking number'],
 
@@ -2340,6 +2366,16 @@ class TranslationSeeder extends Seeder
         ],
 
         'api' => [
+            'introuvable' => ['Expédition introuvable.', 'Zending niet gevonden.', 'Shipment not found.'],
+            'cle_sans_entreprise' => ['Cette clé n\'est rattachée à aucune entreprise : elle ne peut pas déposer d\'ordre.', 'Deze sleutel is aan geen onderneming gekoppeld: ze kan geen opdracht indienen.', 'This key is not linked to any company: it cannot place orders.'],
+            'pays_inconnu' => ['Pays d\'enlèvement non reconnu : utilisez pays_enlevement.', 'Ophaalland niet herkend: gebruik pays_enlevement.', 'Pickup country not recognised: use pays_enlevement.'],
+            'pays_incoherent' => ['Le pays écrit dans l\'adresse d\'enlèvement ne correspond pas à pays_enlevement.', 'Het land in het ophaaladres komt niet overeen met pays_enlevement.', 'The country in the pickup address does not match pays_enlevement.'],
+            'expediteur_requis' => ['Hors de Belgique, indiquez expediteur et telephone_expediteur (le chauffeur charge chez un tiers).', 'Buiten België: geef expediteur en telephone_expediteur op (de chauffeur laadt bij een derde).', 'Outside Belgium, provide expediteur and telephone_expediteur (the driver loads at a third party).'],
+            'jour_chome' => ['Aucun enlèvement ce jour-là (dimanche ou jour férié en :pays). Premier jour ouvrable : :date.', 'Geen ophaling op die dag (zondag of feestdag in :pays). Eerste werkdag: :date.', 'No pickup on that day (Sunday or public holiday in :pays). First working day: :date.'],
+            'geocodage_indisponible' => ['La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.', 'De controle van het leveradres is tijdelijk niet beschikbaar. Probeer het over enkele minuten opnieuw.', 'Delivery address verification is temporarily unavailable. Try again in a few minutes.'],
+            'enlevement_trop_tot' => ['Hors de Belgique, l\'enlèvement est possible au plus tôt le :date (route depuis Bruxelles et repos du chauffeur compris).', 'Buiten België is ophaling ten vroegste mogelijk op :date (rit vanuit Brussel en rusttijd van de chauffeur inbegrepen).', 'Outside Belgium, pickup is possible on :date at the earliest (drive from Brussels and driver rest included).'],
+            'enlevement_inconnu' => ['L\'adresse d\'enlèvement ne correspond à aucune localité connue en :pays.', 'Het ophaaladres komt met geen gekende plaats in :pays overeen.', 'The pickup address matches no known locality in :pays.'],
+            'livraison_inconnue' => ['L\'adresse de livraison ne correspond à aucune localité connue en :pays.', 'Het leveradres komt met geen gekende plaats in :pays overeen.', 'The delivery address matches no known locality in :pays.'],
             'titre' => ['API REST', 'REST-API', 'REST API'],
             'sous_titre' => [
                 'Les clés d\'accès des partenaires et leur activité.',
@@ -2472,6 +2508,7 @@ class TranslationSeeder extends Seeder
         ],
 
         'registre' => [
+            'aucun' => ['Aucun traitement enregistré.', 'Geen verwerking geregistreerd.', 'No processing activity recorded.'],
             'titre' => ['Registre des traitements', 'Register van de verwerkingen', 'Record of processing activities'],
             'sous_titre' => [
                 'Article 30 du RGPD — le document que l\'Autorité demande en premier.',
@@ -3024,6 +3061,7 @@ class TranslationSeeder extends Seeder
             'camionnette' => ['Camionnette', 'Kleine bestelwagen', 'Light van'],
         ],
         'entreprise' => [
+            'aucun_utilisateur' => ['Aucun utilisateur pour le moment.', 'Nog geen gebruikers.', 'No users yet.'],
             'titre' => ['Utilisateurs de l\'entreprise', 'Gebruikers van de onderneming', 'Company users'],
             'vous' => ['vous', 'u', 'you'],
             'role' => ['Rôle', 'Rol', 'Role'],

@@ -1,7 +1,7 @@
 import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useOuverture, usePays, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -42,6 +42,9 @@ const LIBELLES_CRENEAU = {
 export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {}, entreprises = [] }) {
     const t = useTraduction();
     const v = useVocabulaire();
+    const ouverture = useOuverture();
+    const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const nomPays = usePays();
     const locale = useLocale();
     const [champ, setChamp] = useState(recherche ?? '');
     const [traitement, setTraitement] = useState(null);
@@ -72,7 +75,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
     // Ce qu'on sait du lieu d'enlevement ou de livraison, en une ligne.
     const surPlace = (d, lieu) => [
         d[lieu + '_contact_name'] && (d[lieu + '_contact_name'] + (d[lieu + '_contact_phone'] ? ' · ' + d[lieu + '_contact_phone'] : '')),
-        d[lieu + '_opening_hours'],
+        ouverture(d[lieu + '_opening_hours']),
         d[lieu + '_time_slot'] && t(...LIBELLES_CRENEAU[d[lieu + '_time_slot']]),
         d[lieu + '_has_dock'] === true && t('devis.quai_oui', 'Oui, un quai'),
         d[lieu + '_has_dock'] === false && t('devis.quai_non', 'Non : hayon nécessaire'),
@@ -258,10 +261,10 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                         {ouverte === d.id && (
                             <dl className="mt-3 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {d.end_client_name && ligne(t('devis.client_final', 'Entreprise pour laquelle vous demandez'), d.end_client_name)}
-                                {ligne(t('devis.forme_juridique', 'Forme juridique'), [d.legal_form, d.sector].filter(Boolean).join(' · '))}
+                                {ligne(t('devis.forme_juridique', 'Forme juridique'), [d.legal_form, v('secteur', d.sector)].filter(Boolean).join(' · '))}
                                 {ligne(t('devis.eori', 'Numéro EORI'), d.eori_number)}
-                                {ligne(t('devis.adresse_facturation', 'Adresse de facturation'), [d.billing_street, [d.billing_postal_code, d.billing_city].filter(Boolean).join(' '), d.billing_country].filter(Boolean).join(', '))}
-                                {ligne(t('devis.fonction', 'Fonction'), d.contact_function)}
+                                {ligne(t('devis.adresse_facturation', 'Adresse de facturation'), [d.billing_street, [d.billing_postal_code, d.billing_city].filter(Boolean).join(' '), nomPays(d.billing_country)].filter(Boolean).join(', '))}
+                                {ligne(t('devis.fonction', 'Fonction'), v('fonction', d.contact_function))}
                                 {ligne(t('devis.portable', 'Téléphone portable'), d.mobile_phone)}
                                 {ligne(t('devis.email_facturation', 'E-mail de facturation'), d.billing_email)}
                                 {ligne(t('devis.canal', 'Comment vous répondre ?'), (d.preferred_channel === 'phone' ? t('devis.canal_telephone', 'Par téléphone') : t('devis.canal_email', 'Par e-mail'))
@@ -270,11 +273,11 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                                 {ligne(t('devis.sur_place_livraison', 'À la livraison'), surPlace(d, 'delivery'))}
                                 {ligne(t('devis.date_livraison', 'Date de livraison souhaitée'), d.delivery_date ? date(d.delivery_date) : null)}
                                 {ligne(t('devis.volume_mensuel', 'Volume prévu'), choix(d.monthly_volume))}
-                                {ligne(t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'), d.declared_value ? Number(d.declared_value).toLocaleString(locale) + ' €' : null)}
-                                {ligne(t('devis.budget', 'Budget indicatif (€ HT)'), d.budget ? Number(d.budget).toLocaleString(locale) + ' €' : null)}
+                                {ligne(t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'), d.declared_value ? euros(d.declared_value) : null)}
+                                {ligne(t('devis.budget', 'Budget indicatif (€ HT)'), d.budget ? euros(d.budget) : null)}
                                 {ligne(t('devis.reponse_avant', 'Réponse souhaitée avant le'), d.response_deadline ? date(d.response_deadline) : null)}
                                 {d.needs_temperature && ligne(t('devis.temperature', 'Température dirigée'), `${d.temperature_min} °C → ${d.temperature_max} °C`)}
-                                {d.is_hazardous && ligne('ADR', [d.un_number && 'ONU ' + d.un_number, d.adr_class && t('devis.classe_adr', 'Classe ADR') + ' ' + d.adr_class, d.packing_group && t('devis.groupe_emballage', 'Groupe d\'emballage') + ' ' + d.packing_group].filter(Boolean).join(' · '))}
+                                {d.is_hazardous && ligne('ADR', [d.un_number && t('devis.onu', 'ONU') + ' ' + d.un_number, d.adr_class && t('devis.classe_adr', 'Classe ADR') + ' ' + d.adr_class, d.packing_group && t('devis.groupe_emballage', 'Groupe d\'emballage') + ' ' + d.packing_group].filter(Boolean).join(' · '))}
                                 {(d.packages ?? []).length > 0 && (
                                     <div className="sm:col-span-2 lg:col-span-3">
                                         <dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.colis_titre', 'Colis et palettes')}</dt>
@@ -298,7 +301,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                                         <dd className="mt-1 flex flex-wrap gap-2">
                                             {d.attachments.map((p, i) => (
                                                 <a key={i} href={route('quotes.piece', { quoteRequest: d.id, rang: i })} className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-brand-blue shadow-sm hover:underline">
-                                                    {p.nom} ({Math.max(1, Math.round((p.taille ?? 0) / 1024)).toLocaleString(locale)} Ko)
+                                                    {p.nom} ({Math.max(1, Math.round((p.taille ?? 0) / 1024)).toLocaleString(locale)} {t('unite.ko', 'Ko')})
                                                 </a>
                                             ))}
                                         </dd>

@@ -32,11 +32,11 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0; font-size:13px; color:#4a5568;">
         <tr>
             <td style="padding:12px 0 4px; width:40%; color:#94a3b8;">{{ $t::t('courriel.depart', 'Départ') }}</td>
-            <td style="padding:12px 0 4px;">{{ $ordre->pickup_address }}</td>
+            <td style="padding:12px 0 4px;">{{ \App\Support\Adresse::localiser($ordre->pickup_address) }}</td>
         </tr>
         <tr>
             <td style="padding:4px 0; color:#94a3b8;">{{ $t::t('courriel.destination', 'Destination') }}</td>
-            <td style="padding:4px 0;">{{ $ordre->delivery_address }}</td>
+            <td style="padding:4px 0;">{{ \App\Support\Adresse::localiser($ordre->delivery_address) }}</td>
         </tr>
         <tr>
             <td style="padding:4px 0; color:#94a3b8;">{{ $t::t('courriel.marchandise', 'Marchandise') }}</td>

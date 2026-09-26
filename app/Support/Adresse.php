@@ -51,6 +51,22 @@ class Adresse
     }
 
     /**
+     * L'adresse avec son pays dans la langue en cours : l'adresse est
+     * enregistree avec le nom francais (« Allemagne »), un lecteur
+     * neerlandophone lit « Duitsland ». Le reste de l'adresse ne change pas.
+     */
+    public static function localiser(?string $adresse): ?string
+    {
+        $nom = $adresse === null ? null : self::pays($adresse);
+
+        if ($nom === null || Pays::depuisNom($nom) === null) {
+            return $adresse;
+        }
+
+        return substr($adresse, 0, (int) strrpos($adresse, $nom)).Pays::localise($nom);
+    }
+
+    /**
      * Le pays ecrit dans l'adresse est-il celui declare ? C'est la que va le
      * chauffeur : on ne change pas de grille en mentant sur le pays. Sans
      * pays lisible, l'adresse est refusee si $strict (enlevement hors de

@@ -45,6 +45,17 @@ export function useVocabulaire() {
     };
 }
 
+/**
+ * Horaire d'ouverture courant du formulaire de devis (« Lun-ven 7 h - 16 h »),
+ * enregistre en francais, affiche dans la langue de l'interface. Un horaire
+ * saisi librement reste tel quel. Meme calcul que QuoteController::ouverture.
+ */
+export function useOuverture() {
+    const t = useTraduction();
+
+    return (horaire) => (horaire ? t(`devis.ouverture_${slug(horaire)}`, horaire) : horaire);
+}
+
 /** Les pays desservis, par code ISO 3166-1. Doit suivre App\Support\Pays. */
 const CODES_PAYS = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI',
     'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO',
@@ -91,9 +102,29 @@ export function usePays() {
     return (nom) => {
         if (! nom) return nom;
 
-        const code = INDEX_PAYS[slug(nom)];
+        // Un code ISO (« BE ») ou un nom enregistre (« Belgique »).
+        const code = CODES_PAYS.includes(nom) ? nom : INDEX_PAYS[slug(nom)];
 
         return code ? pays(langue).of(code) : nom;
+    };
+}
+
+/**
+ * Une adresse enregistree (« ..., Allemagne ») avec son pays dans la langue
+ * de l'interface (« ..., Duitsland »). Meme calcul que Adresse::localiser.
+ */
+export function useAdresse() {
+    const pays = usePays();
+
+    return (adresse) => {
+        if (! adresse) return adresse;
+        const i = adresse.lastIndexOf(',');
+        if (i < 0) return adresse;
+        const nom = adresse.slice(i + 1).trim();
+        if (/\d/.test(nom)) return adresse;
+        const traduit = pays(nom);
+
+        return traduit === nom ? adresse : adresse.slice(0, i + 1) + ' ' + traduit;
     };
 }
 
@@ -106,5 +137,5 @@ export function useLangue() {
 
 /** Le code de locale complet, celui qu'attend toLocaleString. */
 export function useLocale() {
-    return { fr: 'fr-BE', nl: 'nl-BE', en: 'en-GB' }[useLangue()] ?? 'fr-BE';
+    return { fr: 'fr-BE', nl: 'nl-BE', en: 'en-IE' }[useLangue()] ?? 'fr-BE';
 }

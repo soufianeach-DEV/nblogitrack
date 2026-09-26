@@ -8,6 +8,7 @@ use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\ControleAffectation;
+use App\Support\Formats;
 use App\Support\Suggestions;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
@@ -185,7 +186,7 @@ class VehicleController extends Controller
                 // Arrondi, le message annoncait 175 662 la ou le controle et
                 // le champ retiennent 175 661 : on tronque comme eux.
                 'mileage' => Traductions::t('msg.kilometrage_inferieur', 'Le kilométrage ne peut pas descendre sous le relevé actuel (:km km).', [
-                    'km' => number_format(floor((float) $vehicle->mileage), 0, ',', ' '),
+                    'km' => Formats::nombre(floor((float) $vehicle->mileage)),
                 ]),
             ]);
         }

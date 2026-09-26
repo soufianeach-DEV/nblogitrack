@@ -8,6 +8,7 @@ use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\JoursFeries;
+use Database\Seeders\TranslationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -251,5 +252,20 @@ class ApiExpeditionTest extends TestCase
         $refus($this->importLille(['livraison' => 'Domkloster 4, 50667 Köln', 'pays_livraison' => 'DE']));
 
         $this->assertSame(0, TransportOrder::count());
+    }
+
+    /** Les messages suivent Accept-Language, sinon la langue du compte de l'entreprise. */
+    public function test_les_messages_suivent_la_langue_de_l_integrateur(): void
+    {
+        $this->seed(TranslationSeeder::class);
+        $client = Client::factory()->create();
+        $client->users()->update(['locale' => 'nl']);
+        [, $jeton] = $this->cle($client->id);
+
+        $this->getJson('/api/v1/expeditions/INCONNU', ['Authorization' => 'Bearer '.$jeton, 'Accept-Language' => ''])
+            ->assertNotFound()->assertJsonPath('message', 'Zending niet gevonden.');
+
+        $this->getJson('/api/v1/expeditions/INCONNU', ['Authorization' => 'Bearer '.$jeton, 'Accept-Language' => 'en-GB,en;q=0.9'])
+            ->assertNotFound()->assertJsonPath('message', 'Shipment not found.');
     }
 }

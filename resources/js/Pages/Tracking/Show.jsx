@@ -4,7 +4,7 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -267,6 +267,7 @@ function Reperes({ jalons = [], position = null }) {
 function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, historique, expeditions = [] }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
+    const adresse = useAdresse();
     const v = useVocabulaire();
     const locale = useLocale();
     const [agrandie, setAgrandie] = useState(false);
@@ -295,16 +296,17 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
         let vivant = true;
 
-        const charger = (adresse, appliquer) => fetch(adresse, { headers: { Accept: 'application/json' } })
+        const charger = (adresse, appliquer, echec = () => {}) => fetch(adresse, { headers: { Accept: 'application/json' } })
             .then((reponse) => (reponse.ok ? reponse.json() : null))
             .then((donnees) => {
-                if (vivant && donnees) {
-                    appliquer(donnees);
-                }
+                if (! vivant) return;
+                if (donnees) appliquer(donnees);
+                else echec();
             })
-            .catch(() => {});
+            .catch(() => vivant && echec());
 
-        charger(route('tracking.itineraire', order.id), setItineraire);
+        // Echec : on le dit, au lieu d'annoncer un calcul sans fin.
+        charger(route('tracking.itineraire', order.id), setItineraire, () => setItineraire({ echec: true }));
         charger(route('tracking.peages', order.id), (liste) => setPeages(Array.isArray(liste) ? liste : []));
 
         return () => {
@@ -355,7 +357,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
                             <p className="font-mono text-xs text-brand-blue">{order.tracking_number}</p>
                             <h2 className="mt-0.5 text-sm font-bold leading-snug text-marine">
-                                {order.pickup_address} → {order.delivery_address}
+                                {adresse(order.pickup_address)} → {adresse(order.delivery_address)}
                             </h2>
                             <p className="text-xs text-slate-600">{order.client?.company_name}</p>
 
@@ -593,6 +595,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[1100] rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
                             {itineraire === null ? (
                                 <p className="text-xs text-slate-600">{t('suivi.calcul_itineraire', 'Calcul de l\'itinéraire…')}</p>
+                            ) : itineraire.echec ? (
+                                <p className="text-xs text-slate-600">{t('suivi.itineraire_indisponible', 'Itinéraire momentanément indisponible.')}</p>
                             ) : itineraire.direct ? (
                                 <p className="text-xs text-slate-600">
                                     {t('suivi.itineraire_indispo', 'Itinéraire indisponible — liaison directe entre les deux points.')}
@@ -624,6 +628,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
 function SuiviVisiteur({ order, searched }) {
     const t = useTraduction();
+    const adresse = useAdresse();
     const locale = useLocale();
     const { data, setData, get, processing } = useForm({ tracking_number: '', code: '' });
 
@@ -710,8 +715,8 @@ function SuiviVisiteur({ order, searched }) {
                                     )}
                                 </div>
                                 <dl className="space-y-3 text-sm">
-                                    <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{order.pickup_address}</dd></div>
-                                    <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{order.delivery_address}</dd></div>
+                                    <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{adresse(order.pickup_address)}</dd></div>
+                                    <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{adresse(order.delivery_address)}</dd></div>
                                     <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date
                                         ? new Date(order.requested_delivery_date).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
                                         : '—'}</dd></div>

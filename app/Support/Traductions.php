@@ -38,6 +38,19 @@ class Traductions
         return $texte;
     }
 
+    /** Execute un calcul dans une autre langue (texte destine a un tiers). */
+    public static function dans(string $langue, callable $calcul): mixed
+    {
+        $avant = app()->getLocale();
+        app()->setLocale(self::estServie($langue) ? $langue : 'fr');
+
+        try {
+            return $calcul();
+        } finally {
+            app()->setLocale($avant);
+        }
+    }
+
     public static function vocabulaire(string $groupe, ?string $valeur): ?string
     {
         if ($valeur === null || trim($valeur) === '') {

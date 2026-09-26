@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ChampRecherche from '@/Components/ChampRecherche';
 import ListeRecherche from '@/Components/ListeRecherche';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -52,12 +52,16 @@ const enHeures = (heures) => {
 function FretRetour({ ordre }) {
     const t = useTraduction();
     const candidats = ordre.fret_retour ?? [];
+    // Un refus (camion ou chauffeur devenu indisponible) s'affiche ici :
+    // aucun formulaire de la page ne le montrerait.
+    const [refus, setRefus] = useState(null);
     const affecter = (c) => router.post(route('planning.assign', ordre.id), {
         vehicle_registration: c.vehicle_registration, driver_id: c.driver_id, reaffectation: false,
-    }, { preserveScroll: true });
+    }, { preserveScroll: true, onStart: () => setRefus(null), onError: (e) => setRefus(Object.values(e).join(' ')) });
 
     return (
         <div className="mb-3 space-y-2 text-xs">
+            {refus && <p className="rounded-lg bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">{refus}</p>}
             {ordre.porteuse_info && (
                 <p className={'rounded-lg px-3 py-2 ' + (ordre.porteuse_info.valide ? 'bg-status-delivered/10 text-status-delivered' : 'bg-status-incident/10 text-status-incident')} role={ordre.porteuse_info.valide ? 'status' : 'alert'}>
                     {ordre.porteuse_info.valide
@@ -290,17 +294,17 @@ function BoutonsStatut({ ordre, onReaffecter }) {
 
     const changer = (statut, confirmation) => {
         if (confirmation && ! window.confirm(confirmation)) return;
-        router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true });
+        router.patch(route('planning.status', ordre.id), { status: statut }, { preserveScroll: true, onError: (e) => window.alert(Object.values(e).join('\n')) });
     };
 
     const desaffecter = () => {
         const motif = window.prompt(t('planif.motif_desaffectation', 'Motif de la désaffectation (accident, panne, immobilisation…) :'));
         if (motif === null) return;
-        if (motif.trim().length < 5) {
-            window.alert(t('planif.motif_requis', 'Le motif est obligatoire (5 caractères minimum).'));
+        if (motif.trim().length < 5 || motif.trim().length > 200) {
+            window.alert(t('planif.motif_longueur', 'Le motif compte de 5 à 200 caractères.'));
             return;
         }
-        router.post(route('planning.desaffecter', ordre.id), { motif: motif.trim() }, { preserveScroll: true });
+        router.post(route('planning.desaffecter', ordre.id), { motif: motif.trim() }, { preserveScroll: true, onError: (e) => window.alert(Object.values(e).join('\n')) });
     };
 
     return (
@@ -359,6 +363,7 @@ export default function Index({
     q = '', suggestions = [],
 }) {
     const t = useTraduction();
+    const adresse = useAdresse();
     const [enReaffectation, setEnReaffectation] = useState(null);
     const v = useVocabulaire();
     const locale = useLocale();
@@ -556,7 +561,7 @@ export default function Index({
                                 </div>
                                 <p className="mt-1 text-sm text-slate-600">{ordre.client?.company_name}</p>
                                 <p className="mt-1 text-xs text-slate-600">
-                                    {ordre.pickup_address} → {ordre.delivery_address}
+                                    {adresse(ordre.pickup_address)} → {adresse(ordre.delivery_address)}
                                 </p>
                                 <p className="mt-1 text-xs text-slate-600">
                                     {Number(ordre.weight).toLocaleString(locale)} kg

@@ -252,7 +252,8 @@ class TableauDeBordLiensTest extends TestCase
             ->patch(route('vehicles.update', $camion->registration), ['is_available' => true, 'mileage' => 170000])
             ->assertSessionHasErrors('mileage');
 
-        $message = session('errors')->first('mileage');
+        // Separateur de milliers du format belge (espace fine insecable).
+        $message = str_replace(["\u{202F}", "\u{A0}"], ' ', session('errors')->first('mileage'));
         $this->assertStringContainsString('175 661 km', $message);
         $this->assertStringNotContainsString('175 662', $message);
     }

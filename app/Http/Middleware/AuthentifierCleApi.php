@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\ApiKey;
 use App\Models\ApiRequest;
+use App\Models\Translation;
+use App\Support\Traductions;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,14 @@ class AuthentifierCleApi
         }
 
         $request->attributes->set('cle_api', $cle);
+
+        // Langue des messages : celle demandee par l'integrateur
+        // (Accept-Language), sinon celle du compte de l'entreprise.
+        $langue = $request->getPreferredLanguage(array_keys(Translation::LANGUES));
+        $langue = trim((string) $request->header('Accept-Language')) !== '' && $langue !== null
+            ? $langue
+            : ($cle->client?->compte()?->locale ?? 'fr');
+        app()->setLocale(Traductions::estServie($langue) ? $langue : 'fr');
 
         $reponse = $next($request);
 

@@ -301,6 +301,26 @@ class DevisCompletTest extends TestCase
         $this->assertNull(QuoteRequest::firstOrFail()->end_client_name);
     }
 
+    /** Les consignes de la commande sont ecrites dans la langue de l'entreprise cliente. */
+    public function test_les_consignes_suivent_la_langue_du_client(): void
+    {
+        $this->seed(TranslationSeeder::class);
+        Traductions::oublier();
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        $this->creerLesGrillesDeDemonstration();
+        $client = Client::factory()->create();
+        $client->users()->update(['locale' => 'nl']);
+        $this->post(route('devis.store'), $this->demande())->assertSessionHasNoErrors();
+
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->post(route('quotes.order', QuoteRequest::firstOrFail()), ['client_id' => $client->id]);
+
+        $consignes = TransportOrder::firstOrFail()->special_instructions;
+        $this->assertStringContainsString('Ophaling : contact Marc Dubois', $consignes);
+        $this->assertStringContainsString('lage-emissiezone', $consignes);
+        $this->assertStringContainsString('Offerteaanvraag', $consignes);
+    }
+
     /** La ligne de colis proposee par defaut, laissee telle quelle, n'est pas gardee. */
     public function test_la_palette_par_defaut_non_remplie_n_est_pas_gardee(): void
     {

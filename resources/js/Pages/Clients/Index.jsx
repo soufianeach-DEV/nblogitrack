@@ -128,7 +128,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             onChange={(valeur) => filtrer('pays', valeur)}
                             vide={t('entreprises.tous_pays', 'Tous les pays')}
                             aria-label={t('auth.pays', 'Pays')}
-                            options={suggestions.pays.map((nom) => ({ valeur: nom, libelle: nom }))}
+                            options={suggestions.pays.map((nom) => ({ valeur: nom, libelle: p(nom) }))}
                             className={champCls}
                         />
                     </div>
@@ -139,7 +139,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                             onChange={(valeur) => filtrer('secteur', valeur)}
                             vide={t('entreprises.tous_secteurs', 'Tous les secteurs')}
                             aria-label={t('auth.secteur', 'Secteur d\'activité')}
-                            options={suggestions.secteurs.map((nom) => ({ valeur: nom, libelle: nom }))}
+                            options={suggestions.secteurs.map((nom) => ({ valeur: nom, libelle: v('secteur', nom) }))}
                             className={champCls}
                         />
                     </div>

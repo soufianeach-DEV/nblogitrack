@@ -34,6 +34,9 @@ export default function Utilisateurs({ entreprise, utilisateurs = [] }) {
             <div className="grid gap-4 lg:grid-cols-3">
                 <section className="overflow-hidden rounded-2xl bg-white shadow-sm lg:col-span-2">
                     <ul className="divide-y divide-slate-100">
+                        {utilisateurs.length === 0 && (
+                            <li className="p-4 text-sm text-slate-500">{t('entreprise.aucun_utilisateur', 'Aucun utilisateur pour le moment.')}</li>
+                        )}
                         {utilisateurs.map((u) => (
                             <li key={u.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0">

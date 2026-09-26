@@ -17,6 +17,7 @@ use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
+use App\Support\Traductions;
 use App\Support\Trajet;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -56,7 +57,7 @@ class ExpeditionController extends Controller
         $expedition = $this->perimetre($request)->where('tracking_number', $numero)->first();
 
         if ($expedition === null) {
-            return response()->json(['message' => 'Expédition introuvable.'], 404);
+            return response()->json(['message' => Traductions::t('api.introuvable', 'Expédition introuvable.')], 404);
         }
 
         return response()->json(['data' => $this->format($expedition, true)]);
@@ -68,7 +69,7 @@ class ExpeditionController extends Controller
 
         if ($cle->client_id === null) {
             return response()->json([
-                'message' => 'Cette clé n\'est rattachée à aucune entreprise : elle ne peut pas déposer d\'ordre.',
+                'message' => Traductions::t('api.cle_sans_entreprise', 'Cette clé n\'est rattachée à aucune entreprise : elle ne peut pas déposer d\'ordre.'),
             ], 422);
         }
 
@@ -112,11 +113,11 @@ class ExpeditionController extends Controller
         $paysDepart = strtoupper($donnees['pays_enlevement'] ?? '') ?: ($nomDepart === null ? 'BE' : (Pays::depuisNom($nomDepart) ?? ''));
 
         if ($paysDepart === '') {
-            return response()->json(['message' => 'Pays d\'enlèvement non reconnu : utilisez pays_enlevement.'], 422);
+            return response()->json(['message' => Traductions::t('api.pays_inconnu', 'Pays d\'enlèvement non reconnu : utilisez pays_enlevement.')], 422);
         }
 
         if (! Adresse::paysCoherent($donnees['enlevement'], $paysDepart, false)) {
-            return response()->json(['message' => 'Le pays écrit dans l\'adresse d\'enlèvement ne correspond pas à pays_enlevement.'], 422);
+            return response()->json(['message' => Traductions::t('api.pays_incoherent', 'Le pays écrit dans l\'adresse d\'enlèvement ne correspond pas à pays_enlevement.')], 422);
         }
 
         $trajet = new Trajet($paysDepart, $pays);
@@ -126,7 +127,7 @@ class ExpeditionController extends Controller
         }
 
         if ($paysDepart !== 'BE' && (empty($donnees['expediteur']) || empty($donnees['telephone_expediteur']))) {
-            return response()->json(['message' => 'Hors de Belgique, indiquez expediteur et telephone_expediteur (le chauffeur charge chez un tiers).'], 422);
+            return response()->json(['message' => Traductions::t('api.expediteur_requis', 'Hors de Belgique, indiquez expediteur et telephone_expediteur (le chauffeur charge chez un tiers).')], 422);
         }
 
         $region = FretRetour::regionDe($paysDepart, $donnees['enlevement']);
@@ -134,8 +135,10 @@ class ExpeditionController extends Controller
 
         if (JoursFeries::chome($jourEnlevement, $paysDepart, $region)) {
             return response()->json([
-                'message' => 'Aucun enlèvement ce jour-là (dimanche ou jour férié en '.$paysDepart.'). Premier jour ouvrable : '
-                    .JoursFeries::prochainJourOuvrable($jourEnlevement, $paysDepart, $region)->toDateString().'.',
+                'message' => Traductions::t('api.jour_chome', 'Aucun enlèvement ce jour-là (dimanche ou jour férié en :pays). Premier jour ouvrable : :date.', [
+                    'pays' => $paysDepart,
+                    'date' => JoursFeries::prochainJourOuvrable($jourEnlevement, $paysDepart, $region)->toDateString(),
+                ]),
             ], 422);
         }
 
@@ -143,7 +146,7 @@ class ExpeditionController extends Controller
             $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays, $paysDepart);
         } catch (GeocodageIndisponible) {
             return response()->json([
-                'message' => 'La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.',
+                'message' => Traductions::t('api.geocodage_indisponible', 'La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.'),
             ], 503)->header('Retry-After', '120');
         }
 
@@ -161,7 +164,7 @@ class ExpeditionController extends Controller
             $premierLocal = $premier->copy()->setTimezone(Trajet::fuseau($paysDepart));
 
             if ($jourEnlevement->lt($premierLocal->copy()->startOfDay())) {
-                return response()->json(['message' => 'Hors de Belgique, l\'enlèvement est possible au plus tôt le '.$premierLocal->toDateString().' (route depuis Bruxelles et repos du chauffeur compris).'], 422);
+                return response()->json(['message' => Traductions::t('api.enlevement_trop_tot', 'Hors de Belgique, l\'enlèvement est possible au plus tôt le :date (route depuis Bruxelles et repos du chauffeur compris).', ['date' => $premierLocal->toDateString()])], 422);
             }
 
             [$h, $m] = array_map('intval', explode(':', (string) config('fret.chrono.quai.0', '07:00')));
@@ -261,13 +264,13 @@ class ExpeditionController extends Controller
         $depart = Localite::coordonnees(Adresse::localite($enlevement), $paysDepart);
 
         if ($depart === null) {
-            return 'L\'adresse d\'enlèvement ne correspond à aucune localité connue en '.$paysDepart.'.';
+            return Traductions::t('api.enlevement_inconnu', 'L\'adresse d\'enlèvement ne correspond à aucune localité connue en :pays.', ['pays' => $paysDepart]);
         }
 
         $arrivee = Localite::coordonnees(Adresse::localite($livraison), $pays);
 
         if ($arrivee === null) {
-            return 'L\'adresse de livraison ne correspond à aucune localité connue en '.$pays.'.';
+            return Traductions::t('api.livraison_inconnue', 'L\'adresse de livraison ne correspond à aucune localité connue en :pays.', ['pays' => $pays]);
         }
 
         return ['enlevement' => $depart, 'livraison' => $arrivee];

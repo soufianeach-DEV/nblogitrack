@@ -96,6 +96,9 @@ export default function Index({ traitements, bases, responsable, information }) 
             </section>
 
             <div className="mt-6 space-y-4">
+                {traitements.length === 0 && (
+                    <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-sm">{t('registre.aucun', 'Aucun traitement enregistré.')}</p>
+                )}
                 {traitements.map((entree, i) => (
                     <article key={entree.id} className="break-inside-avoid rounded-2xl bg-white p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">

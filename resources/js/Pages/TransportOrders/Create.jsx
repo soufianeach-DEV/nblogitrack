@@ -85,7 +85,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                 needs_tail_lift: Boolean(data.needs_tail_lift),
             })
                 .then(({ data: r }) => { setDistance(r.distance_km); setEstim(r ?? {}); })
-                .catch((e) => { setDistance(null); setEstim(e.response?.data?.erreur ? { erreur: e.response.data.erreur } : {}); })
+                .catch((e) => { setDistance(null); setEstim(e.response?.data?.erreur ? { erreur: e.response.data.erreur } : { indisponible: true }); })
                 .finally(() => setLoadingDist(false));
         }, 400);
         return () => clearTimeout(minuteur);
@@ -101,6 +101,8 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
 
     const dateHeure = (iso) => new Date(iso).toLocaleString(locale, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const fr = (n, dec = 2) => Number(n).toLocaleString(locale, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    // Montant avec le symbole a sa place selon la langue (« 1 234,50 € », « €1,234.50 »).
+    const euros = (n) => Number(n).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const kmTxt = distance != null ? distance.toLocaleString(locale, { maximumFractionDigits: 1 }) : '';
 
     // La zone tarifaire est le pays etranger du trajet, comme Trajet::zone
@@ -367,6 +369,13 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                             <Link href={route('devis.create')} className="mt-2 inline-block font-semibold underline">{t('commande.demander_devis', 'Demander un devis')}</Link>
                         </div>
                     ) : zone ? (
+                        <>
+                        {estim.indisponible && (
+                            <p className="mt-1 rounded-lg bg-status-incident/10 px-3 py-2 text-sm text-status-incident" role="alert">
+                                {t('commande.estimation_indisponible', 'Le prix n\'a pas pu être calculé (service momentanément indisponible).')}{' '}
+                                <button type="button" onClick={() => setRelance((n) => n + 1)} className="font-semibold underline">{t('commande.reessayer', 'Réessayer')}</button>
+                            </p>
+                        )}
                         <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             {offres.map((g) => {
                                 const p = prixDe(g);
@@ -385,15 +394,16 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                     >
                                         <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ? t(...NOMS_OFFRE[g.service_level]) : g.label}</p>
                                         <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {delai(g)} {t('ordres.j', 'j')}</p>
-                                        <p className="mt-2 text-lg font-bold text-action-dark">{p != null ? `${fr(p)} €` : '—'}</p>
+                                        <p className="mt-2 text-lg font-bold text-action-dark">{p != null ? euros(p) : '—'}</p>
                                         {remise && (
-                                            <p className="text-xs text-slate-500 line-through">{t('commande.au_lieu_de', 'au lieu de :montant', { montant: fr(ligne) + ' €' })}</p>
+                                            <p className="text-xs text-slate-500 line-through">{t('commande.au_lieu_de', 'au lieu de :montant', { montant: euros(ligne) })}</p>
                                         )}
                                         {tropLent && <p className="mt-1 text-xs text-gray-400">{t('commande.trop_lent', 'trop lent pour la date demandée')}</p>}
                                     </button>
                                 );
                             })}
                         </div>
+                        </>
                     ) : (
                         <p className="mt-1 text-sm text-slate-600">{t('commande.destination_dabord', 'Choisissez d\'abord les adresses de départ et de destination : la zone tarifaire est déduite du trajet.')}</p>
                     )}
@@ -426,7 +436,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                     <p className="text-sm font-medium text-marine">
                                         {total != null
                                             ? t('commande.estimation_prix', 'Estimation du prix')
-                                            : t('commande.distance', 'Distance') + ' : ' + kmTxt + ' km'}
+                                            : t('commande.distance_km', 'Distance : :km km', { km: kmTxt })}
                                     </p>
                                     {total != null ? (
                                         <p className="text-xs text-gray-500">

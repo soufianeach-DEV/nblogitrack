@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -30,6 +30,7 @@ function StatusBadge({ status, enAttenteDePaiement = false }) {
 
 export default function Index({ orders, filters }) {
     const t = useTraduction();
+    const adresse = useAdresse();
     const locale = useLocale();
     const v = useVocabulaire();
     const estClient = usePage().props.auth.user.role === 'CLIENT';
@@ -146,7 +147,7 @@ export default function Index({ orders, filters }) {
                                         <div className="text-xs text-slate-600">{v('marchandise', order.goods_type) ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
-                                    <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
+                                    <td className="px-6 py-4 text-slate-600">{adresse(order.delivery_address)}</td>
                                     <td className="px-6 py-4">
                                         <StatusBadge status={order.status} enAttenteDePaiement={order.en_attente_de_paiement} />
                                     </td>
