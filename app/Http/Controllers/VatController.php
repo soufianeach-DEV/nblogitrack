@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\FormeJuridique;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Traductions;
 use App\Support\Translitteration;
@@ -102,6 +103,24 @@ class VatController extends Controller
 
         if (isset($resultat['entreprise']['dirigeant']['fonction'])) {
             $resultat['entreprise']['dirigeant']['fonction'] = Traductions::vocabulaire('fonction', $resultat['entreprise']['dirigeant']['fonction']);
+        }
+
+        if (($resultat['statut'] ?? null) === 'valide') {
+            $resultat['entreprise'] ??= ['dirigeant' => null, 'secteur' => null];
+
+            // Forme absente du registre : lue dans la raison sociale.
+            if (empty($resultat['entreprise']['forme_juridique']) && ($forme = FormeJuridique::depuisNom($resultat['nom'] ?? null))) {
+                $resultat['entreprise']['forme_juridique'] = $forme;
+                $resultat['entreprise']['forme_deduite'] = true;
+            }
+
+            // Ce que le registre de ce pays ne publie pas : a completer.
+            $resultat['non_publie'] = array_keys(array_filter([
+                'nom' => ($resultat['nom'] ?? '') === '',
+                'adresse' => ($resultat['adresse']['rue'] ?? '') === '' && ($resultat['adresse']['ville'] ?? '') === '',
+                'forme_juridique' => empty($resultat['entreprise']['forme_juridique']),
+                'secteur' => empty($resultat['entreprise']['secteur']),
+            ]));
         }
 
         return $resultat;

@@ -110,6 +110,16 @@ class RegistreTvaParPaysTest extends TestCase
         $this->getJson('/verification-tva?tva=BE0202239951')->assertJsonPath('entreprise.secteur', 'Télécommunications');
     }
 
+    public function test_la_forme_est_lue_dans_le_nom_et_le_non_publie_signale(): void
+    {
+        Http::fake(['ec.europa.eu/*' => Http::response(['isValid' => true, 'name' => 'Spotify AB', 'address' => "REGERINGSGATAN 19\n111 53 STOCKHOLM"])]);
+
+        $this->getJson('/verification-tva?tva=SE556703748501')
+            ->assertJsonPath('entreprise.forme_juridique', 'AB')
+            ->assertJsonPath('entreprise.forme_deduite', true)
+            ->assertJsonPath('non_publie', ['secteur']);
+    }
+
     public function test_allemagne_et_espagne_ne_donnent_ni_nom_ni_adresse(): void
     {
         Http::fake(['ec.europa.eu/*' => Http::response(['isValid' => true, 'name' => '---', 'address' => '---'])]);
@@ -118,7 +128,8 @@ class RegistreTvaParPaysTest extends TestCase
             $this->getJson('/verification-tva?tva='.$numero)
                 ->assertJsonPath('statut', 'valide')
                 ->assertJsonPath('nom', '')
-                ->assertJsonPath('adresse.rue', '');
+                ->assertJsonPath('adresse.rue', '')
+                ->assertJsonPath('non_publie', ['nom', 'adresse', 'forme_juridique', 'secteur']);
         }
     }
 

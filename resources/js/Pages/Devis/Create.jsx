@@ -538,7 +538,19 @@ export default function Create({ choix, listes }) {
                                 {vies.entreprise?.situation && ! vies.entreprise.situation.acceptable && <span className="font-semibold text-status-incident"> {vies.entreprise.situation.libelle}.</span>}
                                 {vies.peppol && <> {t('auth.peppol', 'Identifiant Peppol :')} <span className="font-mono text-brand-blue">{vies.peppol}</span>.</>}
                                 {vies.entreprise?.dirigeant && ' ' + t('devis.dirigeant', 'Dirigeant repris du registre national, vérifiez-le.')}
-                                {! vies.nom && ' ' + t('devis.registre_sans_adresse', 'Ce pays ne publie ni le nom ni l\'adresse dans le registre européen : complétez-les ci-dessous.')}
+                                {vies.entreprise?.forme_deduite && ' ' + t('devis.forme_deduite', 'Forme juridique lue dans le nom de la société, vérifiez-la.')}
+                            </p>
+                        )}
+                        {vies?.statut === 'valide' && vies.non_publie?.length > 0 && (
+                            <p className="mt-1 text-xs text-slate-600">
+                                {t('devis.non_publie', 'Le registre de ce pays ne publie pas : :champs. À compléter ci-dessous si besoin.', {
+                                    champs: vies.non_publie.map((c) => ({
+                                        nom: t('devis.societe', 'Société'),
+                                        adresse: t('devis.adresse_facturation', 'Adresse de facturation'),
+                                        forme_juridique: t('devis.forme_juridique', 'Forme juridique'),
+                                        secteur: t('devis.secteur', 'Secteur d\'activité'),
+                                    }[c] ?? c).toLowerCase()).join(', '),
+                                })}
                             </p>
                         )}
                         {vies && vies.statut !== 'valide' && (
