@@ -87,9 +87,11 @@ export default function CarteTrajets({
             zoomControl: true,
         }).setView([50.5, 4.5], 7);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
+        // Les tuiles de CARTO exigent desormais une cle (« API KEY
+        // REQUIRED » en filigrane) : la carte standard d'OpenStreetMap est
+        // libre, a condition de citer ses contributeurs.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
             maxZoom: 19,
         }).addTo(c);
 

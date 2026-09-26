@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnTetesDeSecurite
 {
-    private const IMAGES = 'https://*.basemaps.cartocdn.com';
+    private const IMAGES = 'https://tile.openstreetmap.org';
 
     private const APPELS = 'https://photon.komoot.io https://router.project-osrm.org https://api-adresse.data.gouv.fr https://api.pdok.nl';
 

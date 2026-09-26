@@ -220,12 +220,14 @@ class TranslationSeeder extends Seeder
                 'Optimise your B2B logistics with confidence.',
             ],
             'sous_titre' => [
-                'La plateforme de référence pour le suivi d\'expéditions et la gestion de flotte en Belgique.',
-                'Hét platform voor zendingopvolging en wagenparkbeheer in België.',
-                'The reference platform for shipment tracking and fleet management in Belgium.',
+                'Commande, suivi, planification et facturation de vos transports routiers, en Belgique et en Europe.',
+                'Bestelling, opvolging, planning en facturatie van uw wegtransport, in België en in Europa.',
+                'Ordering, tracking, planning and invoicing of your road freight, in Belgium and across Europe.',
             ],
             'expeditions_an' => ['Expéditions / an', 'Zendingen / jaar', 'Shipments / year'],
             'fiabilite' => ['Fiabilité', 'Betrouwbaarheid', 'Reliability'],
+            'pays_desservis' => ['pays européens desservis', 'Europese landen bediend', 'European countries served'],
+            'trois_langues' => ['trois langues, jusqu\'aux factures', 'drie talen, tot en met de facturen', 'three languages, invoices included'],
         ],
 
         'auth' => [

@@ -2,9 +2,11 @@ import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
+import { usePage } from '@inertiajs/react';
 
 export default function GuestLayout({ children, large = false }) {
     const t = useTraduction();
+    const { paysDesservis = 0 } = usePage().props;
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-3">
@@ -25,17 +27,22 @@ export default function GuestLayout({ children, large = false }) {
                             {t('vitrine.baseline', 'Optimisez votre logistique B2B en toute confiance.')}
                         </h2>
                         <p className="mt-4 text-slate-300">
-                            {t('vitrine.sous_titre', 'La plateforme de référence pour le suivi d\'expéditions et la gestion de flotte en Belgique.')}
+                            {t('vitrine.sous_titre', 'Commande, suivi, planification et facturation de vos transports routiers, en Belgique et en Europe.')}
                         </p>
                     </div>
+                    {/* Des chiffres verifiables : les pays ou l'on peut commander
+                        et les langues de l'application. Les volumes et taux de
+                        fiabilite affiches auparavant etaient inventes. */}
                     <div className="flex gap-10">
+                        {paysDesservis > 0 && (
+                            <div>
+                                <div className="text-2xl font-bold text-action">{paysDesservis}</div>
+                                <div className="text-sm text-slate-300">{t('vitrine.pays_desservis', 'pays européens desservis')}</div>
+                            </div>
+                        )}
                         <div>
-                            <div className="text-2xl font-bold text-action">1.2M+</div>
-                            <div className="text-sm text-slate-300">{t('vitrine.expeditions_an', 'Expéditions / an')}</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-action">99.9%</div>
-                            <div className="text-sm text-slate-300">{t('vitrine.fiabilite', 'Fiabilité')}</div>
+                            <div className="text-2xl font-bold text-action">FR · NL · EN</div>
+                            <div className="text-sm text-slate-300">{t('vitrine.trois_langues', 'trois langues, jusqu\'aux factures')}</div>
                         </div>
                     </div>
                 </div>
