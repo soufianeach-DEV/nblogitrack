@@ -105,7 +105,6 @@ function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
 
 export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLigne = false, peutEnvoyer = false }) {
     const t = useTraduction();
-    const flash = usePage().props.flash ?? {};
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const etat = ETATS[facture.etat] ?? ETATS.SENT;
@@ -151,16 +150,6 @@ export default function Show({ facture, peutMarquerPayee = false, peutPayerEnLig
         >
             <Head title={facture.reference} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="grid gap-4 lg:grid-cols-3">
                 <section className="rounded-2xl bg-white p-5 shadow-sm">

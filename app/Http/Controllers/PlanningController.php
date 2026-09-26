@@ -7,8 +7,10 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\Formats;
 use App\Support\TempsDeConduite;
 use App\Support\Traductions;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -208,7 +210,17 @@ class PlanningController extends Controller
             return back()->withErrors(['driver_id' => Traductions::t('msg.planif_chauffeur_indisponible', 'Ce chauffeur n\'est plus disponible.')]);
         }
 
-        if ($empechements = $driver->empechements()) {
+        // Sans date d'enlevement, l'expedition part « des que possible » :
+        // l'affecter, c'est la planifier aujourd'hui. Elle faisait tomber
+        // l'affectation en erreur 500.
+        if ($transportOrder->pickup_date === null) {
+            $transportOrder->pickup_date = now();
+        }
+
+        $debut = $transportOrder->pickup_date->copy()->startOfDay();
+        $fin = $debut->copy()->addDays(TempsDeConduite::journees($transportOrder->distance_km) - 1);
+
+        if ($empechements = $driver->empechements($fin)) {
             return back()->withErrors([
                 'driver_id' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)]),
             ]);
@@ -217,8 +229,8 @@ class PlanningController extends Controller
         if ($vehicle->capacity_tonnes * 1000 < $transportOrder->weight) {
             return back()->withErrors([
                 'vehicle_registration' => Traductions::t('msg.planif_capacite', 'Capacité insuffisante : :capacite t pour :poids kg.', [
-                    'capacite' => $vehicle->capacity_tonnes,
-                    'poids' => $transportOrder->weight,
+                    'capacite' => Formats::nombre($vehicle->capacity_tonnes, 1),
+                    'poids' => Formats::nombre($transportOrder->weight),
                 ]),
             ]);
         }
@@ -233,13 +245,20 @@ class PlanningController extends Controller
             return back()->withErrors(['driver_id' => Traductions::t('msg.planif_adr', 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.')]);
         }
 
-        $jour = $transportOrder->pickup_date->toDateString();
+        if ($motif = $driver->motifPermis($vehicle)) {
+            return back()->withErrors([
+                'driver_id' => Traductions::t('msg.planif_permis', 'Permis inadapté : :motif.', ['motif' => $motif]),
+            ]);
+        }
 
-        $conflitChauffeur = TransportOrder::where('driver_id', $driver->id)
-            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
-            ->whereDate('pickup_date', $jour)
-            ->where('vehicle_registration', '!=', $vehicle->registration)
-            ->exists();
+        // Une mission de plusieurs jours occupe chauffeur et camion sur
+        // toute sa duree : on compare des intervalles, pas le seul jour
+        // d'enlevement.
+        $conflitChauffeur = $this->chevauche(
+            TransportOrder::where('driver_id', $driver->id)
+                ->where('vehicle_registration', '!=', $vehicle->registration),
+            $debut, $fin, $transportOrder->id,
+        );
 
         if ($conflitChauffeur) {
             return back()->withErrors([
@@ -247,11 +266,11 @@ class PlanningController extends Controller
             ]);
         }
 
-        $conflitCamion = TransportOrder::where('vehicle_registration', $vehicle->registration)
-            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
-            ->whereDate('pickup_date', $jour)
-            ->where('driver_id', '!=', $driver->id)
-            ->exists();
+        $conflitCamion = $this->chevauche(
+            TransportOrder::where('vehicle_registration', $vehicle->registration)
+                ->where('driver_id', '!=', $driver->id),
+            $debut, $fin, $transportOrder->id,
+        );
 
         if ($conflitCamion) {
             return back()->withErrors([
@@ -276,6 +295,7 @@ class PlanningController extends Controller
             'vehicle_registration' => $vehicle->registration,
             'driver_id' => $driver->id,
             'assigned_at' => now(),
+            'pickup_date' => $transportOrder->pickup_date,
             'status' => 'ASSIGNED',
         ]);
 
@@ -296,9 +316,34 @@ class PlanningController extends Controller
         ]));
     }
 
+    /**
+     * Une mission deja engagee occupe-t-elle un des jours [debut, fin] ?
+     */
+    private function chevauche($requete, CarbonInterface $debut, CarbonInterface $fin, int $exclu): bool
+    {
+        return $requete->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+            ->where('id', '!=', $exclu)
+            ->whereNotNull('pickup_date')
+            ->where('pickup_date', '<=', $fin->copy()->endOfDay())
+            ->where('pickup_date', '>=', $debut->copy()->subDays(7))
+            ->get(['pickup_date', 'distance_km'])
+            ->contains(function (TransportOrder $mission) use ($debut) {
+                $finMission = $mission->pickup_date->copy()->startOfDay()
+                    ->addDays(TempsDeConduite::journees($mission->distance_km) - 1);
+
+                return $finMission->gte($debut);
+            });
+    }
+
     public function suiviDirect(TransportOrder $transportOrder): RedirectResponse
     {
         $ouvert = ! $transportOrder->suivi_direct;
+
+        // Suivre un camion n'a de sens que pour une mission affectee ou en
+        // route. On peut toujours le couper.
+        if ($ouvert && ! in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true)) {
+            return back()->with('error', Traductions::t('msg.planif_suivi_impossible', 'Le suivi de position ne s\'ouvre que pour une mission affectée ou en cours.'));
+        }
 
         $transportOrder->update(['suivi_direct' => $ouvert]);
 
@@ -332,6 +377,17 @@ class PlanningController extends Controller
 
         if ($data['status'] === 'DELIVERED') {
             $champs['actual_delivery_date'] = now();
+        }
+
+        // Une mission terminee ne se suit plus, et une annulation garde la
+        // trace de son auteur, comme celle que fait le client.
+        if (in_array($data['status'], ['DELIVERED', 'CANCELLED'], true)) {
+            $champs['suivi_direct'] = false;
+        }
+
+        if ($data['status'] === 'CANCELLED') {
+            $champs['cancelled_at'] = now();
+            $champs['cancelled_by'] = $request->user()->id;
         }
 
         $transportOrder->update($champs);

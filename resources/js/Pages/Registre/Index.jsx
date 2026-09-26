@@ -17,7 +17,6 @@ const CHAMPS = [
 
 export default function Index({ traitements, bases, responsable, information }) {
     const t = useTraduction();
-    const flash = usePage().props.flash ?? {};
     const [edition, setEdition] = useState(null);
 
     const { data, setData, patch, processing, errors } = useForm({});
@@ -58,11 +57,6 @@ export default function Index({ traitements, bases, responsable, information }) 
         >
             <Head title={t('registre.titre', 'Registre des traitements')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered print:hidden">
-                    {flash.success}
-                </div>
-            )}
 
             <section className="rounded-2xl bg-white p-5 shadow-sm">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">

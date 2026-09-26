@@ -138,7 +138,6 @@ function Creation({ roles, permis, statuts, onFermer }) {
 export default function Index({ comptes = [], roles = {}, permis = [], statuts = {}, compteurs, filtres = {} }) {
     const t = useTraduction();
     const [creer, setCreer] = useState(false);
-    const flash = usePage().props.flash ?? {};
     const { errors } = usePage().props;
 
     return (
@@ -166,16 +165,6 @@ export default function Index({ comptes = [], roles = {}, permis = [], statuts =
         >
             <Head title={t('nav.personnel', 'Personnel')} />
 
-            {flash.success && (
-                <p className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-semibold text-status-delivered">
-                    {flash.success}
-                </p>
-            )}
-            {flash.error && (
-                <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
-                    {flash.error}
-                </p>
-            )}
             {errors.is_active && (
                 <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
                     {errors.is_active}

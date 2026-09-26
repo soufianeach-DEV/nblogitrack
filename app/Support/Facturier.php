@@ -111,7 +111,10 @@ class Facturier
                 'client_id' => $client->id,
                 'reference' => sprintf('FAC-%s-%04d', $emission->format('Y'), $rang),
                 'issued_on' => $emission,
-                'due_on' => $this->echeance($emission, $client->payment_terms),
+                // Emise en retard, une facture garde sa date du 1er du mois,
+                // mais le delai de paiement court a partir d'aujourd'hui :
+                // sinon, lancee le 26, elle laissait cinq jours au client.
+                'due_on' => $this->echeance($emission->copy()->max(now()->startOfDay()), $client->payment_terms),
                 'period_start' => $periode,
                 'period_end' => $periode->copy()->endOfMonth(),
                 'amount_excl_tax' => $horsTva,

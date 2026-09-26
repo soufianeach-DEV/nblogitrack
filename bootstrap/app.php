@@ -107,4 +107,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->route('login')
                 ->with('status', Traductions::t('msg.session_expiree', 'Votre session a expiré. Reconnectez-vous pour continuer.'));
         });
+
+        // Une limite de debit depassee repondait par une fenetre brute
+        // « 429 TOO MANY REQUESTS », en anglais, par-dessus le formulaire.
+        // L'utilisateur reste sur sa page, ses champs intacts, avec un
+        // message qui dit combien de temps attendre.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 429 || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
+                return null;
+            }
+
+            $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return back()->with('error', Traductions::t('msg.trop_de_demandes', 'Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', [
+                'secondes' => max(1, $secondes),
+            ]));
+        });
     })->create();

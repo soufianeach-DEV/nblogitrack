@@ -71,7 +71,7 @@ class TraductionsCompletesTest extends TestCase
             '/\.jsx?$/',
             "/\\bt\\(\\s*'([a-z0-9_]+\\.[a-z0-9_.]*[a-z0-9])'/",
         ) + $this->clesDemandees(
-            ['app', 'resources/views'],
+            ['app', 'bootstrap', 'resources/views'],
             '/\.php$/',
             "/(?:Traductions|\\\$t)::t\\(\\s*'([a-z0-9_]+\\.[a-z0-9_.]*[a-z0-9])'/",
         );

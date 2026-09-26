@@ -79,6 +79,17 @@ class MissionController extends Controller
             return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
         }
 
+        // L'enlevement ne se confirme pas plusieurs jours a l'avance : le
+        // client verrait sa marchandise « en route » alors qu'elle attend
+        // encore sur son quai. La veille reste permise, pour un chargement
+        // en fin de journee.
+        if ($vise === 'IN_PROGRESS' && $transportOrder->pickup_date !== null
+            && $transportOrder->pickup_date->copy()->startOfDay()->gt(now()->addDay()->endOfDay())) {
+            return back()->with('error', Traductions::t('msg.mission_trop_tot', 'L\'enlèvement est prévu le :date : il ne peut pas être confirmé plus tôt que la veille.', [
+                'date' => $transportOrder->pickup_date->format('d/m/Y'),
+            ]));
+        }
+
         $changements = ['status' => $vise];
 
         if ($vise === 'IN_PROGRESS') {
@@ -87,6 +98,7 @@ class MissionController extends Controller
 
         if ($vise === 'DELIVERED') {
             $changements['actual_delivery_date'] = now();
+            $changements['suivi_direct'] = false;
         }
 
         $transportOrder->update($changements);

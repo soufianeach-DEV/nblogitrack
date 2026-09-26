@@ -1352,6 +1352,9 @@ class TranslationSeeder extends Seeder
                 'Keuring vervallen sinds :date',
                 'Inspection overdue since :date',
             ],
+            'permis_ce' => ['une semi-remorque exige le permis CE (permis :permis)', 'een oplegger vereist rijbewijs CE (rijbewijs :permis)', 'a semi-trailer requires a CE licence (licence :permis)'],
+            'permis_c' => ['ce camion dépasse 7,5 t en charge : le permis C est requis (permis :permis)', 'deze vrachtwagen weegt beladen meer dan 7,5 t: rijbewijs C is vereist (rijbewijs :permis)', 'this truck exceeds 7.5 t loaded: a C licence is required (licence :permis)'],
+            'permis_c1' => ['ce véhicule dépasse 3,5 t en charge : le permis C1 au moins est requis', 'dit voertuig weegt beladen meer dan 3,5 t: minstens rijbewijs C1 is vereist', 'this vehicle exceeds 3.5 t loaded: at least a C1 licence is required'],
         ],
 
         'ent' => [
@@ -2461,6 +2464,11 @@ class TranslationSeeder extends Seeder
             'session_expiree_courte' => ['Votre session a expiré, reconnectez-vous.', 'Uw sessie is verlopen, meld u opnieuw aan.', 'Your session has expired, please sign in again.'],
             'session_expiree' => ['Votre session a expiré. Reconnectez-vous pour continuer.', 'Uw sessie is verlopen. Meld u opnieuw aan om verder te gaan.', 'Your session has expired. Sign in again to continue.'],
             'planif_desaffectation_affectee' => ['Seule une mission affectée ou en cours peut être désaffectée.', 'Enkel een toegewezen of lopende opdracht kan losgekoppeld worden.', 'Only an assigned or in-progress job can be unassigned.'],
+            'mission_trop_tot' => ['L\'enlèvement est prévu le :date : il ne peut pas être confirmé plus tôt que la veille.', 'De ophaling is gepland op :date: ze kan niet vroeger dan de dag ervoor bevestigd worden.', 'Pickup is planned for :date: it cannot be confirmed earlier than the day before.'],
+            'planif_permis' => ['Permis inadapté : :motif.', 'Ongeschikt rijbewijs: :motif.', 'Unsuitable licence: :motif.'],
+            'planif_suivi_impossible' => ['Le suivi de position ne s\'ouvre que pour une mission affectée ou en cours.', 'Positieopvolging kan enkel voor een toegewezen of lopende opdracht.', 'Position tracking can only be opened for an assigned or in-progress job.'],
+            'devis_transition_impossible' => ['Cette demande est déjà traitée : son statut ne peut plus revenir en arrière.', 'Deze aanvraag is al behandeld: haar status kan niet meer terug.', 'This request has already been handled: its status can no longer go back.'],
+            'trop_de_demandes' => ['Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', 'Te veel pogingen op korte tijd. Probeer opnieuw over :secondes seconden.', 'Too many attempts in a short time. Please try again in :secondes seconds.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

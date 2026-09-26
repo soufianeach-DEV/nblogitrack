@@ -179,7 +179,7 @@ TXT;
 ## Éditeur du site
 NBLogiTrack SRL, société à responsabilité limitée de droit belge.
 Siège social : Avenue du Port 86C, 1000 Bruxelles, Belgique.
-Numéro d'entreprise et numéro de TVA : BE 0123.456.789.
+Numéro d'entreprise et numéro de TVA : BE 0123.456.749.
 Registre des personnes morales de Bruxelles, section francophone.
 Téléphone : +32 (0) 2 456 78 90 — Courriel : info@nblogitrack.be
 
@@ -230,7 +230,7 @@ TXT;
 ## Uitgever van de website
 NBLogiTrack BV, besloten vennootschap naar Belgisch recht.
 Maatschappelijke zetel: Havenlaan 86C, 1000 Brussel, België.
-Ondernemingsnummer en btw-nummer: BE 0123.456.789.
+Ondernemingsnummer en btw-nummer: BE 0123.456.749.
 Rechtspersonenregister Brussel.
 Telefoon: +32 (0) 2 456 78 90 — E-mail: info@nblogitrack.be
 
@@ -281,7 +281,7 @@ TXT;
 ## Website publisher
 NBLogiTrack SRL, a limited liability company under Belgian law.
 Registered office: Avenue du Port 86C, 1000 Brussels, Belgium.
-Company and VAT number: BE 0123.456.789.
+Company and VAT number: BE 0123.456.749.
 Register of Legal Entities, Brussels.
 Phone: +32 (0) 2 456 78 90 — Email: info@nblogitrack.be
 
@@ -330,7 +330,7 @@ TXT;
     {
         return <<<'TXT'
 ## Responsable du traitement
-NBLogiTrack SRL, Avenue du Port 86C, 1000 Bruxelles, numéro d'entreprise BE 0123.456.789.
+NBLogiTrack SRL, Avenue du Port 86C, 1000 Bruxelles, numéro d'entreprise BE 0123.456.749.
 Toute question relative aux données personnelles : info@nblogitrack.be
 
 ## À qui s'adresse cette politique
@@ -433,7 +433,7 @@ TXT;
     {
         return <<<'TXT'
 ## Verwerkingsverantwoordelijke
-NBLogiTrack BV, Havenlaan 86C, 1000 Brussel, ondernemingsnummer BE 0123.456.789.
+NBLogiTrack BV, Havenlaan 86C, 1000 Brussel, ondernemingsnummer BE 0123.456.749.
 Vragen over persoonsgegevens: info@nblogitrack.be
 
 ## Voor wie geldt dit beleid
@@ -536,7 +536,7 @@ TXT;
     {
         return <<<'TXT'
 ## Data controller
-NBLogiTrack SRL, Avenue du Port 86C, 1000 Brussels, company number BE 0123.456.789.
+NBLogiTrack SRL, Avenue du Port 86C, 1000 Brussels, company number BE 0123.456.749.
 Any question regarding personal data: info@nblogitrack.be
 
 ## Who this policy concerns

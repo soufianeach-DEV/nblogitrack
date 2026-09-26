@@ -317,7 +317,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </div>
 
                         <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-                            <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.789. {t('accueil.droits', 'Tous droits réservés.')}</p>
+                            <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.749. {t('accueil.droits', 'Tous droits réservés.')}</p>
                             <button type="button" onClick={ouvrirTemoins} className="text-left text-slate-300 transition-colors hover:text-action sm:text-center">
                                 {t('temoins.gerer', 'Gérer les cookies')}
                             </button>

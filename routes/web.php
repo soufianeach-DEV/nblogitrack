@@ -46,7 +46,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])
-            ->middleware('throttle:6,1')
+            ->middleware('throttle:6,1,profil-suppression')
             ->name('profile.destroy');
         Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
             ->name('transport-orders.create');
@@ -56,14 +56,14 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->name('transport-orders.index');
 
         Route::get('/recherche', [RechercheController::class, 'suggestions'])
-            ->middleware('throttle:60,1')
+            ->middleware('throttle:60,1,recherche')
             ->name('recherche.suggestions');
         Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
             ->whereNumber('transportOrder')
             ->name('transport-orders.show');
         Route::patch('/transport-orders/{transportOrder}/annulation', [TransportOrderController::class, 'annuler'])
             ->whereNumber('transportOrder')
-            ->middleware('throttle:10,1')
+            ->middleware('throttle:10,1,annulation')
             ->name('transport-orders.cancel');
 
         Route::middleware('can:plan-orders')->group(function () {
@@ -86,7 +86,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::patch('/missions/{transportOrder}/statut', [MissionController::class, 'updateStatus'])->name('missions.status');
 
             Route::post('/missions/{transportOrder}/position', [MissionController::class, 'position'])
-                ->middleware('throttle:30,1')
+                ->middleware('throttle:30,1,positions')
                 ->name('missions.position');
 
             Route::post('/missions/note', [MissionController::class, 'accuser'])->name('missions.notice');
@@ -101,7 +101,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->name('invoices.paid');
         Route::post('/factures/{invoice}/envoi', [InvoiceController::class, 'envoyer'])
             ->whereNumber('invoice')
-            ->middleware(['can:control-payments', 'throttle:10,1'])
+            ->middleware(['can:control-payments', 'throttle:10,1,envoi-facture'])
             ->name('invoices.send');
         Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
             ->whereNumber('invoice')
@@ -183,12 +183,12 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
 
     Route::get('/tarifs', [TarifController::class, 'index'])->name('tarifs.index');
     Route::post('/tarifs/simulation', [TarifController::class, 'simuler'])
-        ->middleware('throttle:20,1')
+        ->middleware('throttle:20,1,simulation')
         ->name('tarifs.simuler');
 
     Route::get('/devis', [QuoteController::class, 'create'])->name('devis.create');
     Route::post('/devis', [QuoteController::class, 'store'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,devis')
         ->name('devis.store');
     Route::get('/devis/confirmation', [QuoteController::class, 'confirmation'])->name('devis.confirmation');
 
@@ -209,20 +209,20 @@ Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
         ->name('tracking.peages');
 });
 
-Route::middleware('throttle:120,1')->group(function () {
+Route::middleware('throttle:120,1,geo')->group(function () {
     Route::get('/geo/villes', [GeoController::class, 'villes'])->name('geo.villes');
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
 });
 
 Route::get('/geo/numeros', [GeoController::class, 'numeros'])
-    ->middleware('throttle:15,1')
+    ->middleware('throttle:15,1,geo-numeros')
     ->name('geo.numeros');
 
 Route::post('/stripe/webhook', [PaymentController::class, 'webhook'])
     ->name('payments.webhook');
 
 Route::get('/verification-tva', [VatController::class, 'verifier'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:20,1,tva')
     ->name('vat.verify');
 
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])

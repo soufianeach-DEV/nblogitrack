@@ -242,7 +242,6 @@ export default function Achats({ achats, compteurs, cartes, categories, vehicule
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [encoder, setEncoder] = useState(false);
-    const flash = usePage().props.flash ?? {};
 
     return (
         <AuthenticatedLayout
@@ -266,16 +265,6 @@ export default function Achats({ achats, compteurs, cartes, categories, vehicule
 
             <OngletsFacturation actif="achats" />
 
-            {flash.success && (
-                <p className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-semibold text-status-delivered">
-                    {flash.success}
-                </p>
-            )}
-            {flash.error && (
-                <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
-                    {flash.error}
-                </p>
-            )}
 
             <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">

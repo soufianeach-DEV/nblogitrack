@@ -80,16 +80,6 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
         >
             <Head title={t('api.titre', 'API REST')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             {}
             {nouvelleCle && (

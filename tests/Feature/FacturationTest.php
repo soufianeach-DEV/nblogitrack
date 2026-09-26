@@ -146,6 +146,9 @@ class FacturationTest extends TestCase
 
     public function test_l_echeance_suit_le_delai_convenu(): void
     {
+        // La facture est emise a sa date normale, le 1er avril.
+        $this->travelTo('2026-04-01 04:00');
+
         foreach (['30 jours' => 30, '45 jours' => 45, '60 jours' => 60] as $delai => $jours) {
             $client = Client::factory()->create(['payment_terms' => $delai]);
             $this->livree($client, '2026-03-04');
@@ -159,12 +162,29 @@ class FacturationTest extends TestCase
 
     public function test_sans_delai_convenu_l_echeance_est_a_trente_jours(): void
     {
+        $this->travelTo('2026-04-01 04:00');
+
         $client = Client::factory()->create(['payment_terms' => null]);
         $this->livree($client, '2026-03-04');
 
         $facture = app(Facturier::class)->facturer()->first();
 
         $this->assertSame(30, (int) $facture->issued_on->diffInDays($facture->due_on));
+    }
+
+    public function test_emise_en_retard_la_facture_laisse_tout_le_delai_de_paiement(): void
+    {
+        // Lancee le 26 avril pour mars, elle garde sa date du 1er avril,
+        // mais le client a toujours ses trente jours pour payer.
+        $this->travelTo('2026-04-26 10:00');
+
+        $client = Client::factory()->create(['payment_terms' => '30 jours']);
+        $this->livree($client, '2026-03-04');
+
+        $facture = app(Facturier::class)->facturer()->first();
+
+        $this->assertSame('2026-04-01', $facture->issued_on->toDateString());
+        $this->assertSame('2026-05-26', $facture->due_on->toDateString());
     }
 
     public function test_une_livraison_facturee_non_reglee_attend_son_paiement(): void

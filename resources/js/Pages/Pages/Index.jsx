@@ -11,7 +11,6 @@ const VIDE = {
 
 export default function Index({ pages, documents, types }) {
     const t = useTraduction();
-    const flash = usePage().props.flash ?? {};
     const [edition, setEdition] = useState(null);
     const [langue, setLangue] = useState('fr');
     const [aSupprimer, setASupprimer] = useState(null);
@@ -70,16 +69,6 @@ export default function Index({ pages, documents, types }) {
         >
             <Head title={t('nav.pages', 'Pages du site')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="space-y-3">
                 {pages.length === 0 && (

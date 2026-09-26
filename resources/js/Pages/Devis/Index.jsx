@@ -12,7 +12,6 @@ const COULEUR = {
 };
 
 export default function Index({ demandes, statut, recherche, statuts, compteurs }) {
-    const flash = usePage().props.flash ?? {};
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -86,11 +85,6 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.devis_demandes', 'Demandes de devis')}</h1>}>
             <Head title={t('nav.devis_demandes', 'Demandes de devis')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(statuts).map(([cle, libelle]) => onglet(cle, libelle))}

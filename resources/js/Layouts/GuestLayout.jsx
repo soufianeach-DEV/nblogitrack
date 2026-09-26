@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
@@ -44,6 +45,7 @@ export default function GuestLayout({ children, large = false }) {
                     <div className="flex justify-end">
                         <ChoixLangue />
                     </div>
+                    <MessagesFlash className="mt-4" />
                     {children}
                 </div>
             </div>

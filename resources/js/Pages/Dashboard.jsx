@@ -741,7 +741,7 @@ export default function Dashboard({
                         lien={auth.canValidateClients ? route('clients.index') : null}
                     />
                     <StatCard
-                        label={t('tdb.expeditions_cours', 'Expéditions en cours')}
+                        label={t('tdb.expeditions_actives', 'Expéditions actives')}
                         value={nombre(stats.pending + stats.assigned + stats.in_progress)}
                         detail={`${nombre(stats.in_progress)} ${t('tdb.en_circulation', 'en circulation')}`}
                         icone="camion"

@@ -16,6 +16,18 @@ class QuoteRequest extends Model
         'CLOSED' => 'Sans suite',
     ];
 
+    /**
+     * Une demande avance, elle ne recule pas : un devis transmis ou une
+     * demande classee sans suite est terminee. Seul l'ecran le laissait
+     * entendre ; le serveur acceptait n'importe quel retour en arriere.
+     */
+    public const TRANSITIONS = [
+        'PENDING' => ['PROCESSING', 'QUOTED', 'CLOSED'],
+        'PROCESSING' => ['QUOTED', 'CLOSED'],
+        'QUOTED' => [],
+        'CLOSED' => [],
+    ];
+
     protected $table = 'quote_requests';
 
     protected $fillable = [

@@ -230,6 +230,10 @@ class QuoteController extends Controller
             'internal_note' => 'nullable|string|max:2000',
         ]);
 
+        if (! in_array($data['status'], QuoteRequest::TRANSITIONS[$quoteRequest->status] ?? [], true)) {
+            return back()->with('error', Traductions::t('msg.devis_transition_impossible', 'Cette demande est déjà traitée : son statut ne peut plus revenir en arrière.'));
+        }
+
         $quoteRequest->update([
             'status' => $data['status'],
             'internal_note' => $data['internal_note'] ?? $quoteRequest->internal_note,

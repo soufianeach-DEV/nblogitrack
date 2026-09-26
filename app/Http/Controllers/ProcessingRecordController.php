@@ -44,7 +44,7 @@ class ProcessingRecordController extends Controller
             'responsable' => [
                 'nom' => 'NBLogiTrack SRL',
                 'adresse' => 'Avenue du Port 86C, 1000 Bruxelles, Belgique',
-                'entreprise' => 'BE 0123.456.789',
+                'entreprise' => 'BE 0123.456.749',
                 'contact' => 'info@nblogitrack.be',
             ],
             'information' => [

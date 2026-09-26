@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
@@ -68,6 +69,7 @@ export default function ChauffeurLayout({ children }) {
             </header>
 
             <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-4 lg:pb-8">
+                <MessagesFlash />
                 {children}
             </main>
 

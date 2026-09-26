@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
@@ -275,6 +276,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                 <main className="p-4 sm:p-6 lg:p-8">
                     {header && <div className="mb-6">{header}</div>}
+                    <MessagesFlash />
                     {children}
                 </main>
             </div>

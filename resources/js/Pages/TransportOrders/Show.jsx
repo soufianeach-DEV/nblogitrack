@@ -2,7 +2,7 @@ import BoutonRetour from '@/Components/BoutonRetour';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const ETAPES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
@@ -65,7 +65,13 @@ function Progression({ statut }) {
 function Annulation({ order, annulation, euros }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
-    const { patch, processing } = useForm({ frais: annulation.frais });
+    const { setData, patch, processing } = useForm({ frais: annulation.frais });
+
+    // Si un camion a ete affecte entre-temps, le serveur renvoie le nouveau
+    // montant : le formulaire doit confirmer celui-la, pas l'ancien.
+    useEffect(() => {
+        setData('frais', annulation.frais);
+    }, [annulation.frais]);
     const gratuite = annulation.frais === 0;
 
     const confirmer = () => {
@@ -135,7 +141,6 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
-    const flash = usePage().props.flash ?? {};
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
     const nombre = (valeur, unite, decimales = 0) => valeur === null || valeur === undefined
@@ -190,16 +195,6 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
         >
             <Head title={t('ordres.expedition', 'Expédition') + ' ' + order.tracking_number} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-medium text-status-incident">
-                    {flash.error}
-                </div>
-            )}
 
             <div className="grid gap-4 lg:grid-cols-3">
                 {carte(t('suivi.etat', 'État de livraison'), (

@@ -323,9 +323,15 @@ class CorrectionsAuditTest extends TestCase
                 ->assertSessionHasErrors('password');
         }
 
+        // La septieme tentative est refusee avant meme d'etre verifiee :
+        // l'utilisateur revient sur sa page avec un message qui dit
+        // d'attendre, plutot qu'une page « 429 » brute.
         $this->actingAs($utilisateur)
-            ->post(route('password.confirm'), ['password' => 'essai-7'])
-            ->assertTooManyRequests();
+            ->from(route('password.confirm'))
+            ->post(route('password.confirm'), ['password' => 'password'])
+            ->assertRedirect(route('password.confirm'))
+            ->assertSessionHas('error')
+            ->assertSessionMissing('auth.password_confirmed_at');
     }
 
     public function test_le_lien_de_reinitialisation_ne_revele_pas_les_comptes(): void

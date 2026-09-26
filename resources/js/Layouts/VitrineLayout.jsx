@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import { useTraduction } from '@/traduire';
@@ -50,11 +51,14 @@ export default function VitrineLayout({ children }) {
                 </div>
             </header>
 
-            <main className="flex-1">{children}</main>
+            <main className="flex-1">
+                <MessagesFlash className="mx-auto max-w-6xl px-4 pt-4" />
+                {children}
+            </main>
 
             <footer className="bg-marine-deep">
                 <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                    <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.789 · {t('accueil.expertise', 'Expertise logistique belge')}.</p>
+                    <p>© {new Date().getFullYear()} NBLogiTrack SRL · BE 0123.456.749 · {t('accueil.expertise', 'Expertise logistique belge')}.</p>
                     <nav className="flex flex-wrap gap-4">
                         {pagesPied.map((p) => (
                             <Link key={p.href} href={p.href} className="transition-colors hover:text-action">
