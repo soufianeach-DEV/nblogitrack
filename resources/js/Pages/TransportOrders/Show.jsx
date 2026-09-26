@@ -307,6 +307,8 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                     <dl>
                         {ligne(t('ordres.nature', 'Nature'), v('marchandise', order.goods_type))}
                         {ligne(t('commande.poids', 'Poids'), nombre(order.weight, 'kg'))}
+                        {order.volume != null && ligne(t('commande.volume', 'Volume'), nombre(order.volume, 'm³', 1))}
+                        {order.needs_tail_lift && ligne(t('commande.hayon', 'Hayon élévateur nécessaire'), t('ordres.oui', 'Oui'))}
                         {ligne(t('ordres.dangereuse', 'Matière dangereuse'), order.is_hazardous
                             ? t('ordres.oui_adr', 'Oui — ADR')
                             : t('ordres.non', 'Non'))}

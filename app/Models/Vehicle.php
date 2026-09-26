@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\DatesHeureDeBruxelles;
+use App\Support\Formats;
+use App\Support\Traductions;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -75,6 +77,75 @@ class Vehicle extends Model
         $max = (float) self::max('capacity_tonnes');
 
         return $max > 0 ? $max * 1000 : 44000.0;
+    }
+
+    /**
+     * Le plus grand volume que la flotte sait charger, en m³.
+     */
+    public static function volumeMaxM3(): float
+    {
+        $max = (float) self::max('capacity_volume');
+
+        return $max > 0 ? $max : 120.0;
+    }
+
+    /**
+     * Ce que chaque camion de la flotte sait porter, sans doublons : le
+     * formulaire de commande dit tout de suite si un envoi ADR avec hayon
+     * de 20 t trouvera un camion.
+     *
+     * @return list<array{kg: float, m3: float|null, adr: bool, hayon: bool}>
+     */
+    public static function profils(): array
+    {
+        return self::query()
+            ->select(['capacity_tonnes', 'capacity_volume', 'adr_equipe', 'has_tail_lift'])
+            ->distinct()
+            ->get()
+            ->map(fn (Vehicle $v) => [
+                'kg' => (float) $v->capacity_tonnes * 1000,
+                'm3' => $v->capacity_volume === null ? null : (float) $v->capacity_volume,
+                'adr' => (bool) $v->adr_equipe,
+                'hayon' => (bool) $v->has_tail_lift,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Un camion de la flotte (au garage compris : il reviendra) peut-il
+     * prendre cet envoi ? Sinon, aucune affectation ne sera jamais
+     * possible : autant le dire a la commande.
+     */
+    public static function peutPorter(float $kg, ?float $m3, bool $adr, bool $hayon): bool
+    {
+        // Sans flotte enregistree, rien a comparer (comme chargeUtileMaxKg).
+        if (! self::query()->exists()) {
+            return true;
+        }
+
+        return self::where('capacity_tonnes', '>=', $kg / 1000)
+            ->when($m3 !== null, fn ($q) => $q->where(fn ($v) => $v->whereNull('capacity_volume')->orWhere('capacity_volume', '>=', $m3)))
+            ->when($adr, fn ($q) => $q->where('adr_equipe', true))
+            ->when($hayon, fn ($q) => $q->where('has_tail_lift', true))
+            ->exists();
+    }
+
+    /**
+     * Le message du refus, avec ce que l'envoi demande.
+     */
+    public static function refusFlotte(float $kg, ?float $m3, bool $adr, bool $hayon): string
+    {
+        $conditions = array_filter([
+            Formats::nombre($kg).' kg',
+            $m3 !== null ? Formats::nombre($m3, 1).' m³' : null,
+            $adr ? Traductions::t('commande.cond_adr', 'équipement ADR') : null,
+            $hayon ? Traductions::t('commande.cond_hayon', 'hayon élévateur') : null,
+        ]);
+
+        return Traductions::t('msg.flotte_incapable', 'Aucun camion de notre flotte ne réunit ces conditions (:conditions) : demandez un devis.', [
+            'conditions' => implode(', ', $conditions),
+        ]);
     }
 
     public static function permisDeduit(string $type, float $chargeUtile): string

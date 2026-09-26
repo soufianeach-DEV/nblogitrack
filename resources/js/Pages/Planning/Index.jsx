@@ -63,10 +63,16 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
     // Le serveur dit, a la date de la mission, pourquoi un camion ou un
     // chauffeur ne convient pas (capacite, hayon, ADR, controle technique,
     // documents) : l'ecran et l'affectation ne se contredisent plus.
-    const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration] ?? null;
-    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? null;
     const vehiculeChoisi = vehicles.find((v) => v.registration === data.vehicle_registration);
     const chauffeurChoisi = drivers.find((d) => String(d.id) === String(data.driver_id));
+    // Code 95 et carte tachygraphe ne sont exiges qu'au-dela de 3,5 t :
+    // ils ne grisent pas un chauffeur si le camion choisi est une
+    // camionnette de permis B.
+    const lourd = (v) => ! v || v.permis_requis !== 'B';
+    const refusPro = (d, v) => (lourd(v) ? ordre.refus_chauffeurs_pro?.[d.id] ?? null : null);
+    const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration]
+        ?? (chauffeurChoisi && v.permis_requis !== 'B' ? ordre.refus_chauffeurs_pro?.[chauffeurChoisi.id] ?? null : null);
+    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? refusPro(d, vehiculeChoisi);
     // Le permis depend du couple : celui du chauffeur doit couvrir celui
     // qu'exige le camion (un tracteur de 44 t exige le CE).
     const permisManquant = (permis, vehicule) => (
@@ -107,6 +113,12 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
             <span className={pastille + ' bg-surface text-marine'}>
                 {t('planif.charge_utile', 'Charge utile ≥')} {(Math.floor(Number(ordre.weight) / 10) / 100).toLocaleString(locale, { maximumFractionDigits: 2 })} t
             </span>
+
+            {ordre.volume && (
+                <span className={pastille + ' bg-surface text-marine'}>
+                    {t('planif.volume_min', 'Volume ≥')} {Number(ordre.volume).toLocaleString(locale)} m³
+                </span>
+            )}
 
             {ordre.conduite && (
                 <span className={pastille + ' bg-surface text-marine'}>
@@ -168,6 +180,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                     {vehicles.map((v) => (
                         <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
                             {v.registration} · {voc('vehicule', v.vehicle_type)} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {v.capacity_volume ? ` · ${Number(v.capacity_volume).toLocaleString(locale)} m³` : ''}
                             {' · ' + t('suivi.permis', 'Permis').toLowerCase() + ' ' + v.permis_requis}
                             {v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : ''}
                             {v.adr_equipe ? ' · ADR' : ''}
@@ -493,6 +506,7 @@ export default function Index({
                                 </p>
                                 <p className="mt-1 text-xs text-slate-600">
                                     {Number(ordre.weight).toLocaleString(locale)} kg
+                                    {ordre.volume ? ` · ${Number(ordre.volume).toLocaleString(locale)} m³` : ''}
                                     {ordre.distance_km ? ` · ${Number(ordre.distance_km).toLocaleString(locale)} km` : ''}
                                     {' · ' + t('planif.chargement', 'chargement') + ' '}{dateCourte(ordre.pickup_date)}
                                     {ordre.goods_type ? ` · ${v('marchandise', ordre.goods_type)}` : ''}
@@ -527,6 +541,11 @@ export default function Index({
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
                                             : t('planif.non_affecte', 'non affecté')}
                                     </span>
+                                    {ordre.en_route_depuis && (
+                                        <p className="basis-full rounded-lg bg-status-assigned/10 px-3 py-2 text-status-assigned" role="status">
+                                            {t('planif.en_route_depuis', 'En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', { date: ordre.en_route_depuis })}
+                                        </p>
+                                    )}
                                     {(ordre.alertes ?? []).length > 0 && (
                                         <div className="basis-full rounded-lg bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">
                                             <p className="font-semibold">{t('planif.non_conforme', 'Affectation non conforme : réaffectez cette mission.')}</p>

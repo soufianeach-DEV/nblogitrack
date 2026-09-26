@@ -27,9 +27,16 @@ final class ControleAffectation
      */
     public static function periode(TransportOrder $ordre): array
     {
+        // En route : de maintenant a la fin reelle du voyage, pas une
+        // mission entiere recommencee aujourd'hui (fausses alertes sur un
+        // conge qui commence apres la livraison).
+        if ($ordre->status === 'IN_PROGRESS') {
+            return [now(), today(), self::occupation($ordre)[1]];
+        }
+
         $depart = $ordre->pickup_date;
 
-        if ($ordre->status === 'IN_PROGRESS' || $depart === null || $depart->lt(today())) {
+        if ($depart === null || $depart->lt(today())) {
             $depart = now();
         }
 
@@ -37,6 +44,38 @@ final class ControleAffectation
         $fin = $debut->copy()->addDays(TempsDeConduite::journees($ordre->distance_km) - 1);
 
         return [$depart, $debut, $fin];
+    }
+
+    /**
+     * Premier et dernier jour ou une mission engagee mobilise son camion
+     * et son chauffeur. La meme regle sert aux chevauchements, au groupage,
+     * aux temps de conduite et aux alertes :
+     * - en route : du chargement (ou de l'enlevement prevu, si le chauffeur
+     *   a charge la veille) a la fin du voyage, et au moins jusqu'a
+     *   aujourd'hui tant que la livraison n'est pas enregistree ;
+     * - affectee : a partir de l'enlevement prevu, ou d'aujourd'hui si cette
+     *   date est passee ou absente (la mission n'est pas partie, elle partira).
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
+     */
+    public static function occupation(TransportOrder $mission): array
+    {
+        $journees = TempsDeConduite::journees($mission->distance_km);
+
+        if ($mission->status === 'IN_PROGRESS') {
+            $departs = collect([$mission->picked_up_at, $mission->pickup_date])
+                ->filter()
+                ->map(fn ($d) => Carbon::instance($d)->startOfDay());
+            $debut = $departs->min() ?? today();
+            $fin = ($departs->max() ?? today())->copy()->addDays($journees - 1);
+
+            return [$debut, $fin->lt(today()) ? today() : $fin];
+        }
+
+        $prevu = $mission->pickup_date?->copy()->startOfDay();
+        $debut = $prevu !== null && $prevu->gte(today()) ? $prevu : today();
+
+        return [$debut, $debut->copy()->addDays($journees - 1)];
     }
 
     /**
@@ -51,7 +90,7 @@ final class ControleAffectation
         $refus = [];
         $debut = self::debut($ordre, $fin);
 
-        if ($empechements = $chauffeur->empechements($fin)) {
+        if ($empechements = $chauffeur->empechements($fin, $vehicule)) {
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)])];
         }
 
@@ -136,7 +175,7 @@ final class ControleAffectation
      */
     public static function refusChauffeurCourt(TransportOrder $ordre, Driver $chauffeur, CarbonInterface $fin): ?string
     {
-        if ($empechements = $chauffeur->empechements($fin)) {
+        if ($empechements = $chauffeur->empechementsDeBase($fin)) {
             return $empechements[0];
         }
 
@@ -147,10 +186,25 @@ final class ControleAffectation
         return $ordre->is_hazardous ? $chauffeur->motifAdr($fin) : null;
     }
 
-    /** Premier jour d'une mission qui se termine a $fin. */
+    /**
+     * Code 95 ou carte tachygraphe manquants : ils n'empechent que la
+     * conduite d'un vehicule de plus de 3,5 t, l'ecran les applique
+     * selon le camion choisi.
+     */
+    public static function refusChauffeurProfessionnel(Driver $chauffeur, CarbonInterface $fin): ?string
+    {
+        return $chauffeur->empechementsProfessionnels($fin)[0] ?? null;
+    }
+
+    /**
+     * Premier jour controle d'une mission qui se termine a $fin : jamais
+     * avant aujourd'hui (une absence passee n'empeche rien).
+     */
     private static function debut(TransportOrder $ordre, CarbonInterface $fin): CarbonInterface
     {
-        return $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+        $debut = $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+
+        return $debut->lt(today()) ? today() : $debut;
     }
 
     /**
@@ -164,8 +218,10 @@ final class ControleAffectation
     {
         $refus = [];
 
-        if (self::occupe(TransportOrder::where('driver_id', $chauffeur->id)->where('vehicle_registration', '!=', $vehicule->registration), $debut, $fin, $ordre->id)) {
-            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_occupe', 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.')];
+        // Le message nomme la mission qui bloque : une mission restee « en
+        // route » faute de livraison enregistree se retrouve ainsi.
+        if ($autre = self::missionsSurLaPeriode(TransportOrder::where('driver_id', $chauffeur->id)->where('vehicle_registration', '!=', $vehicule->registration), $debut, $fin, $ordre->id)->first()) {
+            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_occupe_par', 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion (:mission).', ['mission' => $autre->tracking_number])];
         }
 
         // Le meme binome peut charger plusieurs envois le meme jour
@@ -176,12 +232,12 @@ final class ControleAffectation
             ->where('vehicle_registration', $vehicule->registration)
             ->where(fn ($q) => $q->whereNull('pickup_date')->orWhereDate('pickup_date', '!=', $debut->toDateString()));
 
-        if (self::occupe($autresJours, $debut, $fin, $ordre->id)) {
-            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_binome_en_route', 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission.')];
+        if ($autre = self::missionsSurLaPeriode($autresJours, $debut, $fin, $ordre->id)->first()) {
+            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_binome_en_route_par', 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission (:mission).', ['mission' => $autre->tracking_number])];
         }
 
-        if (self::occupe(TransportOrder::where('vehicle_registration', $vehicule->registration)->where('driver_id', '!=', $chauffeur->id), $debut, $fin, $ordre->id)) {
-            $refus[] = ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_camion_occupe', 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.')];
+        if ($autre = self::missionsSurLaPeriode(TransportOrder::where('vehicle_registration', $vehicule->registration)->where('driver_id', '!=', $chauffeur->id), $debut, $fin, $ordre->id)->first()) {
+            $refus[] = ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_camion_occupe_par', 'Ce camion est déjà affecté à un autre chauffeur ce jour-là (:mission).', ['mission' => $autre->tracking_number])];
         }
 
         // Groupage : la charge se verifie en cumul. Deux envois de 19,7 t
@@ -208,7 +264,7 @@ final class ControleAffectation
             ])];
         }
 
-        $conduite = TempsDeConduite::empechements($chauffeur->id, $ordre->distance_km, $depart, $ordre->id);
+        $conduite = TempsDeConduite::empechements($chauffeur->id, $ordre->distance_km, $depart, $ordre->id, $ordre, $vehicule->registration);
 
         if ($conduite !== []) {
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_temps_conduite', 'Temps de conduite : :motifs.', ['motifs' => implode(' ; ', $conduite)])];
@@ -260,11 +316,8 @@ final class ControleAffectation
     }
 
     /**
-     * Les missions engagees dont la periode croise [debut, fin]. Une
-     * mission en route occupe son camion et son chauffeur jusqu'a sa
-     * livraison, au moins jusqu'a aujourd'hui : partie il y a dix jours
-     * ou sans date d'enlevement, elle etait invisible et le camion charge
-     * pouvait etre confie a un autre chauffeur.
+     * Les missions engagees dont la periode d'occupation croise
+     * [debut, fin] (voir occupation()).
      */
     private static function missionsSurLaPeriode($requete, CarbonInterface $debut, CarbonInterface $fin, ?int $exclu)
     {
@@ -273,16 +326,11 @@ final class ControleAffectation
             ->where(fn ($q) => $q->where('status', 'IN_PROGRESS')
                 ->orWhereNull('pickup_date')
                 ->orWhere('pickup_date', '<=', $fin->copy()->endOfDay()))
-            ->get(['id', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'weight', 'volume'])
+            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'weight', 'volume'])
             ->filter(function (TransportOrder $mission) use ($debut, $fin) {
-                $depart = Carbon::instance($mission->picked_up_at ?? $mission->pickup_date ?? $mission->assigned_at ?? now())->startOfDay();
-                $finMission = $depart->copy()->addDays(TempsDeConduite::journees($mission->distance_km) - 1);
+                [$premier, $dernier] = self::occupation($mission);
 
-                if ($mission->status === 'IN_PROGRESS' && $finMission->lt(today())) {
-                    $finMission = today();
-                }
-
-                return $depart->lte($fin) && $finMission->gte($debut);
+                return $premier->lte($fin) && $dernier->gte($debut);
             })
             ->values();
     }

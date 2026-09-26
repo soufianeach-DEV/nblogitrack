@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Driver;
 use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
@@ -78,6 +79,8 @@ class VehicleController extends Controller
                     'marque' => trim($v->brand.' '.$v->model),
                     'type' => $v->vehicle_type,
                     'permis_requis' => $v->permisRequis(),
+                    'permis_fiche' => $v->permis_requis,
+                    'permis_gabarit' => Vehicle::permisDeduit((string) $v->vehicle_type, (float) $v->capacity_tonnes),
                     'adr_equipe' => (bool) $v->adr_equipe,
                     'indisponibilites' => $v->indisponibilites->map(fn (Indisponibilite $i) => [
                         'id' => $i->id,
@@ -127,7 +130,9 @@ class VehicleController extends Controller
             'inspection_valid_until.after_or_equal' => Traductions::t('msg.validite_avant_controle', 'La validité ne peut pas précéder le passage au contrôle.'),
         ]);
 
-        if ($donnees['is_available'] === false) {
+        // Seul un vrai retrait du service se refuse : enregistrer la fiche
+        // d'un camion deja hors service ne doit pas etre bloque.
+        if ($donnees['is_available'] === false && $vehicle->is_available) {
             $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('vehicle_registration', $vehicle->registration)
                 ->exists();
@@ -139,7 +144,9 @@ class VehicleController extends Controller
             }
         }
 
-        if (($donnees['adr_equipe'] ?? true) === false) {
+        // Seul un vrai retrait de l'equipement ADR se refuse : la fiche
+        // envoie toujours la case, meme non modifiee.
+        if (($donnees['adr_equipe'] ?? null) === false && $vehicle->adr_equipe) {
             $dangereux = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('vehicle_registration', $vehicle->registration)
                 ->where('is_hazardous', true)
@@ -148,6 +155,22 @@ class VehicleController extends Controller
             if ($dangereux) {
                 return back()->withErrors([
                     'adr_equipe' => Traductions::t('msg.vehicule_engage_adr', 'Ce véhicule transporte une matière dangereuse : son équipement ADR ne peut pas être retiré maintenant.'),
+                ]);
+            }
+        }
+
+        // Le permis exige peut etre releve (grue, remorque), jamais abaisse
+        // sous celui du gabarit : une semi-remorque reglee sur C partirait
+        // avec un permis C.
+        if (! empty($donnees['permis_requis'])) {
+            $minimum = Vehicle::permisDeduit((string) $vehicle->vehicle_type, (float) $vehicle->capacity_tonnes);
+
+            if (! in_array($minimum, Driver::COUVERTURE[$donnees['permis_requis']] ?? [], true)) {
+                return back()->withErrors([
+                    'permis_requis' => Traductions::t('msg.permis_sous_gabarit', 'Ce véhicule exige au moins le permis :minimum : le permis :choisi ne le couvre pas.', [
+                        'minimum' => $minimum,
+                        'choisi' => $donnees['permis_requis'],
+                    ]),
                 ]);
             }
         }

@@ -491,12 +491,11 @@ class DashboardController extends Controller
             // Un depart programme n'a pas encore eu lieu : le chauffeur
             // roule jusque-la et ses documents doivent rester en regle.
             ->where(fn ($d) => $d->whereNull('left_on')->orWhere('left_on', '>', $aujourdhui))
+            // Memes criteres que Driver::empechements, plus le permis qui
+            // expire dans les deux mois.
             ->where(fn ($e) => $e
-                ->where('medical_exam_date', '<', now()->subYear()->toDateString())
-                ->orWhereNull('medical_exam_date')
-                ->orWhere('license_expiry', '<=', now()->addDays(60)->toDateString())
-                ->orWhere('cpc_expiry', '<', $aujourdhui)
-                ->orWhere('tacho_card_expiry', '<', $aujourdhui));
+                ->inapte()
+                ->orWhere('license_expiry', '<=', now()->addDays(60)->toDateString()));
     }
 
     /**

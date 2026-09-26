@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\Driver;
 use App\Models\Indisponibilite;
+use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\TempsDeConduite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -143,8 +146,20 @@ class ControleAffectationTest extends TestCase
 
         $this->affecter($this->ordre(['distance_km' => 500, 'pickup_date' => $jour]), $camion, $chauffeur)->assertSessionHasNoErrors();
 
-        $this->affecter($this->ordre(['distance_km' => 500, 'pickup_date' => $jour->copy()->setTime(9, 0)]), $camion, $chauffeur)
+        // Un autre trajet le meme jour : plus de quinze heures de volant.
+        $this->affecter($this->ordre(['distance_km' => 500, 'pickup_date' => $jour->copy()->setTime(9, 0), 'delivery_lat' => 45.76, 'delivery_lng' => 4.83]), $camion, $chauffeur)
             ->assertSessionHasErrors('driver_id');
+    }
+
+    public function test_deux_envois_sur_le_meme_trajet_avec_le_meme_camion_ne_font_qu_une_route(): void
+    {
+        $camion = $this->camion('1-GRP-001');
+        $chauffeur = $this->chauffeur();
+        $jour = now()->addDays(3)->setTime(7, 0);
+        $trajet = ['distance_km' => 310, 'pickup_lat' => 50.85, 'pickup_lng' => 4.35, 'delivery_lat' => 48.86, 'delivery_lng' => 2.35];
+
+        $this->affecter($this->ordre([...$trajet, 'pickup_date' => $jour]), $camion, $chauffeur)->assertSessionHasNoErrors();
+        $this->affecter($this->ordre([...$trajet, 'pickup_date' => $jour->copy()->setTime(8, 0)]), $camion, $chauffeur)->assertSessionHasNoErrors();
     }
 
     public function test_une_mission_en_route_sans_date_ou_partie_depuis_longtemps_occupe_son_camion(): void
@@ -163,10 +178,12 @@ class ControleAffectationTest extends TestCase
             ]);
 
             $this->affecter($this->ordre(['pickup_date' => now()->setTime(18, 0)]), $camion, $this->chauffeur())
-                ->assertSessionHasErrors(['vehicle_registration' => 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.']);
+                ->assertSessionHasErrors('vehicle_registration');
+            $this->assertStringStartsWith('Ce camion est déjà affecté à un autre chauffeur ce jour-là (TRK-', session('errors')->first('vehicle_registration'));
 
             $this->affecter($this->ordre(['pickup_date' => now()->setTime(18, 0)]), $this->camion('1-AUT-'.($depart ? '002' : '001')), $roule)
-                ->assertSessionHasErrors(['driver_id' => 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.']);
+                ->assertSessionHasErrors('driver_id');
+            $this->assertStringStartsWith('Ce chauffeur a déjà une mission ce jour-là avec un autre camion (TRK-', session('errors')->first('driver_id'));
         }
     }
 
@@ -334,5 +351,153 @@ class ControleAffectationTest extends TestCase
         $this->affecter($this->ordre(['volume' => 20, 'pickup_date' => $jour->copy()->setTime(9, 0)]), $fourgon, $chauffeur)
             ->assertSessionHasErrors('vehicle_registration');
         $this->assertStringStartsWith('Volume cumulé', session('errors')->first('vehicle_registration'));
+    }
+
+    public function test_une_camionnette_ne_demande_ni_code_95_ni_carte_tachygraphe(): void
+    {
+        $camionnette = $this->camion('1-VAN-001', ['vehicle_type' => 'Camionnette', 'capacity_tonnes' => 1.2]);
+        $this->assertSame('B', $camionnette->permisRequis());
+        $sansQualification = $this->chauffeur(['cpc_expiry' => null, 'tacho_card_expiry' => null]);
+
+        $this->affecter($this->ordre(['weight' => 800]), $camionnette, $sansQualification)->assertSessionHasNoErrors();
+
+        // Au-dela de 3,5 t, les deux documents restent exiges.
+        $this->affecter($this->ordre(['pickup_date' => now()->addDays(5)->setTime(8, 0)]), $this->camion('1-POR-001'), $sansQualification)
+            ->assertSessionHasErrors('driver_id');
+        $this->assertStringContainsString('code 95', session('errors')->first('driver_id'));
+    }
+
+    public function test_un_chauffeur_sans_code_95_est_compte_inapte_et_a_mettre_en_regle(): void
+    {
+        $sansCode95 = $this->chauffeur(['cpc_expiry' => null]);
+        $enRegle = $this->chauffeur();
+        // Un chauffeur de camionnette (permis B) n'a besoin ni de l'un ni de l'autre.
+        $permisB = $this->chauffeur(['license_type' => 'B', 'cpc_expiry' => null, 'tacho_card_expiry' => null]);
+        $admin = User::factory()->administrateur()->create();
+
+        $ids = fn (string $etat) => collect(AssertableInertia::fromTestResponse(
+            $this->actingAs($admin)->get(route('drivers.index', ['etat' => $etat]))
+        )->toArray()['props']['chauffeurs'])->pluck('id');
+
+        $this->assertTrue($ids('inaptes')->contains($sansCode95->id));
+        $this->assertFalse($ids('inaptes')->contains($permisB->id));
+        $this->assertFalse($ids('disponibles')->contains($sansCode95->id));
+        $this->assertTrue($ids('disponibles')->contains($enRegle->id));
+        $this->assertTrue($ids('disponibles')->contains($permisB->id));
+        $this->assertTrue($ids('conformite')->contains($sansCode95->id));
+        $this->assertFalse($ids('conformite')->contains($enRegle->id));
+    }
+
+    public function test_un_envoi_qu_aucun_camion_ne_peut_prendre_est_refuse_a_la_commande(): void
+    {
+        // Un camion ADR sans hayon, un camion a hayon sans ADR : aucun ne
+        // reunit les deux.
+        $this->camion('1-ADR-001', ['adr_equipe' => true, 'capacity_volume' => 60]);
+        $this->camion('1-HAY-001', ['has_tail_lift' => true, 'capacity_volume' => 60]);
+        $client = Client::factory()->create();
+        $commande = [
+            'pickup_address' => 'Rue Neuve 43, 3500 Hasselt, Belgique',
+            'delivery_address' => 'Avenue Louise 200, 1000 Bruxelles, Belgique',
+            'delivery_country' => 'BE',
+            'pickup_lat' => 50.9311, 'pickup_lng' => 5.3378,
+            'delivery_lat' => 50.8504, 'delivery_lng' => 4.3488,
+            'weight' => 1200,
+            'goods_type' => 'Produits chimiques',
+            'priority' => 'NORMAL',
+            'tariff_grid_id' => TariffGrid::factory()->create()->id,
+        ];
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), [...$commande, 'is_hazardous' => true, 'needs_tail_lift' => true])
+            ->assertSessionHasErrors('flotte');
+        $this->assertStringEndsWith('kg, équipement ADR, hayon élévateur) : demandez un devis.', session('errors')->first('flotte'));
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), [...$commande, 'is_hazardous' => true, 'needs_tail_lift' => false])
+            ->assertSessionDoesntHaveErrors('flotte');
+
+        // Le plus grand camion charge 60 m³.
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), [...$commande, 'is_hazardous' => false, 'volume' => 80])
+            ->assertSessionHasErrors('volume');
+        $this->assertStringContainsString('60', session('errors')->first('volume'));
+
+        [, $jeton] = ApiKey::generer([
+            'name' => 'Cle', 'client_id' => $client->id, 'abilities' => ['lecture', 'ecriture'],
+            'created_by' => User::factory()->administrateur()->create()->id,
+        ]);
+        $this->postJson('/api/v1/expeditions', [
+            'enlevement' => 'Rue Neuve 43, 3500 Hasselt', 'livraison' => 'Avenue Louise 200, 1000 Bruxelles',
+            'poids' => 1200, 'marchandise' => 'Produits chimiques', 'matieres_dangereuses' => true, 'hayon' => true,
+            'date_enlevement' => now()->addDays(2)->toDateString(), 'date_livraison' => now()->addDays(9)->toDateString(),
+        ], ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(422)
+            ->assertJsonPath('message', fn (string $message) => str_starts_with($message, 'Aucun camion de notre flotte ne réunit ces conditions (1')
+                && str_ends_with($message, 'kg, équipement ADR, hayon élévateur) : demandez un devis.'));
+        $this->assertSame(0, TransportOrder::count());
+    }
+
+    public function test_pas_de_prix_pour_un_poids_que_la_flotte_ne_porte_pas(): void
+    {
+        $this->camion('1-MAX-002', ['capacity_tonnes' => 26.9]);
+        TariffGrid::factory()->create();
+        $client = Client::factory()->create();
+        $trajet = ['delivery_country' => 'BE', 'pickup_lat' => 50.9311, 'pickup_lng' => 5.3378, 'delivery_lat' => 50.8504, 'delivery_lng' => 4.3488];
+
+        $this->actingAs($client->compte())
+            ->postJson(route('transport-orders.estimation'), [...$trajet, 'weight' => 30000])
+            ->assertOk()
+            ->assertJsonPath('prix', []);
+
+        $prix = $this->actingAs($client->compte())
+            ->postJson(route('transport-orders.estimation'), [...$trajet, 'weight' => 20000])
+            ->assertOk()
+            ->json('prix');
+        $this->assertNotEmpty($prix);
+    }
+
+    public function test_la_reaffectation_d_une_mission_en_retard_garde_l_ancien_enlevement_au_journal(): void
+    {
+        $prevu = now()->subDays(4)->setTime(8, 0);
+        $ordre = $this->ordre(['pickup_date' => $prevu]);
+        $ordre->update(['status' => 'ASSIGNED', 'vehicle_registration' => $this->camion('1-LOG-001')->registration, 'driver_id' => $this->chauffeur()->id, 'assigned_at' => now()->subDays(5)]);
+
+        $this->affecter($ordre->fresh(), $this->camion('1-LOG-002'), $this->chauffeur(), ['motif' => 'Panne du camion', 'reaffectation' => true])
+            ->assertSessionHasNoErrors();
+
+        $journal = ActivityLog::where('action', 'order.reassigned')->firstOrFail();
+        $this->assertSame($prevu->format('Y-m-d H:i'), $journal->properties['ancien_enlevement']);
+        $this->assertStringContainsString('reporté au', $journal->description);
+    }
+
+    public function test_une_mission_en_route_depuis_plus_d_une_semaine_est_signalee(): void
+    {
+        $ancienne = TransportOrder::factory()->enRoute()->create([
+            'vehicle_registration' => $this->camion('1-OUB-001')->registration,
+            'driver_id' => $this->chauffeur()->id,
+            'pickup_date' => now()->subDays(12),
+            'picked_up_at' => now()->subDays(12),
+        ]);
+        $recente = TransportOrder::factory()->enRoute()->create([
+            'vehicle_registration' => $this->camion('1-OUB-002')->registration,
+            'driver_id' => $this->chauffeur()->id,
+            'pickup_date' => now()->subDay(),
+            'picked_up_at' => now()->subDay(),
+        ]);
+
+        $cartes = collect(AssertableInertia::fromTestResponse(
+            $this->actingAs(User::factory()->planificateur()->create())->get(route('planning.index', ['status' => 'IN_PROGRESS']))
+        )->toArray()['props']['orders']['data'])->keyBy('id');
+
+        $this->assertSame(now()->subDays(12)->format('d/m/Y'), $cartes[$ancienne->id]['en_route_depuis']);
+        $this->assertArrayNotHasKey('en_route_depuis', $cartes[$recente->id]);
+    }
+
+    public function test_le_repos_journalier_remet_le_compteur_de_pauses_a_zero(): void
+    {
+        // 737 km : 9 h le premier jour (une pause), 2 h 20 le lendemain.
+        $this->assertSame(1, TempsDeConduite::nombreDePauses(TempsDeConduite::heuresDeConduite(737)));
+        $this->assertSame(0, TempsDeConduite::nombreDePauses(4.4));
+        $this->assertSame(2, TempsDeConduite::nombreDePauses(18.0));
     }
 }

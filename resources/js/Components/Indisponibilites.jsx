@@ -1,5 +1,6 @@
 import { useTraduction } from '@/traduire';
 import { router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 const LIBELLES = {
     CONGE: ['indispo.conge', 'Congé'],
@@ -12,18 +13,29 @@ const LIBELLES = {
 };
 
 /**
- * Conges et immobilisations dates a l'avance. La fiche qui l'accueille est
- * deja un formulaire : pas de <form> imbrique, l'ajout part d'un bouton.
+ * Conges et immobilisations dates a l'avance. Rendu hors du formulaire de
+ * la fiche : il a le sien, Entree ajoute la periode sans enregistrer la
+ * fiche.
  */
 export default function Indisponibilites({ liste = [], motifs, routeAjout, peutModifier }) {
     const t = useTraduction();
     const aujourdhui = new Date().toISOString().slice(0, 10);
     const { data, setData, post, processing, errors, reset } = useForm({ du: '', au: '', motif: motifs[0], commentaire: '' });
+    // Les missions qu'une absence rend non conformes : le message flash
+    // s'affichait derriere la fiche ouverte, on le montre ici.
+    const [alerte, setAlerte] = useState(null);
 
-    const ajouter = () => post(routeAjout, {
-        preserveScroll: true,
-        onSuccess: () => reset('du', 'au', 'commentaire'),
-    });
+    const ajouter = (e) => {
+        e.preventDefault();
+        setAlerte(null);
+        post(routeAjout, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                reset('du', 'au', 'commentaire');
+                setAlerte(page.props.flash?.error ?? null);
+            },
+        });
+    };
 
     const champ = 'mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
@@ -51,8 +63,12 @@ export default function Indisponibilites({ liste = [], motifs, routeAjout, peutM
                 </ul>
             )}
 
+            {alerte && (
+                <p className="rounded-lg bg-status-incident/10 px-3 py-2 text-xs text-status-incident" role="alert">{alerte}</p>
+            )}
+
             {peutModifier && (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <form onSubmit={ajouter} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div>
                         <label htmlFor="indispo-du" className="text-xs text-slate-600">{t('indispo.du', 'Du')}</label>
                         <input id="indispo-du" type="date" min={aujourdhui} value={data.du} onChange={(e) => setData('du', e.target.value)} className={champ} />
@@ -69,8 +85,7 @@ export default function Indisponibilites({ liste = [], motifs, routeAjout, peutM
                     </div>
                     <div className="flex items-end">
                         <button
-                            type="button"
-                            onClick={ajouter}
+                            type="submit"
                             disabled={processing || ! data.du || ! data.au}
                             className="w-full rounded-lg border border-marine px-3 py-2 text-sm font-semibold text-marine transition hover:bg-surface disabled:opacity-50"
                         >
@@ -80,7 +95,7 @@ export default function Indisponibilites({ liste = [], motifs, routeAjout, peutM
                     {(errors.du || errors.au || errors.motif) && (
                         <p className="col-span-2 text-xs text-status-incident sm:col-span-4">{errors.du || errors.au || errors.motif}</p>
                     )}
-                </div>
+                </form>
             )}
         </div>
     );

@@ -3,19 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Driver;
 use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
+use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\ControleAffectation;
 use App\Support\OrderWorkflow;
-use App\Support\TempsDeConduite;
 use App\Support\Traductions;
 use App\Support\TransitionRefusee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -137,24 +139,43 @@ class MissionController extends Controller
         // Au moment de partir, le couple se recontrole : un permis, un code
         // 95 ou un controle technique expire depuis l'affectation, ou une
         // fiche corrigee, ne laisse plus prendre la route sans que le
-        // planificateur le sache.
-        if ($vise === 'IN_PROGRESS' && $transportOrder->vehicle !== null) {
-            $fin = today()->addDays(TempsDeConduite::journees($transportOrder->distance_km) - 1);
-            $refus = ControleAffectation::conformite($transportOrder, $transportOrder->vehicle, $request->user()->driver, $fin);
-
-            if ($refus !== []) {
-                return back()->with('error', Traductions::t('msg.mission_depart_refuse', 'Vous ne pouvez pas prendre cette mission en charge : :motif Contactez le planificateur.', [
-                    'motif' => $refus[0]['message'],
-                ]));
-            }
-        }
-
+        // planificateur le sache. Sous verrou jusqu'au changement d'etat,
+        // comme l'affectation : les documents sur toute la periode prevue
+        // (un chargement la veille couvre aussi le lendemain), et le camion
+        // comme le chauffeur libres (une mission restee « en route » avec un
+        // autre chauffeur, un groupage trop lourd).
         try {
-            $vise === 'DELIVERED'
-                ? OrderWorkflow::livrer($transportOrder, $donnees['receptionnaire'] ?? null, $donnees['reserves'] ?? null)
-                : OrderWorkflow::enlever($transportOrder);
+            $refus = DB::transaction(function () use ($transportOrder, $vise, $donnees) {
+                if ($vise === 'IN_PROGRESS' && $transportOrder->vehicle_registration !== null) {
+                    $vehicule = Vehicle::whereKey($transportOrder->vehicle_registration)->lockForUpdate()->first();
+                    $chauffeur = Driver::whereKey($transportOrder->driver_id)->lockForUpdate()->first();
+
+                    [, , $fin] = ControleAffectation::periode($transportOrder);
+
+                    $refus = [
+                        ...ControleAffectation::conformite($transportOrder, $vehicule, $chauffeur, $fin),
+                        ...ControleAffectation::disponibilite($transportOrder, $vehicule, $chauffeur, now(), today(), $fin),
+                    ];
+
+                    if ($refus !== []) {
+                        return $refus;
+                    }
+                }
+
+                $vise === 'DELIVERED'
+                    ? OrderWorkflow::livrer($transportOrder, $donnees['receptionnaire'] ?? null, $donnees['reserves'] ?? null)
+                    : OrderWorkflow::enlever($transportOrder);
+
+                return [];
+            });
         } catch (TransitionRefusee) {
             return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
+        }
+
+        if ($refus !== []) {
+            return back()->with('error', Traductions::t('msg.mission_depart_refuse', 'Vous ne pouvez pas prendre cette mission en charge : :motif Contactez le planificateur.', [
+                'motif' => $refus[0]['message'],
+            ]));
         }
 
         $this->poserJalon($transportOrder, $vise, $donnees, $request->user()->id);

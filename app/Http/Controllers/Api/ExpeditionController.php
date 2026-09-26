@@ -70,7 +70,7 @@ class ExpeditionController extends Controller
             'enlevement' => 'required|string|max:255',
             'livraison' => 'required|string|max:255',
             'poids' => 'required|numeric|min:1|max:'.Vehicle::chargeUtileMaxKg(),
-            'volume' => 'nullable|numeric|min:0.1|max:120',
+            'volume' => 'nullable|numeric|min:0.1|max:'.Vehicle::volumeMaxM3(),
             'marchandise' => ['required', Rule::in(TransportOrder::MARCHANDISES)],
             'date_enlevement' => 'required|date|after_or_equal:today',
             'date_livraison' => 'required|date|after_or_equal:date_enlevement',
@@ -82,6 +82,16 @@ class ExpeditionController extends Controller
             'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
             'formule' => ['nullable', Rule::in(['ECO', 'STANDARD', 'EXPRESS'])],
         ]);
+
+        // Un envoi qu'aucun camion ne peut prendre (ADR avec hayon, 20 t...)
+        // ne serait jamais affecte : refuse tout de suite.
+        $volume = isset($donnees['volume']) ? (float) $donnees['volume'] : null;
+        $adr = (bool) ($donnees['matieres_dangereuses'] ?? false);
+        $hayon = (bool) ($donnees['hayon'] ?? false);
+
+        if (! Vehicle::peutPorter((float) $donnees['poids'], $volume, $adr, $hayon)) {
+            return response()->json(['message' => Vehicle::refusFlotte((float) $donnees['poids'], $volume, $adr, $hayon)], 422);
+        }
 
         $pays = strtoupper($donnees['pays_livraison'] ?? '')
             ?: (Pays::depuisNom(Adresse::pays($donnees['livraison'])) ?? 'BE');

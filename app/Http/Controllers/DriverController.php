@@ -48,13 +48,8 @@ class DriverController extends Controller
         // chauffeur roule jusque-la.
         $parti = fn ($q) => $q->whereNotNull('left_on')->where('left_on', '<=', $aujourdhui);
 
-        $inapte = fn ($q) => $q
-            ->where($parti)
-            ->orWhere('license_expiry', '<', $aujourdhui)
-            ->orWhereNull('medical_exam_date')
-            ->orWhere('medical_exam_date', '<', $visiteLimite)
-            ->orWhere('cpc_expiry', '<', $aujourdhui)
-            ->orWhere('tacho_card_expiry', '<', $aujourdhui);
+        // Memes criteres que Driver::empechements (voir Driver::scopeInapte).
+        $inapte = fn ($q) => $q->inapte();
 
         match ($filtres['etat'] ?? null) {
             'disponibles' => $requete->where('is_available', true)->whereNot($inapte),
@@ -202,17 +197,23 @@ class DriverController extends Controller
             }
         }
 
-        if ($donnees['is_available'] === false || $donnees['adr_certified'] === false) {
+        // Seul un vrai changement se refuse : enregistrer la fiche d'un
+        // chauffeur deja hors service, ou jamais certifie, ne doit pas etre
+        // bloque.
+        $retireDuService = $donnees['is_available'] === false && $driver->is_available;
+        $retireAdr = $donnees['adr_certified'] === false && $driver->adr_certified;
+
+        if ($retireDuService || $retireAdr) {
             $encours = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
                 ->where('driver_id', $driver->id);
 
-            if ($donnees['is_available'] === false && empty($donnees['left_on']) && (clone $encours)->exists()) {
+            if ($retireDuService && empty($donnees['left_on']) && (clone $encours)->exists()) {
                 return back()->withErrors([
                     'is_available' => Traductions::t('msg.chauffeur_engage_service', 'Ce chauffeur porte une mission en cours : réaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
                 ]);
             }
 
-            if ($donnees['adr_certified'] === false && (clone $encours)->where('is_hazardous', true)->exists()) {
+            if ($retireAdr && (clone $encours)->where('is_hazardous', true)->exists()) {
                 return back()->withErrors([
                     'adr_certified' => Traductions::t('msg.chauffeur_engage_adr', 'Ce chauffeur transporte une matière dangereuse : sa certification ADR ne peut pas être retirée maintenant.'),
                 ]);

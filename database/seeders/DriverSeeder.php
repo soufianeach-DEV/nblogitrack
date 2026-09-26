@@ -11,6 +11,21 @@ class DriverSeeder extends Seeder
     {
         DB::unprepared(file_get_contents(database_path('seeders/sql/drivers.sql')));
 
+        // Le fichier a ete ecrit le 14/08/2026 : ses dates glissent avec
+        // aujourd'hui, sans quoi chaque mois de plus rendait de nouveaux
+        // chauffeurs inaptes (visite, carte tachygraphe) et vidait la
+        // planification de demonstration.
+        DB::statement(<<<'SQL'
+            UPDATE drivers SET
+                hired_on = hired_on + (CURRENT_DATE - DATE '2026-08-14'),
+                birth_date = birth_date + (CURRENT_DATE - DATE '2026-08-14'),
+                retirement_planned_on = retirement_planned_on + (CURRENT_DATE - DATE '2026-08-14'),
+                license_expiry = license_expiry + (CURRENT_DATE - DATE '2026-08-14'),
+                cpc_expiry = cpc_expiry + (CURRENT_DATE - DATE '2026-08-14'),
+                tacho_card_expiry = tacho_card_expiry + (CURRENT_DATE - DATE '2026-08-14'),
+                medical_exam_date = medical_exam_date + (CURRENT_DATE - DATE '2026-08-14')
+        SQL);
+
         // Le jeu de demonstration numerote chaque fiche comme son compte :
         // le lien se fait par user_id, et la numerotation des fiches
         // reprend plus loin.

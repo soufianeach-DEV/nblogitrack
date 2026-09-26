@@ -728,6 +728,8 @@ class TranslationSeeder extends Seeder
             'vehicule_adr' => ['Véhicule équipé ADR', 'ADR-uitgerust voertuig', 'ADR-equipped vehicle'],
             'non_conforme' => ['Affectation non conforme : réaffectez cette mission.', 'Niet-conforme toewijzing: wijs deze opdracht opnieuw toe.', 'Non-compliant assignment: reassign this mission.'],
             'retraite_passee' => ['retraite prévue le :date, fiche à revoir', 'pensioen gepland op :date, fiche na te kijken', 'retirement planned on :date, record to review'],
+            'en_route_depuis' => ['En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', 'Onderweg sinds :date: de levering is niet geregistreerd. Zolang dat niet gebeurt, blijven deze vrachtwagen en chauffeur bezet.', 'On the road since :date: the delivery has not been recorded. Until it is, this truck and driver stay busy.'],
+            'volume_min' => ['Volume ≥', 'Volume ≥', 'Volume ≥'],
         ],
 
         'personnel' => [
@@ -1358,6 +1360,7 @@ class TranslationSeeder extends Seeder
             'a_mettre_en_regle' => ['À mettre en règle', 'In orde te brengen', 'To bring into compliance'],
             'permis_requis' => ['Permis requis', 'Vereist rijbewijs', 'Required licence'],
             'adr_equipe' => ['Équipé ADR (plaques orange, extincteurs, lot de bord)', 'ADR-uitgerust (oranje borden, brandblussers, boorduitrusting)', 'ADR-equipped (orange plates, extinguishers, on-board kit)'],
+            'permis_gabarit' => ['Selon le gabarit (:permis)', 'Volgens het gabariet (:permis)', 'Based on size (:permis)'],
         ],
 
         'profil' => [
@@ -1794,6 +1797,8 @@ class TranslationSeeder extends Seeder
             'adr_question' => ['Cet envoi est-il soumis à l\'ADR (matière dangereuse) ?', 'Valt deze zending onder ADR (gevaarlijke stof)?', 'Is this shipment subject to ADR (dangerous goods)?'],
             'adr_oui' => ['Oui, matière dangereuse (ADR)', 'Ja, gevaarlijke stof (ADR)', 'Yes, dangerous goods (ADR)'],
             'adr_non' => ['Non, non soumis à l\'ADR', 'Nee, niet onder ADR', 'No, not subject to ADR'],
+            'cond_adr' => ['équipement ADR', 'ADR-uitrusting', 'ADR equipment'],
+            'cond_hayon' => ['hayon élévateur', 'laadklep', 'tail lift'],
         ],
 
         'suivi' => [
@@ -2688,6 +2693,12 @@ class TranslationSeeder extends Seeder
             'indispo_enregistree' => ['Indisponibilité enregistrée : :periode.', 'Onbeschikbaarheid geregistreerd: :periode.', 'Unavailability recorded: :periode.'],
             'indispo_passee' => ['Une indisponibilité ne commence pas dans le passé.', 'Een onbeschikbaarheid begint niet in het verleden.', 'An unavailability cannot start in the past.'],
             'indispo_fin_avant_debut' => ['La fin ne peut pas précéder le début.', 'Het einde kan niet voor het begin liggen.', 'The end cannot be before the start.'],
+            'flotte_incapable' => ['Aucun camion de notre flotte ne réunit ces conditions (:conditions) : demandez un devis.', 'Geen enkele vrachtwagen van ons wagenpark voldoet aan deze voorwaarden (:conditions): vraag een offerte aan.', 'No truck in our fleet meets these requirements (:conditions): request a quote.'],
+            'volume_flotte' => ['Aucun camion de notre flotte ne charge plus de :max m³ : demandez un devis.', 'Geen enkele vrachtwagen van ons wagenpark laadt meer dan :max m³: vraag een offerte aan.', 'No truck in our fleet carries more than :max m³: request a quote.'],
+            'permis_sous_gabarit' => ['Ce véhicule exige au moins le permis :minimum : le permis :choisi ne le couvre pas.', 'Dit voertuig vereist minstens rijbewijs :minimum: rijbewijs :choisi dekt het niet.', 'This vehicle requires at least a :minimum licence: a :choisi licence does not cover it.'],
+            'planif_chauffeur_occupe_par' => ['Ce chauffeur a déjà une mission ce jour-là avec un autre camion (:mission).', 'Deze chauffeur heeft die dag al een opdracht met een andere vrachtwagen (:mission).', 'This driver already has a job that day with another truck (:mission).'],
+            'planif_binome_en_route_par' => ['Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission (:mission).', 'Deze vrachtwagen en chauffeur zijn die dag nog onderweg voor een andere opdracht (:mission).', 'This truck and driver are still on the road that day for another job (:mission).'],
+            'planif_camion_occupe_par' => ['Ce camion est déjà affecté à un autre chauffeur ce jour-là (:mission).', 'Deze vrachtwagen is die dag al aan een andere chauffeur toegewezen (:mission).', 'This truck is already assigned to another driver that day (:mission).'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

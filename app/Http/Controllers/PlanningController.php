@@ -24,6 +24,9 @@ use Inertia\Response;
 
 class PlanningController extends Controller
 {
+    /** Au-dela, une mission « en route » est signalee : livraison oubliee ? */
+    private const EN_ROUTE_MAX_JOURS = 7;
+
     private const TRANSITIONS = [
         // Un ordre en attente ne passe en cours que par l'affectation, qui
         // controle le chauffeur, le vehicule, l'ADR et les temps de
@@ -89,7 +92,9 @@ class PlanningController extends Controller
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle',
+            'vehicle.indisponibilites' => $aVenir,
             'driver.user:id,first_name,last_name',
+            'driver.indisponibilites' => $aVenir,
         ])
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
@@ -115,6 +120,9 @@ class PlanningController extends Controller
                     $o->setAttribute('refus_chauffeurs', (object) $chauffeursDisponibles
                         ->mapWithKeys(fn (Driver $d) => [$d->id => ControleAffectation::refusChauffeurCourt($o, $d, $fin)])
                         ->filter()->all());
+                    $o->setAttribute('refus_chauffeurs_pro', (object) $chauffeursDisponibles
+                        ->mapWithKeys(fn (Driver $d) => [$d->id => ControleAffectation::refusChauffeurProfessionnel($d, $fin)])
+                        ->filter()->all());
                 }
 
                 // Une mission deja affectee se recontrole : un document
@@ -122,6 +130,15 @@ class PlanningController extends Controller
                 // non conforme, et le planificateur doit le voir.
                 if (in_array($o->status, ['ASSIGNED', 'IN_PROGRESS'], true) && $o->vehicle && $o->driver) {
                     $o->setAttribute('alertes', array_column(ControleAffectation::conformite($o, $o->vehicle, $o->driver, $fin), 'message'));
+                }
+
+                // Une mission « en route » depuis plus d'une semaine a sans
+                // doute ete livree sans que le chauffeur l'enregistre : elle
+                // occupe son camion et son chauffeur jusqu'a ce qu'on la solde.
+                $charge = $o->picked_up_at ?? $o->pickup_date;
+
+                if ($o->status === 'IN_PROGRESS' && $charge !== null && $charge->lt(today()->subDays(self::EN_ROUTE_MAX_JOURS))) {
+                    $o->setAttribute('en_route_depuis', $charge->format('d/m/Y'));
                 }
 
                 return $o;
@@ -288,6 +305,7 @@ class PlanningController extends Controller
             'statut' => $transportOrder->status,
             'camion' => $transportOrder->vehicle_registration,
             'chauffeur_id' => $transportOrder->driver_id,
+            'enlevement' => $transportOrder->pickup_date?->format('Y-m-d H:i'),
         ];
 
         // Deux planificateurs qui reservent au meme instant le meme chauffeur
@@ -351,9 +369,15 @@ class PlanningController extends Controller
         ['vehicle' => $vehicle, 'driver' => $driver] = $resultat;
 
         if ($reaffectation) {
+            // Une mission en retard repart aujourd'hui avec son nouveau
+            // binome : le journal garde la date d'enlevement qu'elle avait.
+            $enlevement = $transportOrder->pickup_date?->format('Y-m-d H:i');
+            $reportee = $enlevement !== $avant['enlevement'];
+
             ActivityLog::record(
                 'order.reassigned',
-                'Réaffectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration.' : '.$data['motif'],
+                'Réaffectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration.' : '.$data['motif']
+                    .($reportee ? ' (enlèvement du '.($avant['enlevement'] ?? '—').' reporté au '.$enlevement.')' : ''),
                 $transportOrder,
                 [
                     'motif' => $data['motif'],
@@ -362,6 +386,7 @@ class PlanningController extends Controller
                     'ancien_chauffeur_id' => $avant['chauffeur_id'],
                     'vehicule' => $vehicle->registration.' '.$vehicle->brand.' '.$vehicle->model,
                     'chauffeur_id' => $driver->id,
+                    ...($reportee ? ['ancien_enlevement' => $avant['enlevement'], 'enlevement' => $enlevement] : []),
                 ],
             );
 

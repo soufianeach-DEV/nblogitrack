@@ -33,7 +33,7 @@ const NOMS_OFFRE = {
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000 }) {
+export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [] }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -127,12 +127,38 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
     // defaut ne vaut pas declaration.
     const aDeclarer = marchandisesAdr.includes(data.goods_type);
 
+    // Chaque limite prise a part ne suffit pas : un envoi ADR avec hayon
+    // de 20 t doit trouver un camion qui reunit les trois. Dit tout de
+    // suite, pas a l'envoi du formulaire.
+    const kg = Number(data.weight) || 0;
+    const m3 = Number(data.volume) || null;
+    const tropLourd = kg > poidsMax;
+    const tropVolumineux = m3 !== null && m3 > volumeMax;
+    const horsFlotte = kg > 0 && ! tropLourd && ! tropVolumineux && flotte.length > 0 && ! flotte.some((v) => v.kg >= kg
+        && (m3 === null || v.m3 === null || v.m3 >= m3)
+        && (! data.is_hazardous || v.adr)
+        && (! data.needs_tail_lift || v.hayon));
+    const refusFlotte = horsFlotte
+        ? t('msg.flotte_incapable', 'Aucun camion de notre flotte ne réunit ces conditions (:conditions) : demandez un devis.', {
+            conditions: [
+                kg.toLocaleString(locale) + ' kg',
+                m3 !== null ? m3.toLocaleString(locale) + ' m³' : null,
+                data.is_hazardous ? t('commande.cond_adr', 'équipement ADR') : null,
+                data.needs_tail_lift ? t('commande.cond_hayon', 'hayon élévateur') : null,
+            ].filter(Boolean).join(', '),
+        })
+        : null;
+    const messagePoids = tropLourd ? t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', { max: (poidsMax / 1000).toLocaleString(locale) }) : null;
+    const messageVolume = tropVolumineux ? t('msg.volume_flotte', 'Aucun camion de notre flotte ne charge plus de :max m³ : demandez un devis.', { max: volumeMax.toLocaleString(locale) }) : null;
+
     const manque = {
         pickup: !data.pickup_lat ? t('commande.manque_depart', 'Complétez l\'adresse de départ : pays, ville, code postal, rue et numéro.') : null,
         delivery: !data.delivery_lat ? t('commande.manque_destination', 'Complétez l\'adresse de destination : pays, ville, code postal, rue et numéro.') : null,
         weight: !data.weight
             ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.')
-            : (Number(data.weight) > poidsMax ? t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', { max: (poidsMax / 1000).toLocaleString() }) : null),
+            : messagePoids,
+        volume: messageVolume,
+        flotte: refusFlotte,
         adr: aDeclarer && data.is_hazardous === null ? t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.') : null,
         goods: !data.goods_type ? t('commande.manque_marchandise', 'Choisissez le type de marchandise.') : null,
         grille: !data.tariff_grid_id ? t('commande.manque_formule', 'Choisissez une formule de livraison.') : null,
@@ -150,7 +176,8 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
     const prixDe = (g) => (g && prix[g.id] != null ? Number(prix[g.id]) : null);
 
     const selectedGrid = tariffGrids.find((g) => String(g.id) === String(data.tariff_grid_id));
-    const total = prixDe(selectedGrid);
+    // Pas de prix pour un envoi qu'aucun camion ne peut prendre.
+    const total = refusFlotte || messageVolume ? null : prixDe(selectedGrid);
 
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('commande.titre', 'Nouvelle expédition')}</h1>}>
@@ -176,7 +203,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                     <div>
                         <InputLabel htmlFor="weight">{t('commande.poids_kg', 'Poids (kg)')} <span className="text-status-incident">*</span></InputLabel>
                         <TextInput id="weight" type="number" step="0.01" min="0" value={data.weight} onChange={(e) => setData('weight', e.target.value)} placeholder={t('commande.poids_ex', 'ex. 300')} className="mt-1 block w-full" />
-                        <InputError message={(soumis && manque.weight) || errors.weight} className="mt-2" />
+                        <InputError message={messagePoids || (soumis && manque.weight) || errors.weight} className="mt-2" />
                     </div>
                     <div>
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
@@ -200,7 +227,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                     <div>
                         <InputLabel htmlFor="volume">{t('commande.volume_m3', 'Volume (m³)')}</InputLabel>
                         <TextInput id="volume" type="number" step="0.1" min="0" value={data.volume} onChange={(e) => setData('volume', e.target.value)} placeholder={t('commande.volume_ex', 'facultatif, ex. 12')} className="mt-1 block w-full" />
-                        <InputError message={errors.volume} className="mt-2" />
+                        <InputError message={messageVolume || errors.volume} className="mt-2" />
                     </div>
                     {aDeclarer ? (
                         <fieldset className="sm:col-span-2">
@@ -229,6 +256,9 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                         <Checkbox name="needs_tail_lift" checked={data.needs_tail_lift} onChange={(e) => setData('needs_tail_lift', e.target.checked)} />
                         <span className="text-sm text-slate-600">{t('commande.hayon_long', 'Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)')}</span>
                     </label>
+                    {(refusFlotte || errors.flotte) && (
+                        <InputError message={refusFlotte || errors.flotte} className="sm:col-span-2" />
+                    )}
                     <div className="sm:col-span-2">
                         <InputLabel htmlFor="priority">{t('commande.priorite', 'Priorité')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="priority" value={data.priority} onChange={(e) => setData('priority', e.target.value)} className={selectCls} disabled={urgence48h}>
@@ -327,7 +357,9 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                             {selectedGrid.service_level === 'EXPRESS' ? t('tarifs.dedie', 'Véhicule dédié') : t('tarifs.groupage', 'Groupage')} · {kmTxt} km · {data.weight} kg{data.is_hazardous ? ' · ADR' : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
                                         </p>
                                     ) : (
-                                        <p className="text-xs text-gray-500">{t('commande.poids_pour_prix', 'Indiquez le poids pour voir les prix groupage.')}</p>
+                                        <p className={'text-xs ' + (messagePoids || messageVolume || refusFlotte ? 'text-status-incident' : 'text-gray-500')}>
+                                            {messagePoids || messageVolume || refusFlotte || t('commande.poids_pour_prix', 'Indiquez le poids pour voir les prix groupage.')}
+                                        </p>
                                     )}
                                 </div>
                                 {total != null && <p className="text-3xl font-bold text-action-dark">{fr(total)} €</p>}

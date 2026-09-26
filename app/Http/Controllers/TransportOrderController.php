@@ -258,6 +258,8 @@ class TransportOrderController extends Controller
             'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'delivery_days', 'service_level']),
             'marchandisesAdr' => TransportOrder::MARCHANDISES_ADR,
             'poidsMax' => Vehicle::chargeUtileMaxKg(),
+            'volumeMax' => Vehicle::volumeMaxM3(),
+            'flotte' => Vehicle::profils(),
         ]);
     }
 
@@ -290,7 +292,9 @@ class TransportOrderController extends Controller
         $grilles = TariffGrid::where('zone', $data['delivery_country'])->where('is_active', true)->get();
         $poids = $data['weight'] ?? null;
 
-        $prix = $poids === null
+        // Au-dela de la charge utile de la flotte, la commande sera
+        // refusee : pas de prix pour un envoi qu'on ne peut pas prendre.
+        $prix = $poids === null || (float) $poids > Vehicle::chargeUtileMaxKg()
             ? []
             : Tarificateur::parFormule($grilles, $km, (float) $poids, $data['delivery_country'], $request->boolean('is_hazardous'));
 
@@ -313,7 +317,7 @@ class TransportOrderController extends Controller
             'delivery_lat' => 'required|numeric|between:-90,90',
             'delivery_lng' => 'required|numeric|between:-180,180',
             'weight' => 'required|numeric|min:1|max:'.Vehicle::chargeUtileMaxKg(),
-            'volume' => 'nullable|numeric|min:0.1|max:120',
+            'volume' => 'nullable|numeric|min:0.1|max:'.Vehicle::volumeMaxM3(),
             'goods_type' => 'required|in:'.implode(',', TransportOrder::MARCHANDISES),
             'is_hazardous' => [Rule::requiredIf(fn () => in_array($request->input('goods_type'), TransportOrder::MARCHANDISES_ADR, true)), 'nullable', 'boolean'],
             'needs_tail_lift' => 'boolean',
@@ -334,7 +338,20 @@ class TransportOrderController extends Controller
             'weight.max' => Traductions::t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', [
                 'max' => Formats::nombre(Vehicle::chargeUtileMaxKg() / 1000, 1),
             ]),
+            'volume.max' => Traductions::t('msg.volume_flotte', 'Aucun camion de notre flotte ne charge plus de :max m³ : demandez un devis.', [
+                'max' => Formats::nombre(Vehicle::volumeMaxM3(), 1),
+            ]),
         ]);
+
+        // Chaque limite prise a part ne suffit pas : un envoi ADR de 20 t
+        // avec hayon doit trouver un camion qui reunit les trois.
+        $volume = isset($data['volume']) ? (float) $data['volume'] : null;
+
+        if (! Vehicle::peutPorter((float) $data['weight'], $volume, (bool) ($data['is_hazardous'] ?? false), (bool) ($data['needs_tail_lift'] ?? false))) {
+            return back()->withErrors([
+                'flotte' => Vehicle::refusFlotte((float) $data['weight'], $volume, (bool) ($data['is_hazardous'] ?? false), (bool) ($data['needs_tail_lift'] ?? false)),
+            ]);
+        }
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
 

@@ -12,7 +12,10 @@ class Traductions
     /** @return array<string, string> */
     public static function pour(string $langue): array
     {
-        return Cache::remember(
+        // Memorise pour la requete : l'ecran de planification demande des
+        // centaines de libelles, et chaque lecture du cache en base relisait
+        // tout le dictionnaire (950 requetes au lieu de 44).
+        return Cache::memo()->remember(
             self::cle($langue),
             self::DUREE_CACHE,
             fn () => Translation::all()
@@ -75,7 +78,7 @@ class Traductions
     public static function oublier(): void
     {
         foreach (array_keys(Translation::LANGUES) as $langue) {
-            Cache::forget(self::cle($langue));
+            Cache::memo()->forget(self::cle($langue));
         }
     }
 

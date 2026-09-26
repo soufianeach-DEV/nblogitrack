@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\DatesHeureDeBruxelles;
 use App\Support\Traductions;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,7 +60,29 @@ class Driver extends Model
     /**
      * @return list<string>
      */
-    public function empechements(?CarbonInterface $jusquau = null): array
+    public function empechements(?CarbonInterface $jusquau = null, ?Vehicle $vehicule = null): array
+    {
+        // Le code 95 et la carte tachygraphe ne concernent que les vehicules
+        // de plus de 3,5 t (directive 2022/2561, reglement 561/2006) : pour
+        // une camionnette de categorie B, ou un chauffeur qui n'a que le
+        // permis B, ils ne bloquent pas.
+        $professionnels = $vehicule !== null
+            ? $vehicule->permisRequis() !== 'B'
+            : $this->license_type !== 'B';
+
+        return [
+            ...$this->empechementsDeBase($jusquau),
+            ...($professionnels ? $this->empechementsProfessionnels($jusquau) : []),
+        ];
+    }
+
+    /**
+     * Documents exiges pour tout vehicule : depart, permis, visite
+     * medicale.
+     *
+     * @return list<string>
+     */
+    public function empechementsDeBase(?CarbonInterface $jusquau = null): array
     {
         // Les documents doivent etre valables jusqu'au dernier jour de la
         // mission, pas seulement aujourd'hui : une carte tachygraphe qui
@@ -84,8 +107,20 @@ class Driver extends Model
                 ['date' => $this->medical_exam_date->format('d/m/Y')]);
         }
 
-        // Sans code 95 ni carte tachygraphe, un chauffeur professionnel ne
-        // prend pas la route : une date absente bloque, comme la visite.
+        return $motifs;
+    }
+
+    /**
+     * Qualification code 95 et carte tachygraphe, exigees au-dela de 3,5 t.
+     * Une date absente bloque, comme la visite medicale.
+     *
+     * @return list<string>
+     */
+    public function empechementsProfessionnels(?CarbonInterface $jusquau = null): array
+    {
+        $motifs = [];
+        $aujourdhui = ($jusquau ?? now())->copy()->startOfDay();
+
         if ($this->cpc_expiry === null) {
             $motifs[] = Traductions::t('empechement.sans_code95', 'aucune qualification code 95 enregistrée');
         } elseif ($this->cpc_expiry->lt($aujourdhui)) {
@@ -157,6 +192,29 @@ class Driver extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Chauffeurs qui ne peuvent pas prendre la route a cette date : memes
+     * criteres que empechements(), pour les filtres en SQL.
+     */
+    public function scopeInapte(Builder $requete, ?CarbonInterface $date = null): void
+    {
+        $jour = ($date ?? now())->toDateString();
+        $visite = ($date ?? now())->copy()->subYear()->toDateString();
+
+        $requete->where(fn ($q) => $q
+            ->where(fn ($p) => $p->whereNotNull('left_on')->where('left_on', '<=', $jour))
+            ->orWhere('license_expiry', '<', $jour)
+            ->orWhereNull('medical_exam_date')
+            ->orWhere('medical_exam_date', '<', $visite)
+            ->orWhere(fn ($pro) => $pro
+                ->where(fn ($p) => $p->whereNull('license_type')->orWhere('license_type', '!=', 'B'))
+                ->where(fn ($d) => $d
+                    ->whereNull('cpc_expiry')
+                    ->orWhere('cpc_expiry', '<', $jour)
+                    ->orWhereNull('tacho_card_expiry')
+                    ->orWhere('tacho_card_expiry', '<', $jour))));
     }
 
     public function indisponibilites(): HasMany
