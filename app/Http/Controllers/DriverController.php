@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
+use App\Support\ControleAffectation;
 use App\Support\Traductions;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -99,6 +100,7 @@ class DriverController extends Controller
                 'code95' => $d->cpc_expiry?->format('Y-m-d'),
                 'code95_affiche' => $d->cpc_expiry?->format('d/m/Y'),
                 'tacho' => $d->tacho_card_expiry?->format('Y-m-d'),
+                'adr_fin' => $d->adr_expiry?->format('Y-m-d'),
                 'tacho_affiche' => $d->tacho_card_expiry?->format('d/m/Y'),
                 'statut' => self::statuts()[$d->employment_status] ?? $d->employment_status,
                 'statut_code' => $d->employment_status,
@@ -142,6 +144,7 @@ class DriverController extends Controller
         $donnees = $request->validate([
             'is_available' => 'required|boolean',
             'adr_certified' => 'required|boolean',
+            'adr_expiry' => 'nullable|date',
             'medical_exam_date' => 'nullable|date|before_or_equal:today',
             'license_expiry' => 'nullable|date',
             'cpc_expiry' => 'nullable|date',
@@ -221,9 +224,17 @@ class DriverController extends Controller
             $donnees,
         );
 
-        return back()->with('success', ! empty($donnees['left_on'])
+        $reponse = back()->with('success', ! empty($donnees['left_on'])
             ? Traductions::t('msg.depart_enregistre', 'Départ enregistré. La fiche est conservée pour l\'historique.')
             : Traductions::t('msg.chauffeur_mis_a_jour', 'Chauffeur mis à jour.'));
+
+        // Une echeance corrigee peut rendre non conforme une mission deja
+        // affectee : le planificateur l'apprend ici, et sur la carte.
+        $aReaffecter = ControleAffectation::missionsNonConformes(TransportOrder::where('driver_id', $driver->id));
+
+        return $aReaffecter === [] ? $reponse : $reponse->with('error', Traductions::t('msg.missions_a_reaffecter', 'Attention : ces missions ne sont plus conformes et doivent être réaffectées : :missions.', [
+            'missions' => implode(', ', $aReaffecter),
+        ]));
     }
 
     /**

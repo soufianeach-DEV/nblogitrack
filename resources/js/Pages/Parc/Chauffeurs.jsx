@@ -14,6 +14,7 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
     const { data, setData, patch, processing, errors } = useForm({
         is_available: chauffeur.disponible,
         adr_certified: chauffeur.adr,
+        adr_expiry: chauffeur.adr_fin ?? '',
         medical_exam_date: chauffeur.visite ?? '',
         license_expiry: jjmmaaaaVersIso(chauffeur.permis_echeance),
         cpc_expiry: chauffeur.code95 ?? '',
@@ -113,6 +114,25 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         />
                         <span className="text-sm font-semibold text-marine">{t('chauffeurs.adr', 'Certifié ADR — matières dangereuses')}</span>
                     </label>
+
+                    {data.adr_certified && (
+                        <div>
+                            <label htmlFor="adr-fin" className="text-xs uppercase tracking-wide text-slate-600">
+                                {t('chauffeurs.adr_fin', 'Certificat ADR valable jusqu\'au')}
+                            </label>
+                            <input
+                                id="adr-fin"
+                                type="date"
+                                value={data.adr_expiry ?? ''}
+                                onChange={(e) => setData('adr_expiry', e.target.value)}
+                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            />
+                            {! data.adr_expiry && (
+                                <p className="mt-1 text-xs text-action-dark">{t('chauffeurs.adr_fin_manquante', 'Sans cette date, aucune marchandise dangereuse ne peut lui être confiée.')}</p>
+                            )}
+                            {errors.adr_expiry && <p className="mt-1 text-xs text-status-incident">{errors.adr_expiry}</p>}
+                        </div>
+                    )}
 
                     {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
                     {errors.adr_certified && <p className="text-xs text-status-incident">{errors.adr_certified}</p>}

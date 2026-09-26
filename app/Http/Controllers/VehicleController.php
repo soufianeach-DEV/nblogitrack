@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
+use App\Support\ControleAffectation;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,6 +75,8 @@ class VehicleController extends Controller
                 'immatriculation' => $v->registration,
                 'marque' => trim($v->brand.' '.$v->model),
                 'type' => $v->vehicle_type,
+                'permis_requis' => $v->permisRequis(),
+                'adr_equipe' => (bool) $v->adr_equipe,
                 'norme' => $v->euro_standard,
                 'carburant' => $v->fuel_type,
                 'capacite' => (float) $v->capacity_tonnes,
@@ -110,6 +113,8 @@ class VehicleController extends Controller
             'inspection_date' => 'nullable|date|before_or_equal:today',
             'inspection_valid_until' => 'nullable|date|after_or_equal:inspection_date',
             'mileage' => 'nullable|numeric|min:0|max:9999999',
+            'permis_requis' => 'sometimes|nullable|in:'.implode(',', Vehicle::PERMIS),
+            'adr_equipe' => 'sometimes|boolean',
         ], [
             'inspection_date.before_or_equal' => Traductions::t('msg.controle_futur', 'Un contrôle technique ne peut pas être daté dans le futur.'),
             'inspection_valid_until.after_or_equal' => Traductions::t('msg.validite_avant_controle', 'La validité ne peut pas précéder le passage au contrôle.'),
@@ -123,6 +128,19 @@ class VehicleController extends Controller
             if ($engage) {
                 return back()->withErrors([
                     'is_available' => Traductions::t('msg.vehicule_engage_service', 'Ce véhicule porte une expédition en cours : réaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
+                ]);
+            }
+        }
+
+        if (($donnees['adr_equipe'] ?? true) === false) {
+            $dangereux = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
+                ->where('vehicle_registration', $vehicle->registration)
+                ->where('is_hazardous', true)
+                ->exists();
+
+            if ($dangereux) {
+                return back()->withErrors([
+                    'adr_equipe' => Traductions::t('msg.vehicule_engage_adr', 'Ce véhicule transporte une matière dangereuse : son équipement ADR ne peut pas être retiré maintenant.'),
                 ]);
             }
         }
@@ -155,6 +173,11 @@ class VehicleController extends Controller
             $donnees,
         );
 
-        return back()->with('success', Traductions::t('msg.vehicule_mis_a_jour', 'Véhicule mis à jour.'));
+        $reponse = back()->with('success', Traductions::t('msg.vehicule_mis_a_jour', 'Véhicule mis à jour.'));
+        $aReaffecter = ControleAffectation::missionsNonConformes(TransportOrder::where('vehicle_registration', $vehicle->registration));
+
+        return $aReaffecter === [] ? $reponse : $reponse->with('error', Traductions::t('msg.missions_a_reaffecter', 'Attention : ces missions ne sont plus conformes et doivent être réaffectées : :missions.', [
+            'missions' => implode(', ', $aReaffecter),
+        ]));
     }
 }

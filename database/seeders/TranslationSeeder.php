@@ -721,6 +721,12 @@ class TranslationSeeder extends Seeder
             'confirmer_livre' => ['Marquer l\'ordre :numero comme livré aujourd\'hui ? Ce changement est définitif.', 'Opdracht :numero vandaag als geleverd markeren? Deze wijziging is definitief.', 'Mark order :numero as delivered today? This change is final.'],
             'enlevement_le' => ['Enlèvement le :date', 'Ophaling op :date', 'Pickup on :date'],
             'retirer_filtre' => ['Retirer ce filtre', 'Deze filter verwijderen', 'Remove this filter'],
+            'plafond_jour' => ['plafond journalier dépassé : :jour déjà prévues ce jour-là plus :mission, maximum :max', 'dagplafond overschreden: :jour al gepland die dag plus :mission, maximum :max', 'daily limit exceeded: :jour already planned that day plus :mission, maximum :max'],
+            'volume_insuffisant' => ['volume insuffisant', 'onvoldoende volume', 'insufficient volume'],
+            'vehicule_non_adr' => ['non équipé ADR', 'niet ADR-uitgerust', 'not ADR-equipped'],
+            'controle_expire' => ['contrôle technique jusqu\'au :date', 'keuring tot :date', 'roadworthiness test until :date'],
+            'vehicule_adr' => ['Véhicule équipé ADR', 'ADR-uitgerust voertuig', 'ADR-equipped vehicle'],
+            'non_conforme' => ['Affectation non conforme : réaffectez cette mission.', 'Niet-conforme toewijzing: wijs deze opdracht opnieuw toe.', 'Non-compliant assignment: reassign this mission.'],
         ],
 
         'personnel' => [
@@ -931,6 +937,8 @@ class TranslationSeeder extends Seeder
             'sortie_inaptitude' => ['Inaptitude médicale', 'Medische ongeschiktheid', 'Medical unfitness'],
             'sortie_decheance' => ['Déchéance du permis', 'Verval van het rijbewijs', 'Driving ban'],
             'depart_prevu_le' => ['Départ prévu le :date — :motif. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', 'Vertrek gepland op :date — :motif. Het account wordt die dag afgesloten; tot dan rijdt de bestuurder gewoon.', 'Departure planned on :date — :motif. The account will close on that day; until then, the driver drives as usual.'],
+            'adr_fin' => ['Certificat ADR valable jusqu\'au', 'ADR-certificaat geldig tot', 'ADR certificate valid until'],
+            'adr_fin_manquante' => ['Sans cette date, aucune marchandise dangereuse ne peut lui être confiée.', 'Zonder deze datum kunnen hem geen gevaarlijke goederen worden toevertrouwd.', 'Without this date, no dangerous goods can be assigned to this driver.'],
         ],
 
         'facturation' => [
@@ -1347,6 +1355,8 @@ class TranslationSeeder extends Seeder
             ],
             'echu_le' => ['échu le', 'vervallen op', 'expired on'],
             'a_mettre_en_regle' => ['À mettre en règle', 'In orde te brengen', 'To bring into compliance'],
+            'permis_requis' => ['Permis requis', 'Vereist rijbewijs', 'Required licence'],
+            'adr_equipe' => ['Équipé ADR (plaques orange, extincteurs, lot de bord)', 'ADR-uitgerust (oranje borden, brandblussers, boorduitrusting)', 'ADR-equipped (orange plates, extinguishers, on-board kit)'],
         ],
 
         'profil' => [
@@ -1447,6 +1457,12 @@ class TranslationSeeder extends Seeder
             'permis_ce' => ['une semi-remorque exige le permis CE (permis :permis)', 'een oplegger vereist rijbewijs CE (rijbewijs :permis)', 'a semi-trailer requires a CE licence (licence :permis)'],
             'permis_c' => ['ce camion dépasse 7,5 t en charge : le permis C est requis (permis :permis)', 'deze vrachtwagen weegt beladen meer dan 7,5 t: rijbewijs C is vereist (rijbewijs :permis)', 'this truck exceeds 7.5 t loaded: a C licence is required (licence :permis)'],
             'permis_c1' => ['ce véhicule dépasse 3,5 t en charge : le permis C1 au moins est requis', 'dit voertuig weegt beladen meer dan 3,5 t: minstens rijbewijs C1 is vereist', 'this vehicle exceeds 3.5 t loaded: at least a C1 licence is required'],
+            'sans_code95' => ['aucune qualification code 95 enregistrée', 'geen code 95-vakbekwaamheid geregistreerd', 'no code 95 qualification recorded'],
+            'sans_tachygraphe' => ['aucune carte tachygraphe enregistrée', 'geen tachograafkaart geregistreerd', 'no tachograph card recorded'],
+            'permis_requis' => ['ce véhicule exige le permis :requis (permis :permis)', 'dit voertuig vereist rijbewijs :requis (rijbewijs :permis)', 'this vehicle requires a :requis licence (licence :permis)'],
+            'adr_absent' => ['ce chauffeur n\'a pas la certification ADR', 'deze chauffeur heeft geen ADR-certificaat', 'this driver has no ADR certificate'],
+            'adr_sans_date' => ['la fin de validité de son certificat ADR n\'est pas enregistrée', 'de vervaldatum van zijn ADR-certificaat is niet geregistreerd', 'the expiry date of their ADR certificate is not recorded'],
+            'adr_expire' => ['son certificat ADR expire le :date', 'zijn ADR-certificaat vervalt op :date', 'their ADR certificate expires on :date'],
         ],
 
         'ent' => [
@@ -2650,6 +2666,14 @@ class TranslationSeeder extends Seeder
             'supplement_trop_eleve' => ['Un supplément ne peut pas dépasser :max HT.', 'Een toeslag kan niet hoger zijn dan :max excl. btw.', 'A surcharge cannot exceed :max excl. VAT.'],
             'tva_belge_invalide' => ['Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).', 'Dit Belgische btw-nummer is niet geldig: controleer het. Het telt 10 cijfers na BE en begint met 0 of 1 (bv. BE0123456749).', 'This Belgian VAT number is not valid: please check it. It has 10 digits after BE and starts with 0 or 1 (e.g. BE0123456749).'],
             'verification_adresse_indisponible' => ['La vérification de l\'adresse est momentanément indisponible. Réessayez dans quelques minutes.', 'De controle van het adres is tijdelijk niet beschikbaar. Probeer het over enkele minuten opnieuw.', 'Address verification is temporarily unavailable. Please try again in a few minutes.'],
+            'planif_adr_certificat' => ['Marchandise dangereuse : :motif.', 'Gevaarlijke goederen: :motif.', 'Dangerous goods: :motif.'],
+            'planif_adr_vehicule' => ['Marchandise dangereuse : ce véhicule n\'est pas équipé ADR (plaques orange, extincteurs, lot de bord).', 'Gevaarlijke goederen: dit voertuig is niet ADR-uitgerust (oranje borden, brandblussers, boorduitrusting).', 'Dangerous goods: this vehicle is not ADR-equipped (orange plates, extinguishers, on-board kit).'],
+            'planif_volume' => ['Volume insuffisant : :capacite m³ pour :volume m³.', 'Onvoldoende volume: :capacite m³ voor :volume m³.', 'Insufficient volume: :capacite m³ for :volume m³.'],
+            'planif_charge_cumulee' => ['Charge cumulée trop lourde : :abord kg déjà prévus à bord, plus :poids kg, pour :capacite t de charge utile.', 'Totale lading te zwaar: :abord kg al gepland aan boord, plus :poids kg, voor :capacite t laadvermogen.', 'Combined load too heavy: :abord kg already planned on board, plus :poids kg, for a :capacite t payload.'],
+            'planif_volume_cumule' => ['Volume cumulé trop grand : :abord m³ déjà prévus à bord, plus :volume m³, pour :capacite m³.', 'Totaal volume te groot: :abord m³ al gepland aan boord, plus :volume m³, voor :capacite m³.', 'Combined volume too large: :abord m³ already planned on board, plus :volume m³, for :capacite m³.'],
+            'mission_depart_refuse' => ['Vous ne pouvez pas prendre cette mission en charge : :motif Contactez le planificateur.', 'U kunt deze opdracht niet opnemen: :motif Neem contact op met de planner.', 'You cannot take on this mission: :motif Please contact the planner.'],
+            'vehicule_engage_adr' => ['Ce véhicule transporte une matière dangereuse : son équipement ADR ne peut pas être retiré maintenant.', 'Dit voertuig vervoert gevaarlijke stoffen: de ADR-uitrusting kan nu niet worden verwijderd.', 'This vehicle is carrying dangerous goods: its ADR equipment cannot be removed now.'],
+            'missions_a_reaffecter' => ['Attention : ces missions ne sont plus conformes et doivent être réaffectées : :missions.', 'Let op: deze opdrachten zijn niet meer conform en moeten opnieuw worden toegewezen: :missions.', 'Warning: these missions are no longer compliant and must be reassigned: :missions.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

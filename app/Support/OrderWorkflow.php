@@ -34,7 +34,7 @@ class OrderWorkflow
      * Changer de camion ou de chauffeur sans changer d'etat : avant le
      * depart, ou en route (transbordement, panne, relais de chauffeur).
      */
-    public static function reaffecter(TransportOrder $ordre, Vehicle $camion, Driver $chauffeur): void
+    public static function reaffecter(TransportOrder $ordre, Vehicle $camion, Driver $chauffeur, ?CarbonInterface $enlevement = null): void
     {
         $etat = OrderStatus::from($ordre->status);
 
@@ -42,10 +42,13 @@ class OrderWorkflow
             throw new TransitionRefusee(self::message());
         }
 
+        // Une mission affectee dont l'enlevement prevu est passe repart
+        // avec son nouveau binome a la date ou il la prend.
         self::appliquer($ordre, $etat, [
             'vehicle_registration' => $camion->registration,
             'driver_id' => $chauffeur->id,
             'assigned_at' => now(),
+            ...($enlevement !== null && $etat === OrderStatus::ASSIGNED ? ['pickup_date' => $enlevement] : []),
         ]);
     }
 

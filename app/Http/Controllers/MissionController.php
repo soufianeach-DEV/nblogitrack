@@ -7,7 +7,9 @@ use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\ControleAffectation;
 use App\Support\OrderWorkflow;
+use App\Support\TempsDeConduite;
 use App\Support\Traductions;
 use App\Support\TransitionRefusee;
 use Illuminate\Http\JsonResponse;
@@ -130,6 +132,21 @@ class MissionController extends Controller
             return back()->with('error', Traductions::t('msg.mission_trop_tot', 'L\'enlèvement est prévu le :date : il ne peut pas être confirmé plus tôt que la veille.', [
                 'date' => $transportOrder->pickup_date->format('d/m/Y'),
             ]));
+        }
+
+        // Au moment de partir, le couple se recontrole : un permis, un code
+        // 95 ou un controle technique expire depuis l'affectation, ou une
+        // fiche corrigee, ne laisse plus prendre la route sans que le
+        // planificateur le sache.
+        if ($vise === 'IN_PROGRESS' && $transportOrder->vehicle !== null) {
+            $fin = today()->addDays(TempsDeConduite::journees($transportOrder->distance_km) - 1);
+            $refus = ControleAffectation::conformite($transportOrder, $transportOrder->vehicle, $request->user()->driver, $fin);
+
+            if ($refus !== []) {
+                return back()->with('error', Traductions::t('msg.mission_depart_refuse', 'Vous ne pouvez pas prendre cette mission en charge : :motif Contactez le planificateur.', [
+                    'motif' => $refus[0]['message'],
+                ]));
+            }
         }
 
         try {

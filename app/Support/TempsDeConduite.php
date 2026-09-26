@@ -100,6 +100,21 @@ class TempsDeConduite
         return self::heuresDeConduite((int) $km);
     }
 
+    /**
+     * Conduite deja prevue le jour de l'enlevement : la premiere journee de
+     * chaque mission qui commence ce jour-la (une mission de deux jours ne
+     * compte que neuf heures le premier jour).
+     */
+    public static function conduiteDuJour(int $chauffeurId, CarbonInterface $date, ?int $ordreExclu = null): float
+    {
+        return (float) TransportOrder::where('driver_id', $chauffeurId)
+            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS', 'DELIVERED'])
+            ->when($ordreExclu, fn ($q) => $q->where('id', '!=', $ordreExclu))
+            ->whereDate('pickup_date', $date->toDateString())
+            ->pluck('distance_km')
+            ->sum(fn ($km) => min(self::heuresDeConduite((int) $km), self::CONDUITE_JOUR_MAX));
+    }
+
     public static function joursConsecutifsAvant(int $chauffeurId, CarbonInterface $date): int
     {
         $journees = TransportOrder::where('driver_id', $chauffeurId)
@@ -145,6 +160,22 @@ class TempsDeConduite
                     'semaine' => self::enHeures($semaine),
                     'mission' => self::enHeures($conduite),
                     'max' => self::enHeures(self::CONDUITE_SEMAINE_MAX),
+                ],
+            );
+        }
+
+        // Groupage : deux envois de 500 km le meme jour font plus de quinze
+        // heures de volant ; le plafond journalier est de neuf heures.
+        $jour = self::conduiteDuJour($chauffeurId, $enlevement, $ordreExclu);
+
+        if ($jour > 0 && $jour + min($conduite, self::CONDUITE_JOUR_MAX) > self::CONDUITE_JOUR_MAX) {
+            $motifs[] = Traductions::t(
+                'planif.plafond_jour',
+                'plafond journalier dépassé : :jour déjà prévues ce jour-là plus :mission, maximum :max',
+                [
+                    'jour' => self::enHeures($jour),
+                    'mission' => self::enHeures(min($conduite, self::CONDUITE_JOUR_MAX)),
+                    'max' => self::enHeures(self::CONDUITE_JOUR_MAX),
                 ],
             );
         }

@@ -19,6 +19,8 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
         inspection_date: vehicule.controle ?? '',
         inspection_valid_until: vehicule.controle_valide ?? '',
         mileage: vehicule.kilometrage,
+        permis_requis: vehicule.permis_requis,
+        adr_equipe: vehicule.adr_equipe,
     });
 
     const passageControle = (valeur) => {
@@ -49,6 +51,7 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.charge_utile', 'Charge utile')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.capacite, 't', 1)}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('commande.volume', 'Volume')}</dt><dd className="font-semibold text-marine">{nombre(vehicule.volume, 'm³', 0)}</dd></div>
                 <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.hayon', 'Hayon élévateur')}</dt><dd className="font-semibold text-marine">{vehicule.hayon ? t('ordres.oui', 'Oui') : t('ordres.non', 'Non')}</dd></div>
+                <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.permis_requis', 'Permis requis')}</dt><dd className="font-semibold text-marine">{vehicule.permis_requis}{vehicule.adr_equipe ? ' · ADR' : ''}</dd></div>
                 <div className="col-span-2"><dt className="text-xs uppercase tracking-wide text-slate-600">{t('parc.chassis', 'Numéro de châssis')}</dt><dd className="font-mono text-xs text-marine">{vehicule.vin}</dd></div>
             </dl>
 
@@ -103,6 +106,33 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                             {errors.inspection_valid_until && <p className="mt-1 text-xs text-status-incident">{errors.inspection_valid_until}</p>}
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label htmlFor="permis-requis" className="text-xs uppercase tracking-wide text-slate-600">
+                                {t('parc.permis_requis', 'Permis requis')}
+                            </label>
+                            <select
+                                id="permis-requis"
+                                value={data.permis_requis ?? ''}
+                                onChange={(e) => setData('permis_requis', e.target.value)}
+                                className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            >
+                                {['B', 'C1', 'C1E', 'C', 'CE'].map((p) => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                            {errors.permis_requis && <p className="mt-1 text-xs text-status-incident">{errors.permis_requis}</p>}
+                        </div>
+                        <label className="mt-5 flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(data.adr_equipe)}
+                                onChange={(e) => setData('adr_equipe', e.target.checked)}
+                                className="rounded border-slate-300 text-marine focus:ring-marine"
+                            />
+                            <span className="text-sm font-semibold text-marine">{t('parc.adr_equipe', 'Équipé ADR (plaques orange, extincteurs, lot de bord)')}</span>
+                        </label>
+                    </div>
+                    {errors.adr_equipe && <p className="text-xs text-status-incident">{errors.adr_equipe}</p>}
 
                     <div>
                         <label htmlFor="km" className="text-xs uppercase tracking-wide text-slate-600">

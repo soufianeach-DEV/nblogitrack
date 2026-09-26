@@ -19,9 +19,12 @@ class Vehicle extends Model
 
     protected $keyType = 'string';
 
+    /** Categories de permis, de la plus petite a la plus grande. */
+    public const PERMIS = ['B', 'C1', 'C1E', 'C', 'CE'];
+
     protected $fillable = [
-        'registration', 'vin', 'vehicle_type', 'brand', 'model',
-        'euro_standard', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift',
+        'registration', 'vin', 'vehicle_type', 'permis_requis', 'brand', 'model',
+        'euro_standard', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift', 'adr_equipe',
         'mileage', 'is_available', 'inspection_date', 'inspection_valid_until', 'fuel_type',
     ];
 
@@ -30,8 +33,29 @@ class Vehicle extends Model
         return [
             'is_available' => 'boolean',
             'has_tail_lift' => 'boolean',
+            'adr_equipe' => 'boolean',
             'inspection_date' => 'date',
             'inspection_valid_until' => 'date',
         ];
+    }
+
+    /**
+     * Le permis qu'exige ce vehicule : celui de sa fiche, sinon celui que
+     * donne son gabarit. Une semi-remorque, ou une charge utile de
+     * tracteur, exige le CE, quelle que soit la carrosserie.
+     */
+    public function permisRequis(): string
+    {
+        return $this->permis_requis ?? self::permisDeduit((string) $this->vehicle_type, (float) $this->capacity_tonnes);
+    }
+
+    public static function permisDeduit(string $type, float $chargeUtile): string
+    {
+        return match (true) {
+            $type === 'Semi-remorque' || $chargeUtile >= 18 => 'CE',
+            $chargeUtile > 3.5 => 'C',
+            $chargeUtile > 1.5 => 'C1',
+            default => 'B',
+        };
     }
 }

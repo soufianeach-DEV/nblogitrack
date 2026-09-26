@@ -8,15 +8,15 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
-use App\Support\Formats;
+use App\Support\ControleAffectation;
 use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
 use App\Support\Traductions;
 use App\Support\TransitionRefusee;
-use Carbon\CarbonInterface;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -76,9 +76,16 @@ class PlanningController extends Controller
             ->orWhereContient('delivery_address', (string) $q)
             ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', (string) $q)));
 
+        $parcDisponible = Vehicle::where('is_available', true)->orderBy('registration')->get();
+
+        $chauffeursDisponibles = Driver::with('user:id,first_name,last_name,is_active')
+            ->where('is_available', true)
+            ->whereHas('user', fn ($q) => $q->where('is_active', true))
+            ->get();
+
         $orders = TransportOrder::with([
             'client:id,company_name',
-            'vehicle:registration,brand,model,capacity_tonnes',
+            'vehicle',
             'driver.user:id,first_name,last_name',
         ])
             ->where('status', $statut)
@@ -90,9 +97,29 @@ class PlanningController extends Controller
             ->orderBy('pickup_date')
             ->paginate(15)
             ->withQueryString()
-            ->through(function (TransportOrder $o) {
+            ->through(function (TransportOrder $o) use ($parcDisponible, $chauffeursDisponibles) {
                 $o->setAttribute('conduite', TempsDeConduite::resume($o->distance_km));
                 $o->setAttribute('conduite_heures', TempsDeConduite::heuresDeConduite($o->distance_km));
+
+                // Grisage calcule par le serveur, a la date de la mission :
+                // l'ecran et l'affectation disent la meme chose.
+                [, , $fin] = ControleAffectation::periode($o);
+
+                if (in_array($o->status, ['PENDING', 'ASSIGNED', 'IN_PROGRESS'], true)) {
+                    $o->setAttribute('refus_vehicules', (object) $parcDisponible
+                        ->mapWithKeys(fn (Vehicle $v) => [$v->registration => ControleAffectation::refusVehiculeCourt($o, $v, $fin)])
+                        ->filter()->all());
+                    $o->setAttribute('refus_chauffeurs', (object) $chauffeursDisponibles
+                        ->mapWithKeys(fn (Driver $d) => [$d->id => ControleAffectation::refusChauffeurCourt($o, $d, $fin)])
+                        ->filter()->all());
+                }
+
+                // Une mission deja affectee se recontrole : un document
+                // expire ou une fiche corrigee depuis l'affectation la rend
+                // non conforme, et le planificateur doit le voir.
+                if (in_array($o->status, ['ASSIGNED', 'IN_PROGRESS'], true) && $o->vehicle && $o->driver) {
+                    $o->setAttribute('alertes', array_column(ControleAffectation::conformite($o, $o->vehicle, $o->driver, $fin), 'message'));
+                }
 
                 return $o;
             });
@@ -112,10 +139,6 @@ class PlanningController extends Controller
             ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
             ->first();
 
-        $vehicles = Vehicle::where('is_available', true)
-            ->orderBy('registration')
-            ->get(['registration', 'brand', 'model', 'vehicle_type', 'capacity_tonnes', 'capacity_volume', 'has_tail_lift']);
-
         $conduiteSemaine = TransportOrder::whereNotNull('driver_id')
             ->where('status', '!=', 'CANCELLED')
             ->whereBetween('pickup_date', [now()->startOfWeek(), now()->endOfWeek()])
@@ -123,25 +146,32 @@ class PlanningController extends Controller
             ->groupBy('driver_id')
             ->pluck('km', 'driver_id');
 
-        $drivers = Driver::with('user:id,first_name,last_name')
-            ->where('is_available', true)
-            ->whereHas('user', fn ($q) => $q->where('is_active', true))
-            ->get()
-            ->map(fn (Driver $d) => [
-                'id' => $d->id,
-                'nom' => $d->user ? $d->user->first_name.' '.$d->user->last_name : 'Chauffeur '.$d->id,
-                'license_type' => $d->license_type,
-                'adr_certified' => $d->adr_certified,
-                'empechements' => $d->empechements(),
-                'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
-            ])
-            ->sortBy('nom')
-            ->values();
-
         return Inertia::render('Planning/Index', [
             'orders' => $orders,
-            'vehicles' => $vehicles,
-            'drivers' => $drivers,
+            'vehicles' => $parcDisponible->map(fn (Vehicle $v) => [
+                'registration' => $v->registration,
+                'brand' => $v->brand,
+                'model' => $v->model,
+                'vehicle_type' => $v->vehicle_type,
+                'capacity_tonnes' => $v->capacity_tonnes,
+                'capacity_volume' => $v->capacity_volume,
+                'has_tail_lift' => $v->has_tail_lift,
+                'adr_equipe' => $v->adr_equipe,
+                'permis_requis' => $v->permisRequis(),
+            ])->values(),
+            'drivers' => $chauffeursDisponibles
+                ->map(fn (Driver $d) => [
+                    'id' => $d->id,
+                    'nom' => $d->user ? $d->user->first_name.' '.$d->user->last_name : 'Chauffeur '.$d->id,
+                    'license_type' => $d->license_type,
+                    'adr_certified' => $d->adr_certified,
+                    'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
+                ])
+                ->sortBy('nom')
+                ->values(),
+            // Ce que couvre chaque permis : l'ecran compare le permis du
+            // chauffeur a celui qu'exige le camion, sans recopier la regle.
+            'couverture' => Driver::COUVERTURE,
             'statut' => $statut,
             'priorite' => $priorite,
             'contrainte' => $contrainte,
@@ -246,155 +276,71 @@ class PlanningController extends Controller
             'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
 
-        $vehicle = Vehicle::find($data['vehicle_registration']);
-        $driver = Driver::find($data['driver_id']);
-
-        if (! $vehicle->is_available) {
-            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_vehicule_indisponible', 'Ce véhicule n\'est plus disponible.')]);
-        }
-
-        if (! $driver->is_available || ! $driver->user?->is_active) {
-            return back()->withErrors(['driver_id' => Traductions::t('msg.planif_chauffeur_indisponible', 'Ce chauffeur n\'est plus disponible.')]);
-        }
-
-        // Sans date d'enlevement, l'expedition part « des que possible » :
-        // l'affecter, c'est la planifier aujourd'hui. Elle faisait tomber
-        // l'affectation en erreur 500.
-        // Une date d'enlevement deja passee aussi : sinon les documents du
-        // chauffeur et le controle technique etaient verifies a une date
-        // revolue, et la mission restait datee dans le passe.
-        if ($transportOrder->pickup_date === null
-            || ($transportOrder->status === 'PENDING' && $transportOrder->pickup_date->lt(today()))) {
-            $transportOrder->pickup_date = now();
-        }
-
-        // Reaffecter au meme camion et au meme chauffeur ne change rien.
-        if ($reaffectation
-            && $transportOrder->vehicle_registration === $vehicle->registration
-            && $transportOrder->driver_id === $driver->id) {
-            return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_reaffectation_identique', 'Cette mission a déjà ce camion et ce chauffeur.')]);
-        }
-
-        // En route, le nouveau camion et le nouveau chauffeur sont mobilises
-        // a partir d'aujourd'hui.
-        $depart = $transportOrder->status === 'IN_PROGRESS' ? now() : $transportOrder->pickup_date;
-        $debut = $depart->copy()->startOfDay();
-        $fin = $debut->copy()->addDays(TempsDeConduite::journees($transportOrder->distance_km) - 1);
-
-        if ($empechements = $driver->empechements($fin)) {
-            return back()->withErrors([
-                'driver_id' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)]),
-            ]);
-        }
-
-        if ($vehicle->capacity_tonnes * 1000 < $transportOrder->weight) {
-            return back()->withErrors([
-                'vehicle_registration' => Traductions::t('msg.planif_capacite', 'Capacité insuffisante : :capacite t pour :poids kg.', [
-                    'capacite' => Formats::nombre($vehicle->capacity_tonnes, 1),
-                    'poids' => Formats::nombre($transportOrder->weight),
-                ]),
-            ]);
-        }
-
-        if ($transportOrder->needs_tail_lift && ! $vehicle->has_tail_lift) {
-            return back()->withErrors([
-                'vehicle_registration' => Traductions::t('msg.planif_hayon', 'Cette expédition demande un hayon élévateur : ce véhicule n\'en a pas.'),
-            ]);
-        }
-
-        if ($transportOrder->is_hazardous && ! $driver->adr_certified) {
-            return back()->withErrors(['driver_id' => Traductions::t('msg.planif_adr', 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.')]);
-        }
-
-        // Le tableau de bord signalait un controle technique echu, mais
-        // rien n'empechait d'affecter le camion : il doit etre valable
-        // jusqu'au dernier jour de la mission.
-        if ($vehicle->inspection_valid_until !== null && $vehicle->inspection_valid_until->lt($fin)) {
-            return back()->withErrors([
-                'vehicle_registration' => Traductions::t('msg.planif_controle_technique', 'Le contrôle technique de ce véhicule expire le :date, avant la fin de la mission.', [
-                    'date' => $vehicle->inspection_valid_until->format('d/m/Y'),
-                ]),
-            ]);
-        }
-
-        if ($motif = $driver->motifPermis($vehicle)) {
-            return back()->withErrors([
-                'driver_id' => Traductions::t('msg.planif_permis', 'Permis inadapté : :motif.', ['motif' => $motif]),
-            ]);
-        }
-
-        // Une mission de plusieurs jours occupe chauffeur et camion sur
-        // toute sa duree : on compare des intervalles, pas le seul jour
-        // d'enlevement.
-        $conflitChauffeur = $this->chevauche(
-            TransportOrder::where('driver_id', $driver->id)
-                ->where('vehicle_registration', '!=', $vehicle->registration),
-            $debut, $fin, $transportOrder->id,
-        );
-
-        if ($conflitChauffeur) {
-            return back()->withErrors([
-                'driver_id' => Traductions::t('msg.planif_chauffeur_occupe', 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion.'),
-            ]);
-        }
-
-        // Le meme binome peut charger plusieurs envois le meme jour
-        // (groupage), mais pas partir sur une autre mission pendant qu'il
-        // roule encore : le deuxieme jour d'un Bruxelles-Lyon, il n'est pas
-        // a Namur.
-        $conflitBinome = $this->chevauche(
-            TransportOrder::where('driver_id', $driver->id)
-                ->where('vehicle_registration', $vehicle->registration)
-                ->whereDate('pickup_date', '!=', $debut->toDateString()),
-            $debut, $fin, $transportOrder->id,
-        );
-
-        if ($conflitBinome) {
-            return back()->withErrors([
-                'driver_id' => Traductions::t('msg.planif_binome_en_route', 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission.'),
-            ]);
-        }
-
-        $conflitCamion = $this->chevauche(
-            TransportOrder::where('vehicle_registration', $vehicle->registration)
-                ->where('driver_id', '!=', $driver->id),
-            $debut, $fin, $transportOrder->id,
-        );
-
-        if ($conflitCamion) {
-            return back()->withErrors([
-                'vehicle_registration' => Traductions::t('msg.planif_camion_occupe', 'Ce camion est déjà affecté à un autre chauffeur ce jour-là.'),
-            ]);
-        }
-
-        $conduite = TempsDeConduite::empechements(
-            $driver->id,
-            $transportOrder->distance_km,
-            $depart,
-            $transportOrder->id,
-        );
-
-        if ($conduite !== []) {
-            return back()->withErrors([
-                'driver_id' => Traductions::t('msg.planif_temps_conduite', 'Temps de conduite : :motifs.', ['motifs' => implode(' ; ', $conduite)]),
-            ]);
-        }
-
         $avant = [
             'statut' => $transportOrder->status,
             'camion' => $transportOrder->vehicle_registration,
             'chauffeur_id' => $transportOrder->driver_id,
         ];
 
-        try {
-            $reaffectation
-                ? OrderWorkflow::reaffecter($transportOrder, $vehicle, $driver)
-                : OrderWorkflow::affecter($transportOrder, $vehicle, $driver, $transportOrder->pickup_date);
-        } catch (TransitionRefusee $e) {
-            // L'ordre a change d'etat entre-temps : sa carte change
-            // d'onglet au retour, le message doit rester visible.
-            return back()->with('error', $e->getMessage());
+        // Deux planificateurs qui reservent au meme instant le meme chauffeur
+        // ou le meme camion : le verrou sur leurs fiches fait passer le
+        // second apres le premier, qui voit alors la mission deja posee.
+        $resultat = DB::transaction(function () use ($transportOrder, $data, $reaffectation) {
+            $vehicle = Vehicle::whereKey($data['vehicle_registration'])->lockForUpdate()->first();
+            $driver = Driver::whereKey($data['driver_id'])->lockForUpdate()->first();
+
+            if (! $vehicle->is_available) {
+                return ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_vehicule_indisponible', 'Ce véhicule n\'est plus disponible.')];
+            }
+
+            if (! $driver->is_available || ! $driver->user?->is_active) {
+                return ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_indisponible', 'Ce chauffeur n\'est plus disponible.')];
+            }
+
+            // Reaffecter au meme camion et au meme chauffeur ne change rien.
+            if ($reaffectation
+                && $transportOrder->vehicle_registration === $vehicle->registration
+                && $transportOrder->driver_id === $driver->id) {
+                return ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_reaffectation_identique', 'Cette mission a déjà ce camion et ce chauffeur.')];
+            }
+
+            // Sans date d'enlevement, ou avec une date deja passee (mission
+            // en attente, ou affectee mais jamais partie), l'expedition part
+            // aujourd'hui : les documents se verifient a partir d'aujourd'hui,
+            // pas a une date revolue.
+            $enlevement = $transportOrder->pickup_date;
+
+            if ($transportOrder->status !== 'IN_PROGRESS' && ($enlevement === null || $enlevement->lt(today()))) {
+                $enlevement = now();
+                $transportOrder->pickup_date = $enlevement;
+            }
+
+            if ($refus = ControleAffectation::refus($transportOrder, $vehicle, $driver)) {
+                return $refus[0];
+            }
+
+            try {
+                $reaffectation
+                    ? OrderWorkflow::reaffecter($transportOrder, $vehicle, $driver, $transportOrder->status === 'ASSIGNED' ? $enlevement : null)
+                    : OrderWorkflow::affecter($transportOrder, $vehicle, $driver, $enlevement);
+            } catch (TransitionRefusee $e) {
+                // L'ordre a change d'etat entre-temps : sa carte change
+                // d'onglet au retour, le message doit rester visible.
+                return ['bandeau' => $e->getMessage()];
+            }
+
+            return ['vehicle' => $vehicle, 'driver' => $driver];
+        });
+
+        if (isset($resultat['bandeau'])) {
+            return back()->with('error', $resultat['bandeau']);
         }
+
+        if (isset($resultat['champ'])) {
+            return back()->withErrors([$resultat['champ'] => $resultat['message']]);
+        }
+
+        ['vehicle' => $vehicle, 'driver' => $driver] = $resultat;
 
         if ($reaffectation) {
             ActivityLog::record(
@@ -432,25 +378,6 @@ class PlanningController extends Controller
             'numero' => $transportOrder->tracking_number,
             'vehicule' => $vehicle->registration,
         ]));
-    }
-
-    /**
-     * Une mission deja engagee occupe-t-elle un des jours [debut, fin] ?
-     */
-    private function chevauche($requete, CarbonInterface $debut, CarbonInterface $fin, int $exclu): bool
-    {
-        return $requete->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
-            ->where('id', '!=', $exclu)
-            ->whereNotNull('pickup_date')
-            ->where('pickup_date', '<=', $fin->copy()->endOfDay())
-            ->where('pickup_date', '>=', $debut->copy()->subDays(7))
-            ->get(['pickup_date', 'distance_km'])
-            ->contains(function (TransportOrder $mission) use ($debut) {
-                $finMission = $mission->pickup_date->copy()->startOfDay()
-                    ->addDays(TempsDeConduite::journees($mission->distance_km) - 1);
-
-                return $finMission->gte($debut);
-            });
     }
 
     public function suiviDirect(TransportOrder $transportOrder): RedirectResponse

@@ -42,8 +42,9 @@ const enHeures = (heures) => {
     return min === 0 ? `${h} h` : `${h} h ${String(min).padStart(2, '0')}`;
 };
 
-function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onFermer }) {
+function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffectation = false, onFermer }) {
     const t = useTraduction();
+    const voc = useVocabulaire();
     const { data, setData, post, processing, errors } = useForm({
         vehicle_registration: reaffectation ? (ordre.vehicle?.registration ?? '') : '',
         driver_id: reaffectation ? String(ordre.driver_id ?? '') : '',
@@ -59,39 +60,35 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
         });
     };
 
-    const capaciteSuffisante = (v) => Number(v.capacity_tonnes) * 1000 >= Number(ordre.weight);
-    const hayonSuffisant = (v) => ! ordre.needs_tail_lift || v.has_tail_lift;
-    const vehiculeCompatible = (v) => capaciteSuffisante(v) && hayonSuffisant(v);
-    const motifRefus = (v) => {
-        if (! capaciteSuffisante(v)) return ' (' + t('planif.capacite_insuffisante', 'capacité insuffisante') + ')';
-        if (! hayonSuffisant(v)) return ' (' + t('planif.sans_hayon', 'sans hayon') + ')';
-
-        return '';
-    };
-    const chauffeurApte = (d) => (d.empechements ?? []).length === 0;
+    // Le serveur dit, a la date de la mission, pourquoi un camion ou un
+    // chauffeur ne convient pas (capacite, hayon, ADR, controle technique,
+    // documents) : l'ecran et l'affectation ne se contredisent plus.
+    const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration] ?? null;
+    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? null;
     const vehiculeChoisi = vehicles.find((v) => v.registration === data.vehicle_registration);
-    // Meme regle que Driver::motifPermis : le serveur refuserait
-    // l'affectation, autant griser le chauffeur des le choix du camion.
-    const permisRequis = (d) => {
-        if (! vehiculeChoisi) return null;
+    const chauffeurChoisi = drivers.find((d) => String(d.id) === String(data.driver_id));
+    // Le permis depend du couple : celui du chauffeur doit couvrir celui
+    // qu'exige le camion (un tracteur de 44 t exige le CE).
+    const permisManquant = (permis, vehicule) => (
+        vehicule && ! (couverture[permis] ?? []).includes(vehicule.permis_requis) ? vehicule.permis_requis : null
+    );
+    const motifPermis = (permis) => ' (' + t('planif.permis_requis', 'permis :permis requis', { permis }) + ')';
 
-        const permis = String(d.license_type ?? '');
-        const charge = Number(vehiculeChoisi.capacity_tonnes);
+    const vehiculeCompatible = (v) => ! refusVehicule(v) && ! (chauffeurChoisi && permisManquant(chauffeurChoisi.license_type, v));
+    const motifRefus = (v) => {
+        const refus = refusVehicule(v);
+        if (refus) return ' (' + refus + ')';
+        const permis = chauffeurChoisi ? permisManquant(chauffeurChoisi.license_type, v) : null;
 
-        if (vehiculeChoisi.vehicle_type === 'Semi-remorque' && permis !== 'CE') return 'CE';
-        if (charge > 3.5 && ['B', 'C1', 'C1E'].includes(permis)) return 'C';
-        if (charge > 1.5 && permis === 'B') return 'C1';
-
-        return null;
+        return permis ? motifPermis(permis) : '';
     };
-    const chauffeurCompatible = (d) => chauffeurApte(d) && (! ordre.is_hazardous || d.adr_certified) && permisRequis(d) === null;
+    const chauffeurCompatible = (d) => ! refusChauffeur(d) && ! permisManquant(d.license_type, vehiculeChoisi);
     const motifChauffeur = (d) => {
-        if (! chauffeurApte(d)) return ' (' + d.empechements[0] + ')';
-        if (ordre.is_hazardous && ! d.adr_certified) return ' (' + t('planif.adr_requis', 'ADR requis') + ')';
-        const permis = permisRequis(d);
-        if (permis) return ' (' + t('planif.permis_requis', 'permis :permis requis', { permis }) + ')';
+        const refus = refusChauffeur(d);
+        if (refus) return ' (' + refus + ')';
+        const permis = permisManquant(d.license_type, vehiculeChoisi);
 
-        return '';
+        return permis ? motifPermis(permis) : '';
     };
     const selectCls = 'w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
 
@@ -118,9 +115,14 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
             )}
 
             {ordre.is_hazardous && (
-                <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
-                    {t('planif.chauffeur_adr', 'Chauffeur certifié ADR')}
-                </span>
+                <>
+                    <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
+                        {t('planif.chauffeur_adr', 'Chauffeur certifié ADR')}
+                    </span>
+                    <span className={pastille + ' bg-status-incident/10 text-status-incident'}>
+                        {t('planif.vehicule_adr', 'Véhicule équipé ADR')}
+                    </span>
+                </>
             )}
 
             {ordre.needs_tail_lift && (
@@ -165,8 +167,10 @@ function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onF
                     <option value="">— {t('ordres.vehicule', 'Véhicule')} —</option>
                     {vehicles.map((v) => (
                         <option key={v.registration} value={v.registration} disabled={! vehiculeCompatible(v)}>
-                            {v.registration} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {v.registration} · {voc('vehicule', v.vehicle_type)} · {v.brand} {v.model} · {Number(v.capacity_tonnes).toLocaleString(locale)} t
+                            {' · ' + t('suivi.permis', 'Permis').toLowerCase() + ' ' + v.permis_requis}
                             {v.has_tail_lift ? ' · ' + t('planif.hayon_court', 'hayon') : ''}
+                            {v.adr_equipe ? ' · ADR' : ''}
                             {motifRefus(v)}
                         </option>
                     ))}
@@ -278,7 +282,7 @@ const LIBELLE_CONTRAINTE = {
 };
 
 export default function Index({
-    orders, vehicles, drivers, statut, compteurs,
+    orders, vehicles, drivers, couverture = {}, statut, compteurs,
     priorite = null, priorites = [],
     contrainte = null, contraintes = [],
     jour = null,
@@ -498,12 +502,13 @@ export default function Index({
 
                         <div className="mt-4 border-t border-slate-100 pt-4">
                             {ordre.status === 'PENDING' ? (
-                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} />
+                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} couverture={couverture} />
                             ) : enReaffectation === ordre.id ? (
                                 <LigneAffectation
                                     ordre={ordre}
                                     vehicles={vehicles}
                                     drivers={drivers}
+                                    couverture={couverture}
                                     reaffectation
                                     onFermer={() => setEnReaffectation(null)}
                                 />
@@ -521,6 +526,14 @@ export default function Index({
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
                                             : t('planif.non_affecte', 'non affecté')}
                                     </span>
+                                    {(ordre.alertes ?? []).length > 0 && (
+                                        <div className="basis-full rounded-lg bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">
+                                            <p className="font-semibold">{t('planif.non_conforme', 'Affectation non conforme : réaffectez cette mission.')}</p>
+                                            <ul className="mt-1 list-disc pl-4">
+                                                {ordre.alertes.map((alerte) => <li key={alerte}>{alerte}</li>)}
+                                            </ul>
+                                        </div>
+                                    )}
                                     {ordre.actual_delivery_date && (
                                         <span>
                                             <span className="text-slate-600">{t('planif.livre_le', 'Livré le')} : </span>
