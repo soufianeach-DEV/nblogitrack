@@ -157,7 +157,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
             <section className="bg-marine py-16 text-white">
                 <div className="mx-auto max-w-4xl px-4 text-center">
                     <h1 className="text-3xl font-bold sm:text-4xl">{t('tarifs.calculez', 'Calculez votre tarif')}</h1>
-                    <p className="mx-auto mt-3 max-w-2xl text-slate-300">
+                    <p className="entree mx-auto mt-3 max-w-2xl text-slate-300" style={{ animationDelay: '120ms' }}>
                         {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Enlèvement ou livraison en Belgique, :n pays européens desservis.', { n: destinations.filter((d) => d.code !== 'BE').length })}
                     </p>
                 </div>
@@ -166,7 +166,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
             <section className="bg-surface py-12">
                 <h2 className="sr-only">{t('referencement.tarifs_titre', 'Tarifs de transport et simulateur de prix')}</h2>
                 <div className="mx-auto max-w-4xl px-4">
-                    <form onSubmit={simuler} className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
+                    <form onSubmit={simuler} className="entree rounded-2xl bg-white p-6 shadow-sm sm:p-8" style={{ animationDelay: '200ms' }}>
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
                                 <label htmlFor="pays_depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -271,7 +271,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                     </form>
 
                     {resultat && (
-                        <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
+                        <div className="entree mt-6 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
                             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-100 pb-4">
                                 <h2 className="text-lg font-bold text-marine">
                                     {resultat.depart} <span className="text-slate-600">→</span> {resultat.arrivee}

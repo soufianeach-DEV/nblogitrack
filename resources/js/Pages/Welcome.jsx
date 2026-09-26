@@ -1,30 +1,42 @@
+import Apparition from '@/Components/Apparition';
 import MenuVitrineMobile from '@/Components/MenuVitrineMobile';
 import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import { useTraduction } from '@/traduire';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
 const TRAME = {
     backgroundImage: 'radial-gradient(circle, rgb(20 50 79 / 0.07) 1px, transparent 1px)',
     backgroundSize: '22px 22px',
 };
 
-function Service({ icone, titre, texte }) {
+// Position de la souris dans la carte, pour le halo (.carte-halo).
+function suivreSouris(e) {
+    const cadre = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--x', `${e.clientX - cadre.left}px`);
+    e.currentTarget.style.setProperty('--y', `${e.clientY - cadre.top}px`);
+}
+
+function Service({ icone, titre, texte, delai }) {
     return (
-        <article className="group rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-blue/40 hover:shadow-xl hover:shadow-marine/10">
+        <Apparition delai={delai} className="h-full">
+        <article onMouseMove={suivreSouris} className="carte-halo group h-full rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-blue/40 hover:shadow-xl hover:shadow-marine/10">
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue transition-all duration-300 group-hover:scale-110 group-hover:bg-brand-blue group-hover:text-white">
                 <Icone nom={icone} className="h-6 w-6" />
             </span>
             <h3 className="mt-5 text-lg font-bold text-marine">{titre}</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{texte}</p>
         </article>
+        </Apparition>
     );
 }
 
-function Tarif({ icone, titre, texte }) {
+function Tarif({ icone, titre, texte, delai }) {
     return (
-        <li className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:translate-x-1.5 hover:border-action hover:shadow-md">
+        <Apparition as="li" delai={delai}>
+        <div className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:translate-x-1.5 hover:border-action hover:shadow-md">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue transition-colors duration-300 group-hover:bg-action group-hover:text-marine-deep">
                 <Icone nom={icone} className="h-5 w-5" />
             </span>
@@ -32,7 +44,8 @@ function Tarif({ icone, titre, texte }) {
                 <h3 className="font-bold text-marine">{titre}</h3>
                 <p className="text-sm text-slate-600">{texte}</p>
             </div>
-        </li>
+        </div>
+        </Apparition>
     );
 }
 
@@ -68,7 +81,17 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
     const lienNav = 'group relative text-[15px] font-bold text-marine transition-colors duration-200 hover:text-brand-blue';
     const soulignement = 'absolute -bottom-1.5 left-0 h-0.5 w-0 bg-action transition-all duration-300 group-hover:w-full';
-    const boutonAction = 'rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep shadow-sm transition-all duration-300 hover:bg-action-dark hover:shadow-lg hover:shadow-action/40 active:scale-95';
+    // L'en-tete prend une ombre et un voile des que la page defile.
+    const [defile, setDefile] = useState(false);
+    useEffect(() => {
+        const suivre = () => setDefile(window.scrollY > 8);
+        suivre();
+        window.addEventListener('scroll', suivre, { passive: true });
+
+        return () => window.removeEventListener('scroll', suivre);
+    }, []);
+
+    const boutonAction = 'bouton-eclat rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-marine-deep shadow-sm transition-all duration-300 hover:bg-action-dark hover:shadow-lg hover:shadow-action/40 active:scale-95';
 
     return (
         <>
@@ -77,7 +100,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
             <div className="min-h-screen bg-surface">
                 {}
                 <div className="flex min-h-screen flex-col">
-                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+                <header className={'sticky top-0 z-30 border-b transition-all duration-300 ' + (defile ? 'border-slate-200/80 bg-white/90 shadow-md shadow-marine/5 backdrop-blur-md' : 'border-slate-200 bg-white')}>
                     <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-3 sm:px-6">
                         <Link href={route('accueil')} className="shrink-0 transition-transform duration-300 hover:scale-105">
                             <img src="/images/logo-marine.png" alt="NBLogiTrack" className="h-14 w-auto sm:h-20" />
@@ -130,23 +153,23 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
                     <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-12 sm:px-6">
                         {}
-                        <span className="self-start rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold text-white backdrop-blur">
+                        <span className="entree self-start rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold text-white backdrop-blur">
                             {t('accueil.expertise', 'Expertise logistique belge')}
                         </span>
 
                         <h1 className="mt-5 max-w-2xl text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">
                             {t('accueil.titre', 'Gérez vos transports')}
-                            <span className="block text-action">{t('accueil.titre_suite', 'en toute simplicité.')}</span>
+                            <span className="texte-reflet block">{t('accueil.titre_suite', 'en toute simplicité.')}</span>
                         </h1>
 
-                        <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-200 sm:text-lg">
+                        <p className="entree mt-5 max-w-xl text-base leading-relaxed text-slate-200 sm:text-lg" style={{ animationDelay: '150ms' }}>
                             {t('accueil.accroche', 'Plateforme dédiée aux professionnels belges et européens. Optimisez vos flux, maîtrisez vos coûts et sécurisez vos expéditions B2B en temps réel.')}
                         </p>
 
-                        <div className="mt-8 flex flex-wrap gap-4">
+                        <div className="entree mt-8 flex flex-wrap gap-4" style={{ animationDelay: '300ms' }}>
                             <Link
                                 href={canRegister ? route('register') : route('login')}
-                                className="group rounded-lg bg-marine px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-blue hover:shadow-xl hover:shadow-brand-blue/40 active:translate-y-0"
+                                className="bouton-eclat group rounded-lg bg-marine px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-blue hover:shadow-xl hover:shadow-brand-blue/40 active:translate-y-0"
                             >
                                 {t('accueil.demarrer', 'Démarrer l\'aventure')}
                                 <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1.5">→</span>
@@ -177,14 +200,15 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     <div className="absolute -left-40 bottom-0 -z-10 h-96 w-96 rounded-full bg-action/10 blur-3xl" />
 
                     <div className="mx-auto max-w-7xl px-4 sm:px-6">
-                        <div className="mx-auto max-w-2xl text-center">
+                        <Apparition className="mx-auto max-w-2xl text-center">
                             <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
                                 {t('accueil.services_titre', 'Une solution complète pour votre flotte')}
                             </h2>
+                            <span className="filet" aria-hidden="true" />
                             <p className="mt-4 text-slate-600">
                                 {t('accueil.services_texte', 'Concentrez-vous sur votre cœur de métier, nous nous occupons de l\'intelligence logistique.')}
                             </p>
-                        </div>
+                        </Apparition>
 
                         <div className="mt-14 grid gap-6 lg:grid-cols-3">
                             <Service
@@ -193,11 +217,13 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                 texte={t('accueil.service_reservation_texte', 'Interface guidée pour commander vos trajets en quelques clics. Adresses vérifiées, formule adaptée au délai et prix connu avant validation.')}
                             />
                             <Service
+                                delai={120}
                                 icone="camion"
                                 titre={t('accueil.service_suivi', 'Suivi en temps réel')}
                                 texte={t('accueil.service_suivi_texte', 'Chaque expédition reçoit un numéro de suivi et un code d\'accès. Le destinataire consulte l\'état de la livraison sans avoir de compte.')}
                             />
                             <Service
+                                delai={240}
                                 icone="journal"
                                 titre={t('accueil.service_facturation', 'Facturation simplifiée')}
                                 texte={t('accueil.service_facturation_texte', 'Identifiant Peppol déduit de votre numéro d\'entreprise à l\'inscription, et factures jointes au format électronique européen (UBL, norme EN 16931).')}
@@ -209,9 +235,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                 <section id="tarifs" className="bg-white py-20">
                     <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
                         <div>
-                            <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
-                                {t('accueil.tarifs_titre', 'Une tarification transparente')}
-                            </h2>
+                            <Apparition>
+                                <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
+                                    {t('accueil.tarifs_titre', 'Une tarification transparente')}
+                                </h2>
+                                <span className="filet filet-gauche" aria-hidden="true" />
+                            </Apparition>
                             <p className="mt-4 text-slate-600">
                                 {t('accueil.tarifs_texte', 'Pas de coût caché. Le prix se calcule sur la distance routière réelle, le carburant, les péages du pays traversé et le poids transporté.')}
                             </p>
@@ -223,11 +252,13 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                     texte={t('accueil.tarif_economique_texte', 'Groupage sur les axes réguliers, pour les envois non urgents.')}
                                 />
                                 <Tarif
+                                    delai={100}
                                     icone="horloge"
                                     titre={t('accueil.tarif_standard', 'Standard — dès 3 jours')}
                                     texte={t('accueil.tarif_standard_texte', 'Le meilleur rapport entre délai et coût pour un envoi courant.')}
                                 />
                                 <Tarif
+                                    delai={200}
                                     icone="rotation"
                                     titre={t('accueil.tarif_express', 'Express — dès 24 heures')}
                                     texte={t('accueil.tarif_express_texte', 'Transport dédié, facturé au coût de revient réel plus marge.')}
@@ -236,12 +267,13 @@ export default function Welcome({ auth, canLogin, canRegister }) {
 
                             <Link
                                 href={route('tarifs.index')}
-                                className="mt-8 inline-flex items-center gap-2 rounded-lg bg-action px-7 py-3.5 text-base font-bold text-marine-deep transition hover:bg-action-dark"
+                                className="bouton-eclat mt-8 inline-flex items-center gap-2 rounded-lg bg-action px-7 py-3.5 text-base font-bold text-marine-deep shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-action-dark hover:shadow-xl hover:shadow-action/40 active:translate-y-0"
                             >
                                 {t('accueil.calculer', 'Calculer mon tarif')}
                             </Link>
                         </div>
 
+                        <Apparition delai={150}>
                         <div className="group relative isolate overflow-hidden rounded-2xl shadow-lg transition-shadow duration-500 hover:shadow-2xl">
                             <picture>
                                 <source srcSet="/images/login-bg.webp" type="image/webp" />
@@ -261,16 +293,18 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                 </p>
                             </div>
                         </div>
+                        </Apparition>
                     </div>
                 </section>
 
                 <section id="apropos" className="relative isolate overflow-hidden py-20" style={TRAME}>
                     <div className="absolute left-1/2 top-1/2 -z-10 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-blue/5 blur-3xl" />
 
-                    <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+                    <Apparition className="mx-auto max-w-3xl px-4 text-center sm:px-6">
                         <h2 className="text-3xl font-extrabold text-marine sm:text-4xl">
                             {t('accueil.apropos_titre', 'L\'excellence logistique au service de l\'industrie belge')}
                         </h2>
+                        <span className="filet" aria-hidden="true" />
                         <p className="mt-5 leading-relaxed text-slate-600">
                             {t('accueil.apropos_texte', 'NBLogiTrack s\'adresse aux entreprises qui expédient régulièrement en Belgique et dans l\'Union européenne. Marchandise palettisée, transport dédié ou groupage, matières dangereuses sous certification ADR. Chaque société cliente est vérifiée auprès du registre européen de la TVA avant d\'obtenir un accès.')}
                         </p>
@@ -278,12 +312,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         {canRegister && (
                             <Link
                                 href={route('register')}
-                                className="mt-8 inline-block rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-action-dark hover:shadow-xl hover:shadow-action/40 active:translate-y-0"
+                                className="bouton-eclat mt-8 inline-block rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-action-dark hover:shadow-xl hover:shadow-action/40 active:translate-y-0"
                             >
                                 {t('accueil.inscrire', 'Inscrire mon entreprise')}
                             </Link>
                         )}
-                    </div>
+                    </Apparition>
                 </section>
 
                 <footer className="bg-marine-deep">

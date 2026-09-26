@@ -42,7 +42,7 @@ const DIMENSIONS = {
 
 function Bloc({ numero, titre, children }) {
     return (
-        <section className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
+        <section className="entree rounded-2xl bg-white p-6 shadow-sm sm:p-8">
             <h2 className="mb-6 flex items-center gap-3 text-lg font-bold text-marine">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-marine text-sm font-bold text-white">
                     {numero}
