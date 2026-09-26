@@ -42,16 +42,20 @@ const enHeures = (heures) => {
     return min === 0 ? `${h} h` : `${h} h ${String(min).padStart(2, '0')}`;
 };
 
-function LigneAffectation({ ordre, vehicles, drivers }) {
+function LigneAffectation({ ordre, vehicles, drivers, reaffectation = false, onFermer }) {
     const t = useTraduction();
     const { data, setData, post, processing, errors } = useForm({
-        vehicle_registration: '',
-        driver_id: '',
+        vehicle_registration: reaffectation ? (ordre.vehicle?.registration ?? '') : '',
+        driver_id: reaffectation ? String(ordre.driver_id ?? '') : '',
+        motif: '',
     });
 
     const affecter = (e) => {
         e.preventDefault();
-        post(route('planning.assign', ordre.id), { preserveScroll: true });
+        post(route('planning.assign', ordre.id), {
+            preserveScroll: true,
+            onSuccess: () => onFermer?.(),
+        });
     };
 
     const capaciteSuffisante = (v) => Number(v.capacity_tonnes) * 1000 >= Number(ordre.weight);
@@ -110,6 +114,26 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
             </span>
         </div>
 
+        {reaffectation && (
+            <div className="mb-2">
+                <p className="mb-1 text-xs text-slate-600">
+                    {ordre.status === 'IN_PROGRESS'
+                        ? t('planif.transbordement_aide', 'La marchandise est chargée : choisissez le camion ou le chauffeur qui prend le relais. La mission reste en cours.')
+                        : t('planif.reaffectation_aide', 'Changez de camion ou de chauffeur sans remettre la mission en attente.')}
+                </p>
+                <input
+                    type="text"
+                    value={data.motif}
+                    onChange={(e) => setData('motif', e.target.value)}
+                    placeholder={t('planif.motif_reaffectation', 'Motif (panne, accident, relais de chauffeur…)')}
+                    className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                    required
+                    minLength={5}
+                    maxLength={200}
+                />
+                {errors.motif && <p className="mt-1 text-xs text-status-incident">{errors.motif}</p>}
+            </div>
+        )}
         <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <select
@@ -152,14 +176,23 @@ function LigneAffectation({ ordre, vehicles, drivers }) {
                 disabled={processing}
                 className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
             >
-                {t('planif.affecter', 'Affecter')}
+                {reaffectation ? t('planif.reaffecter', 'Réaffecter') : t('planif.affecter', 'Affecter')}
             </button>
+            {reaffectation && (
+                <button
+                    type="button"
+                    onClick={onFermer}
+                    className="px-2 py-2 text-sm font-semibold text-slate-600 hover:text-marine"
+                >
+                    {t('action.annuler', 'Annuler')}
+                </button>
+            )}
         </form>
         </>
     );
 }
 
-function BoutonsStatut({ ordre }) {
+function BoutonsStatut({ ordre, onReaffecter }) {
     const t = useTraduction();
 
     const changer = (statut, confirmation) => {
@@ -189,6 +222,15 @@ function BoutonsStatut({ ordre }) {
                 </button>
             )}
             {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
+                <button
+                    type="button"
+                    onClick={onReaffecter}
+                    className="rounded-lg border border-marine px-3 py-1.5 text-xs font-semibold text-marine transition hover:bg-marine/5"
+                >
+                    {t('planif.reaffecter', 'Réaffecter')}
+                </button>
+            )}
+            {ordre.status === 'ASSIGNED' && (
                 <button
                     type="button"
                     onClick={desaffecter}
@@ -222,6 +264,7 @@ export default function Index({
     q = '', suggestions = [],
 }) {
     const t = useTraduction();
+    const [enReaffectation, setEnReaffectation] = useState(null);
     const v = useVocabulaire();
     const locale = useLocale();
 
@@ -402,12 +445,20 @@ export default function Index({
                                     {ordre.goods_type ? ` · ${v('marchandise', ordre.goods_type)}` : ''}
                                 </p>
                             </div>
-                            <BoutonsStatut ordre={ordre} />
+                            <BoutonsStatut ordre={ordre} onReaffecter={() => setEnReaffectation(ordre.id)} />
                         </div>
 
                         <div className="mt-4 border-t border-slate-100 pt-4">
                             {ordre.status === 'PENDING' ? (
                                 <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} />
+                            ) : enReaffectation === ordre.id ? (
+                                <LigneAffectation
+                                    ordre={ordre}
+                                    vehicles={vehicles}
+                                    drivers={drivers}
+                                    reaffectation
+                                    onFermer={() => setEnReaffectation(null)}
+                                />
                             ) : (
                                 <div className="flex flex-wrap gap-6 text-xs text-slate-600">
                                     <span>

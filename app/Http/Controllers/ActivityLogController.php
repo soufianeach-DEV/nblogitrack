@@ -24,6 +24,7 @@ class ActivityLogController extends Controller
         'quote.handled' => 'Traitement de devis',
         'order.created_api' => 'Création d\'ordre par API',
         'order.unassigned' => 'Désaffectation',
+        'order.reassigned' => 'Réaffectation',
         'order.cancelled_by_client' => 'Annulation par le client',
         'order.tracking_opened' => 'Suivi direct ouvert',
         'order.tracking_closed' => 'Suivi direct fermé',

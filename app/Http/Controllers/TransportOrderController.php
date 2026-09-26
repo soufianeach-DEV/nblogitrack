@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use App\Mail\OrdreCree;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
@@ -11,8 +12,10 @@ use App\Support\Adresse;
 use App\Support\Formats;
 use App\Support\JoursFeries;
 use App\Support\Localite;
+use App\Support\OrderWorkflow;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
+use App\Support\TransitionRefusee;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -146,13 +149,14 @@ class TransportOrderController extends Controller
 
         $ancien = $transportOrder->status;
 
-        $transportOrder->update([
-            'status' => 'CANCELLED',
-            'cancelled_at' => now(),
-            'cancelled_by' => $request->user()->id,
-            'cancellation_fee' => $frais > 0 ? $frais : null,
-            'suivi_direct' => false,
-        ]);
+        // L'indemnite a ete calculee sur ce statut : si le chauffeur a
+        // charge entre-temps, l'annulation est refusee au lieu de passer
+        // avec un montant faux.
+        try {
+            OrderWorkflow::annuler($transportOrder, OrderStatus::from($ancien), $request->user()->id, $frais);
+        } catch (TransitionRefusee) {
+            return back()->with('error', Traductions::t('msg.ordre_etat_change', 'Cet ordre vient de changer d\'état : actualisez la page.'));
+        }
 
         ActivityLog::record(
             'order.cancelled_by_client',

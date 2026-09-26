@@ -623,6 +623,7 @@ class TranslationSeeder extends Seeder
             ],
             'recherche_active' => ['Recherche : « :terme »', 'Zoekopdracht: « :terme »', 'Search: “:terme”'],
             'effacer_recherche' => ['Effacer', 'Wissen', 'Clear'],
+            'reserves' => ['Réserves à la livraison', 'Voorbehouden bij levering', 'Reservations on delivery'],
         ],
 
         'planif' => [
@@ -689,6 +690,10 @@ class TranslationSeeder extends Seeder
             'sur_jours' => ['sur :n jours', 'over :n dagen', 'over :n days'],
             'plafond_hebdo' => ['plafond hebdomadaire dépassé : :semaine déjà engagées plus :mission pour cette mission, maximum :max', 'wekelijks maximum overschreden: :semaine al ingepland plus :mission voor deze opdracht, maximaal :max', 'weekly limit exceeded: :semaine already committed plus :mission for this mission, maximum :max'],
             'septieme_jour' => ['septième journée d\'affilée : le repos hebdomadaire doit commencer après :n jours', 'zevende dag op rij: de wekelijkse rust moet na :n dagen beginnen', 'seventh day in a row: the weekly rest must start after :n days'],
+            'reaffecter' => ['Réaffecter', 'Opnieuw toewijzen', 'Reassign'],
+            'transbordement_aide' => ['La marchandise est chargée : choisissez le camion ou le chauffeur qui prend le relais. La mission reste en cours.', 'De goederen zijn geladen: kies de vrachtwagen of bestuurder die het overneemt. De opdracht blijft lopend.', 'The goods are loaded: choose the truck or driver taking over. The job stays in progress.'],
+            'reaffectation_aide' => ['Changez de camion ou de chauffeur sans remettre la mission en attente.', 'Wijzig vrachtwagen of bestuurder zonder de opdracht terug in wacht te zetten.', 'Change truck or driver without putting the job back on hold.'],
+            'motif_reaffectation' => ['Motif (panne, accident, relais de chauffeur…)', 'Reden (panne, ongeval, aflossing bestuurder…)', 'Reason (breakdown, accident, driver relay…)'],
         ],
 
         'personnel' => [
@@ -1170,6 +1175,10 @@ class TranslationSeeder extends Seeder
                 'Kies een opdracht om het detail te zien.',
                 'Choose a mission to see its details.',
             ],
+            'receptionnaire' => ['Réceptionné par', 'Ontvangen door', 'Received by'],
+            'receptionnaire_aide' => ['Nom de la personne qui reçoit la marchandise', 'Naam van de persoon die de goederen ontvangt', 'Name of the person receiving the goods'],
+            'reserves' => ['Réserves (facultatif)', 'Voorbehouden (optioneel)', 'Reservations (optional)'],
+            'reserves_aide' => ['Colis abîmé, manquant, emballage ouvert…', 'Beschadigd pakket, ontbrekend, verpakking geopend…', 'Damaged parcel, missing item, packaging opened…'],
         ],
 
         'journal' => [
@@ -1236,6 +1245,7 @@ class TranslationSeeder extends Seeder
             'action_api_key_created' => ['Clé d\'API créée', 'API-sleutel aangemaakt', 'API key created'],
             'action_api_key_revoked' => ['Clé d\'API révoquée', 'API-sleutel ingetrokken', 'API key revoked'],
             'action_processing_record_updated' => ['Registre RGPD modifié', 'AVG-register gewijzigd', 'GDPR register updated'],
+            'action_order_reassigned' => ['Réaffectation', 'Hertoewijzing', 'Reassignment'],
         ],
 
         'parc' => [
@@ -2417,7 +2427,7 @@ class TranslationSeeder extends Seeder
             'naissance_future' => ['La date de naissance doit être dans le passé.', 'De geboortedatum moet in het verleden liggen.', 'The date of birth must be in the past.'],
             'motif_depart_requis' => ['Indiquez le motif du départ.', 'Vermeld de reden van vertrek.', 'Please state the reason for leaving.'],
             'chauffeur_engage_depart' => ['Ce chauffeur porte une mission en cours : réaffectez-la avant d\'enregistrer son départ.', 'Deze bestuurder heeft een lopende opdracht: wijs ze opnieuw toe voordat u zijn vertrek registreert.', 'This driver has a mission under way: reassign it before recording their departure.'],
-            'chauffeur_engage_service' => ['Ce chauffeur porte une mission en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.', 'Deze bestuurder heeft een lopende opdracht: hef de toewijzing op via het scherm Planning voordat u hem uit dienst neemt.', 'This driver has a mission under way: unassign it from the Planning screen before taking them out of service.'],
+            'chauffeur_engage_service' => ['Ce chauffeur porte une mission en cours : réaffectez-la depuis l\'écran Planification avant de le retirer du service.', 'Deze bestuurder heeft een lopende opdracht: wijs ze opnieuw toe via het scherm Planning voordat u hem uit dienst neemt.', 'This driver has a mission under way: reassign it from the Planning screen before taking them out of service.'],
             'chauffeur_engage_adr' => ['Ce chauffeur transporte une matière dangereuse : sa certification ADR ne peut pas être retirée maintenant.', 'Deze bestuurder vervoert een gevaarlijke stof: zijn ADR-certificering kan nu niet worden ingetrokken.', 'This driver is carrying dangerous goods: their ADR certification cannot be removed now.'],
             'depart_enregistre' => ['Départ enregistré. La fiche est conservée pour l\'historique.', 'Vertrek geregistreerd. De fiche blijft bewaard voor de historiek.', 'Departure recorded. The record is kept for the history.'],
             'chauffeur_mis_a_jour' => ['Chauffeur mis à jour.', 'Bestuurder bijgewerkt.', 'Driver updated.'],
@@ -2451,7 +2461,7 @@ class TranslationSeeder extends Seeder
             'ordre_cree_sans_courriel' => ['Ordre créé : :numero — l\'e-mail de confirmation n\'a pas pu être envoyé.', 'Opdracht aangemaakt: :numero — de bevestigingsmail kon niet worden verstuurd.', 'Order created: :numero — the confirmation email could not be sent.'],
             'controle_futur' => ['Un contrôle technique ne peut pas être daté dans le futur.', 'Een technische keuring kan niet in de toekomst gedateerd zijn.', 'A roadworthiness test cannot be dated in the future.'],
             'validite_avant_controle' => ['La validité ne peut pas précéder le passage au contrôle.', 'De geldigheid kan niet vóór de keuring liggen.', 'The validity cannot precede the date of the test.'],
-            'vehicule_engage_service' => ['Ce véhicule porte une expédition en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.', 'Dit voertuig heeft een lopende zending: hef de toewijzing op via het scherm Planning voordat u het uit dienst neemt.', 'This vehicle has a shipment under way: unassign it from the Planning screen before taking it out of service.'],
+            'vehicule_engage_service' => ['Ce véhicule porte une expédition en cours : réaffectez-la depuis l\'écran Planification avant de le retirer du service.', 'Dit voertuig heeft een lopende zending: wijs ze opnieuw toe via het scherm Planning voordat u het uit dienst neemt.', 'This vehicle has a shipment under way: reassign it from the Planning screen before taking it out of service.'],
             'kilometrage_inferieur' => ['Le kilométrage ne peut pas descendre sous le relevé actuel (:km km).', 'De kilometerstand kan niet lager zijn dan de huidige stand (:km km).', 'The mileage cannot go below the current reading (:km km).'],
             'vehicule_mis_a_jour' => ['Véhicule mis à jour.', 'Voertuig bijgewerkt.', 'Vehicle updated.'],
             'localite_enlevement_requise' => ['Indiquez la localité d\'enlèvement.', 'Vermeld de ophaalgemeente.', 'Please enter the pickup town.'],
@@ -2504,7 +2514,7 @@ class TranslationSeeder extends Seeder
             'trimestre' => ['T:n :annee', 'K:n :annee', 'Q:n :annee'],
             'session_expiree_courte' => ['Votre session a expiré, reconnectez-vous.', 'Uw sessie is verlopen, meld u opnieuw aan.', 'Your session has expired, please sign in again.'],
             'session_expiree' => ['Votre session a expiré. Reconnectez-vous pour continuer.', 'Uw sessie is verlopen. Meld u opnieuw aan om verder te gaan.', 'Your session has expired. Sign in again to continue.'],
-            'planif_desaffectation_affectee' => ['Seule une mission affectée ou en cours peut être désaffectée.', 'Enkel een toegewezen of lopende opdracht kan losgekoppeld worden.', 'Only an assigned or in-progress job can be unassigned.'],
+            'planif_desaffectation_affectee' => ['Seule une mission affectée peut être désaffectée.', 'Enkel een toegewezen opdracht kan losgekoppeld worden.', 'Only an assigned job can be unassigned.'],
             'mission_trop_tot' => ['L\'enlèvement est prévu le :date : il ne peut pas être confirmé plus tôt que la veille.', 'De ophaling is gepland op :date: ze kan niet vroeger dan de dag ervoor bevestigd worden.', 'Pickup is planned for :date: it cannot be confirmed earlier than the day before.'],
             'planif_permis' => ['Permis inadapté : :motif.', 'Ongeschikt rijbewijs: :motif.', 'Unsuitable licence: :motif.'],
             'planif_suivi_impossible' => ['Le suivi de position ne s\'ouvre que pour une mission affectée ou en cours.', 'Positieopvolging kan enkel voor een toegewezen of lopende opdracht.', 'Position tracking can only be opened for an assigned or in-progress job.'],
@@ -2519,6 +2529,10 @@ class TranslationSeeder extends Seeder
             'acces_refuse' => ['Vous n\'avez pas accès à cet écran.', 'U hebt geen toegang tot dit scherm.', 'You do not have access to this screen.'],
             'paiement_en_ligne_indisponible' => ['Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.', 'Online betalen is tijdelijk niet mogelijk. Betaal via overschrijving met de gestructureerde mededeling.', 'Online payment is temporarily unavailable. Please pay by bank transfer using the structured reference.'],
             'planif_controle_technique' => ['Le contrôle technique de ce véhicule expire le :date, avant la fin de la mission.', 'De technische keuring van dit voertuig vervalt op :date, vóór het einde van de opdracht.', 'This vehicle\'s roadworthiness test expires on :date, before the end of the job.'],
+            'ordre_etat_change' => ['Cet ordre vient de changer d\'état : actualisez la page.', 'Deze opdracht is net van status veranderd: vernieuw de pagina.', 'This order has just changed status: refresh the page.'],
+            'planif_motif_reaffectation' => ['Indiquez le motif du changement d\'affectation.', 'Geef de reden voor de wijziging van toewijzing op.', 'State the reason for the change of assignment.'],
+            'planif_ordre_reaffecte' => ['Ordre :numero réaffecté au véhicule :vehicule.', 'Opdracht :numero opnieuw toegewezen aan voertuig :vehicule.', 'Order :numero reassigned to vehicle :vehicule.'],
+            'planif_desaffectation_en_route' => ['La marchandise est chargée : réaffectez la mission à un autre camion ou chauffeur au lieu de la remettre en attente.', 'De goederen zijn geladen: wijs de opdracht toe aan een andere vrachtwagen of bestuurder in plaats van ze terug in wacht te zetten.', 'The goods are loaded: reassign the job to another truck or driver instead of putting it back on hold.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

@@ -7,7 +7,9 @@ use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Support\Adresse;
+use App\Support\OrderWorkflow;
 use App\Support\Traductions;
+use App\Support\TransitionRefusee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,6 +72,8 @@ class MissionController extends Controller
             'lat' => 'nullable|numeric|between:-90,90',
             'lng' => 'nullable|numeric|between:-180,180',
             'precision_m' => 'nullable|integer|min:0|max:100000',
+            'receptionnaire' => 'nullable|string|max:120',
+            'reserves' => 'nullable|string|max:1000',
         ]);
 
         $vise = $donnees['statut'];
@@ -90,18 +94,13 @@ class MissionController extends Controller
             ]));
         }
 
-        $changements = ['status' => $vise];
-
-        if ($vise === 'IN_PROGRESS') {
-            $changements['picked_up_at'] = now();
+        try {
+            $vise === 'DELIVERED'
+                ? OrderWorkflow::livrer($transportOrder, $donnees['receptionnaire'] ?? null, $donnees['reserves'] ?? null)
+                : OrderWorkflow::enlever($transportOrder);
+        } catch (TransitionRefusee) {
+            return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
         }
-
-        if ($vise === 'DELIVERED') {
-            $changements['actual_delivery_date'] = now();
-            $changements['suivi_direct'] = false;
-        }
-
-        $transportOrder->update($changements);
 
         $this->poserJalon($transportOrder, $vise, $donnees, $request->user()->id);
 

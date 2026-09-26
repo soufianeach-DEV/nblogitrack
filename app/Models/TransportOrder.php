@@ -50,6 +50,9 @@ class TransportOrder extends Model
      */
     public const STATUTS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'DELIVERED', 'CANCELLED'];
 
+    // Les transitions entre ces statuts sont definies par App\Enums\OrderStatus
+    // et appliquees par App\Support\OrderWorkflow, seul a modifier le statut.
+
     /** Les ordres qui mobilisent encore un chauffeur ou un camion. */
     public const ACTIFS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS'];
 
@@ -106,7 +109,7 @@ class TransportOrder extends Model
         'client_id', 'created_date', 'pickup_date', 'pickup_address', 'delivery_address',
         'weight', 'distance_km', 'volume', 'goods_type', 'is_hazardous', 'needs_tail_lift', 'status', 'priority',
         'tracking_number', 'tracking_code', 'special_instructions', 'requested_delivery_date',
-        'actual_delivery_date', 'estimated_cost', 'tariff_grid_id',
+        'actual_delivery_date', 'delivered_at', 'received_by', 'delivery_reserves', 'estimated_cost', 'tariff_grid_id',
         'vehicle_registration', 'driver_id', 'assigned_at', 'picked_up_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
         'cancelled_at', 'cancelled_by', 'cancellation_fee',
@@ -124,6 +127,7 @@ class TransportOrder extends Model
             'pickup_date' => 'datetime',
             'assigned_at' => 'datetime',
             'picked_up_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'cancellation_fee' => 'decimal:2',
             'distance_km' => 'integer',

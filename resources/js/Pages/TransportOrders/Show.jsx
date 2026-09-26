@@ -202,7 +202,9 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         <Progression statut={order.status} />
                         <dl className="mt-4 border-t border-slate-100 pt-3">
                             {ligne(t('ordres.livraison_souhaitee', 'Livraison souhaitée'), date(order.requested_delivery_date))}
-                            {ligne(t('ordres.livraison_effective', 'Livraison effective'), date(order.actual_delivery_date))}
+                            {ligne(t('ordres.livraison_effective', 'Livraison effective'), order.delivered_at ? date(order.delivered_at, true) : date(order.actual_delivery_date))}
+                            {order.received_by && ligne(t('mission.receptionnaire', 'Réceptionné par'), order.received_by)}
+                            {order.delivery_reserves && ligne(t('ordres.reserves', 'Réserves à la livraison'), order.delivery_reserves)}
                         </dl>
                     </>
                 ))}

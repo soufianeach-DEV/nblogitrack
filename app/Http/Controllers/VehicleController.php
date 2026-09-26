@@ -118,7 +118,7 @@ class VehicleController extends Controller
 
             if ($engage) {
                 return back()->withErrors([
-                    'is_available' => Traductions::t('msg.vehicule_engage_service', 'Ce véhicule porte une expédition en cours : désaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
+                    'is_available' => Traductions::t('msg.vehicule_engage_service', 'Ce véhicule porte une expédition en cours : réaffectez-la depuis l\'écran Planification avant de le retirer du service.'),
                 ]);
             }
         }

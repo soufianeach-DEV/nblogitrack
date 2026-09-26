@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
 use App\Support\Traductions;
+use App\Support\TransitionRefusee;
 use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -190,12 +193,22 @@ class PlanningController extends Controller
 
     public function assign(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
+        // Un ordre en attente s'affecte ; un ordre affecte ou en route se
+        // reaffecte (autre camion, autre chauffeur) sans revenir en
+        // attente : une marchandise chargee ne redevient jamais « en
+        // attente », c'est un transbordement.
+        $reaffectation = in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true);
+
         $data = $request->validate([
             'vehicle_registration' => 'required|exists:vehicles,registration',
             'driver_id' => 'required|exists:drivers,id',
+            'motif' => $reaffectation ? 'required|string|min:5|max:200' : 'nullable',
+        ], [
+            'motif.required' => Traductions::t('msg.planif_motif_reaffectation', 'Indiquez le motif du changement d\'affectation.'),
+            'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
 
-        if ($transportOrder->status !== 'PENDING') {
+        if ($transportOrder->status !== 'PENDING' && ! $reaffectation) {
             return back()->withErrors(['vehicle_registration' => Traductions::t('msg.planif_ordre_non_attente', 'Seul un ordre en attente peut être affecté.')]);
         }
 
@@ -217,7 +230,10 @@ class PlanningController extends Controller
             $transportOrder->pickup_date = now();
         }
 
-        $debut = $transportOrder->pickup_date->copy()->startOfDay();
+        // En route, le nouveau camion et le nouveau chauffeur sont mobilises
+        // a partir d'aujourd'hui.
+        $depart = $transportOrder->status === 'IN_PROGRESS' ? now() : $transportOrder->pickup_date;
+        $debut = $depart->copy()->startOfDay();
         $fin = $debut->copy()->addDays(TempsDeConduite::journees($transportOrder->distance_km) - 1);
 
         if ($empechements = $driver->empechements($fin)) {
@@ -292,7 +308,7 @@ class PlanningController extends Controller
         $conduite = TempsDeConduite::empechements(
             $driver->id,
             $transportOrder->distance_km,
-            $transportOrder->pickup_date,
+            $depart,
             $transportOrder->id,
         );
 
@@ -302,13 +318,40 @@ class PlanningController extends Controller
             ]);
         }
 
-        $transportOrder->update([
-            'vehicle_registration' => $vehicle->registration,
-            'driver_id' => $driver->id,
-            'assigned_at' => now(),
-            'pickup_date' => $transportOrder->pickup_date,
-            'status' => 'ASSIGNED',
-        ]);
+        $avant = [
+            'statut' => $transportOrder->status,
+            'camion' => $transportOrder->vehicle_registration,
+            'chauffeur_id' => $transportOrder->driver_id,
+        ];
+
+        try {
+            $reaffectation
+                ? OrderWorkflow::reaffecter($transportOrder, $vehicle, $driver)
+                : OrderWorkflow::affecter($transportOrder, $vehicle, $driver, $transportOrder->pickup_date);
+        } catch (TransitionRefusee $e) {
+            return back()->withErrors(['vehicle_registration' => $e->getMessage()]);
+        }
+
+        if ($reaffectation) {
+            ActivityLog::record(
+                'order.reassigned',
+                'Réaffectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration.' : '.$data['motif'],
+                $transportOrder,
+                [
+                    'motif' => $data['motif'],
+                    'statut' => $avant['statut'],
+                    'ancien_camion' => $avant['camion'],
+                    'ancien_chauffeur_id' => $avant['chauffeur_id'],
+                    'vehicule' => $vehicle->registration.' '.$vehicle->brand.' '.$vehicle->model,
+                    'chauffeur_id' => $driver->id,
+                ],
+            );
+
+            return back()->with('success', Traductions::t('msg.planif_ordre_reaffecte', 'Ordre :numero réaffecté au véhicule :vehicule.', [
+                'numero' => $transportOrder->tracking_number,
+                'vehicule' => $vehicle->registration,
+            ]));
+        }
 
         ActivityLog::record(
             'order.assigned',
@@ -384,24 +427,14 @@ class PlanningController extends Controller
         }
 
         $ancien = $transportOrder->status;
-        $champs = ['status' => $data['status']];
 
-        if ($data['status'] === 'DELIVERED') {
-            $champs['actual_delivery_date'] = now();
+        try {
+            $data['status'] === 'DELIVERED'
+                ? OrderWorkflow::livrer($transportOrder)
+                : OrderWorkflow::annuler($transportOrder, OrderStatus::from($ancien), $request->user()->id);
+        } catch (TransitionRefusee $e) {
+            return back()->withErrors(['status' => $e->getMessage()]);
         }
-
-        // Une mission terminee ne se suit plus, et une annulation garde la
-        // trace de son auteur, comme celle que fait le client.
-        if (in_array($data['status'], ['DELIVERED', 'CANCELLED'], true)) {
-            $champs['suivi_direct'] = false;
-        }
-
-        if ($data['status'] === 'CANCELLED') {
-            $champs['cancelled_at'] = now();
-            $champs['cancelled_by'] = $request->user()->id;
-        }
-
-        $transportOrder->update($champs);
 
         ActivityLog::record(
             'order.status_changed',
@@ -422,23 +455,25 @@ class PlanningController extends Controller
             'motif.min' => Traductions::t('msg.planif_motif_court', 'Le motif doit faire au moins 5 caractères.'),
         ]);
 
-        if (! in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true)) {
-            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée ou en cours peut être désaffectée.')]);
+        // Une marchandise chargee ne revient pas en attente : elle se
+        // reaffecte a un autre camion (transbordement).
+        if ($transportOrder->status === 'IN_PROGRESS') {
+            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_en_route', 'La marchandise est chargée : réaffectez la mission à un autre camion ou chauffeur au lieu de la remettre en attente.')]);
+        }
+
+        if ($transportOrder->status !== 'ASSIGNED') {
+            return back()->withErrors(['motif' => Traductions::t('msg.planif_desaffectation_affectee', 'Seule une mission affectée peut être désaffectée.')]);
         }
 
         $ancien = $transportOrder->status;
         $camion = $transportOrder->vehicle_registration;
         $chauffeur = $transportOrder->driver_id;
 
-        $transportOrder->update([
-            'status' => 'PENDING',
-            'vehicle_registration' => null,
-            'driver_id' => null,
-            'assigned_at' => null,
-            // Une marchandise deja chargee le reste : l'heure d'enlevement
-            // est gardee, et elle empeche le client d'annuler en ligne.
-            'suivi_direct' => false,
-        ]);
+        try {
+            OrderWorkflow::desaffecter($transportOrder);
+        } catch (TransitionRefusee $e) {
+            return back()->withErrors(['motif' => $e->getMessage()]);
+        }
 
         ActivityLog::record(
             'order.unassigned',

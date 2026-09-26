@@ -71,6 +71,9 @@ function BoutonAvancement({ mission }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [receptionnaire, setReceptionnaire] = useState('');
+    const [reserves, setReserves] = useState('');
+    const livraison = mission.action.statut === 'DELIVERED';
 
     const envoyer = async () => {
         if (! arme) {
@@ -86,6 +89,7 @@ function BoutonAvancement({ mission }) {
         router.patch(route('missions.status', mission.id), {
             statut: mission.action.statut,
             ...(point ?? {}),
+            ...(livraison ? { receptionnaire, reserves } : {}),
         }, {
             preserveScroll: true,
             onFinish: () => {
@@ -97,6 +101,33 @@ function BoutonAvancement({ mission }) {
 
     return (
         <div className="sticky bottom-20 mt-4 lg:bottom-0">
+            {arme && livraison && (
+                <div className="mb-3 space-y-2 rounded-xl bg-white p-3 shadow-lg">
+                    <label className="block text-sm font-medium text-marine">
+                        {t('mission.receptionnaire', 'Réceptionné par')}
+                        <input
+                            type="text"
+                            value={receptionnaire}
+                            onChange={(e) => setReceptionnaire(e.target.value)}
+                            maxLength={120}
+                            autoComplete="off"
+                            placeholder={t('mission.receptionnaire_aide', 'Nom de la personne qui reçoit la marchandise')}
+                            className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                    </label>
+                    <label className="block text-sm font-medium text-marine">
+                        {t('mission.reserves', 'Réserves (facultatif)')}
+                        <textarea
+                            value={reserves}
+                            onChange={(e) => setReserves(e.target.value)}
+                            maxLength={1000}
+                            rows={2}
+                            placeholder={t('mission.reserves_aide', 'Colis abîmé, manquant, emballage ouvert…')}
+                            className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                    </label>
+                </div>
+            )}
             <button
                 type="button"
                 onClick={envoyer}

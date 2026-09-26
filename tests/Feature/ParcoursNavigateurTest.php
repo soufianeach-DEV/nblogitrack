@@ -441,18 +441,18 @@ class ParcoursNavigateurTest extends TestCase
         $this->assertStringNotContainsString('VATEX-EU-AE', $xml);
     }
 
-    public function test_une_marchandise_chargee_puis_desaffectee_ne_s_annule_pas_en_ligne(): void
+    public function test_une_marchandise_chargee_ne_revient_pas_en_attente(): void
     {
         $chauffeur = $this->chauffeur();
         $ordre = TransportOrder::factory()->enRoute()->create(['driver_id' => $chauffeur->id]);
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->post(route('planning.desaffecter', $ordre), ['motif' => 'Panne moteur'])
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('motif');
 
         $ordre->refresh();
-        $this->assertSame('PENDING', $ordre->status);
-        $this->assertNull($ordre->fraisAnnulation());
+        $this->assertSame('IN_PROGRESS', $ordre->status);
+        $this->assertSame($chauffeur->id, $ordre->driver_id);
 
         $this->actingAs(User::find($ordre->client_id))
             ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
