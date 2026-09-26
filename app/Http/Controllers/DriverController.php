@@ -6,9 +6,12 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
+use App\Models\User;
 use App\Support\ControleAffectation;
+use App\Support\Suggestions;
 use App\Support\Traductions;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -77,6 +80,7 @@ class DriverController extends Controller
             ->flip();
 
         return Inertia::render('Parc/Chauffeurs', [
+            'suggestions' => self::noms(fn () => User::whereIn('id', Driver::query()->select('user_id')), $filtres['q'] ?? null),
             'chauffeurs' => $requete->with(['indisponibilites' => fn ($q) => $q->where('au', '>=', today()->toDateString())->orderBy('du')])
                 ->get()->map(fn (Driver $d) => [
                     'id' => $d->id,
@@ -267,5 +271,30 @@ class DriverController extends Controller
         return collect(Driver::MOTIFS_SORTIE)
             ->map(fn (string $libelle, string $code) => Traductions::t('chauffeurs.sortie_'.strtolower($code), $libelle))
             ->all();
+    }
+
+    /**
+     * « Prenom Nom » des comptes dont le prenom, le nom ou l'adresse
+     * contient le texte tape.
+     *
+     * @param  callable(): Builder  $comptes
+     * @return list<string>
+     */
+    public static function noms(callable $comptes, ?string $terme): array
+    {
+        $terme = trim((string) $terme);
+
+        if (mb_strlen($terme) < 2) {
+            return [];
+        }
+
+        $trouves = $comptes()
+            ->where(fn ($q) => $q->whereContient('first_name', $terme)->orWhereContient('last_name', $terme)->orWhereContient('email', $terme))
+            ->limit(20)
+            ->get(['first_name', 'last_name', 'email']);
+
+        return Suggestions::ranger($trouves->map(fn ($u) => str_contains(mb_strtolower($u->email), mb_strtolower($terme)) && ! str_contains(mb_strtolower($u->first_name.' '.$u->last_name), mb_strtolower($terme))
+            ? $u->email
+            : trim($u->first_name.' '.$u->last_name))->all());
     }
 }

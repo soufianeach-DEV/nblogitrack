@@ -8,6 +8,7 @@ use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\ControleAffectation;
+use App\Support\Suggestions;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,7 @@ class VehicleController extends Controller
             ->flip();
 
         return Inertia::render('Parc/Vehicules', [
+            'suggestions' => Suggestions::depuis(fn () => Vehicle::query(), ['registration', 'brand', 'model'], $filtres['q'] ?? null),
             'vehicules' => $requete->with(['indisponibilites' => fn ($q) => $q->where('au', '>=', today()->toDateString())->orderBy('du')])
                 ->orderBy('registration')->get()->map(fn (Vehicle $v) => [
                     'immatriculation' => $v->registration,

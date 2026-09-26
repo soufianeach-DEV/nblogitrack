@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\PurchaseInvoice;
 use App\Models\Vehicle;
+use App\Support\Suggestions;
 use App\Support\Traductions;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -66,6 +67,7 @@ class PurchaseInvoiceController extends Controller
             ]);
 
         return Inertia::render('Factures/Achats', [
+            'suggestions' => Suggestions::depuis(fn () => PurchaseInvoice::query(), ['supplier_name', 'reference', 'vehicle_registration'], $filtres['q'] ?? null),
             'achats' => $achats,
             'compteurs' => [
                 'total' => PurchaseInvoice::count(),

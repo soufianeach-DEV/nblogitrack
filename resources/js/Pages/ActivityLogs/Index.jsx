@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ListeRecherche from '@/Components/ListeRecherche';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -81,12 +82,14 @@ export default function Index({ logs, actions, filtres, stats }) {
                         placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
                         className={champCls}
                     />
-                    <select value={champs.action} onChange={(e) => filtrer('action', e.target.value)} className={champCls}>
-                        <option value="">{t('journal.toutes_actions', 'Toutes les actions')}</option>
-                        {Object.entries(actions).map(([cle, libelle]) => (
-                            <option key={cle} value={cle}>{libelle}</option>
-                        ))}
-                    </select>
+                    <ListeRecherche
+                        value={champs.action}
+                        onChange={(v) => filtrer('action', v)}
+                        vide={t('journal.toutes_actions', 'Toutes les actions')}
+                        aria-label={t('journal.toutes_actions', 'Toutes les actions')}
+                        options={Object.entries(actions).map(([cle, libelle]) => ({ valeur: cle, libelle }))}
+                        className={champCls}
+                    />
                     <input
                         value={champs.ip}
                         onChange={(e) => filtrer('ip', e.target.value)}

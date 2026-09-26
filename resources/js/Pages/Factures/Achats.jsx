@@ -1,4 +1,6 @@
 import BarreFiltres from '@/Components/BarreFiltres';
+import ChampRecherche from '@/Components/ChampRecherche';
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import OngletsFacturation from '@/Components/OngletsFacturation';
 
@@ -119,17 +121,7 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
                     <label htmlFor="fournisseur" className={intitule}>{t('achats.fournisseur', 'Fournisseur')}</label>
-                    <input
-                        id="fournisseur"
-                        list="liste-fournisseurs"
-                        value={data.supplier_name}
-                        onChange={(e) => setData('supplier_name', e.target.value)}
-                        className={champ}
-                        required
-                    />
-                    <datalist id="liste-fournisseurs">
-                        {fournisseurs.map((f) => <option key={f} value={f} />)}
-                    </datalist>
+                    <ChampRecherche id="fournisseur" value={data.supplier_name} onChange={(v) => setData('supplier_name', v)} suggestions={fournisseurs} local className={champ} />
                     {erreur('supplier_name')}
                 </div>
                 <div>
@@ -145,25 +137,19 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                 </div>
                 <div>
                     <label htmlFor="categorie" className={intitule}>{t('personnel.categorie', 'Catégorie')}</label>
-                    <select id="categorie" value={data.category} onChange={(e) => choisirCategorie(e.target.value)} className={champ}>
-                        {Object.entries(categories).map(([valeur, libelle]) => (
-                            <option key={valeur} value={valeur}>{libelle}</option>
-                        ))}
-                    </select>
+                    <ListeRecherche id="categorie" value={data.category} onChange={(v) => v && choisirCategorie(v)} options={Object.entries(categories).map(([valeur, libelle]) => ({ valeur, libelle }))} className={champ} />
                     {erreur('category')}
                 </div>
                 <div>
                     <label htmlFor="vehicule" className={intitule}>{t('ordres.vehicule', 'Véhicule')}</label>
-                    <select
+                    <ListeRecherche
                         id="vehicule"
                         value={data.vehicle_registration}
-                        onChange={(e) => setData('vehicle_registration', e.target.value)}
+                        onChange={(v) => setData('vehicle_registration', v)}
+                        placeholder={t('commande.choisir', '— Choisir —')}
+                        options={vehicules}
                         className={champ}
-                        required
-                    >
-                        <option value="">{t('commande.choisir', '— Choisir —')}</option>
-                        {vehicules.map((v) => <option key={v.valeur} value={v.valeur}>{v.libelle}</option>)}
-                    </select>
+                    />
                     {erreur('vehicle_registration')}
                 </div>
                 <div>
@@ -290,7 +276,7 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
     );
 }
 
-export default function Achats({ achats, compteurs, cartes, categories, vehicules = [], fournisseurs = [], filtres = {} }) {
+export default function Achats({ suggestions = [], achats, compteurs, cartes, categories, vehicules = [], fournisseurs = [], filtres = {} }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
@@ -338,6 +324,7 @@ export default function Achats({ achats, compteurs, cartes, categories, vehicule
 
             <div className="mt-4">
                 <BarreFiltres
+                    suggestions={suggestions}
                     adresse={route('purchases.index')}
                     filtres={filtres}
                     placeholder={t('achats.filtre', 'Fournisseur, référence, immatriculation…')}

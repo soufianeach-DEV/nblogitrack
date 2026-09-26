@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\FormeJuridique;
 use App\Support\IdentifiantEntreprise;
+use App\Support\RegistresNationaux;
+use App\Support\Secteurs;
 use App\Support\Traductions;
+use App\Support\Translitteration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -30,12 +34,16 @@ class VatController extends Controller
 
         $tva = $identifiant['tva'];
 
-        // Un numero belge dont le controle modulo 97 echoue n'existe pas :
-        // inutile de le demander a VIES.
+        // Format ou cle de controle faux : le numero n'existe pas, inutile
+        // d'interroger le registre.
         if (! IdentifiantEntreprise::controleLocal($tva)) {
             return response()->json([
                 'statut' => 'format',
-                'message' => Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'),
+                'message' => $identifiant['pays'] === 'BE'
+                    ? Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).')
+                    : Traductions::t('msg.tva_format_pays', 'Ce numéro ne respecte pas le format de son pays : vérifiez-le (ex. :exemple).', [
+                        'exemple' => IdentifiantEntreprise::exemple($tva) ?? 'BE0123456749',
+                    ]),
             ]);
         }
 
@@ -45,7 +53,14 @@ class VatController extends Controller
             return response()->json($this->traduire($cache));
         }
 
-        $resultat = $this->interrogerVies($tva, $identifiant);
+        // Suisse, Royaume-Uni et Norvege ne sont pas dans VIES : chacun
+        // son registre.
+        $resultat = match ($identifiant['pays']) {
+            'CH' => $this->registreSuisse($identifiant),
+            'NO' => $this->registreNorvegien($identifiant),
+            'GB' => $this->registreBritannique($identifiant),
+            default => $this->interrogerVies($tva, $identifiant),
+        };
 
         if (in_array($resultat['statut'], ['valide', 'invalide'], true)) {
             Cache::put($cle, $resultat, now()->addDay());
@@ -64,7 +79,10 @@ class VatController extends Controller
     private function traduire(array $resultat): array
     {
         $message = match ($resultat['statut'] ?? null) {
-            'invalide' => Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.'),
+            'invalide' => ($resultat['registre'] ?? 'VIES') === 'VIES'
+                ? Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.')
+                : Traductions::t('msg.tva_inactive_registre', 'Ce numéro n\'est pas actif dans le registre :registre.', ['registre' => $resultat['registre']]),
+            'non_verifie' => Traductions::t('msg.tva_non_verifiee', 'Format valide. Le registre :registre n\'est pas interrogé : complétez les informations vous-même.', ['registre' => $resultat['registre'] ?? '']),
             'indisponible' => Traductions::t('msg.tva_registre_sature', 'Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.'),
             default => null,
         };
@@ -81,12 +99,29 @@ class VatController extends Controller
             $resultat['entreprise']['situation']['libelle'] = Traductions::t('msg.entreprise_cessee', 'Entreprise cessée');
         }
 
-        if (isset($resultat['entreprise']['secteur'])) {
-            $resultat['entreprise']['secteur'] = Traductions::vocabulaire('secteur', $resultat['entreprise']['secteur']);
-        }
+        // Le secteur reste en francais : c'est la valeur de la liste, que
+        // le formulaire affiche dans la langue de l'interface.
 
         if (isset($resultat['entreprise']['dirigeant']['fonction'])) {
             $resultat['entreprise']['dirigeant']['fonction'] = Traductions::vocabulaire('fonction', $resultat['entreprise']['dirigeant']['fonction']);
+        }
+
+        if (($resultat['statut'] ?? null) === 'valide') {
+            $resultat['entreprise'] ??= ['dirigeant' => null, 'secteur' => null];
+
+            // Forme absente du registre : lue dans la raison sociale.
+            if (empty($resultat['entreprise']['forme_juridique']) && ($forme = FormeJuridique::depuisNom($resultat['nom'] ?? null))) {
+                $resultat['entreprise']['forme_juridique'] = $forme;
+                $resultat['entreprise']['forme_deduite'] = true;
+            }
+
+            // Ce que le registre de ce pays ne publie pas : a completer.
+            $resultat['non_publie'] = array_keys(array_filter([
+                'nom' => ($resultat['nom'] ?? '') === '',
+                'adresse' => ($resultat['adresse']['rue'] ?? '') === '' && ($resultat['adresse']['ville'] ?? '') === '',
+                'forme_juridique' => empty($resultat['entreprise']['forme_juridique']),
+                'secteur' => empty($resultat['entreprise']['secteur']),
+            ]));
         }
 
         return $resultat;
@@ -113,16 +148,33 @@ class VatController extends Controller
             $corps = $reponse->json();
 
             if ($corps['isValid'] ?? false) {
+                // Tchequie, Finlande, Pologne, Roumanie : forme juridique et
+                // activite depuis le registre national ; l'ANAF roumaine
+                // donne aussi l'adresse deja decoupee.
+                $complement = RegistresNationaux::completer($identifiant['pays'], $tva);
+                $adresse = [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '', $identifiant['pays'])), 'pays' => $identifiant['pays']];
+
+                if (isset($complement['adresse'])) {
+                    $adresse = [...$complement['adresse'], 'pays' => $identifiant['pays']];
+                }
+
                 return [
                     'statut' => 'valide',
-                    'nom' => $this->nettoyer($corps['name'] ?? ''),
-                    'adresse' => $this->decomposerAdresse($corps['address'] ?? ''),
+                    'registre' => 'VIES',
+                    // Cyrillique (Bulgarie) ou grec (Grece) : en lettres latines,
+                    // la raison sociale garde l'original entre parentheses.
+                    'nom' => Translitteration::avecOriginal($this->nettoyer($corps['name'] ?? '')),
+                    'adresse' => $adresse,
                     'tva' => $identifiant['tva'],
                     'peppol' => $identifiant['peppol'],
                     'entreprise' => match ($identifiant['pays']) {
                         'FR' => $this->registreFrancais($identifiant['national']),
                         'BE' => $this->registreBelge($identifiant['national']),
-                        default => null,
+                        default => $complement === null ? null : [
+                            'dirigeant' => null,
+                            'secteur' => $this->secteurDepuisNace($complement['nace']),
+                            'forme_juridique' => $complement['forme_juridique'],
+                        ],
                     },
                 ];
             }
@@ -146,22 +198,194 @@ class VatController extends Controller
         }
     }
 
-    private const SECTEURS_NACE = [
-        '01' => 'Agriculture', '02' => 'Agriculture', '03' => 'Agriculture',
-        '10' => 'Agroalimentaire', '11' => 'Agroalimentaire', '12' => 'Agroalimentaire',
-        '13' => 'Textile', '14' => 'Textile', '15' => 'Textile',
-        '16' => 'Bois et papier', '17' => 'Bois et papier', '18' => 'Bois et papier',
-        '19' => 'Énergie', '20' => 'Chimie', '21' => 'Pharmaceutique', '22' => 'Plasturgie',
-        '23' => 'Matériaux de construction', '24' => 'Métallurgie', '25' => 'Métallurgie',
-        '26' => 'Électronique', '27' => 'Électronique', '28' => 'Machines et équipements',
-        '29' => 'Automobile', '30' => 'Automobile', '31' => 'Mobilier', '32' => 'Cosmétique',
-        '35' => 'Énergie', '36' => 'Énergie', '37' => 'Recyclage', '38' => 'Recyclage', '39' => 'Recyclage',
-        '41' => 'Construction', '42' => 'Construction', '43' => 'Construction',
-        '45' => 'Automobile', '46' => 'Distribution', '47' => 'Grande distribution',
-        '49' => 'Transport', '50' => 'Transport', '51' => 'Transport',
-        '52' => 'Logistique', '53' => 'Logistique',
-        '62' => 'Électronique', '63' => 'Électronique',
-        '86' => 'Santé', '87' => 'Santé', '88' => 'Santé',
+    /**
+     * Registre suisse des entreprises (UID), service public sans cle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreSuisse(array $identifiant): array
+    {
+        $enveloppe = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:uid="http://www.uid.admin.ch/xmlns/uid-wse" xmlns:ns="http://www.ech.ch/xmlns/eCH-0097/5">'
+            .'<soapenv:Body><uid:GetByUID><uid:uid><ns:uidOrganisationIdCategorie>CHE</ns:uidOrganisationIdCategorie>'
+            .'<ns:uidOrganisationId>'.$identifiant['national'].'</ns:uidOrganisationId></uid:uid></uid:GetByUID></soapenv:Body></soapenv:Envelope>';
+
+        try {
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->withHeaders(['SOAPAction' => 'http://www.uid.admin.ch/xmlns/uid-wse/IPublicServices/GetByUID'])
+                ->withBody($enveloppe, 'text/xml; charset=utf-8')
+                ->post('https://www.uid-wse.admin.ch/V5.0/PublicServices.svc');
+
+            // Seul un numero inconnu (reponse sans organisation, ou
+            // Data_validation_failed) est refuse ; toute autre erreur du
+            // service (quota, maintenance) n'accuse pas le numero.
+            if ($reponse->failed() && ! str_contains($reponse->body(), 'Data_validation_failed')) {
+                return $this->indisponible();
+            }
+
+            $xml = $reponse->body();
+            $valeur = fn (string $balise) => preg_match('/<(?:\w+:)?'.$balise.'>([^<]*)</u', $xml, $m) ? $this->nettoyer(html_entity_decode($m[1])) : '';
+            $nom = $valeur('organisationName');
+
+            if ($nom === '') {
+                return ['statut' => 'invalide', 'registre' => 'UID (Suisse)'];
+            }
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'UID (Suisse)',
+                'nom' => $nom,
+                'adresse' => [
+                    'rue' => trim($valeur('street').' '.$valeur('houseNumber')),
+                    'code_postal' => $valeur('swissZipCode'),
+                    'ville' => $valeur('town'),
+                    'pays' => 'CH',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => [
+                    'dirigeant' => null,
+                    'secteur' => null,
+                    'forme_juridique' => self::FORMES_SUISSES[$valeur('legalForm')] ?? ($valeur('legalForm') ?: null),
+                    // 2 : inscrite ; 3 : radiee (eCH-0097).
+                    'situation' => $valeur('uidregStatusEnterpriseDetail') === '3'
+                        ? ['libelle' => 'Entreprise cessée', 'acceptable' => false]
+                        : ['libelle' => 'Entreprise active', 'acceptable' => true],
+                ],
+            ];
+        } catch (\Throwable) {
+            return $this->indisponible();
+        }
+    }
+
+    /**
+     * Registre norvegien des entites (Bronnoysund), service public sans cle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreNorvegien(array $identifiant): array
+    {
+        try {
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->acceptJson()
+                ->get('https://data.brreg.no/enhetsregisteret/api/enheter/'.$identifiant['national']);
+
+            if ($reponse->status() === 404 || $reponse->status() === 410) {
+                return ['statut' => 'invalide', 'registre' => 'Brønnøysund (Norvège)'];
+            }
+
+            if (! $reponse->ok()) {
+                return $this->indisponible();
+            }
+
+            $e = $reponse->json();
+
+            // Hors du registre de la TVA, le numero n'est pas un numero de TVA.
+            if (! ($e['registrertIMvaregisteret'] ?? false)) {
+                return ['statut' => 'invalide', 'registre' => 'Brønnøysund (Norvège)'];
+            }
+
+            $cessee = ($e['konkurs'] ?? false) || ($e['underAvvikling'] ?? false) || ($e['underTvangsavviklingEllerTvangsopplosning'] ?? false);
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'Brønnøysund (Norvège)',
+                'nom' => $this->nettoyer($e['navn'] ?? ''),
+                'adresse' => [
+                    'rue' => $this->nettoyer(implode(', ', $e['forretningsadresse']['adresse'] ?? [])),
+                    'code_postal' => (string) ($e['forretningsadresse']['postnummer'] ?? ''),
+                    'ville' => $this->casseNom((string) ($e['forretningsadresse']['poststed'] ?? '')),
+                    'pays' => 'NO',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => [
+                    'dirigeant' => null,
+                    'secteur' => $this->secteurDepuisNace($e['naeringskode1']['kode'] ?? null),
+                    'forme_juridique' => $e['organisasjonsform']['kode'] ?? null,
+                    'situation' => $cessee
+                        ? ['libelle' => 'Entreprise cessée', 'acceptable' => false]
+                        : ['libelle' => 'Entreprise active', 'acceptable' => true],
+                ],
+            ];
+        } catch (\Throwable) {
+            return $this->indisponible();
+        }
+    }
+
+    /**
+     * Registre britannique de la TVA (HMRC). Il exige une application
+     * declaree : sans identifiants, seul le format est controle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreBritannique(array $identifiant): array
+    {
+        $client = config('services.hmrc.client_id');
+        $secret = config('services.hmrc.client_secret');
+
+        if (! $client || ! $secret) {
+            return ['statut' => 'non_verifie', 'registre' => 'HMRC (Royaume-Uni)', 'tva' => $identifiant['tva'], 'peppol' => $identifiant['peppol']];
+        }
+
+        $base = rtrim((string) config('services.hmrc.base', 'https://api.service.hmrc.gov.uk'), '/');
+
+        try {
+            $jeton = Cache::remember('hmrc:jeton', now()->addMinutes(200), fn () => Http::asForm()
+                ->timeout(self::DELAI_REGISTRE)
+                ->post($base.'/oauth/token', ['client_id' => $client, 'client_secret' => $secret, 'grant_type' => 'client_credentials'])
+                ->throw()
+                ->json('access_token'));
+
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->withToken($jeton)
+                ->accept('application/vnd.hmrc.2.0+json')
+                ->get($base.'/organisations/vat/check-vat-number/lookup/'.substr((string) $identifiant['tva'], 2));
+
+            if ($reponse->status() === 404) {
+                return ['statut' => 'invalide', 'registre' => 'HMRC (Royaume-Uni)'];
+            }
+
+            if (! $reponse->ok()) {
+                return $this->indisponible();
+            }
+
+            $adresse = $reponse->json('target.address', []);
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'HMRC (Royaume-Uni)',
+                'nom' => $this->nettoyer((string) $reponse->json('target.name', '')),
+                'adresse' => [
+                    'rue' => $this->nettoyer(implode(', ', array_filter([$adresse['line1'] ?? null, $adresse['line2'] ?? null]))),
+                    'code_postal' => (string) ($adresse['postcode'] ?? ''),
+                    'ville' => $this->nettoyer((string) ($adresse['line3'] ?? $adresse['line4'] ?? '')),
+                    'pays' => 'GB',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => null,
+            ];
+        } catch (\Throwable) {
+            Cache::forget('hmrc:jeton');
+
+            return $this->indisponible();
+        }
+    }
+
+    /** Formes juridiques du registre UID (eCH-0097), en francais. */
+    private const FORMES_SUISSES = [
+        '0101' => 'Entreprise individuelle', '0103' => 'Société en nom collectif', '0104' => 'Société en commandite',
+        '0106' => 'SA', '0107' => 'Sàrl', '0108' => 'Société coopérative', '0109' => 'Association', '0110' => 'Fondation',
+        '0111' => 'Succursale étrangère', '0151' => 'Succursale suisse',
+    ];
+
+    /** Categories juridiques INSEE les plus courantes. */
+    private const FORMES_FRANCAISES = [
+        '1000' => 'Entrepreneur individuel', '5410' => 'SARL', '5498' => 'EURL', '5499' => 'SARL',
+        '5599' => 'SA', '5710' => 'SAS', '5720' => 'SASU', '6540' => 'SCI', '9220' => 'Association',
     ];
 
     /**
@@ -192,6 +416,7 @@ class VatController extends Controller
             return [
                 'dirigeant' => $this->premierDirigeant($reponse->json('results.0.dirigeants', [])),
                 'secteur' => $this->secteurDepuisNace($reponse->json('results.0.activite_principale')),
+                'forme_juridique' => self::FORMES_FRANCAISES[(string) $reponse->json('results.0.nature_juridique')] ?? null,
                 'situation' => $etat === null ? null : [
                     'libelle' => $etat === 'A' ? 'Entreprise active' : 'Entreprise cessée',
                     'acceptable' => $etat === 'A',
@@ -265,6 +490,7 @@ class VatController extends Controller
                 'dirigeant' => $this->dirigeantBelge($texte),
                 'secteur' => $this->premierSecteurConnu($codes[1] ?? []),
                 'situation' => $this->situationBelge($texte),
+                'forme_juridique' => preg_match('/Forme l[ée]gale\s*:?\s*([\p{L}\'\- ]{2,80}?)\s*(?:Depuis|Type|Situation|$)/u', $texte, $f) ? $this->nettoyer($f[1]) : null,
             ];
         } catch (\Throwable $e) {
             return null;
@@ -328,11 +554,7 @@ class VatController extends Controller
 
     private function secteurDepuisNace(?string $code): ?string
     {
-        if ($code === null) {
-            return null;
-        }
-
-        return self::SECTEURS_NACE[substr(preg_replace('/\D/', '', $code), 0, 2)] ?? null;
+        return Secteurs::depuisNace($code);
     }
 
     /**
@@ -340,13 +562,8 @@ class VatController extends Controller
      */
     private function premierSecteurConnu(array $divisions): ?string
     {
-        foreach ($divisions as $division) {
-            if (isset(self::SECTEURS_NACE[$division])) {
-                return self::SECTEURS_NACE[$division];
-            }
-        }
-
-        return null;
+        // La BCE liste d'abord l'activite principale.
+        return Secteurs::depuisNace($divisions[0] ?? null);
     }
 
     private function casseNom(string $valeur): string
@@ -375,30 +592,157 @@ class VatController extends Controller
     }
 
     /**
+     * Codes postaux europeens tels que VIES les renvoie : 1000, 75002,
+     * 1012 LG, 110 00, 00-950, 1100-048, L-1234, LV-1050, VLT 1234 (Malte),
+     * D02 X285 (Irlande).
+     */
+    private const CODE_POSTAL = '(?:[A-Z]{1,2}-)?(?:\d{4}\s?[A-Z]{2}(?![A-Z])|\d{3}\s\d{2}(?!\d)|\d{2}-\d{3}(?!\d)|\d{4}-\d{3}(?!\d)|\d{4,6}(?!\d)|[A-Z]{3}\s?\d{4}|[A-Z]\d{2}\s[A-Z0-9]{4})';
+
+    /**
+     * L'adresse de VIES, dans la forme de chaque pays : sur plusieurs
+     * lignes ou une seule, code postal avant ou apres la localite. La ligne
+     * qui porte le code postal donne la localite ; la premiere des autres
+     * lignes est la rue.
+     *
      * @return array{rue: string, code_postal: string, ville: string}
      */
-    private function decomposerAdresse(string $brut): array
-    {
-        $lignes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $brut))));
+    /** « 3RD FLOOR », « 2ÈME ÉTAGE », « UNIT 4 », « SUITE 200 » : pas une rue. */
+    private const ETAGE = '/^(?:(?:\d+\s*(?:ST|ND|RD|TH|E|ÈME|EME|ER)?|GROUND|FIRST|SECOND|THIRD|FOURTH|FIFTH|TOP)\s+(?:FLOOR|ÉTAGE|ETAGE)|(?:FLOOR|UNIT|SUITE|FLAT|APT\.?|APARTMENT)\s+\S+)$/iu';
 
-        if ($lignes === [] || $lignes === ['---']) {
+    /** Type de voie d'une adresse anglaise. */
+    private const VOIE_ANGLAISE = '/\b(?:STREET|ST\.?|ROAD|RD\.?|AVENUE|AVE\.?|LANE|QUAY|PLACE|SQUARE|DRIVE|TERRACE|CRESCENT|PARADE|ROW|WAY|WALK|HILL|GREEN|MALL|BOULEVARD)$/iu';
+
+    private function decomposerAdresse(string $brut, string $pays = ''): array
+    {
+        $lignes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $brut)), fn ($l) => $l !== '' && $l !== '---'));
+
+        if ($lignes === []) {
             return ['rue' => '', 'code_postal' => '', 'ville' => ''];
         }
 
-        $derniere = array_pop($lignes);
-        $codePostal = '';
-        $ville = $derniere;
-
-        if (preg_match('/^([A-Z]{0,2}[\s-]?\d{4,6}(?:\s?[A-Z]{2})?)\s+(.+)$/u', $derniere, $m)) {
-            $codePostal = trim($m[1]);
-            $ville = trim($m[2]);
-        } elseif (preg_match('/^(.+?)\s+([A-Z]{0,2}[\s-]?\d{4,6}(?:\s?[A-Z]{2})?)$/u', $derniere, $m)) {
-            $ville = trim($m[1]);
-            $codePostal = trim($m[2]);
+        // Une seule ligne : les virgules separent rue, quartier et localite.
+        if (count($lignes) === 1 && str_contains($lignes[0], ',')) {
+            $lignes = array_values(array_filter(array_map('trim', explode(',', $lignes[0]))));
         }
 
+        // Roumanie : « LOC. MIOVENI - ORŞ. MIOVENI 115400 STR. UZINEI Nr. 1 »,
+        // localite, code postal puis rue sur une seule ligne.
+        if ($pays === 'RO') {
+            foreach ($lignes as $i => $ligne) {
+                if (preg_match('/^(.*\S)\s+(\d{6})\s+(\S.*)$/u', $ligne, $m)) {
+                    $segments = preg_split('/\s+-\s+|,/u', $m[1]);
+                    array_splice($lignes, $i, 1, [$m[3], $m[2].' '.trim((string) end($segments))]);
+                    break;
+                }
+            }
+        }
+
+        $codePostal = '';
+        $ville = '';
+        $rang = null;
+
+        foreach (array_reverse(array_keys($lignes)) as $i) {
+            $ligne = $lignes[$i];
+
+            // Code postal seul (Estonie, Lettonie) : la localite est le
+            // segment precedent qui n'est ni un comte ni un quartier.
+            if (preg_match('/^('.self::CODE_POSTAL.')$/u', $ligne)) {
+                $codePostal = $ligne;
+
+                for ($j = $i - 1; $j > 0; $j--) {
+                    if (! preg_match('/maakond|linnaosa|vald|novads|apskritis|county/iu', $lignes[$j])) {
+                        [$ville, $rang] = [$lignes[$j], $j];
+                        break;
+                    }
+                }
+
+                $rang ??= $i;
+                break;
+            }
+
+            if (preg_match('/^('.self::CODE_POSTAL.')\s+(\D.*)$/u', $ligne, $m)
+                || preg_match('/^(.*\D)\s+('.self::CODE_POSTAL.')$/u', $ligne, $n)) {
+                [$codePostal, $ville] = isset($m[1]) ? [$m[1], $m[2]] : [$n[2], $n[1]];
+                $rang = $i;
+                break;
+            }
+        }
+
+        // Sans code postal (Roumanie, Irlande sans Eircode) : la localite est
+        // le « municipiul » roumain, sinon le dernier segment.
+        if ($rang === null) {
+            foreach ($lignes as $i => $ligne) {
+                if (preg_match('/^(?:MUNICIPIUL|MUN\.|ORAŞ|ORAS|JUD\.)\s+(.+)$/iu', $ligne, $m)) {
+                    [$ville, $rang] = [$m[1], $i];
+                    break;
+                }
+            }
+
+            if ($rang === null && count($lignes) > 1) {
+                $rang = count($lignes) - 1;
+                $ville = $lignes[$rang];
+            }
+        }
+
+        // La rue : la premiere ligne qui n'est ni la localite, ni un quartier
+        // repetant la localite, ni un secteur administratif, ni un etage.
+        $rue = '';
+        $restantes = [];
+
+        foreach ($lignes as $i => $ligne) {
+            if ($i === $rang || mb_strtolower($ligne) === mb_strtolower($ville) || $ligne === $codePostal
+                || preg_match('/^(?:SECTOR|SECTORUL|обл\.)\s*\S+$/iu', $ligne)
+                || preg_match('/maakond|linnaosa|vald|novads|apskritis/iu', $ligne)
+                || preg_match(self::ETAGE, $ligne)) {
+                continue;
+            }
+
+            $restantes[] = $ligne;
+        }
+
+        // Adresse anglaise (Irlande, Malte, Chypre) : « GORDON HOUSE,
+        // BARROW STREET » garde le nom du batiment devant la rue.
+        foreach (in_array($pays, ['IE', 'MT', 'CY', 'GB'], true) ? $restantes : [] as $k => $ligne) {
+            if ($k > 0 && preg_match(self::VOIE_ANGLAISE, $ligne)) {
+                $restantes = [implode(', ', array_slice($restantes, 0, $k + 1)), ...array_slice($restantes, $k + 1)];
+                break;
+            }
+        }
+
+        foreach ($restantes as $ligne) {
+
+            $rue = $rue === '' ? $ligne : $rue;
+
+            // Rue et numero sur deux segments (« STR. X », « NR. 1 »).
+            if (preg_match('/^(?:NR\.?|NO\.?|N°)\s*\S+$/iu', $ligne) && $rue !== $ligne) {
+                $rue .= ' '.$ligne;
+            }
+        }
+
+        // « ORŞ. MIOVENI », « MUN. PITEŞTI » : le type de localite roumain.
+        $ville = preg_replace('/^(?:LOC\.|LOCALITATEA|ORŞ\.|ORAŞ|ORAS|ORS\.|MUN\.|MUNICIPIUL|COM\.|COMUNA|SAT)\s*/iu', '', $ville);
+
+        // « AT-5330 » : le prefixe du pays n'appartient au code postal
+        // qu'au Luxembourg, en Lettonie et en Lituanie.
+        if (! in_array($pays, ['LU', 'LV', 'LT'], true)) {
+            $codePostal = preg_replace('/^[A-Z]{1,2}-(?=\d)/', '', $codePostal);
+        }
+
+        // « ROMA RM » : le sigle de la province italienne suit la localite.
+        if ($pays === 'IT') {
+            $ville = preg_replace('/\s+[A-Z]{2}$/u', '', $ville);
+        }
+
+        // « 10563 - ΑΘΗΝΑ » (Grece) : le tiret n'appartient pas a la localite.
+        $ville = preg_replace('/^[\s\-–]+|[\s\-–]+$/u', '', $ville);
+
+        // Abreviations bulgares : « гр. » (ville) ou « с. » (village) devant
+        // la localite, « обл. » (region) en fin de rue.
+        $ville = preg_replace('/^(?:гр\.|с\.)\s*/u', '', $ville);
+        $rue = preg_replace('/\s*,?\s*обл\.\s*\S+$/u', '', $rue);
+
         return [
-            'rue' => $this->nettoyer(implode(', ', $lignes)),
+            'rue' => $this->nettoyer($rue),
             'code_postal' => $this->nettoyer($codePostal),
             'ville' => $this->nettoyer($ville),
         ];

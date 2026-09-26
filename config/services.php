@@ -35,6 +35,14 @@ return [
         ],
     ],
 
+    // Verification des numeros de TVA britanniques (HMRC, API « Check a
+    // UK VAT number », application declaree sur developer.service.hmrc.gov.uk).
+    'hmrc' => [
+        'client_id' => env('HMRC_CLIENT_ID'),
+        'client_secret' => env('HMRC_CLIENT_SECRET'),
+        'base' => env('HMRC_API_BASE', 'https://api.service.hmrc.gov.uk'),
+    ],
+
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),

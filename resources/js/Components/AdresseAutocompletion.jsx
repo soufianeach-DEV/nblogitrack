@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
+import ListeRecherche from '@/Components/ListeRecherche';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
@@ -644,11 +645,14 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
-                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysVerrouille} className={selectCls}>
-                        {PAYS.map((p) => (
-                            <option key={p.code} value={p.code}>{p.nom}</option>
-                        ))}
-                    </select>
+                    <ListeRecherche
+                        value={pays}
+                        onChange={(code) => code && changerPays(code)}
+                        disabled={paysVerrouille}
+                        options={PAYS.map((p) => ({ valeur: p.code, libelle: p.nom }))}
+                        aria-label={t('auth.pays', 'Pays')}
+                        className={selectCls}
+                    />
                 </div>
                 <div>
                     <span className={sousLabel}>{t('adresse.ville', 'Ville')} <span className="text-status-incident">*</span></span>

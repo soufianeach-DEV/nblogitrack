@@ -104,6 +104,8 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::middleware('can:handle-quotes')->group(function () {
             Route::get('/demandes-de-devis', [QuoteController::class, 'index'])->name('quotes.index');
             Route::patch('/demandes-de-devis/{quoteRequest}/statut', [QuoteController::class, 'updateStatus'])->name('quotes.status');
+            Route::get('/demandes-de-devis/{quoteRequest}/pieces/{rang}', [QuoteController::class, 'piece'])->whereNumber('rang')->name('quotes.piece');
+            Route::post('/demandes-de-devis/{quoteRequest}/commande', [QuoteController::class, 'commander'])->name('quotes.order');
         });
 
         Route::middleware('can:drive')->group(function () {

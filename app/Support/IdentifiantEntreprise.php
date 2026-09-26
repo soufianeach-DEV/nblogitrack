@@ -19,6 +19,37 @@ class IdentifiantEntreprise
     private const SANS_PREFIXE = ['BE', 'DK', 'NO', 'SE'];
 
     /**
+     * Format de chaque numero, prefixe compris (formats publies par la
+     * Commission pour VIES ; Suisse, Royaume-Uni et Norvege par leurs
+     * registres). Une faute de frappe se voit avant tout appel.
+     */
+    public const FORMATS = [
+        'AT' => '/^ATU\d{8}$/', 'BE' => '/^BE[01]\d{9}$/', 'BG' => '/^BG\d{9,10}$/',
+        'CY' => '/^CY\d{8}[A-Z]$/', 'CZ' => '/^CZ\d{8,10}$/', 'DE' => '/^DE\d{9}$/',
+        'DK' => '/^DK\d{8}$/', 'EE' => '/^EE\d{9}$/', 'EL' => '/^EL\d{9}$/',
+        'ES' => '/^ES[A-Z0-9]\d{7}[A-Z0-9]$/', 'FI' => '/^FI\d{8}$/', 'FR' => '/^FR[0-9A-Z]{2}\d{9}$/',
+        'HR' => '/^HR\d{11}$/', 'HU' => '/^HU\d{8}$/', 'IE' => '/^IE(\d{7}[A-W][A-I]?|\d[A-Z+*]\d{5}[A-W])$/',
+        'IT' => '/^IT\d{11}$/', 'LT' => '/^LT(\d{9}|\d{12})$/', 'LU' => '/^LU\d{8}$/',
+        'LV' => '/^LV\d{11}$/', 'MT' => '/^MT\d{8}$/', 'NL' => '/^NL\d{9}B\d{2}$/',
+        'PL' => '/^PL\d{10}$/', 'PT' => '/^PT\d{9}$/', 'RO' => '/^RO\d{2,10}$/',
+        'SE' => '/^SE\d{10}01$/', 'SI' => '/^SI\d{8}$/', 'SK' => '/^SK\d{10}$/',
+        'XI' => '/^XI(\d{9}|\d{12}|GD\d{3}|HA\d{3})$/',
+        'CH' => '/^CHE\d{9}$/', 'GB' => '/^GB(\d{9}|\d{12}|GD\d{3}|HA\d{3})$/', 'NO' => '/^NO\d{9}(MVA)?$/',
+    ];
+
+    /** Exemple affiche quand le format ne correspond pas. */
+    public const EXEMPLES = [
+        'AT' => 'ATU12345678', 'BE' => 'BE0123456749', 'BG' => 'BG123456789', 'CY' => 'CY12345678L',
+        'CZ' => 'CZ12345678', 'DE' => 'DE123456789', 'DK' => 'DK12345678', 'EE' => 'EE123456789',
+        'EL' => 'EL123456789', 'ES' => 'ESB12345678', 'FI' => 'FI12345678', 'FR' => 'FR40303265045',
+        'HR' => 'HR12345678901', 'HU' => 'HU12345678', 'IE' => 'IE1234567T', 'IT' => 'IT12345678901',
+        'LT' => 'LT123456789', 'LU' => 'LU12345678', 'LV' => 'LV12345678901', 'MT' => 'MT12345678',
+        'NL' => 'NL123456789B01', 'PL' => 'PL1234567890', 'PT' => 'PT123456789', 'RO' => 'RO1234567',
+        'SE' => 'SE123456789001', 'SI' => 'SI12345678', 'SK' => 'SK1234567890', 'XI' => 'XI123456789',
+        'CH' => 'CHE-123.456.788', 'GB' => 'GB123456789', 'NO' => 'NO923609016MVA',
+    ];
+
+    /**
      * @return array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}
      */
     public static function analyser(string $saisie): array
@@ -45,6 +76,18 @@ class IdentifiantEntreprise
         }
 
         [$prefixe, $numero] = [$m[1], $m[2]];
+
+        // Suisse : CHE-123.456.789 (MWST, TVA, IVA). Norvege : 9 chiffres,
+        // suivis de MVA s'ils sont inscrits a la TVA.
+        if ($prefixe === 'CH') {
+            $chiffres = preg_replace('/\D/', '', $numero);
+
+            return ['pays' => 'CH', 'tva' => 'CHE'.$chiffres, 'national' => $chiffres, 'peppol' => '9927:CHE'.$chiffres];
+        }
+
+        if ($prefixe === 'NO' && preg_match('/^(\d{9})(MVA)?$/', $numero, $n)) {
+            return ['pays' => 'NO', 'tva' => 'NO'.$n[1].'MVA', 'national' => $n[1], 'peppol' => '0192:'.$n[1]];
+        }
         $pays = self::PREFIXES_PARTICULIERS[$prefixe] ?? $prefixe;
         $schema = self::SCHEMAS[$prefixe] ?? null;
 
@@ -84,12 +127,61 @@ class IdentifiantEntreprise
     public static function controleLocal(string $saisie): bool
     {
         $identifiant = self::analyser($saisie);
+        $tva = (string) $identifiant['tva'];
+        $prefixe = substr($tva, 0, 2);
+        $format = self::FORMATS[$prefixe] ?? null;
 
-        if ($identifiant['pays'] !== 'BE') {
-            return true;
+        // Prefixe inconnu (hors Europe) : a l'appreciation du registre.
+        if ($format !== null && ! preg_match($format, $tva)) {
+            return false;
         }
 
-        return self::numeroBelgeValide(substr((string) $identifiant['tva'], 2));
+        return match ($identifiant['pays']) {
+            'BE' => self::numeroBelgeValide(substr($tva, 2)),
+            'FR' => self::cleFrancaiseValide($tva),
+            'CH', 'NO' => self::moduloOnze((string) $identifiant['national'], $identifiant['pays'] === 'CH' ? [5, 4, 3, 2, 7, 6, 5, 4] : [3, 2, 7, 6, 5, 4, 3, 2]),
+            default => true,
+        };
+    }
+
+    /** Exemple de numero pour le pays du prefixe saisi. */
+    public static function exemple(string $saisie): ?string
+    {
+        $valeur = preg_replace('/[^0-9A-Z]/', '', strtoupper($saisie));
+
+        return self::EXEMPLES[substr($valeur, 0, 2)] ?? null;
+    }
+
+    /** Cle francaise : (12 + 3 x (SIREN mod 97)) mod 97, si elle est numerique. */
+    private static function cleFrancaiseValide(string $tva): bool
+    {
+        $cle = substr($tva, 2, 2);
+
+        return ! ctype_digit($cle) || self::tvaFrancaise(substr($tva, 4, 9)) === $tva;
+    }
+
+    /**
+     * Cle de controle modulo 11 des numeros suisse (UID) et norvegien
+     * (organisasjonsnummer) : le dernier chiffre.
+     *
+     * @param  list<int>  $poids
+     */
+    private static function moduloOnze(string $numero, array $poids): bool
+    {
+        if (! preg_match('/^\d{9}$/', $numero)) {
+            return false;
+        }
+
+        $somme = 0;
+
+        foreach ($poids as $i => $p) {
+            $somme += (int) $numero[$i] * $p;
+        }
+
+        $cle = 11 - $somme % 11;
+        $cle = $cle === 11 ? 0 : $cle;
+
+        return $cle !== 10 && $cle === (int) $numero[8];
     }
 
     public static function numeroBelgeValide(string $numero): bool

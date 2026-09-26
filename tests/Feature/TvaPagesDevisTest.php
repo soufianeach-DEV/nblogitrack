@@ -24,6 +24,15 @@ class TvaPagesDevisTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Aucun registre reel n'est interroge : un appel non simule echoue,
+        // comme un registre en panne.
+        Http::preventStrayRequests();
+    }
+
     /** @return array<string, mixed> */
     private function inscription(array $remplace = []): array
     {
@@ -34,7 +43,7 @@ class TvaPagesDevisTest extends TestCase
             'postal_code' => '1050',
             'city' => 'Bruxelles',
             'country' => 'Belgique',
-            'business_sector' => 'Transport',
+            'business_sector' => 'Transport routier et ferroviaire',
             'first_name' => 'Soufiane',
             'last_name' => 'Achraa',
             'phone' => '+32 470 00 00 00',
@@ -77,10 +86,15 @@ class TvaPagesDevisTest extends TestCase
         }
     }
 
-    public function test_les_autres_pays_ne_sont_pas_controles_sur_place(): void
+    public function test_chaque_pays_europeen_a_son_format_et_sa_cle(): void
     {
-        foreach (['FR12345678901', 'NL123456789B01', 'DE123456789', '123456789'] as $numero) {
+        foreach (['FR40303265045', 'NL123456789B01', 'DE123456789', '123456789', 'ATU12345678', 'CHE-116.281.710 MWST', 'NO923609016MVA', 'GB123456789', 'US123'] as $numero) {
             $this->assertTrue(IdentifiantEntreprise::controleLocal($numero), $numero);
+        }
+
+        // Cle francaise fausse, chiffre en trop, cle suisse et norvegienne fausses.
+        foreach (['FR12345678901', 'DE1234567890', 'ATU1234567', 'CHE-116.281.711', 'NO923609017', 'NL123456789'] as $numero) {
+            $this->assertFalse(IdentifiantEntreprise::controleLocal($numero), $numero);
         }
     }
 
@@ -178,8 +192,8 @@ class TvaPagesDevisTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Devis/Index')
                 ->where('demandes.data.0.customer_type', 'Nouvelle entreprise')
-                ->where('libelles.Nouvelle entreprise', 'Nieuwe onderneming')
-                ->where('libelles.Client régulier / entreprise', 'Vaste klant / onderneming')
+                ->where('libelles.Nouvelle entreprise', 'Eerste aanvraag: ik ben nog geen klant')
+                ->where('libelles.Client régulier / entreprise', 'Ik ben al klant bij NBLogiTrack')
                 ->where('libelles.National (Belgique)', 'Nationaal (België)')
                 ->where('libelles.Import vers la Belgique', 'Import naar België')
                 ->where('libelles.Transport ponctuel', 'Eenmalig transport')
@@ -267,6 +281,8 @@ class TvaPagesDevisTest extends TestCase
         $this->post(route('devis.store'), [
             'company_name' => 'Essai SRL', 'contact_name' => 'Nadia Peeters', 'email' => 'nadia@exemple.be',
             'phone' => '+32 470 00 00 00', 'customer_type' => 'Nouvelle entreprise',
+            'legal_form' => 'SRL', 'sector' => 'Commerce de gros',
+            'billing_street' => 'Rue Neuve 43', 'billing_postal_code' => '1000', 'billing_city' => 'Bruxelles', 'billing_country' => 'BE',
             'pickup_address' => 'Rue Nationale 1, 59000 Lille, France', 'pickup_country' => 'FR',
             'pickup_lat' => 50.6292, 'pickup_lng' => 3.0573,
             'delivery_address' => 'Meir 50, 2000 Anvers, Belgique', 'delivery_country' => 'BE',
@@ -277,6 +293,7 @@ class TvaPagesDevisTest extends TestCase
             'frequency' => 'Transport ponctuel', 'date_flexibility' => 'Flexible',
             'goods_type' => TransportOrder::MARCHANDISES[0], 'vehicle_type' => 'Porteur',
             'insurance_value' => 'Plus de 50 000 €', 'weight' => 1000,
+            'correspondence_language' => 'fr', 'preferred_channel' => 'email', 'privacy' => true,
         ])->assertSessionHasNoErrors();
 
         $devis = QuoteRequest::firstOrFail();

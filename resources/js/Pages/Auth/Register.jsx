@@ -1,5 +1,7 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ChampRecherche from '@/Components/ChampRecherche';
 import ChampMotDePasse from '@/Components/ChampMotDePasse';
+import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -116,17 +118,7 @@ export default function Register({ secteurs, fonctions }) {
     const liste = (nom, libelle, valeurs, exemple, options = {}) => (
         <div className={options.large ? 'sm:col-span-2' : ''}>
             {etiquette(nom, libelle, true)}
-            <input
-                id={nom}
-                list={nom + '-liste'}
-                value={data[nom]}
-                placeholder={exemple}
-                onChange={(e) => setData(nom, e.target.value)}
-                className={selectCls}
-            />
-            <datalist id={nom + '-liste'}>
-                {valeurs.map((v) => <option key={v} value={v} />)}
-            </datalist>
+            <ChampRecherche id={nom} value={data[nom]} onChange={(v) => setData(nom, v)} suggestions={valeurs} local placeholder={exemple} className={selectCls} />
             <InputError message={errors[nom]} className="mt-1" />
         </div>
     );
@@ -191,7 +183,11 @@ export default function Register({ secteurs, fonctions }) {
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                             {champ('company_name', t('auth.raison_sociale', 'Raison sociale'), { large: true, exemple: t('auth.raison_sociale_ex', 'ex. Transports Dupont SA') })}
-                            {liste('business_sector', t('auth.secteur', 'Secteur d\'activité'), secteurs, t('auth.secteur_ex', 'ex. Construction'), { large: true })}
+                            <div className="sm:col-span-2">
+                                {etiquette('business_sector', t('auth.secteur', 'Secteur d\'activité'))}
+                                <ListeSecteurs id="business_sector" value={data.business_sector} onChange={(v) => setData('business_sector', v)} groupes={secteurs} className={selectCls} />
+                                <InputError message={errors.business_sector} className="mt-1" />
+                            </div>
                         </div>
 
                         <div className="mt-3">
