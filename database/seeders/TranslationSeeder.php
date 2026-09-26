@@ -1615,9 +1615,9 @@ class TranslationSeeder extends Seeder
                 'Director taken from the national register, please check it.',
             ],
             'non_publie' => [
-                'Le registre de ce pays ne publie pas : :champs. À compléter ci-dessous si besoin.',
-                'Het register van dit land publiceert niet: :champs. Hieronder aan te vullen indien nodig.',
-                'This country\'s register does not publish: :champs. To be filled in below if needed.',
+                'Numéro valide, mais le registre de ce pays ne publie pas : :champs. Merci de les compléter ci-dessous.',
+                'Geldig nummer, maar het register van dit land publiceert niet: :champs. Vul ze hieronder aan.',
+                'Valid number, but this country\'s register does not publish: :champs. Please fill them in below.',
             ],
             'forme_deduite' => [
                 'Forme juridique lue dans le nom de la société, vérifiez-la.',

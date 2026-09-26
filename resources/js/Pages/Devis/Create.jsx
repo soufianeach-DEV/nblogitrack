@@ -547,8 +547,8 @@ export default function Create({ choix, listes }) {
                             </p>
                         )}
                         {vies?.statut === 'valide' && vies.non_publie?.length > 0 && (
-                            <p className="mt-1 text-xs text-slate-600">
-                                {t('devis.non_publie', 'Le registre de ce pays ne publie pas : :champs. À compléter ci-dessous si besoin.', {
+                            <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                {t('devis.non_publie', 'Numéro valide, mais le registre de ce pays ne publie pas : :champs. Merci de les compléter ci-dessous.', {
                                     champs: vies.non_publie.map((c) => ({
                                         nom: t('devis.societe', 'Société'),
                                         adresse: t('devis.adresse_facturation', 'Adresse de facturation'),
