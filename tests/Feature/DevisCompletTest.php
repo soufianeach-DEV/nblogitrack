@@ -209,9 +209,10 @@ class DevisCompletTest extends TestCase
 
         $this->getJson('/verification-tva?tva=BG131468980')
             ->assertJsonPath('statut', 'valide')
-            ->assertJsonPath('adresse.rue', 'ул. КУКУШ №1')
+            ->assertJsonPath('nom', 'A1 Balgaria - EAD (А1 България - ЕАД)')
+            ->assertJsonPath('adresse.rue', 'ul. KUKUSH №1')
             ->assertJsonPath('adresse.code_postal', '1309')
-            ->assertJsonPath('adresse.ville', 'СОФИЯ')
+            ->assertJsonPath('adresse.ville', 'SOFIA')
             ->assertJsonPath('adresse.pays', 'BG');
     }
 }
