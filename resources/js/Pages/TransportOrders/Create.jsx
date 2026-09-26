@@ -164,6 +164,7 @@ export default function Create({ tariffGrids, pricing }) {
                     <AdresseAutocompletion
                         label={t('commande.adresse_depart', 'Adresse de départ')}
                         required
+                        pays="BE"
                         onChange={(v) => setData({ ...data, pickup_address: v, pickup_lat: '', pickup_lng: '' })}
                         onSelect={({ address, lat, lng }) => setData({ ...data, pickup_address: address, pickup_lat: lat, pickup_lng: lng })}
                         error={(soumis && manque.pickup) || errors.pickup_address || errors.pickup_lat}

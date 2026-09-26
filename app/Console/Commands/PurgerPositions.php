@@ -17,9 +17,15 @@ class PurgerPositions extends Command
         $jours = max(0, (int) $this->option('jours'));
         $limite = now()->subDays($jours);
 
-        $livrees = TransportOrder::where('status', 'DELIVERED')
-            ->whereNotNull('actual_delivery_date')
-            ->where('actual_delivery_date', '<=', $limite)
+        // Une expedition annulee en cours de route a aussi des positions :
+        // elles suivent la meme duree que celles d'une livraison, sinon
+        // elles restaient indefiniment.
+        $livrees = TransportOrder::where(fn ($q) => $q
+            ->where(fn ($l) => $l->where('status', 'DELIVERED')
+                ->whereNotNull('actual_delivery_date')
+                ->where('actual_delivery_date', '<=', $limite))
+            ->orWhere(fn ($a) => $a->where('status', 'CANCELLED')
+                ->where('updated_at', '<=', $limite)))
             ->pluck('id');
 
         $requete = ShipmentPosition::where('type', ShipmentPosition::ROUTE)

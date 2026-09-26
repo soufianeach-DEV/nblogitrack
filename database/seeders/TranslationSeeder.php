@@ -149,13 +149,13 @@ class TranslationSeeder extends Seeder
                 'Groepage op de vaste assen, voor niet-dringende zendingen.',
                 'Groupage on regular routes, for non-urgent shipments.',
             ],
-            'tarif_standard' => ['Standard — 3 jours', 'Standaard — 3 dagen', 'Standard — 3 days'],
+            'tarif_standard' => ['Standard — dès 3 jours', 'Standaard — vanaf 3 dagen', 'Standard — from 3 days'],
             'tarif_standard_texte' => [
                 'Le meilleur rapport entre délai et coût pour un envoi courant.',
                 'De beste verhouding tussen termijn en kost voor een gewone zending.',
                 'The best balance of time and cost for an everyday shipment.',
             ],
-            'tarif_express' => ['Express — 48 heures', 'Express — 48 uur', 'Express — 48 hours'],
+            'tarif_express' => ['Express — dès 24 heures', 'Express — vanaf 24 uur', 'Express — from 24 hours'],
             'tarif_express_texte' => [
                 'Transport dédié, facturé au coût de revient réel plus marge.',
                 'Toegewijd transport, gefactureerd aan de werkelijke kostprijs plus marge.',
@@ -621,6 +621,8 @@ class TranslationSeeder extends Seeder
                 'Geen bijzondere instructies.',
                 'No special instructions.',
             ],
+            'recherche_active' => ['Recherche : « :terme »', 'Zoekopdracht: « :terme »', 'Search: “:terme”'],
+            'effacer_recherche' => ['Effacer', 'Wissen', 'Clear'],
         ],
 
         'planif' => [
@@ -2338,6 +2340,7 @@ class TranslationSeeder extends Seeder
             'autoliquidation' => ['Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).', 'Verlegging van heffing — btw verschuldigd door de medecontractant (art. 21, §2 van het Btw-wetboek; art. 44 van richtlijn 2006/112/EG).', 'Reverse charge — VAT payable by the customer (art. 21, §2 of the Belgian VAT Code; art. 44 of Directive 2006/112/EC).'],
             'conditions' => ['Paiement au comptant sauf convention contraire. À défaut de paiement à l\'échéance, intérêts de retard conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.', 'Contante betaling tenzij anders overeengekomen. Bij niet-betaling op de vervaldag zijn verwijlintresten verschuldigd overeenkomstig de wet van 2 augustus 2002 betreffende de bestrijding van de betalingsachterstand bij handelstransacties.', 'Payment in cash unless otherwise agreed. If not paid by the due date, late-payment interest is charged under the Belgian Act of 2 August 2002 on combating late payment in commercial transactions.'],
             'indemnite_annulation' => ['Indemnité d\'annulation :numero', 'Annuleringsvergoeding :numero', 'Cancellation fee :numero'],
+            'hors_champ' => ['Prestation hors du champ de la TVA belge — preneur établi hors de l\'Union européenne (art. 21, §2 du Code de la TVA).', 'Dienst buiten het toepassingsgebied van de Belgische btw — afnemer gevestigd buiten de Europese Unie (art. 21, §2 van het Btw-wetboek).', 'Service outside the scope of Belgian VAT — customer established outside the European Union (art. 21, §2 of the Belgian VAT Code).'],
         ],
         'adresse' => [
             'ville' => ['Ville', 'Gemeente', 'City'],
@@ -2513,6 +2516,8 @@ class TranslationSeeder extends Seeder
             'lien_deja_envoye' => ['Un lien vient déjà de partir vers cette adresse. Réessayez dans une minute.', 'Er is net al een link naar dit adres vertrokken. Probeer het over een minuut opnieuw.', 'A link was just sent to this address. Please try again in a minute.'],
             'inscription_refusee' => ['Votre demande d\'inscription n\'a pas été retenue. Le motif vous a été envoyé par e-mail.', 'Uw registratieaanvraag werd niet aanvaard. De reden werd u per e-mail bezorgd.', 'Your registration request was not accepted. The reason was sent to you by email.'],
             'acces_refuse' => ['Vous n\'avez pas accès à cet écran.', 'U hebt geen toegang tot dit scherm.', 'You do not have access to this screen.'],
+            'paiement_en_ligne_indisponible' => ['Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.', 'Online betalen is tijdelijk niet mogelijk. Betaal via overschrijving met de gestructureerde mededeling.', 'Online payment is temporarily unavailable. Please pay by bank transfer using the structured reference.'],
+            'planif_controle_technique' => ['Le contrôle technique de ce véhicule expire le :date, avant la fin de la mission.', 'De technische keuring van dit voertuig vervalt op :date, vóór het einde van de opdracht.', 'This vehicle\'s roadworthiness test expires on :date, before the end of the job.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2528,6 +2533,10 @@ class TranslationSeeder extends Seeder
             'montant_change' => ['Un véhicule vient d\'être affecté à cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', 'Er werd net een voertuig aan deze zending toegewezen: annuleren kost nu :montant excl. btw. Controleer het bedrag en bevestig opnieuw.', 'A vehicle has just been assigned to this shipment: cancelling now costs :montant excl. VAT. Check the amount and confirm again.'],
             'faite_payante' => ['Expédition annulée. L\'indemnité de :montant HT figurera sur votre prochaine facture.', 'Zending geannuleerd. De vergoeding van :montant excl. btw komt op uw volgende factuur.', 'Shipment cancelled. The :montant excl. VAT fee will appear on your next invoice.'],
             'faite_gratuite' => ['Expédition annulée, sans frais.', 'Zending kosteloos geannuleerd.', 'Shipment cancelled, free of charge.'],
+        ],
+        'grille' => [
+            'national' => ['National (BE)', 'Nationaal (BE)', 'Domestic (BE)'],
+            'export' => ['Export :pays', 'Export :pays', 'Export :pays'],
         ],
     ];
 }

@@ -1,3 +1,4 @@
+import MenuVitrineMobile from '@/Components/MenuVitrineMobile';
 import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
@@ -12,7 +13,7 @@ export default function VitrineLayout({ children }) {
 
     return (
         <div className="flex min-h-screen flex-col bg-surface">
-            <header className="border-b border-slate-200 bg-white">
+            <header className="relative border-b border-slate-200 bg-white">
                 <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-3 sm:px-6">
                     <Link href={route('accueil')} className="shrink-0">
                         <img src="/images/logo-marine.png" alt="NBLogiTrack" className="h-12 w-auto sm:h-14" />
@@ -26,6 +27,7 @@ export default function VitrineLayout({ children }) {
 
                     <div className="ml-auto flex items-center gap-3">
                         <ChoixLangue />
+                        <MenuVitrineMobile />
 
                         {utilisateur ? (
                             <Link

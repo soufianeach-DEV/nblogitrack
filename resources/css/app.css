@@ -116,3 +116,12 @@
     from { transform: scale(1); }
     to { transform: scale(1.12); }
 }
+
+/*
+ * Un libelle reserve aux lecteurs d'ecran (.sr-only) est positionne en
+ * absolu : dans un tableau defilant, il se calait sur la page entiere et
+ * l'elargissait sur mobile. Le conteneur defilant le retient.
+ */
+.overflow-x-auto {
+    position: relative;
+}

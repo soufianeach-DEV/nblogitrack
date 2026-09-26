@@ -45,9 +45,14 @@ class AppServiceProvider extends ServiceProvider
                 ]);
         });
 
-        RateLimiter::for('suivi', fn (Request $r) => $r->user()
-            ? Limit::perMinute(120)->by('u'.$r->user()->id)
-            : Limit::perMinute(10)->by($r->ip()));
+        // Seule une recherche (numero + code) compte : ouvrir la page ou y
+        // revenir n'use pas le quota qui protege les codes contre la force
+        // brute.
+        RateLimiter::for('suivi', fn (Request $r) => match (true) {
+            $r->user() !== null => Limit::perMinute(120)->by('u'.$r->user()->id),
+            ! $r->filled('code') => Limit::none(),
+            default => Limit::perMinute(10)->by($r->ip()),
+        });
 
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));
 

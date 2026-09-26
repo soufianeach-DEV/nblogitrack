@@ -166,6 +166,10 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Une adresse tapee en majuscules est la meme adresse : on la range
+        // en minuscules plutot que de la refuser.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
             'vat_number' => ['required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/'],
@@ -178,7 +182,7 @@ class RegisteredUserController extends Controller
             'last_name' => 'required|string|max:100',
             'position' => 'nullable|string|max:100',
             'phone' => 'required|string|max:20',
-            'email' => 'required|string|lowercase|email|max:150|unique:'.User::class,
+            'email' => 'required|string|email|max:150|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
@@ -227,6 +231,8 @@ class RegisteredUserController extends Controller
                 'phone' => $data['phone'],
                 'password' => Hash::make($data['password']),
                 'role' => 'CLIENT',
+                // La langue de l'inscription devient celle de ses courriels.
+                'locale' => app()->getLocale(),
                 'is_active' => true,
             ]);
 

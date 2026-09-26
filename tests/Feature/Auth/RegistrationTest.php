@@ -113,4 +113,24 @@ class RegistrationTest extends TestCase
 
         $this->assertDatabaseMissing('users', ['email' => 'contact@transports-essai.be']);
     }
+
+    public function test_la_langue_de_l_inscription_devient_celle_des_courriels(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register', ['langue' => 'nl']), $this->formulaire())
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('nl', User::where('email', 'contact@transports-essai.be')->value('locale'));
+    }
+
+    public function test_une_adresse_en_majuscules_est_rangee_en_minuscules(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register'), $this->formulaire(['email' => 'Contact@Transports-Essai.BE']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull(User::where('email', 'contact@transports-essai.be')->first());
+    }
 }

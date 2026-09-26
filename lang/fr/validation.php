@@ -110,7 +110,7 @@ return [
 
     'starts_with' => 'Le champ :attribute doit commencer par : :values.',
     'string' => 'Le champ :attribute doit être du texte.',
-    'unique' => 'Cette valeur de :attribute est déjà utilisée.',
+    'unique' => 'Cette valeur est déjà utilisée pour le champ :attribute.',
     'uploaded' => 'Le téléversement du fichier :attribute a échoué.',
     'url' => 'Le champ :attribute doit être une adresse web valide.',
 

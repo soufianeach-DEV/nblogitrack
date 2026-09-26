@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\ClientContact;
 use App\Models\Invoice;
 use App\Models\TransportOrder;
 use App\Support\Traductions;
@@ -34,6 +35,19 @@ class ProfileController extends Controller
         }
 
         $request->user()->save();
+
+        // Les factures partent au contact principal de l'entreprise. Pour
+        // le compte client, ce contact, c'est lui : son adresse et son nom
+        // suivent, sinon les factures continuaient vers l'ancienne adresse.
+        if ($request->user()->isClient()) {
+            ClientContact::where('client_id', $request->user()->id)
+                ->where('is_primary', true)
+                ->update([
+                    'email' => $request->user()->email,
+                    'first_name' => $request->user()->first_name,
+                    'last_name' => $request->user()->last_name,
+                ]);
+        }
 
         return Redirect::route('profile.edit');
     }

@@ -175,7 +175,11 @@
             </table>
         </div>
 
-        @if ($facture->reverse_charge)
+        @if ($facture->reverse_charge && $pays::horsUnion($facture->client->country))
+            <p class="mention">
+                {{ $t::t('pdf.hors_champ', 'Prestation hors du champ de la TVA belge — preneur établi hors de l\'Union européenne (art. 21, §2 du Code de la TVA).') }}
+            </p>
+        @elseif ($facture->reverse_charge)
             <p class="mention">
                 {{ $t::t('pdf.autoliquidation', 'Autoliquidation — TVA due par le preneur (art. 21, §2 du Code de la TVA ; art. 44 de la directive 2006/112/CE).') }}
             </p>

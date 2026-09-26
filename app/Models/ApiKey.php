@@ -86,6 +86,18 @@ class ApiKey extends Model
             return 'permission_absente';
         }
 
+        // Une entreprise refusee, desactivee ou pas encore validee ne se
+        // connecte pas a l'application : elle ne passe pas davantage par
+        // l'API avec une cle obtenue plus tot.
+        if ($this->client_id !== null) {
+            $client = $this->client;
+            $compte = User::find($this->client_id);
+
+            if ($client === null || ! $client->is_validated || ! $compte?->is_active) {
+                return 'entreprise_inactive';
+            }
+        }
+
         return null;
     }
 

@@ -621,6 +621,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
 function SuiviVisiteur({ order, searched }) {
     const t = useTraduction();
+    const locale = useLocale();
     const { data, setData, get, processing } = useForm({ tracking_number: '', code: '' });
 
     const chercher = (e) => {
@@ -708,7 +709,9 @@ function SuiviVisiteur({ order, searched }) {
                                 <dl className="space-y-3 text-sm">
                                     <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{order.pickup_address}</dd></div>
                                     <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{order.delivery_address}</dd></div>
-                                    <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date?.slice(0, 10) ?? '—'}</dd></div>
+                                    <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date
+                                        ? new Date(order.requested_delivery_date).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                        : '—'}</dd></div>
                                 </dl>
                             </div>
                         </div>

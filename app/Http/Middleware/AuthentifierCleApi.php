@@ -27,7 +27,7 @@ class AuthentifierCleApi
         }
 
         if ($motif = $cle->empechement($request->ip(), $permission)) {
-            $code = $motif === 'permission_absente' || $motif === 'adresse_refusee' ? 403 : 401;
+            $code = in_array($motif, ['permission_absente', 'adresse_refusee', 'entreprise_inactive'], true) ? 403 : 401;
 
             return $this->refuser($request, $cle, $motif, $code, $depart);
         }

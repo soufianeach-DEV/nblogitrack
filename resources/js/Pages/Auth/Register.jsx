@@ -15,7 +15,7 @@ export default function Register({ secteurs, fonctions }) {
     const t = useTraduction();
 
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         company_name: '', vat_number: '', billing_address: '', postal_code: '',
         city: '', country: '', business_sector: '',
         first_name: '', last_name: '', position: '', phone: '',
@@ -49,6 +49,9 @@ export default function Register({ secteurs, fonctions }) {
             setVies(resultat);
 
             if (resultat.statut === 'valide') {
+                // Le numero est confirme : l'erreur d'un envoi precedent
+                // (« numero de TVA obligatoire ») n'a plus lieu d'etre.
+                clearErrors('vat_number', 'company_name', 'billing_address');
                 setAdresseManuelle(false);
                 const d = resultat.entreprise?.dirigeant;
 

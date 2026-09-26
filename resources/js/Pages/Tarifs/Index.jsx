@@ -2,11 +2,14 @@ import Icone from '@/Components/Icone';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [minuteur, setMinuteur] = useState(null);
+    // Une reponse qui arrive apres que le champ a perdu le focus ne doit
+    // pas rouvrir la liste par-dessus le reste du formulaire.
+    const actif = useRef(false);
 
     const saisir = (texte) => {
         onChange(texte);
@@ -21,7 +24,7 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
         setMinuteur(setTimeout(() => {
             fetch(route('geo.villes', { pays, q: texte.trim() }), { headers: { Accept: 'application/json' } })
                 .then((r) => (r.ok ? r.json() : []))
-                .then((villes) => setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []))
+                .then((villes) => actif.current && setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []))
                 .catch(() => setSuggestions([]));
         }, 200));
     };
@@ -32,7 +35,12 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
                 id={id}
                 value={valeur}
                 onChange={(e) => saisir(e.target.value)}
-                onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+                onFocus={() => { actif.current = true; }}
+                onBlur={() => {
+                    actif.current = false;
+                    clearTimeout(minuteur);
+                    setTimeout(() => setSuggestions([]), 150);
+                }}
                 placeholder={placeholder}
                 autoComplete="off"
                 className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"

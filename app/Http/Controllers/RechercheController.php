@@ -73,6 +73,7 @@ class RechercheController extends Controller
             ->when($client !== null, fn ($q) => $q->where('client_id', $client))
             ->where(fn ($q) => $q
                 ->where('tracking_number', 'ilike', $filtre)
+                ->orWhere('pickup_address', 'ilike', $filtre)
                 ->orWhere('delivery_address', 'ilike', $filtre))
             ->orderByDesc('id')
             ->limit(self::MAXIMUM)

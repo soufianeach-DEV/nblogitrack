@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const rechercher = (terme) => {
         estAdmin
             ? router.get(route('clients.index'), { etat: 'tout', q: terme })
-            : router.get(route('transport-orders.index'), { tracking: terme });
+            : router.get(route('transport-orders.index'), { q: terme });
     };
 
     const marque = (

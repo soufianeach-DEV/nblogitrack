@@ -79,8 +79,8 @@ class TarifController extends Controller
             ->all();
 
         return response()->json([
-            'depart' => $depart->ville,
-            'arrivee' => $arrivee->ville,
+            'depart' => Traductions::vocabulaire('ville', $depart->ville),
+            'arrivee' => Traductions::vocabulaire('ville', $arrivee->ville),
             'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
             'distance' => (int) round($km),
             'poids' => (float) $donnees['poids'],

@@ -1,3 +1,4 @@
+import MenuVitrineMobile from '@/Components/MenuVitrineMobile';
 import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
@@ -89,8 +90,8 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                         </nav>
 
                         <div className="ml-auto flex items-center gap-3">
-                            {}
                             <ChoixLangue />
+                            <MenuVitrineMobile ancres="#" />
 
                             {auth?.user ? (
                                 <Link href={route('dashboard')} className={boutonAction}>
@@ -219,12 +220,12 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                                 />
                                 <Tarif
                                     icone="horloge"
-                                    titre={t('accueil.tarif_standard', 'Standard — 3 jours')}
+                                    titre={t('accueil.tarif_standard', 'Standard — dès 3 jours')}
                                     texte={t('accueil.tarif_standard_texte', 'Le meilleur rapport entre délai et coût pour un envoi courant.')}
                                 />
                                 <Tarif
                                     icone="rotation"
-                                    titre={t('accueil.tarif_express', 'Express — 48 heures')}
+                                    titre={t('accueil.tarif_express', 'Express — dès 24 heures')}
                                     texte={t('accueil.tarif_express_texte', 'Transport dédié, facturé au coût de revient réel plus marge.')}
                                 />
                             </ul>

@@ -123,10 +123,13 @@ class Facturier
                 'amount_incl_tax' => round($horsTva + $tva, 2),
                 'reverse_charge' => $autoliquidation,
                 'status' => $emission->isFuture() ? 'DRAFT' : 'SENT',
-                'payment_reference' => $this->communicationStructuree(
-                    (int) $emission->format('Y'), $rang, $client->id
-                ),
             ]);
+
+            // Construite sur l'identifiant de la facture, la communication
+            // est unique : derivee du rang et du client (modulo 1000), deux
+            // factures du meme client pouvaient partager la meme reference
+            // de paiement, et le rapprochement bancaire devenait ambigu.
+            $facture->update(['payment_reference' => $this->communicationStructuree($facture->id)]);
 
             foreach ($expeditions as $ordre) {
                 InvoiceLine::create([
@@ -145,11 +148,18 @@ class Facturier
 
     public function prochainRang(int $annee): int
     {
-        $dernier = Invoice::where('reference', 'like', 'FAC-'.$annee.'-%')
-            ->orderByDesc('reference')
-            ->value('reference');
+        // Deux emissions simultanees (la tache planifiee et un lancement a
+        // la main) ne prennent pas le meme rang : le verrou tient jusqu'a la
+        // fin de la transaction qui cree la facture.
+        DB::select('select pg_advisory_xact_lock(?)', [crc32('factures-'.$annee)]);
 
-        return $dernier === null ? 1 : ((int) substr($dernier, -4)) + 1;
+        // Le plus grand rang se lit comme un nombre : trie comme un texte,
+        // « FAC-2027-10000 » passait avant « FAC-2027-9999 ».
+        $dernier = Invoice::where('reference', 'like', 'FAC-'.$annee.'-%')
+            ->selectRaw("max(cast(split_part(reference, '-', 3) as integer)) as rang")
+            ->value('rang');
+
+        return $dernier === null ? 1 : ((int) $dernier) + 1;
     }
 
     public function echeance(Carbon $emission, ?string $delai): Carbon
@@ -162,14 +172,9 @@ class Facturier
         };
     }
 
-    public function communicationStructuree(int $annee, int $numero, int $clientId): string
+    public function communicationStructuree(int $factureId): string
     {
-        // Une communication structuree compte dix chiffres, plus deux de
-        // controle. sprintf ne fixe qu'une largeur minimale : a partir du
-        // client 1000 ou de la millieme facture de l'annee, la base
-        // debordait et le decoupage tronquait le chiffre de controle.
-        // Chaque champ est donc ramene a sa largeur.
-        $base = sprintf('%03d%04d%03d', $numero % 1000, $annee % 10000, $clientId % 1000);
+        $base = sprintf('%010d', $factureId % 10_000_000_000);
         $controle = (int) $base % 97;
         $controle = $controle === 0 ? 97 : $controle;
 

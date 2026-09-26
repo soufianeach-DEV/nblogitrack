@@ -224,7 +224,7 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                             ? t('ordres.oui_adr', 'Oui — ADR')
                             : t('ordres.non', 'Non'))}
                         {ligne(t('ordres.formule', 'Formule'), order.tariff_grid
-                            ? order.tariff_grid.label + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
+                            ? (order.tariff_grid.libelle ?? order.tariff_grid.label) + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
                             : null)}
                         {ligne(t('commande.estimation', 'Prix estimé'), nombre(order.estimated_cost, '€', 2))}
                     </dl>

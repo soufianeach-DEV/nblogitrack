@@ -45,7 +45,8 @@ class FactureUbl
             'peppol' => config('entreprise.peppol'),
             'nom' => config('entreprise.nom'),
             'rue' => config('entreprise.adresse'),
-            'localite' => config('entreprise.localite'),
+            'code_postal' => strtok((string) config('entreprise.localite'), ' '),
+            'localite' => trim((string) strstr((string) config('entreprise.localite'), ' ')),
             'pays' => 'BE',
             'tva' => str_replace([' ', '.'], '', config('entreprise.tva')),
         ]);
@@ -53,7 +54,8 @@ class FactureUbl
             'peppol' => $facture->client->peppol_id,
             'nom' => $facture->client->company_name,
             'rue' => $facture->client->billing_address,
-            'localite' => trim($facture->client->postal_code.' '.$facture->client->city),
+            'code_postal' => $facture->client->postal_code,
+            'localite' => $facture->client->city,
             'pays' => Pays::code($facture->client->country),
             'tva' => str_replace([' ', '.'], '', (string) $facture->client->vat_number),
         ]);
@@ -85,7 +87,7 @@ class FactureUbl
      */
     private static function partie(XMLWriter $x, string $balise, array $partie): void
     {
-        [$scheme, $identifiant] = self::peppol($partie['peppol']);
+        [$scheme, $identifiant] = self::peppol($partie['peppol'], $partie['tva'], $partie['pays']);
 
         $x->startElement($balise);
         $x->startElement('cac:Party');
@@ -102,6 +104,9 @@ class FactureUbl
         $x->startElement('cac:PostalAddress');
         self::texte($x, 'cbc:StreetName', (string) $partie['rue']);
         self::texte($x, 'cbc:CityName', (string) $partie['localite']);
+        // Le code postal a son propre champ : colle a la ville, il faisait
+        // echouer la validation EN 16931 de l'adresse.
+        self::texte($x, 'cbc:PostalZone', (string) $partie['code_postal']);
         $x->startElement('cac:Country');
         self::texte($x, 'cbc:IdentificationCode', $partie['pays']);
         $x->endElement();
@@ -154,10 +159,21 @@ class FactureUbl
     private static function categorie(XMLWriter $x, Invoice $facture, bool $avecMotif): void
     {
         $x->startElement('cac:TaxCategory');
-        self::texte($x, 'cbc:ID', $facture->reverse_charge ? 'AE' : 'S');
-        self::texte($x, 'cbc:Percent', number_format((float) $facture->vat_rate, 2, '.', ''));
+        $horsUnion = $facture->reverse_charge && Pays::horsUnion($facture->client?->country);
 
-        if ($avecMotif && $facture->reverse_charge) {
+        // Hors de l'Union, la prestation est hors du champ de la TVA belge
+        // (categorie O) : l'autoliquidation intracommunautaire (AE) ne
+        // s'applique qu'a un preneur etabli dans un autre Etat membre.
+        self::texte($x, 'cbc:ID', $horsUnion ? 'O' : ($facture->reverse_charge ? 'AE' : 'S'));
+
+        if (! $horsUnion) {
+            self::texte($x, 'cbc:Percent', number_format((float) $facture->vat_rate, 2, '.', ''));
+        }
+
+        if ($avecMotif && $horsUnion) {
+            self::texte($x, 'cbc:TaxExemptionReasonCode', 'VATEX-EU-O');
+            self::texte($x, 'cbc:TaxExemptionReason', 'Prestation hors du champ de la TVA belge (art. 21, §2 du Code de la TVA)');
+        } elseif ($avecMotif && $facture->reverse_charge) {
             self::texte($x, 'cbc:TaxExemptionReasonCode', 'VATEX-EU-AE');
             self::texte($x, 'cbc:TaxExemptionReason', 'Autoliquidation — TVA due par le preneur');
         }
@@ -205,7 +221,16 @@ class FactureUbl
     /**
      * @return array{0: string, 1: string}
      */
-    private static function peppol(?string $peppol): array
+    /*
+     * Schemas Peppol des numeros de TVA, pour un acheteur sans identifiant
+     * Peppol enregistre : un EndpointID vide rend le fichier invalide.
+     */
+    private const SCHEMAS_TVA = [
+        'BE' => '9925', 'FR' => '9957', 'NL' => '9944', 'DE' => '9930', 'LU' => '9938',
+        'IT' => '9906', 'ES' => '9920', 'AT' => '9914', 'PT' => '9946', 'IE' => '9935',
+    ];
+
+    private static function peppol(?string $peppol, ?string $tva = null, ?string $pays = null): array
     {
         if ($peppol && str_contains($peppol, ':')) {
             [$scheme, $identifiant] = explode(':', $peppol, 2);
@@ -213,7 +238,11 @@ class FactureUbl
             return [$scheme, $identifiant];
         }
 
-        return ['9925', (string) $peppol];
+        if ($peppol) {
+            return ['9925', $peppol];
+        }
+
+        return [self::SCHEMAS_TVA[strtoupper((string) $pays)] ?? '9925', (string) $tva];
     }
 
     private static function texte(XMLWriter $x, string $balise, string $valeur): void

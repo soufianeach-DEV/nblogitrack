@@ -25,6 +25,7 @@ class ApiRequest extends Model
         'expiree' => 'Clé expirée',
         'adresse_refusee' => 'Adresse IP non autorisée',
         'permission_absente' => 'Permission absente',
+        'entreprise_inactive' => 'Entreprise non validée ou désactivée',
     ];
 
     public function cle(): BelongsTo

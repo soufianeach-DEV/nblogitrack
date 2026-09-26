@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Support\EnvoiFacture;
 use App\Support\FacturePdf;
 use App\Support\FactureUbl;
+use App\Support\LigneFacture;
+use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,19 +94,20 @@ class InvoiceController extends Controller
                     'tva' => $invoice->client->vat_number,
                     'adresse' => $invoice->client->billing_address,
                     'localite' => trim($invoice->client->postal_code.' '.$invoice->client->city),
-                    'pays' => $invoice->client->country,
+                    'pays' => Pays::localise($invoice->client->country),
                 ],
                 'lignes' => $invoice->lines->map(fn ($ligne) => [
                     'id' => $ligne->id,
                     'ordre_id' => $ligne->transport_order_id,
                     'numero' => $ligne->transportOrder?->tracking_number,
-                    'description' => $ligne->description,
+                    'description' => LigneFacture::libelle($ligne->description),
                     'ht' => (float) $ligne->amount_excl_tax,
                 ])->all(),
             ],
             'peutMarquerPayee' => $utilisateur->can('control-payments') && $invoice->status === 'SENT',
             'peutEnvoyer' => $utilisateur->can('control-payments') && $invoice->status !== 'DRAFT',
             'peutPayerEnLigne' => $invoice->status === 'SENT'
+                && ! empty(config('services.stripe.secret'))
                 && $utilisateur->cannot('view-all-orders')
                 && $invoice->client_id === $utilisateur->id,
         ]);

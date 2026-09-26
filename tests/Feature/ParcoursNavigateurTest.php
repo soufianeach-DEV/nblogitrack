@@ -3,12 +3,18 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\ApiKey;
 use App\Models\Client;
+use App\Models\ClientContact;
 use App\Models\Driver;
+use App\Models\Invoice;
 use App\Models\QuoteRequest;
+use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\FactureUbl;
+use App\Support\Facturier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -313,5 +319,158 @@ class ParcoursNavigateurTest extends TestCase
             ])
             ->assertRedirect(route('dashboard'))
             ->assertSessionHas('error');
+    }
+
+    // --- Troisieme serie : parcours client et conception ------------------
+
+    public function test_sans_cle_stripe_le_paiement_en_ligne_ne_plante_pas(): void
+    {
+        config(['services.stripe.secret' => null]);
+
+        $client = Client::factory()->create();
+        TransportOrder::factory()->livree()->create([
+            'client_id' => $client->id,
+            'actual_delivery_date' => now()->subMonth()->startOfMonth()->addDays(3)->toDateString(),
+        ]);
+        $facture = app(Facturier::class)->facturer()->first();
+
+        $this->actingAs(User::find($client->id))
+            ->get(route('invoices.show', $facture))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('peutPayerEnLigne', false));
+
+        $this->actingAs(User::find($client->id))
+            ->post(route('payments.payer', $facture))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+    }
+
+    public function test_changer_d_adresse_change_celle_des_factures(): void
+    {
+        $client = Client::factory()->create();
+        $compte = User::find($client->id);
+        ClientContact::create([
+            'client_id' => $client->id, 'first_name' => $compte->first_name, 'last_name' => $compte->last_name,
+            'email' => $compte->email, 'is_primary' => true,
+        ]);
+
+        $this->actingAs($compte)->patch(route('profile.update'), [
+            'first_name' => 'Nadia', 'last_name' => 'Peeters',
+            'email' => 'nouvelle@exemple.be', 'current_password' => 'password',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('nouvelle@exemple.be', ClientContact::where('client_id', $client->id)->value('email'));
+    }
+
+    public function test_une_adresse_en_majuscules_se_connecte(): void
+    {
+        $utilisateur = User::factory()->create(['email' => 'nadia@exemple.be']);
+
+        $this->post(route('login'), ['email' => 'Nadia@Exemple.BE', 'password' => 'password']);
+
+        $this->assertAuthenticatedAs($utilisateur);
+    }
+
+    public function test_le_suivi_public_accepte_un_numero_en_minuscules(): void
+    {
+        $ordre = TransportOrder::factory()->create();
+
+        $this->get(route('tracking.show', [
+            'tracking_number' => strtolower($ordre->tracking_number),
+            'code' => strtolower($ordre->tracking_code),
+        ]))->assertInertia(fn (AssertableInertia $page) => $page->where('order.tracking_number', $ordre->tracking_number));
+    }
+
+    public function test_deux_factures_du_meme_client_ont_des_communications_distinctes(): void
+    {
+        $client = Client::factory()->create();
+
+        foreach (['2026-03-04', '2026-04-04'] as $jour) {
+            TransportOrder::factory()->livree()->create(['client_id' => $client->id, 'actual_delivery_date' => $jour]);
+        }
+
+        $communications = app(Facturier::class)->facturer()->pluck('payment_reference');
+
+        $this->assertCount(2, $communications->unique());
+    }
+
+    public function test_la_numerotation_depasse_9999_sans_se_repeter(): void
+    {
+        $client = Client::factory()->create();
+
+        foreach (['FAC-2027-9999', 'FAC-2027-10000'] as $reference) {
+            Invoice::create([
+                'client_id' => $client->id, 'reference' => $reference, 'issued_on' => '2027-01-01', 'due_on' => '2027-01-31',
+                'period_start' => '2026-12-01', 'period_end' => '2026-12-31', 'amount_excl_tax' => 1, 'vat_rate' => 21,
+                'vat_amount' => 0.21, 'amount_incl_tax' => 1.21, 'status' => 'SENT',
+            ]);
+        }
+
+        $this->assertSame(10001, app(Facturier::class)->prochainRang(2027));
+    }
+
+    public function test_un_camion_au_controle_technique_echu_n_est_pas_affecte(): void
+    {
+        $ordre = TransportOrder::factory()->create(['pickup_date' => now()->addDays(10), 'weight' => 1000, 'distance_km' => 80]);
+        $camion = $this->camion('1-CTE-001', ['inspection_valid_until' => now()->addDays(5)->toDateString()]);
+
+        $this->affecter($ordre, $camion, $this->chauffeur())->assertSessionHasErrors('vehicle_registration');
+    }
+
+    public function test_la_cle_d_une_entreprise_desactivee_est_refusee(): void
+    {
+        $client = Client::factory()->create();
+        [, $jeton] = ApiKey::generer([
+            'name' => 'Partenaire', 'client_id' => $client->id, 'abilities' => ['lecture'],
+            'created_by' => User::factory()->administrateur()->create()->id,
+        ]);
+
+        User::find($client->id)->update(['is_active' => false]);
+
+        $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])->assertForbidden();
+    }
+
+    public function test_un_client_suisse_est_facture_hors_champ_et_non_en_autoliquidation(): void
+    {
+        $client = Client::factory()->create(['country' => 'Suisse']);
+        TransportOrder::factory()->livree()->create(['client_id' => $client->id, 'actual_delivery_date' => '2026-03-04']);
+
+        $facture = app(Facturier::class)->facturer()->first();
+        $xml = FactureUbl::pour($facture->load('client', 'lines'));
+
+        $this->assertStringContainsString('VATEX-EU-O', $xml);
+        $this->assertStringNotContainsString('VATEX-EU-AE', $xml);
+    }
+
+    public function test_une_marchandise_chargee_puis_desaffectee_ne_s_annule_pas_en_ligne(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $ordre = TransportOrder::factory()->enRoute()->create(['driver_id' => $chauffeur->id]);
+
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->post(route('planning.desaffecter', $ordre), ['motif' => 'Panne moteur'])
+            ->assertSessionHasNoErrors();
+
+        $ordre->refresh();
+        $this->assertSame('PENDING', $ordre->status);
+        $this->assertNull($ordre->fraisAnnulation());
+
+        $this->actingAs(User::find($ordre->client_id))
+            ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
+            ->assertSessionHas('error');
+    }
+
+    public function test_les_positions_d_une_expedition_annulee_sont_purgees(): void
+    {
+        $ordre = TransportOrder::factory()->create(['status' => 'CANCELLED']);
+        $ordre->forceFill(['updated_at' => now()->subDays(10)])->saveQuietly();
+
+        ShipmentPosition::create([
+            'transport_order_id' => $ordre->id, 'driver_id' => $this->chauffeur()->id,
+            'type' => ShipmentPosition::ROUTE, 'lat' => 50.85, 'lng' => 4.35, 'recorded_at' => now()->subDays(10),
+        ]);
+
+        $this->artisan('positions:purger', ['--jours' => 7])->assertSuccessful();
+
+        $this->assertSame(0, ShipmentPosition::where('transport_order_id', $ordre->id)->count());
     }
 }

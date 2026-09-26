@@ -41,6 +41,16 @@ class Pays
         'Tchéquie' => 'CZ',
     ];
 
+    /**
+     * Le client est-il etabli hors de l'Union europeenne (Suisse,
+     * Royaume-Uni, Norvege) ? Sa facture n'est alors pas en
+     * autoliquidation intracommunautaire, mais hors du champ de la TVA belge.
+     */
+    public static function horsUnion(?string $nom): bool
+    {
+        return array_key_exists((string) self::depuisNom($nom), self::HORS_UNION);
+    }
+
     public static function code(?string $nom): string
     {
         return self::CODES[trim((string) $nom)] ?? 'BE';

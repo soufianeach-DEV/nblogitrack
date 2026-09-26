@@ -25,9 +25,28 @@ class PaymentController extends Controller
             return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));
         }
 
+        // Sans cle Stripe, ou si Stripe refuse, le client reste sur sa
+        // facture avec un message, au lieu d'une erreur 500.
+        if (empty(config('services.stripe.secret'))) {
+            return back()->with('error', Traductions::t('msg.paiement_en_ligne_indisponible', 'Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.'));
+        }
+
+        try {
+            $session = $this->ouvrirSession($request, $invoice);
+        } catch (ErreurStripe $e) {
+            report($e);
+
+            return back()->with('error', Traductions::t('msg.paiement_en_ligne_indisponible', 'Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.'));
+        }
+
+        return Inertia::location($session->url);
+    }
+
+    private function ouvrirSession(Request $request, Invoice $invoice): object
+    {
         $stripe = new StripeClient(config('services.stripe.secret'));
 
-        $session = $stripe->checkout->sessions->create([
+        return $stripe->checkout->sessions->create([
             'mode' => 'payment',
             'client_reference_id' => (string) $invoice->id,
             'customer_email' => $request->user()->email,
@@ -48,8 +67,6 @@ class PaymentController extends Controller
             'success_url' => route('payments.retour', $invoice).'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('invoices.show', $invoice),
         ]);
-
-        return Inertia::location($session->url);
     }
 
     public function retour(Request $request, Invoice $invoice): Response

@@ -52,17 +52,20 @@ const kmEntre = (lat1, lng1, lat2, lng2) => {
     return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false }) {
+export default function AdresseAutocompletion({ label, onChange, onSelect, error, required = false, numeroLibre = false, compact = false, pays: paysImpose = null }) {
     const t = useTraduction();
     const langue = useLangue();
     const PAYS = useMemo(() => {
         const noms = new Intl.DisplayNames([langue], { type: 'region' });
 
-        return CODES_EUROPE
+        // Un pays impose (l'enlevement se fait en Belgique) reduit la liste
+        // a ce seul pays, plutot que d'accepter une adresse que le serveur
+        // refusera.
+        return (paysImpose ? [paysImpose] : CODES_EUROPE)
             .map((code) => ({ code, nom: noms.of(code) }))
             .sort((a, b) => a.nom.localeCompare(b.nom, langue));
-    }, [langue]);
-    const [pays, setPays] = useState('BE');
+    }, [langue, paysImpose]);
+    const [pays, setPays] = useState(paysImpose ?? 'BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
     const [cp, setCp] = useState('');
@@ -544,7 +547,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
-                    <select value={pays} onChange={(e) => changerPays(e.target.value)} className={selectCls}>
+                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysImpose !== null} className={selectCls}>
                         {PAYS.map((p) => (
                             <option key={p.code} value={p.code}>{p.nom}</option>
                         ))}

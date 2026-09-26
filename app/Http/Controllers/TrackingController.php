@@ -30,8 +30,8 @@ class TrackingController extends Controller
 
         $ordre = $cherche
             ? TransportOrder::with('client:id,company_name')
-                ->where('tracking_number', $request->query('tracking_number'))
-                ->where('tracking_code', strtoupper($request->query('code')))
+                ->where('tracking_number', strtoupper(trim((string) $request->query('tracking_number'))))
+                ->where('tracking_code', strtoupper(trim((string) $request->query('code'))))
                 ->first([
                     'id', 'client_id', 'tracking_number', 'status',
                     'pickup_address', 'delivery_address', 'requested_delivery_date',
@@ -51,7 +51,7 @@ class TrackingController extends Controller
 
     private function pourUtilisateur(Request $request, User $utilisateur): Response
     {
-        $numero = trim((string) $request->query('tracking_number', ''));
+        $numero = strtoupper(trim((string) $request->query('tracking_number', '')));
         $ordre = null;
 
         if ($numero !== '') {
@@ -59,7 +59,7 @@ class TrackingController extends Controller
                 'client:id,company_name',
                 'vehicle:registration,brand,model,vehicle_type,euro_standard,fuel_type,capacity_tonnes',
                 'driver.user:id,first_name,last_name,phone',
-                'tariffGrid:id,label,delivery_days',
+                'tariffGrid:id,label,zone,service_level,delivery_days',
             ])->where('tracking_number', $numero);
 
             if ($utilisateur->cannot('view-all-orders')) {

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -30,6 +30,7 @@ function StatusBadge({ status, enAttenteDePaiement = false }) {
 
 export default function Index({ orders, filters }) {
     const t = useTraduction();
+    const locale = useLocale();
     const v = useVocabulaire();
     const estClient = usePage().props.auth.user.role === 'CLIENT';
     const [search, setSearch] = useState({
@@ -37,6 +38,7 @@ export default function Index({ orders, filters }) {
         client: filters.client ?? '',
         destination: filters.destination ?? '',
         status: filters.status ?? '',
+        q: filters.q ?? '',
     });
     const timeout = useRef();
 
@@ -75,6 +77,15 @@ export default function Index({ orders, filters }) {
             }
         >
             <Head title={t('nav.ordres', 'Ordres de transport')} />
+
+            {search.q && (
+                <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                    {t('ordres.recherche_active', 'Recherche : « :terme »', { terme: search.q })}
+                    <button type="button" onClick={() => update('q', '')} className="font-semibold text-brand-blue hover:text-marine">
+                        {t('ordres.effacer_recherche', 'Effacer')}
+                    </button>
+                </p>
+            )}
 
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="overflow-x-auto">
@@ -127,7 +138,9 @@ export default function Index({ orders, filters }) {
                                         <StatusBadge status={order.status} enAttenteDePaiement={order.en_attente_de_paiement} />
                                     </td>
                                     <td className="px-6 py-4 text-right font-medium text-marine">
-                                        {order.estimated_cost ? `${order.estimated_cost} €` : '—'}
+                                        {order.estimated_cost
+                                            ? Number(order.estimated_cost).toLocaleString(locale, { style: 'currency', currency: 'EUR' })
+                                            : '—'}
                                     </td>
                                 </tr>
                             ))}

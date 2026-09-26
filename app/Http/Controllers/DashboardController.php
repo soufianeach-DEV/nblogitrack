@@ -10,6 +10,7 @@ use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\Formats;
 use App\Support\JoursFeries;
 use App\Support\Traductions;
 use Illuminate\Database\Eloquent\Builder;
@@ -305,7 +306,7 @@ class DashboardController extends Controller
                 ->map(fn (Invoice $facture) => [
                     'id' => $facture->id,
                     'reference' => $facture->reference,
-                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' €',
+                    'montant' => Formats::montant($facture->amount_incl_tax),
                     'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
                 ])
                 ->all(),

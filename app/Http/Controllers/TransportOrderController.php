@@ -36,6 +36,15 @@ class TransportOrderController extends Controller
         if ($request->filled('tracking')) {
             $query->where('tracking_number', 'ilike', '%'.$request->tracking.'%');
         }
+        // La recherche globale (touche Entree) cherche comme ses
+        // suggestions : numero, depart ou destination.
+        if ($request->filled('q')) {
+            $terme = '%'.$request->q.'%';
+            $query->where(fn ($q) => $q
+                ->where('tracking_number', 'ilike', $terme)
+                ->orWhere('pickup_address', 'ilike', $terme)
+                ->orWhere('delivery_address', 'ilike', $terme));
+        }
         if ($request->filled('destination')) {
             $query->where('delivery_address', 'ilike', '%'.$request->destination.'%');
         }
@@ -54,7 +63,7 @@ class TransportOrderController extends Controller
 
         return Inertia::render('TransportOrders/Index', [
             'orders' => $orders,
-            'filters' => $request->only(['tracking', 'client', 'destination', 'status']),
+            'filters' => $request->only(['tracking', 'client', 'destination', 'status', 'q']),
         ]);
     }
 
@@ -69,7 +78,7 @@ class TransportOrderController extends Controller
             'client:id,company_name,city,country',
             'vehicle:registration,brand,model,vehicle_type,capacity_tonnes',
             'driver.user:id,first_name,last_name',
-            'tariffGrid:id,label,service_level,delivery_days', 'invoiceLine:id,invoice_id,transport_order_id',
+            'tariffGrid:id,label,zone,service_level,delivery_days', 'invoiceLine:id,invoice_id,transport_order_id',
             'invoiceLine.invoice:id,reference,status,due_on,paid_on,amount_incl_tax',
         ]);
 
@@ -281,11 +290,16 @@ class TransportOrderController extends Controller
             return back()->withErrors(['delivery_address' => $reference])->withInput();
         }
 
+        // Les points transmis ont ete verifies ci-dessus (a moins de 30 km
+        // de leur localite) : la distance se calcule entre eux, comme le
+        // formulaire l'a fait pour afficher le prix. Calculee entre les
+        // centres des localites, elle donnait un prix enregistre different
+        // du prix annonce.
         $distanceKm = Tarificateur::distanceRoutiere(
-            $reference['pickup']->lat,
-            $reference['pickup']->lng,
-            $reference['delivery']->lat,
-            $reference['delivery']->lng,
+            (float) $data['pickup_lat'],
+            (float) $data['pickup_lng'],
+            (float) $data['delivery_lat'],
+            (float) $data['delivery_lng'],
         );
         $hazardous = $request->boolean('is_hazardous');
 

@@ -68,6 +68,12 @@ class TransportOrder extends Model
      */
     public function fraisAnnulation(): ?float
     {
+        // Marchandise deja chargee (puis desaffectee apres une panne, par
+        // exemple) : l'annulation en ligne n'est plus possible.
+        if ($this->picked_up_at !== null) {
+            return null;
+        }
+
         return match ($this->status) {
             'PENDING' => 0.0,
             'ASSIGNED' => round(min(

@@ -245,6 +245,17 @@ class PlanningController extends Controller
             return back()->withErrors(['driver_id' => Traductions::t('msg.planif_adr', 'Marchandise dangereuse : ce chauffeur n\'a pas la certification ADR.')]);
         }
 
+        // Le tableau de bord signalait un controle technique echu, mais
+        // rien n'empechait d'affecter le camion : il doit etre valable
+        // jusqu'au dernier jour de la mission.
+        if ($vehicle->inspection_valid_until !== null && $vehicle->inspection_valid_until->lt($fin)) {
+            return back()->withErrors([
+                'vehicle_registration' => Traductions::t('msg.planif_controle_technique', 'Le contrôle technique de ce véhicule expire le :date, avant la fin de la mission.', [
+                    'date' => $vehicle->inspection_valid_until->format('d/m/Y'),
+                ]),
+            ]);
+        }
+
         if ($motif = $driver->motifPermis($vehicle)) {
             return back()->withErrors([
                 'driver_id' => Traductions::t('msg.planif_permis', 'Permis inadapté : :motif.', ['motif' => $motif]),
@@ -424,7 +435,8 @@ class PlanningController extends Controller
             'vehicle_registration' => null,
             'driver_id' => null,
             'assigned_at' => null,
-            'picked_up_at' => null,
+            // Une marchandise deja chargee le reste : l'heure d'enlevement
+            // est gardee, et elle empeche le client d'annuler en ligne.
             'suivi_direct' => false,
         ]);
 
