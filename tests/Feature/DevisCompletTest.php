@@ -323,6 +323,23 @@ class DevisCompletTest extends TestCase
         $this->assertStringContainsString('Offerteaanvraag', $consignes);
     }
 
+    /** Poids absent de la demande : l'agent le complete dans la fenetre de transformation. */
+    public function test_l_agent_complete_le_poids_manquant(): void
+    {
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        $this->creerLesGrillesDeDemonstration();
+        $client = Client::factory()->create();
+        $this->post(route('devis.store'), $this->demande(['packages' => [], 'weight' => null]))->assertSessionHasNoErrors();
+        $devis = QuoteRequest::firstOrFail();
+        $this->assertNull($devis->weight);
+        $agent = User::factory()->planificateur()->create();
+
+        $this->actingAs($agent)->post(route('quotes.order', $devis), ['client_id' => $client->id])->assertSessionHas('error');
+        $this->actingAs($agent)->post(route('quotes.order', $devis), ['client_id' => $client->id, 'weight' => 750])->assertSessionHas('success');
+
+        $this->assertSame(750.0, (float) TransportOrder::firstOrFail()->weight);
+    }
+
     /** La ligne de colis proposee par defaut, laissee telle quelle, n'est pas gardee. */
     public function test_la_palette_par_defaut_non_remplie_n_est_pas_gardee(): void
     {

@@ -57,16 +57,18 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
     const [aCommander, setACommander] = useState(null);
     const [entreprise, setEntreprise] = useState('');
     const [envoiCommande, setEnvoiCommande] = useState(false);
+    const [poidsCommande, setPoidsCommande] = useState('');
 
     const commander = (d) => {
         setEntreprise(d.client_propose ? String(d.client_propose) : '');
+        setPoidsCommande('');
         setACommander(d);
     };
 
     const confirmerCommande = (e) => {
         e.preventDefault();
-        if (! entreprise || envoiCommande) return;
-        router.post(route('quotes.order', aCommander.id), { client_id: entreprise }, {
+        if (! entreprise || envoiCommande || (! aCommander.weight && ! poidsCommande)) return;
+        router.post(route('quotes.order', aCommander.id), { client_id: entreprise, weight: poidsCommande || null }, {
             preserveScroll: true,
             onStart: () => setEnvoiCommande(true),
             onFinish: () => { setEnvoiCommande(false); setACommander(null); },
@@ -394,11 +396,18 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                                 {t('demandes.entreprise_inconnue', 'Aucune entreprise validée n\'a ce numéro de TVA ni cette adresse e-mail. Choisissez-la, ou créez d\'abord son compte.')}
                             </p>
                         ))}
+                    {aCommander && ! aCommander.weight && (
+                        <div className="mt-4">
+                            <label htmlFor="poids_commande" className="block text-sm font-semibold text-marine">{t('demandes.poids_manquant', 'Poids de l\'envoi (kg)')}</label>
+                            <input id="poids_commande" type="number" min="1" max="44000" required value={poidsCommande} onChange={(e) => setPoidsCommande(e.target.value)} className="mt-1 block w-40 rounded-lg border-slate-300 text-sm" />
+                            <p className="mt-1 text-xs text-slate-500">{t('demandes.poids_manquant_aide', 'Le demandeur ne l\'a pas indiqué : demandez-le-lui avant de créer la commande.')}</p>
+                        </div>
+                    )}
                     <div className="mt-6 flex justify-end gap-3">
                         <button type="button" onClick={() => setACommander(null)} disabled={envoiCommande} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-surface disabled:opacity-50">
                             {t('action.annuler', 'Annuler')}
                         </button>
-                        <button type="submit" disabled={! entreprise || envoiCommande} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
+                        <button type="submit" disabled={! entreprise || envoiCommande || (aCommander && ! aCommander.weight && ! poidsCommande)} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
                             {envoiCommande ? t('demandes.creation_en_cours', 'Création…') : t('demandes.creer_commande', 'Créer la commande')}
                         </button>
                     </div>

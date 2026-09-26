@@ -1129,12 +1129,15 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                                 ← {t('devis.precedent', 'Précédent')}
                             </button>
                         )}
+                        {/* Deux boutons distincts (key) : un meme bouton passant de
+                            « button » a « submit » pendant le clic envoyait la
+                            demande depuis l'avant-derniere etape. */}
                         {etape < 4 ? (
-                            <button type="button" onClick={suivant} className="rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark">
+                            <button key="suivant" type="button" onClick={suivant} className="rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark">
                                 {t('devis.suivant', 'Suivant')} →
                             </button>
                         ) : (
-                            <button type="submit" disabled={processing} className="rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
+                            <button key="envoyer" type="submit" disabled={processing} className="rounded-lg bg-action px-7 py-3.5 text-sm font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
                                 {processing ? t('devis.envoi', 'Envoi…') : t('devis.recevoir', 'Recevoir mon devis →')}
                             </button>
                         )}

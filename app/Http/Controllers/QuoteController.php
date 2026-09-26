@@ -586,7 +586,12 @@ class QuoteController extends Controller
      */
     public function commander(Request $request, QuoteRequest $quoteRequest): RedirectResponse
     {
-        $choix = $request->validate(['client_id' => 'required|integer']);
+        $choix = $request->validate([
+            'client_id' => 'required|integer',
+            // Poids laisse vide par le demandeur : l'agent le complete apres
+            // l'avoir obtenu (telephone, e-mail).
+            'weight' => 'nullable|numeric|min:1|max:44000',
+        ]);
 
         if ($quoteRequest->converted_order_id !== null
             || ! in_array('ORDERED', QuoteRequest::TRANSITIONS[$quoteRequest->status] ?? [], true)) {
@@ -605,10 +610,14 @@ class QuoteController extends Controller
             return back()->with('error', $refus);
         }
 
+        if (! empty($choix['weight']) && ! ($quoteRequest->weight > 0)) {
+            $quoteRequest->update(['weight' => (int) round((float) $choix['weight'])]);
+        }
+
         $poids = (float) $quoteRequest->weight;
 
         if (! ($poids > 0)) {
-            return back()->with('error', Traductions::t('msg.devis_sans_poids', 'Renseignez le poids avant de transformer la demande en commande.'));
+            return back()->with('error', Traductions::t('msg.devis_sans_poids', 'Indiquez le poids de l\'envoi pour transformer la demande en commande.'));
         }
 
         $volume = QuoteRequest::volumeDesColis($quoteRequest->packages) ?? QuoteRequest::volumeSaisi($quoteRequest->volume);
