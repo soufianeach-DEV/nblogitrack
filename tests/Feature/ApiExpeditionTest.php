@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\JoursFeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -24,6 +25,7 @@ class ApiExpeditionTest extends TestCase
             ['country_code' => 'BE', 'code' => '3500', 'city' => 'Hasselt', 'lat' => 50.9311, 'lng' => 5.3378],
             ['country_code' => 'BE', 'code' => '1000', 'city' => 'Bruxelles', 'lat' => 50.8504, 'lng' => 4.3488],
             ['country_code' => 'FR', 'code' => '75001', 'city' => 'Paris', 'lat' => 48.8534, 'lng' => 2.3488],
+            ['country_code' => 'FR', 'code' => '59000', 'city' => 'Lille', 'lat' => 50.6292, 'lng' => 3.0573],
         ]);
 
         Http::fake([
@@ -54,8 +56,9 @@ class ApiExpeditionTest extends TestCase
             'livraison' => 'Avenue Louise 200, 1000 Bruxelles',
             'poids' => 850,
             'marchandise' => TransportOrder::MARCHANDISES[0],
-            'date_enlevement' => now()->addDays(2)->toDateString(),
-            'date_livraison' => now()->addDays(9)->toDateString(),
+            // Un jour ouvrable : un dimanche, l'enlevement est refuse.
+            'date_enlevement' => JoursFeries::prochainJourOuvrable(now()->addDays(2))->toDateString(),
+            'date_livraison' => now()->addDays(12)->toDateString(),
         ], $remplace);
     }
 
@@ -191,5 +194,62 @@ class ApiExpeditionTest extends TestCase
 
         $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])
             ->assertUnauthorized();
+    }
+
+    /** Lundi 5 octobre 2026 : un camion peut etre a Lille le mardi. */
+    private function importLille(array $remplace = []): array
+    {
+        $this->travelTo('2026-10-05 10:00');
+        TariffGrid::factory()->zone('FR', 'France')->create();
+
+        return $this->corps([
+            'enlevement' => 'Rue Nationale 1, 59000 Lille, France',
+            'livraison' => 'Avenue Louise 200, 1000 Bruxelles',
+            'expediteur' => 'Entrepôt Lille Sud',
+            'telephone_expediteur' => '+33 3 20 00 00 00',
+            'date_enlevement' => '2026-10-08',
+            'date_livraison' => '2026-10-15',
+            ...$remplace,
+        ]);
+    }
+
+    public function test_un_import_se_depose_par_l_api(): void
+    {
+        [, $jeton] = $this->cle(Client::factory()->create()->id);
+
+        $this->postJson('/api/v1/expeditions', $this->importLille(['pays_enlevement' => 'FR']), ['Authorization' => 'Bearer '.$jeton])
+            ->assertCreated()
+            ->assertJsonPath('data.pays_depart', 'FR')
+            ->assertJsonPath('data.pays_arrivee', 'BE')
+            ->assertJsonPath('data.tarif', 'ligne');
+
+        $ordre = TransportOrder::firstOrFail();
+        $this->assertSame('FR', $ordre->tariffGrid->zone);
+        $this->assertGreaterThan(0, (float) $ordre->estimated_cost);
+    }
+
+    public function test_le_pays_d_enlevement_se_deduit_de_l_adresse(): void
+    {
+        [, $jeton] = $this->cle(Client::factory()->create()->id);
+
+        $this->postJson('/api/v1/expeditions', $this->importLille(), ['Authorization' => 'Bearer '.$jeton])
+            ->assertCreated()
+            ->assertJsonPath('data.pays_depart', 'FR');
+    }
+
+    public function test_l_api_refuse_les_enlevements_etrangers_hors_regles(): void
+    {
+        [, $jeton] = $this->cle(Client::factory()->create()->id);
+        $refus = fn (array $corps) => $this->postJson('/api/v1/expeditions', $corps, ['Authorization' => 'Bearer '.$jeton])->assertStatus(422);
+
+        $refus($this->importLille(['pays_enlevement' => 'GB']));
+        $refus($this->importLille(['pays_enlevement' => 'BE']));
+        $refus($this->importLille(['date_enlevement' => '2026-10-05']));
+        $refus($this->importLille(['date_enlevement' => '2026-10-11']));
+        $refus($this->importLille(['expediteur' => null]));
+        $refus($this->importLille(['enlevement' => 'Theaterplatz 1, 52062 Aachen, Deutschland-Nord']));
+        $refus($this->importLille(['livraison' => 'Domkloster 4, 50667 Köln', 'pays_livraison' => 'DE']));
+
+        $this->assertSame(0, TransportOrder::count());
     }
 }

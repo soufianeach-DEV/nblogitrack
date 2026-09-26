@@ -7,7 +7,9 @@ use App\Models\TariffGrid;
 use App\Models\User;
 use App\Support\Tarificateur;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class TarifsCoherentsTest extends TestCase
@@ -107,5 +109,34 @@ class TarifsCoherentsTest extends TestCase
                 'weight' => 1000,
             ])
             ->assertForbidden();
+    }
+
+    public function test_le_simulateur_tarife_un_import_sur_les_grilles_du_pays_de_depart(): void
+    {
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        DB::table('postal_codes')->insert([
+            ['country_code' => 'BE', 'code' => '1000', 'city' => 'Bruxelles', 'lat' => 50.8504, 'lng' => 4.3488],
+            ['country_code' => 'FR', 'code' => '59000', 'city' => 'Lille', 'lat' => 50.6292, 'lng' => 3.0573],
+        ]);
+        TariffGrid::factory()->create();
+        $grilles = $this->grillesFrance();
+
+        $reponse = $this->postJson(route('tarifs.simuler'), ['depart' => 'Lille', 'pays_depart' => 'FR', 'destination' => 'Bruxelles', 'pays' => 'BE', 'poids' => 500])
+            ->assertOk()
+            ->assertJsonPath('fret_retour_possible', true);
+
+        $km = Tarificateur::distanceRoutiere(50.6292, 3.0573, 50.8504, 4.3488);
+        $attendus = Tarificateur::parFormule(collect($grilles), $km, 500, 'FR', false);
+        $this->assertEqualsCanonicalizing(array_values($attendus), array_column($reponse->json('formules'), 'prix'));
+
+        $this->postJson(route('tarifs.simuler'), ['depart' => 'Lille', 'pays_depart' => 'FR', 'destination' => 'Paris', 'pays' => 'FR', 'poids' => 500])->assertStatus(422);
+        $this->postJson(route('tarifs.simuler'), ['depart' => 'Londres', 'pays_depart' => 'GB', 'destination' => 'Bruxelles', 'pays' => 'BE', 'poids' => 500])->assertStatus(422);
+    }
+
+    public function test_la_page_tarifs_liste_les_pays_d_enlevement(): void
+    {
+        $departs = AssertableInertia::fromTestResponse($this->get(route('tarifs.index')))->toArray()['props']['departs'];
+
+        $this->assertEqualsCanonicalizing(config('fret.pays_enlevement'), array_column($departs, 'code'));
     }
 }

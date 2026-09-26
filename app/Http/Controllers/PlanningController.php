@@ -9,6 +9,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\ControleAffectation;
+use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
@@ -125,8 +126,8 @@ class PlanningController extends Controller
                         'chauffeur' => trim(($c['mission']->driver?->user?->first_name ?? '').' '.($c['mission']->driver?->user?->last_name ?? '')),
                         'ville' => Adresse::localite((string) $c['mission']->delivery_address),
                         'arrivee' => $c['arrivee']->format('d/m/Y'),
-                        'approche_km' => $c['approche_km'],
-                        'reste_t' => round($c['reste_kg'] / 1000, 1),
+                        'approche_km' => Formats::nombre($c['approche_km'], 1),
+                        'reste_t' => Formats::nombre($c['reste_kg'] / 1000, 1),
                     ])->all());
 
                     if ($candidats->isEmpty()) {
@@ -151,7 +152,7 @@ class PlanningController extends Controller
                         'numero' => $c['ordre']->tracking_number,
                         'ville' => Adresse::localite((string) $c['ordre']->pickup_address),
                         'date' => $c['ordre']->pickup_date?->format('d/m/Y'),
-                        'approche_km' => $c['approche_km'],
+                        'approche_km' => Formats::nombre($c['approche_km'], 1),
                         'poids' => (float) $c['ordre']->weight,
                     ])->all());
                 }
