@@ -582,6 +582,14 @@ class VatController extends Controller
             return ['rue' => '', 'code_postal' => '', 'ville' => ''];
         }
 
+        // Adresse sur une seule ligne (Bulgarie, Roumanie...) : la localite
+        // est le dernier segment apres une virgule. « ул. КУКУШ №1
+        // обл.СОФИЯ, гр.СОФИЯ 1309 » : rue, puis ville et code postal.
+        if (count($lignes) === 1 && str_contains($lignes[0], ',')) {
+            $segments = array_map('trim', explode(',', $lignes[0]));
+            $lignes = [implode(', ', array_slice($segments, 0, -1)), end($segments)];
+        }
+
         $derniere = array_pop($lignes);
         $codePostal = '';
         $ville = $derniere;
@@ -594,8 +602,13 @@ class VatController extends Controller
             $codePostal = trim($m[2]);
         }
 
+        // Abreviations bulgares : « гр. » (ville) devant la localite,
+        // « обл. » (region) qui n'a rien a faire dans la rue.
+        $ville = preg_replace('/^(?:гр\.|с\.)\s*/u', '', $ville);
+        $rue = preg_replace('/\s*,?\s*обл\.\s*\S+$/u', '', implode(', ', $lignes));
+
         return [
-            'rue' => $this->nettoyer(implode(', ', $lignes)),
+            'rue' => $this->nettoyer($rue),
             'code_postal' => $this->nettoyer($codePostal),
             'ville' => $this->nettoyer($ville),
         ];

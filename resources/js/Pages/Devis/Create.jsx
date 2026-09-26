@@ -124,6 +124,33 @@ export default function Create({ choix, listes }) {
     const [vies, setVies] = useState(null);
     const [verification, setVerification] = useState(false);
     const relances = useRef(0);
+    // Ce que le registre a rempli : un autre numero le remplace, un numero
+    // refuse l'efface. Un champ retouche a la main n'est plus touche.
+    const repris = useRef({});
+
+    const reprendreDuRegistre = (valeurs) => setData((actuel) => {
+        const suivant = { ...actuel };
+        const anciens = repris.current;
+        const nouveaux = {};
+
+        for (const cle of new Set([...Object.keys(anciens), ...Object.keys(valeurs)])) {
+            if (cle in anciens) {
+                // Retouche a la main depuis : on n'y touche plus.
+                if (actuel[cle] !== anciens[cle]) continue;
+                suivant[cle] = valeurs[cle] || initial[cle];
+            } else {
+                // Le contact saisi par l'utilisateur prime sur le dirigeant.
+                if (! valeurs[cle] || (['contact_name', 'contact_function'].includes(cle) && actuel[cle])) continue;
+                suivant[cle] = valeurs[cle];
+            }
+
+            if (valeurs[cle]) nouveaux[cle] = valeurs[cle];
+        }
+
+        repris.current = nouveaux;
+
+        return suivant;
+    });
     const minuteurRelance = useRef(null);
 
     const verifierTva = async (automatique = false) => {
@@ -150,19 +177,21 @@ export default function Create({ choix, listes }) {
                 const dirigeant = resultat.entreprise?.dirigeant;
                 const adresse = resultat.adresse ?? {};
 
-                setData((actuel) => ({
-                    ...actuel,
-                    vat_number: resultat.tva ?? actuel.vat_number,
-                    company_name: resultat.nom || actuel.company_name,
-                    contact_name: dirigeant && ! actuel.contact_name ? `${dirigeant.prenom} ${dirigeant.nom}`.trim() : actuel.contact_name,
-                    contact_function: dirigeant?.fonction && ! actuel.contact_function ? dirigeant.fonction : actuel.contact_function,
-                    legal_form: resultat.entreprise?.forme_juridique || actuel.legal_form,
-                    sector: resultat.entreprise?.secteur || actuel.sector,
-                    billing_street: adresse.rue || actuel.billing_street,
-                    billing_postal_code: adresse.code_postal || actuel.billing_postal_code,
-                    billing_city: adresse.ville || actuel.billing_city,
-                    billing_country: adresse.pays || actuel.billing_country,
-                }));
+                if (resultat.tva) setData('vat_number', resultat.tva);
+                reprendreDuRegistre({
+                    company_name: resultat.nom,
+                    contact_name: dirigeant ? `${dirigeant.prenom} ${dirigeant.nom}`.trim() : '',
+                    contact_function: dirigeant?.fonction ?? '',
+                    legal_form: resultat.entreprise?.forme_juridique ?? '',
+                    sector: resultat.entreprise?.secteur ?? '',
+                    billing_street: adresse.rue,
+                    billing_postal_code: adresse.code_postal,
+                    billing_city: adresse.ville,
+                    billing_country: adresse.pays,
+                });
+            } else if (['invalide', 'format'].includes(resultat.statut)) {
+                // Numero refuse : rien de l'ancienne entreprise ne reste.
+                reprendreDuRegistre({});
             }
 
             // Registre sature : nouvel essai automatique, trois fois au plus.

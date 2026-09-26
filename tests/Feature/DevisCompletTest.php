@@ -200,4 +200,18 @@ class DevisCompletTest extends TestCase
             ->assertJsonPath('nom', 'British Haulage Ltd')
             ->assertJsonPath('adresse.code_postal', 'SW1A 1AA');
     }
+
+    public function test_une_adresse_bulgare_sur_une_ligne_est_decoupee(): void
+    {
+        Http::fake(['ec.europa.eu/*' => Http::response([
+            'isValid' => true, 'name' => 'А1 България - ЕАД', 'address' => 'ул. КУКУШ №1 обл.СОФИЯ, гр.СОФИЯ 1309',
+        ])]);
+
+        $this->getJson('/verification-tva?tva=BG131468980')
+            ->assertJsonPath('statut', 'valide')
+            ->assertJsonPath('adresse.rue', 'ул. КУКУШ №1')
+            ->assertJsonPath('adresse.code_postal', '1309')
+            ->assertJsonPath('adresse.ville', 'СОФИЯ')
+            ->assertJsonPath('adresse.pays', 'BG');
+    }
 }
