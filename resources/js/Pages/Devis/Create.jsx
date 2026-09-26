@@ -23,12 +23,18 @@ function Bloc({ numero, titre, children }) {
 
 export default function Create({ choix }) {
     const t = useTraduction();
+    // Meme regle que Trajet::type cote serveur, qui a le dernier mot.
+    const typeTrajet = (depart = 'BE', arrivee = '') => {
+        if (! arrivee) return choix.trajets[depart === 'BE' ? 0 : 2];
+        if (depart === 'BE') return choix.trajets[arrivee === 'BE' ? 0 : 1];
+        return choix.trajets[arrivee === 'BE' ? 2 : 3];
+    };
     const { data, setData, post, processing, errors } = useForm({
         company_name: '', contact_name: '', email: '', phone: '', vat_number: '',
         customer_type: choix.clients[0],
         pickup_address: '', pickup_lat: '', pickup_lng: '',
         delivery_address: '', delivery_lat: '', delivery_lng: '', delivery_country: '',
-        pickup_date: '', trip_type: choix.trajets[0],
+        pickup_date: '', pickup_country: 'BE', trip_type: choix.trajets[0],
         frequency: choix.frequences[0], date_flexibility: choix.flexibilites[0],
         goods_type: '', weight: '', volume: '',
         vehicle_type: choix.vehicules[0], insurance_value: choix.assurances[0],
@@ -207,8 +213,9 @@ export default function Create({ choix }) {
                                 label={t('commande.enlevement', 'Adresse d\'enlèvement')}
                                 required
                                 onChange={() => setData((d) => ({ ...d, pickup_address: '', pickup_lat: '', pickup_lng: '' }))}
-                                onSelect={({ address, lat, lng }) => setData((d) => ({
-                                    ...d, pickup_address: address, pickup_lat: lat, pickup_lng: lng,
+                                onSelect={({ address, lat, lng, pays }) => setData((d) => ({
+                                    ...d, pickup_address: address, pickup_lat: lat, pickup_lng: lng, pickup_country: pays,
+                                    trip_type: typeTrajet(pays, d.delivery_country),
                                 }))}
                                 error={errors.pickup_address || errors.pickup_lat}
                             />
@@ -226,7 +233,7 @@ export default function Create({ choix }) {
                                     delivery_lng: lng,
                                     delivery_country: pays,
 
-                                    trip_type: pays === 'BE' ? choix.trajets[0] : choix.trajets[1],
+                                    trip_type: typeTrajet(d.pickup_country, pays),
                                 }))}
                                 error={errors.delivery_address || errors.delivery_lat || errors.delivery_country}
                             />

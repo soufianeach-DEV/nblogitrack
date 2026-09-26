@@ -3,7 +3,9 @@
 namespace App\Support;
 
 use App\Models\TariffGrid;
+use App\Models\TransportOrder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class Tarificateur
@@ -65,6 +67,82 @@ class Tarificateur
         return $prix;
     }
 
+    /**
+     * Le prix d'un trajet : formules de la zone (le pays etranger), et,
+     * pour un import qui tombe sur le retour d'un de nos camions, le tarif
+     * fret retour. Le serveur seul en decide.
+     *
+     * @return array{zone: string, base: string, prix: array<int, float>, prix_ligne: array<int, float>, remises: array<int, float>, porteuse: ?TransportOrder, delais: array<int, int>}
+     */
+    public static function offre(Trajet $trajet, TransportOrder $demande, float $km): array
+    {
+        $zone = (string) $trajet->zone();
+        $grilles = $trajet->grilles();
+        $poids = (float) $demande->weight;
+        $adr = (bool) $demande->is_hazardous;
+        $ligne = self::parFormule($grilles, $km, $poids, $zone, $adr);
+        $prix = $ligne;
+        $base = 'LANE';
+        $porteuse = null;
+
+        if ($trajet->estImport() && self::remise() > 0 && $demande->pickup_date !== null
+            && ($candidat = FretRetour::porteuses($demande, true, 1)->first()) !== null) {
+            $prix = self::fretRetour($grilles, $ligne, $km, $poids, $adr);
+            $base = 'BACKHAUL';
+            $porteuse = $candidat['mission'];
+        }
+
+        return [
+            'zone' => $zone,
+            'base' => $base,
+            'prix' => $prix,
+            'prix_ligne' => $ligne,
+            'remises' => array_map(fn (int $id) => $ligne[$id] > 0 ? round(1 - $prix[$id] / $ligne[$id], 4) : 0.0, array_combine(array_keys($ligne), array_keys($ligne))),
+            'porteuse' => $porteuse,
+            'delais' => $grilles->mapWithKeys(fn (TariffGrid $g) => [$g->id => self::delai($g, $km)])->all(),
+        ];
+    }
+
+    /**
+     * Tarif fret retour : la remise sur le prix de ligne, jamais sous le
+     * tarif national belge (meme distance, meme poids), jamais au-dessus du
+     * prix de ligne. Ligne et national respectent Eco <= Standard <= Express
+     * et Express >= Standard x 1,10 : le plus grand ou le plus petit des deux
+     * aussi.
+     *
+     * @param  Collection<int, TariffGrid>  $grilles
+     * @param  array<int, float>  $ligne
+     * @return array<int, float>
+     */
+    public static function fretRetour(Collection $grilles, array $ligne, float $km, float $poids, bool $adr): array
+    {
+        $nationales = TariffGrid::where('zone', 'BE')->where('is_active', true)->get();
+        $national = self::parFormule($nationales, $km, $poids, 'BE', $adr);
+        $remise = self::remise();
+        $prix = [];
+
+        foreach ($grilles as $g) {
+            $plancher = ($n = $nationales->firstWhere('service_level', $g->service_level)) !== null ? $national[$n->id] : 0.0;
+            $prix[$g->id] = round(min($ligne[$g->id], max(round($ligne[$g->id] * (1 - $remise), 2), $plancher)), 2);
+        }
+
+        return $prix;
+    }
+
+    public static function remise(): float
+    {
+        return (float) config('fret.retour.remise', 0.0);
+    }
+
+    /**
+     * Delai promis : celui de la formule, mais jamais moins que les
+     * journees de conduite (9 h par jour) moins le jour du chargement.
+     */
+    public static function delai(TariffGrid $grille, ?float $km): int
+    {
+        return max((int) $grille->delivery_days, TempsDeConduite::journees((int) round((float) $km)) - 1);
+    }
+
     private static function plafond(float $prix, ?float $plafond): float
     {
         return $plafond === null ? $prix : min($prix, $plafond);
@@ -94,7 +172,33 @@ class Tarificateur
         return round($cout, 2);
     }
 
+    /**
+     * Distance routiere, gardee en cache : l'estimation et l'enregistrement
+     * voient la meme distance, donc le meme prix.
+     */
     public static function distanceRoutiere(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $cle = 'osrm:'.implode(',', array_map(fn ($v) => number_format($v, 5, '.', ''), [$lat1, $lng1, $lat2, $lng2]));
+
+        if (($connue = Cache::get($cle)) !== null) {
+            return (float) $connue;
+        }
+
+        $osrm = self::osrm($lat1, $lng1, $lat2, $lng2);
+
+        if ($osrm !== null) {
+            Cache::put($cle, $osrm, now()->addDay());
+
+            return $osrm;
+        }
+
+        $repli = self::distanceVol($lat1, $lng1, $lat2, $lng2) * 1.3;
+        Cache::put($cle, $repli, now()->addMinutes(10));
+
+        return $repli;
+    }
+
+    private static function osrm(float $lat1, float $lng1, float $lat2, float $lng2): ?float
     {
         try {
             $reponse = Http::timeout(5)->get(
@@ -108,7 +212,7 @@ class Tarificateur
         } catch (\Throwable $e) {
         }
 
-        return self::distanceVol($lat1, $lng1, $lat2, $lng2) * 1.3;
+        return null;
     }
 
     public static function distanceVol(float $lat1, float $lng1, float $lat2, float $lng2): float

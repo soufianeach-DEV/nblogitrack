@@ -8,6 +8,7 @@ use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
 use App\Support\Traductions;
+use App\Support\Trajet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,6 +26,9 @@ class TarifController extends Controller
     {
         return Inertia::render('Tarifs/Index', [
             'destinations' => $this->destinations(),
+            // Pays d'enlevement ouverts en ligne ; les autres passent par un devis.
+            'departs' => $this->departs(),
+            'remiseFretRetour' => (int) round(Tarificateur::remise() * 100),
             'formules' => array_values(self::NIVEAUX),
         ]);
     }
@@ -33,6 +37,7 @@ class TarifController extends Controller
     {
         $donnees = $request->validate([
             'depart' => 'required|string|max:120',
+            'pays_depart' => 'nullable|string|size:2',
             'destination' => 'required|string|max:120',
             'pays' => 'required|string|size:2|exists:tariff_grids,zone',
             'poids' => 'required|numeric|min:1|max:44000',
@@ -47,8 +52,17 @@ class TarifController extends Controller
             'poids.numeric' => Traductions::t('msg.poids_nombre', 'Le poids doit être un nombre.'),
         ]);
 
+        $paysDepart = strtoupper($donnees['pays_depart'] ?? 'BE');
+        $trajet = new Trajet($paysDepart, $donnees['pays']);
+
+        // Aucune lecture de la flotte : le simulateur public ne dit jamais
+        // ou se trouvent nos camions.
+        if ($refus = $trajet->refus()) {
+            return response()->json(['erreur' => $refus], 422);
+        }
+
         try {
-            $depart = $this->localiser($donnees['depart'], 'BE');
+            $depart = $this->localiser($donnees['depart'], $paysDepart);
             $arrivee = $this->localiser($donnees['destination'], $donnees['pays']);
         } catch (GeocodageIndisponible) {
             return response()->json([
@@ -59,7 +73,7 @@ class TarifController extends Controller
         if ($depart === null || $arrivee === null) {
             return response()->json([
                 'erreur' => $depart === null
-                    ? Traductions::t('msg.depart_introuvable', 'Localité de départ introuvable en Belgique.')
+                    ? Traductions::t('msg.depart_introuvable', 'Localité de départ introuvable dans ce pays.')
                     : Traductions::t('msg.destination_introuvable', 'Localité de destination introuvable dans ce pays.'),
             ], 422);
         }
@@ -67,20 +81,14 @@ class TarifController extends Controller
         $km = Tarificateur::distanceRoutiere($depart->lat, $depart->lng, $arrivee->lat, $arrivee->lng);
         $adr = $request->boolean('adr');
 
-        $formules = TariffGrid::where('is_active', true)
-            ->where('zone', $donnees['pays'])
-            ->orderBy('delivery_days')
-            ->get()
+        $grilles = $trajet->grilles()->sortBy('delivery_days')->values();
+        $prix = Tarificateur::parFormule($grilles, $km, (float) $donnees['poids'], (string) $trajet->zone(), $adr);
+
+        $formules = $grilles
             ->map(fn (TariffGrid $grille) => [
                 'formule' => self::NIVEAUX[$grille->service_level] ?? $grille->service_level,
-                'delai' => (int) $grille->delivery_days,
-                'prix' => Tarificateur::cout(
-                    $grille,
-                    $km,
-                    (float) $donnees['poids'],
-                    $donnees['pays'],
-                    $adr,
-                ),
+                'delai' => Tarificateur::delai($grille, $km),
+                'prix' => $prix[$grille->id],
                 'dedie' => $grille->service_level === 'EXPRESS',
             ])
             ->all();
@@ -89,6 +97,9 @@ class TarifController extends Controller
             'depart' => Traductions::vocabulaire('ville', $depart->ville),
             'arrivee' => Traductions::vocabulaire('ville', $arrivee->ville),
             'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
+            'pays_depart' => Pays::libelle($paysDepart) ?? $paysDepart,
+            'trajet' => $trajet->fleche(),
+            'fret_retour_possible' => $trajet->estImport() && Tarificateur::remise() > 0,
             'distance' => (int) round($km),
             'poids' => (float) $donnees['poids'],
             'adr' => $adr,
@@ -108,6 +119,25 @@ class TarifController extends Controller
             ->distinct()
             ->orderBy('zone')
             ->pluck('zone')
+            ->map(fn (string $code) => [
+                'code' => $code,
+                'nom' => Pays::libelle($code) ?? $code,
+                'en_ligne' => Localite::enLigne($code),
+            ])
+            ->all();
+
+        $collateur = new \Collator(app()->getLocale());
+        usort($pays, fn (array $a, array $b) => $collateur->compare($a['nom'], $b['nom']));
+
+        return $pays;
+    }
+
+    /**
+     * @return array<int, array{code: string, nom: string, en_ligne: bool}>
+     */
+    private function departs(): array
+    {
+        $pays = collect(config('fret.pays_enlevement'))
             ->map(fn (string $code) => [
                 'code' => $code,
                 'nom' => Pays::libelle($code) ?? $code,

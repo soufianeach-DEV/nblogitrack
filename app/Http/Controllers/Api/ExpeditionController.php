@@ -3,19 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TransportOrderController;
 use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\Chronologie;
+use App\Support\FretRetour;
 use App\Support\GeocodageIndisponible;
+use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\Pays;
 use App\Support\Tarificateur;
+use App\Support\Trajet;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ExpeditionController extends Controller
@@ -81,6 +87,10 @@ class ExpeditionController extends Controller
             'instructions' => 'nullable|string|max:500',
             'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
             'formule' => ['nullable', Rule::in(['ECO', 'STANDARD', 'EXPRESS'])],
+            'pays_enlevement' => 'nullable|string|size:2',
+            'expediteur' => 'nullable|string|max:150',
+            'telephone_expediteur' => 'nullable|string|max:30',
+            'reference_chargement' => 'nullable|string|max:60',
         ]);
 
         // Un envoi qu'aucun camion ne peut prendre (ADR avec hayon, 20 t...)
@@ -96,8 +106,41 @@ class ExpeditionController extends Controller
         $pays = strtoupper($donnees['pays_livraison'] ?? '')
             ?: (Pays::depuisNom(Adresse::pays($donnees['livraison'])) ?? 'BE');
 
+        // Pays d'enlevement : le parametre, sinon celui ecrit dans l'adresse,
+        // sinon la Belgique (les appels existants ne changent pas).
+        $nomDepart = Adresse::pays($donnees['enlevement']);
+        $paysDepart = strtoupper($donnees['pays_enlevement'] ?? '') ?: ($nomDepart === null ? 'BE' : (Pays::depuisNom($nomDepart) ?? ''));
+
+        if ($paysDepart === '') {
+            return response()->json(['message' => 'Pays d\'enlèvement non reconnu : utilisez pays_enlevement.'], 422);
+        }
+
+        if (! Adresse::paysCoherent($donnees['enlevement'], $paysDepart, false)) {
+            return response()->json(['message' => 'Le pays écrit dans l\'adresse d\'enlèvement ne correspond pas à pays_enlevement.'], 422);
+        }
+
+        $trajet = new Trajet($paysDepart, $pays);
+
+        if ($refus = TransportOrderController::refusDuTrajet($trajet, $donnees['enlevement'])) {
+            return response()->json(['message' => $refus['message']], 422);
+        }
+
+        if ($paysDepart !== 'BE' && (empty($donnees['expediteur']) || empty($donnees['telephone_expediteur']))) {
+            return response()->json(['message' => 'Hors de Belgique, indiquez expediteur et telephone_expediteur (le chauffeur charge chez un tiers).'], 422);
+        }
+
+        $region = FretRetour::regionDe($paysDepart, $donnees['enlevement']);
+        $jourEnlevement = Carbon::parse($donnees['date_enlevement'], Trajet::fuseau($paysDepart))->startOfDay();
+
+        if (JoursFeries::chome($jourEnlevement, $paysDepart, $region)) {
+            return response()->json([
+                'message' => 'Aucun enlèvement ce jour-là (dimanche ou jour férié en '.$paysDepart.'). Premier jour ouvrable : '
+                    .JoursFeries::prochainJourOuvrable($jourEnlevement, $paysDepart, $region)->toDateString().'.',
+            ], 422);
+        }
+
         try {
-            $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays);
+            $points = $this->situer($donnees['enlevement'], $donnees['livraison'], $pays, $paysDepart);
         } catch (GeocodageIndisponible) {
             return response()->json([
                 'message' => 'La vérification de l\'adresse de livraison est momentanément indisponible. Réessayez dans quelques minutes.',
@@ -108,8 +151,31 @@ class ExpeditionController extends Controller
             return response()->json(['message' => $points], 422);
         }
 
-        $grille = $this->grille($pays, $donnees['formule'] ?? null,
-            $donnees['date_enlevement'], $donnees['date_livraison']);
+        // Hors de Belgique : un camion doit pouvoir y etre, route depuis
+        // Bruxelles et repos compris. Le chargement se prevoit a l'ouverture
+        // du quai, ou au premier instant possible ce jour-la.
+        $enlevement = Carbon::parse($donnees['date_enlevement']);
+
+        if ($paysDepart !== 'BE') {
+            $premier = FretRetour::premierEnlevement($paysDepart, (float) $points['enlevement']->lat, (float) $points['enlevement']->lng, $donnees['enlevement']);
+            $premierLocal = $premier->copy()->setTimezone(Trajet::fuseau($paysDepart));
+
+            if ($jourEnlevement->lt($premierLocal->copy()->startOfDay())) {
+                return response()->json(['message' => 'Hors de Belgique, l\'enlèvement est possible au plus tôt le '.$premierLocal->toDateString().' (route depuis Bruxelles et repos du chauffeur compris).'], 422);
+            }
+
+            [$h, $m] = array_map('intval', explode(':', (string) config('fret.chrono.quai.0', '07:00')));
+            $enlevement = $jourEnlevement->copy()->setTime($h, $m)->setTimezone(config('app.timezone'));
+            $enlevement = $enlevement->lt($premier) ? $premier : $enlevement;
+        }
+
+        $km = Tarificateur::distanceRoutiere(
+            (float) $points['enlevement']->lat, (float) $points['enlevement']->lng,
+            (float) $points['livraison']->lat, (float) $points['livraison']->lng,
+        );
+
+        $grille = $this->grille($trajet, $donnees['formule'] ?? null,
+            $donnees['date_enlevement'], $donnees['date_livraison'], $km);
 
         if ($grille === null) {
             return response()->json([
@@ -117,36 +183,64 @@ class ExpeditionController extends Controller
             ], 422);
         }
 
-        $km = Tarificateur::distanceRoutiere(
-            (float) $points['enlevement']->lat, (float) $points['enlevement']->lng,
-            (float) $points['livraison']->lat, (float) $points['livraison']->lng,
-        );
         $adr = $request->boolean('matieres_dangereuses');
 
-        $expedition = TransportOrder::deposer([
+        $demande = new TransportOrder([
             'client_id' => $cle->client_id,
-            'created_date' => now()->toDateString(),
+            'pickup_country' => $paysDepart,
+            'delivery_country' => $pays,
             'pickup_address' => $donnees['enlevement'],
-            'delivery_address' => $donnees['livraison'],
             'pickup_lat' => $points['enlevement']->lat,
             'pickup_lng' => $points['enlevement']->lng,
             'delivery_lat' => $points['livraison']->lat,
             'delivery_lng' => $points['livraison']->lng,
+            'pickup_date' => $enlevement,
             'weight' => $donnees['poids'],
             'volume' => $donnees['volume'] ?? null,
-            'goods_type' => $donnees['marchandise'],
             'is_hazardous' => $adr,
             'needs_tail_lift' => $request->boolean('hayon'),
-            'pickup_date' => $donnees['date_enlevement'],
-            'requested_delivery_date' => $donnees['date_livraison'],
-            'special_instructions' => $donnees['instructions'] ?? null,
-            'status' => 'PENDING',
-            'priority' => 'NORMAL',
-            'tariff_grid_id' => $grille->id,
             'distance_km' => (int) round($km),
-            'estimated_cost' => Tarificateur::cout($grille, $km, (float) $donnees['poids'], $pays, $adr),
-            'tracking_code' => TransportOrder::prochainCode(),
         ]);
+
+        $expedition = DB::transaction(function () use ($trajet, $demande, $km, $grille, $cle, $donnees, $adr, $request, $enlevement, $paysDepart, $pays, $points) {
+            DB::statement('select pg_advisory_xact_lock(?)', [FretRetour::VERROU]);
+            $offre = Tarificateur::offre($trajet, $demande, $km);
+
+            return TransportOrder::deposer([
+                'client_id' => $cle->client_id,
+                'created_date' => now()->toDateString(),
+                'pickup_address' => $donnees['enlevement'],
+                'pickup_country' => $paysDepart,
+                'delivery_address' => $donnees['livraison'],
+                'delivery_country' => $pays,
+                'shipper_name' => $donnees['expediteur'] ?? null,
+                'shipper_phone' => $donnees['telephone_expediteur'] ?? null,
+                'loading_reference' => $donnees['reference_chargement'] ?? null,
+                'pricing_basis' => $offre['base'],
+                'backhaul_order_id' => $offre['porteuse']?->id,
+                'approche_km' => $paysDepart === 'BE' ? null : (int) round($offre['porteuse'] !== null
+                    ? FretRetour::approche($offre['porteuse'], (float) $points['enlevement']->lat, (float) $points['enlevement']->lng)
+                    : Chronologie::kmDepuisDepot((float) $points['enlevement']->lat, (float) $points['enlevement']->lng)),
+                'pickup_lat' => $points['enlevement']->lat,
+                'pickup_lng' => $points['enlevement']->lng,
+                'delivery_lat' => $points['livraison']->lat,
+                'delivery_lng' => $points['livraison']->lng,
+                'weight' => $donnees['poids'],
+                'volume' => $donnees['volume'] ?? null,
+                'goods_type' => $donnees['marchandise'],
+                'is_hazardous' => $adr,
+                'needs_tail_lift' => $request->boolean('hayon'),
+                'pickup_date' => $enlevement,
+                'requested_delivery_date' => $donnees['date_livraison'],
+                'special_instructions' => $donnees['instructions'] ?? null,
+                'status' => 'PENDING',
+                'priority' => 'NORMAL',
+                'tariff_grid_id' => $grille->id,
+                'distance_km' => (int) round($km),
+                'estimated_cost' => $offre['prix'][$grille->id],
+                'tracking_code' => TransportOrder::prochainCode(),
+            ]);
+        });
 
         ActivityLog::record(
             'order.created_api',
@@ -162,12 +256,12 @@ class ExpeditionController extends Controller
     /**
      * @return array{enlevement: object, livraison: object}|string
      */
-    private function situer(string $enlevement, string $livraison, string $pays): array|string
+    private function situer(string $enlevement, string $livraison, string $pays, string $paysDepart = 'BE'): array|string
     {
-        $depart = Localite::coordonnees(Adresse::localite($enlevement), 'BE');
+        $depart = Localite::coordonnees(Adresse::localite($enlevement), $paysDepart);
 
         if ($depart === null) {
-            return 'L\'adresse d\'enlèvement ne correspond à aucune localité belge connue.';
+            return 'L\'adresse d\'enlèvement ne correspond à aucune localité connue en '.$paysDepart.'.';
         }
 
         $arrivee = Localite::coordonnees(Adresse::localite($livraison), $pays);
@@ -179,19 +273,23 @@ class ExpeditionController extends Controller
         return ['enlevement' => $depart, 'livraison' => $arrivee];
     }
 
-    private function grille(string $pays, ?string $formule, string $enlevement, string $livraison): ?TariffGrid
+    /**
+     * La formule du trajet : celle demandee, sinon la moins rapide qui tient
+     * le delai, route comprise (9 h de conduite par jour).
+     */
+    private function grille(Trajet $trajet, ?string $formule, string $enlevement, string $livraison, float $km): ?TariffGrid
     {
-        $requete = TariffGrid::where('zone', $pays)->where('is_active', true);
+        $grilles = $trajet->grilles();
 
         if ($formule !== null) {
-            return $requete->where('service_level', $formule)->first();
+            return $grilles->firstWhere('service_level', $formule);
         }
 
         $jours = Carbon::parse($enlevement)->startOfDay()
             ->diffInDays(Carbon::parse($livraison)->startOfDay(), false);
 
-        return $requete->where('delivery_days', '<=', $jours)
-            ->orderByDesc('delivery_days')
+        return $grilles->filter(fn (TariffGrid $g) => Tarificateur::delai($g, $km) <= $jours)
+            ->sortByDesc(fn (TariffGrid $g) => Tarificateur::delai($g, $km))
             ->first();
     }
 
@@ -212,6 +310,8 @@ class ExpeditionController extends Controller
             'statut' => $o->status,
             'priorite' => $o->priority,
             'depart' => Adresse::localite($o->pickup_address),
+            'pays_depart' => $o->pickup_country ?? 'BE',
+            'pays_arrivee' => $o->delivery_country ?? 'BE',
             'arrivee' => Adresse::localite($o->delivery_address),
             'enlevement_prevu' => $o->pickup_date?->toDateString(),
             'livraison_prevue' => $o->requested_delivery_date?->toDateString(),
@@ -230,6 +330,9 @@ class ExpeditionController extends Controller
             'matieres_dangereuses' => (bool) $o->is_hazardous,
             'hayon' => (bool) $o->needs_tail_lift,
             'distance_km' => $o->distance_km !== null ? (float) $o->distance_km : null,
+            'prix_ht' => $o->estimated_cost !== null ? (float) $o->estimated_cost : null,
+            'tarif' => $o->pricing_basis === 'BACKHAUL' ? 'fret_retour' : 'ligne',
+            'expediteur' => $o->shipper_name,
             'creee_le' => $o->created_date?->toDateString(),
         ];
     }

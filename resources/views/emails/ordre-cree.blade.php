@@ -45,7 +45,7 @@
         @if ($grille)
             <tr>
                 <td style="padding:4px 0; color:#94a3b8;">{{ $t::t('courriel.formule', 'Formule') }}</td>
-                <td style="padding:4px 0;">{{ $grille->libelle }} — {{ $t::t('courriel.livraison_en', 'livraison en :jours j', ['jours' => $grille->delivery_days]) }}</td>
+                <td style="padding:4px 0;">{{ $ordre->formule() }} — {{ $t::t('courriel.livraison_en', 'livraison en :jours j', ['jours' => $ordre->delaiPromis() ?? $grille->delivery_days]) }}</td>
             </tr>
         @endif
         @if ($ordre->pickup_date)

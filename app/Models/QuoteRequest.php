@@ -36,7 +36,7 @@ class QuoteRequest extends Model
     protected $fillable = [
         'reference', 'company_name', 'contact_name', 'email', 'phone',
         'vat_number', 'customer_type',
-        'pickup_address', 'pickup_lat', 'pickup_lng',
+        'pickup_address', 'pickup_country', 'pickup_lat', 'pickup_lng',
         'delivery_address', 'delivery_lat', 'delivery_lng', 'delivery_country',
         'pickup_date', 'trip_type', 'frequency', 'date_flexibility',
         'goods_type', 'weight', 'volume', 'vehicle_type', 'insurance_value',

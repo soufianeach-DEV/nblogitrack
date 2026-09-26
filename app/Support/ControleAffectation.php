@@ -40,10 +40,22 @@ final class ControleAffectation
             $depart = now();
         }
 
-        $debut = $depart->copy()->startOfDay();
-        $fin = $debut->copy()->addDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+        $jour = $depart->copy()->startOfDay();
+        $fin = $jour->copy()->addDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+        $debut = $jour->copy()->subDays(self::joursDApproche($ordre));
 
-        return [$depart, $debut, $fin];
+        return [$depart, $debut->lt(today()) ? today() : $debut, $fin];
+    }
+
+    /**
+     * Jours de route a vide avant le chargement : un camion envoye du depot
+     * charger a Lyon part la veille. Pendant ce temps, il n'est pas libre.
+     */
+    public static function joursDApproche(TransportOrder $ordre): int
+    {
+        $km = (int) $ordre->approche_km;
+
+        return $km > 0 ? TempsDeConduite::journees($km) - 1 : 0;
     }
 
     /**
@@ -73,9 +85,67 @@ final class ControleAffectation
         }
 
         $prevu = $mission->pickup_date?->copy()->startOfDay();
-        $debut = $prevu !== null && $prevu->gte(today()) ? $prevu : today();
+        $jour = $prevu !== null && $prevu->gte(today()) ? $prevu : today();
+        $debut = $jour->copy()->subDays(self::joursDApproche($mission));
 
-        return [$debut, $debut->copy()->addDays($journees - 1)];
+        return [$debut->lt(today()) ? today() : $debut, $jour->copy()->addDays($journees - 1)];
+    }
+
+    /**
+     * La mission engagee du camion qui finit le plus tard sans depasser
+     * $auPlusTard : d'ou il part pour la suivante.
+     */
+    public static function derniereMission(string $immatriculation, CarbonInterface $auPlusTard, ?int $exclu = null): ?TransportOrder
+    {
+        return TransportOrder::where('vehicle_registration', $immatriculation)
+            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+            ->when($exclu !== null, fn ($q) => $q->where('id', '!=', $exclu))
+            ->get()
+            ->map(fn (TransportOrder $m) => [$m, self::occupation($m)[1]])
+            ->filter(fn (array $p) => $p[1]->lte($auPlusTard))
+            ->sortByDesc(fn (array $p) => $p[1]->timestamp * 1000000 + $p[0]->id)
+            ->first()[0] ?? null;
+    }
+
+    /**
+     * Le camion peut-il rejoindre le lieu de chargement a temps depuis sa
+     * derniere livraison ? Un camion qui livre a Lyon le jour A n'est pas a
+     * Namur le lendemain (680 km, deux journees de conduite).
+     *
+     * @return array{champ: string, message: string}|null
+     */
+    private static function approcheImpossible(TransportOrder $ordre, Vehicle $vehicule, CarbonInterface $fin): ?array
+    {
+        if ($ordre->pickup_lat === null || $ordre->pickup_lng === null) {
+            return null;
+        }
+
+        $jour = $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+        $precedente = self::derniereMission($vehicule->registration, $jour->copy()->subDay(), $ordre->id);
+
+        if ($precedente === null || $precedente->delivery_lat === null) {
+            return null;
+        }
+
+        $livraison = self::occupation($precedente)[1];
+        $ecart = (int) $livraison->diffInDays($jour);
+
+        if ($ecart > 3) {
+            return null;
+        }
+
+        $km = FretRetour::approche($precedente, (float) $ordre->pickup_lat, (float) $ordre->pickup_lng);
+
+        if (TempsDeConduite::journees((int) round($km)) <= $ecart) {
+            return null;
+        }
+
+        return ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_approche_impossible', 'Ce camion livre à :ville le :date, à :km km d\'ici : il ne peut pas charger ici le :jour.', [
+            'ville' => Adresse::localite((string) $precedente->delivery_address),
+            'date' => $livraison->format('d/m/Y'),
+            'km' => Formats::nombre(round($km)),
+            'jour' => $jour->format('d/m/Y'),
+        ])];
     }
 
     /**
@@ -202,7 +272,7 @@ final class ControleAffectation
      */
     private static function debut(TransportOrder $ordre, CarbonInterface $fin): CarbonInterface
     {
-        $debut = $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1);
+        $debut = $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1 + self::joursDApproche($ordre));
 
         return $debut->lt(today()) ? today() : $debut;
     }
@@ -264,10 +334,17 @@ final class ControleAffectation
             ])];
         }
 
-        $conduite = TempsDeConduite::empechements($chauffeur->id, $ordre->distance_km, $depart, $ordre->id, $ordre, $vehicule->registration);
+        // Les kilometres a vide jusqu'au lieu de chargement comptent aussi.
+        $km = $ordre->distance_km === null ? null : (int) $ordre->distance_km + (int) $ordre->approche_km;
+        $conduite = TempsDeConduite::empechements($chauffeur->id, $km, $depart, $ordre->id, $ordre, $vehicule->registration);
 
         if ($conduite !== []) {
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_temps_conduite', 'Temps de conduite : :motifs.', ['motifs' => implode(' ; ', $conduite)])];
+        }
+
+        // En dernier : les refus existants gardent leur ordre.
+        if ($approche = self::approcheImpossible($ordre, $vehicule, $fin)) {
+            $refus[] = $approche;
         }
 
         return $refus;
@@ -326,7 +403,7 @@ final class ControleAffectation
             ->where(fn ($q) => $q->where('status', 'IN_PROGRESS')
                 ->orWhereNull('pickup_date')
                 ->orWhere('pickup_date', '<=', $fin->copy()->endOfDay()))
-            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'weight', 'volume'])
+            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'approche_km', 'weight', 'volume'])
             ->filter(function (TransportOrder $mission) use ($debut, $fin) {
                 [$premier, $dernier] = self::occupation($mission);
 

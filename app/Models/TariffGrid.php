@@ -17,7 +17,7 @@ class TariffGrid extends Model
 
     protected $fillable = [
         'label', 'zone', 'base_rate', 'price_per_km', 'price_per_kg',
-        'adr_coefficient', 'is_active',
+        'adr_coefficient', 'is_active', 'service_level', 'delivery_days',
     ];
 
     /*

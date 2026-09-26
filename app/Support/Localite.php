@@ -49,12 +49,38 @@ class Localite
             return Geocodeur::localite($ville, $pays, $lat, $lng);
         }
 
+        // « % » ou « _ » ne sont pas des localites : sans echappement, une
+        // adresse « 1000 % » trouvait la premiere ville du pays.
+        $motif = addcslashes(self::locale($ville), '\\%_');
+
+        // Avec un point, la ligne la plus proche : deux Saint-Denis, deux
+        // Neustadt, ne se confondent plus au centre de leur moyenne.
+        if ($lat !== null && $lng !== null) {
+            return DB::table('postal_codes')
+                ->selectRaw('city AS ville, lat, lng, region')
+                ->where('country_code', $pays)
+                ->where('city', 'ilike', $motif)
+                ->orderByRaw('power(lat - ?, 2) + power((lng - ?) * cos(radians(?)), 2)', [$lat, $lng, $lat])
+                ->first();
+        }
+
         return DB::table('postal_codes')
-            ->selectRaw('MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
+            ->selectRaw('MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng, MIN(region) AS region')
             ->where('country_code', $pays)
-            ->where('city', 'ilike', self::locale($ville))
+            ->where('city', 'ilike', $motif)
             ->groupBy('city')
             ->first();
+    }
+
+    /** La region GeoNames d'un code postal (le Land allemand). */
+    public static function region(string $pays, string $codePostal): ?string
+    {
+        $region = DB::table('postal_codes')
+            ->where('country_code', strtoupper($pays))
+            ->where('code', trim($codePostal))
+            ->value('region');
+
+        return $region === null ? null : (string) $region;
     }
 
     /**

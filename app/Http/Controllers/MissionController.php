@@ -324,6 +324,11 @@ class MissionController extends Controller
     {
         return array_merge($this->carte($ordre), [
             'adresse_enlevement' => $ordre->pickup_address,
+            // Chargement a l'etranger chez un tiers : qui appeler sur place.
+            'expediteur' => $ordre->shipper_name,
+            'telephone_expediteur' => $ordre->shipper_phone,
+            'reference_chargement' => $ordre->loading_reference,
+            'pays_enlevement' => $ordre->pickup_country !== 'BE' ? $ordre->pickup_country : null,
             'adresse_livraison' => $ordre->delivery_address,
             'livree_le' => $ordre->delivered_at?->toIso8601String() ?? $ordre->actual_delivery_date?->toDateString(),
             'receptionnaire' => $ordre->received_by,

@@ -94,13 +94,21 @@ const NOM_FORMULE = {
     Express: ['commande.offre_express', 'Express'],
 };
 
-export default function Index({ destinations = [], formules = [] }) {
+export default function Index({ destinations = [], departs = [], formules = [], remiseFretRetour = 0 }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [depart, setDepart] = useState('');
     const [destination, setDestination] = useState('');
     const [pays, setPays] = useState('BE');
+    // Un enlevement hors de Belgique livre en Belgique : les trajets entre
+    // deux pays etrangers se traitent sur devis.
+    const [paysDepart, setPaysDepart] = useState('BE');
+    const changerDepart = (code) => {
+        setPaysDepart(code);
+        setDepart('');
+        if (code !== 'BE') { setPays('BE'); setDestination(''); }
+    };
     const [poids, setPoids] = useState('500');
     const [adr, setAdr] = useState(false);
     const [resultat, setResultat] = useState(null);
@@ -123,7 +131,7 @@ export default function Index({ destinations = [], formules = [] }) {
                         document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
                     ),
                 },
-                body: JSON.stringify({ depart, destination, pays, poids, adr }),
+                body: JSON.stringify({ depart, pays_depart: paysDepart, destination, pays, poids, adr }),
             });
 
             const donnees = await reponse.json();
@@ -149,7 +157,7 @@ export default function Index({ destinations = [], formules = [] }) {
                 <div className="mx-auto max-w-4xl px-4 text-center">
                     <h1 className="text-3xl font-bold sm:text-4xl">{t('tarifs.calculez', 'Calculez votre tarif')}</h1>
                     <p className="mx-auto mt-3 max-w-2xl text-slate-300">
-                        {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Départ de Belgique vers :n destinations européennes.', { n: destinations.length })}
+                        {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Enlèvement ou livraison en Belgique, :n pays européens desservis.', { n: destinations.filter((d) => d.code !== 'BE').length })}
                     </p>
                 </div>
             </section>
@@ -159,15 +167,32 @@ export default function Index({ destinations = [], formules = [] }) {
                     <form onSubmit={simuler} className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
+                                <label htmlFor="pays_depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    {t('tarifs.pays_enlevement', 'Pays d\'enlèvement')}
+                                </label>
+                                <select
+                                    id="pays_depart"
+                                    value={paysDepart}
+                                    onChange={(e) => changerDepart(e.target.value)}
+                                    className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                >
+                                    {departs.map((d) => (
+                                        <option key={d.code} value={d.code}>{d.nom}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
                                 <label htmlFor="depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    {t('tarifs.enlevement_be', 'Enlèvement en Belgique')}
+                                    {t('tarifs.localite_enlevement', 'Localité d\'enlèvement')}
                                 </label>
                                 <ChoixVille
                                     id="depart"
-                                    pays="BE"
+                                    pays={paysDepart}
+                                    enLigne={departs.find((d) => d.code === paysDepart)?.en_ligne === true}
                                     valeur={depart}
                                     onChange={setDepart}
-                                    placeholder={t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…')}
+                                    placeholder={paysDepart === 'BE' ? t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…') : t('tarifs.taper', 'Commencez à taper…')}
                                 />
                             </div>
 
@@ -178,6 +203,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <select
                                     id="pays"
                                     value={pays}
+                                    disabled={paysDepart !== 'BE'}
                                     onChange={(e) => { setPays(e.target.value); setDestination(''); }}
                                     className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
                                 >
@@ -253,7 +279,7 @@ export default function Index({ destinations = [], formules = [] }) {
                             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-100 pb-4">
                                 <h2 className="text-lg font-bold text-marine">
                                     {resultat.depart} <span className="text-slate-600">→</span> {resultat.arrivee}
-                                    <span className="ml-2 text-sm font-normal text-slate-600">{resultat.pays}</span>
+                                    <span className="ml-2 text-sm font-normal text-slate-600">{resultat.trajet ?? resultat.pays}</span>
                                 </h2>
                                 <p className="text-sm text-slate-600">
                                     {resultat.distance.toLocaleString(locale)} {t('tarifs.par_route', 'km par la route')} ·{' '}
@@ -278,6 +304,12 @@ export default function Index({ destinations = [], formules = [] }) {
                                     </div>
                                 ))}
                             </div>
+
+                            {resultat.fret_retour_possible && (
+                                <p className="mt-5 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm text-status-delivered">
+                                    {t('tarifs.note_fret_retour', 'Import vers la Belgique : si l\'un de nos camions revient de la région à votre date, un tarif fret retour (jusqu\'à :remise % de remise) s\'applique à la commande.', { remise: remiseFretRetour })}
+                                </p>
+                            )}
 
                             <p className="mt-5 text-xs text-slate-600">
                                 {t('tarifs.indicatif', 'Prix hors TVA, à titre indicatif. Le tarif définitif tient compte de l\'adresse exacte, de la date d\'enlèvement et des contraintes de chargement.')}

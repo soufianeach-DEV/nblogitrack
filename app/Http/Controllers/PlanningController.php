@@ -9,6 +9,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\ControleAffectation;
+use App\Support\FretRetour;
 use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
 use App\Support\Traductions;
@@ -54,11 +55,14 @@ class PlanningController extends Controller
         }
 
         $contrainte = $request->query('contrainte');
-        if (! in_array($contrainte, ['adr', 'hayon'], true)) {
+        if (! in_array($contrainte, ['adr', 'hayon', 'etranger'], true)) {
             $contrainte = null;
         }
 
         $colonneContrainte = ['adr' => 'is_hazardous', 'hayon' => 'needs_tail_lift'];
+        $filtreContrainte = fn ($requete) => $contrainte === 'etranger'
+            ? $requete->where('pickup_country', '!=', 'BE')
+            : $requete->where($colonneContrainte[$contrainte], true);
 
         // Un jour d'enlevement precis, venu du calendrier du tableau de
         // bord. Une date mal formee ou impossible (31 fevrier) est ignoree
@@ -95,10 +99,11 @@ class PlanningController extends Controller
             'vehicle.indisponibilites' => $aVenir,
             'driver.user:id,first_name,last_name',
             'driver.indisponibilites' => $aVenir,
+            'porteuse:id,tracking_number,status,vehicle_registration,driver_id,delivery_lat,delivery_lng,delivery_address,delivery_country,delivered_at,picked_up_at,pickup_date,distance_km,client_id',
         ])
             ->where('status', $statut)
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
-            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($contrainte, $filtreContrainte)
             ->when($jour, $duJour)
             ->when($q !== '', $recherche)
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
@@ -107,6 +112,49 @@ class PlanningController extends Controller
             ->withQueryString()
             ->through(function (TransportOrder $o) use ($parcDisponible, $chauffeursDisponibles) {
                 $o->setAttribute('conduite', TempsDeConduite::resume($o->distance_km));
+                $o->setAttribute('trajet', $o->trajet()->court());
+
+                // Fret retour : les binomes qui livrent a cote a la bonne date,
+                // sinon le depart du depot a prevoir.
+                if ($o->status === 'PENDING' && FretRetour::concerne($o)) {
+                    $candidats = FretRetour::porteuses($o, false, 3);
+                    $o->setAttribute('fret_retour', $candidats->map(fn (array $c) => [
+                        'numero' => $c['mission']->tracking_number,
+                        'vehicle_registration' => $c['mission']->vehicle_registration,
+                        'driver_id' => $c['mission']->driver_id,
+                        'chauffeur' => trim(($c['mission']->driver?->user?->first_name ?? '').' '.($c['mission']->driver?->user?->last_name ?? '')),
+                        'ville' => Adresse::localite((string) $c['mission']->delivery_address),
+                        'arrivee' => $c['arrivee']->format('d/m/Y'),
+                        'approche_km' => $c['approche_km'],
+                        'reste_t' => round($c['reste_kg'] / 1000, 1),
+                    ])->all());
+
+                    if ($candidats->isEmpty()) {
+                        $o->setAttribute('positionnement', FretRetour::positionnement($o));
+                    }
+                }
+
+                // Vendu au tarif fret retour : la mission porteuse est-elle
+                // toujours la ? Le prix reste acquis au client, mais il faut
+                // alors un autre camion.
+                if ($o->pricing_basis === 'BACKHAUL' && in_array($o->status, ['PENDING', 'ASSIGNED'], true)) {
+                    $porteuse = $o->porteuse;
+                    $o->setAttribute('porteuse_info', [
+                        'numero' => $porteuse?->tracking_number,
+                        'valide' => $porteuse !== null && in_array($porteuse->status, ['ASSIGNED', 'IN_PROGRESS'], true)
+                            && ($o->status !== 'PENDING' || FretRetour::porteuses($o, false, 5)->contains(fn (array $c) => $c['mission']->id === $porteuse->id)),
+                    ]);
+                }
+
+                if (in_array($o->status, ['ASSIGNED', 'IN_PROGRESS'], true) && $o->delivery_country !== 'BE') {
+                    $o->setAttribute('retours_possibles', FretRetour::chargements($o, 3)->map(fn (array $c) => [
+                        'numero' => $c['ordre']->tracking_number,
+                        'ville' => Adresse::localite((string) $c['ordre']->pickup_address),
+                        'date' => $c['ordre']->pickup_date?->format('d/m/Y'),
+                        'approche_km' => $c['approche_km'],
+                        'poids' => (float) $c['ordre']->weight,
+                    ])->all());
+                }
                 $o->setAttribute('conduite_heures', TempsDeConduite::heuresDeConduite($o->distance_km));
 
                 // Grisage calcule par le serveur, a la date de la mission :
@@ -145,7 +193,7 @@ class PlanningController extends Controller
             });
 
         $parPriorite = TransportOrder::where('status', $statut)
-            ->when($contrainte, fn ($q) => $q->where($colonneContrainte[$contrainte], true))
+            ->when($contrainte, $filtreContrainte)
             ->when($jour, $duJour)
             ->when($q !== '', $recherche)
             ->selectRaw('priority, count(*) AS total')
@@ -156,7 +204,7 @@ class PlanningController extends Controller
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
             ->when($jour, $duJour)
             ->when($q !== '', $recherche)
-            ->selectRaw('count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon')
+            ->selectRaw("count(*) filter (where is_hazardous) AS adr, count(*) filter (where needs_tail_lift) AS hayon, count(*) filter (where pickup_country <> 'BE') AS etranger")
             ->first();
 
         $conduiteSemaine = TransportOrder::whereNotNull('driver_id')
@@ -206,6 +254,7 @@ class PlanningController extends Controller
             'contraintes' => [
                 ['valeur' => 'adr', 'nombre' => (int) $parContrainte->adr],
                 ['valeur' => 'hayon', 'nombre' => (int) $parContrainte->hayon],
+                ['valeur' => 'etranger', 'nombre' => (int) $parContrainte->etranger],
             ],
             'compteurs' => TransportOrder::when($q !== '', $recherche)
                 ->when($jour, $duJour)
@@ -341,6 +390,13 @@ class PlanningController extends Controller
                 $transportOrder->pickup_date = $enlevement;
             }
 
+            // Enlevement a l'etranger : les kilometres a vide depuis la
+            // derniere livraison du camion, ou depuis le depot, comptent
+            // dans l'occupation et le temps de conduite.
+            if ($transportOrder->status !== 'IN_PROGRESS') {
+                $transportOrder->approche_km = FretRetour::approchePour($transportOrder, $vehicle);
+            }
+
             if ($refus = ControleAffectation::refus($transportOrder, $vehicle, $driver)) {
                 return $refus[0];
             }
@@ -349,6 +405,9 @@ class PlanningController extends Controller
                 $reaffectation
                     ? OrderWorkflow::reaffecter($transportOrder, $vehicle, $driver, $transportOrder->status === 'ASSIGNED' ? $enlevement : null)
                     : OrderWorkflow::affecter($transportOrder, $vehicle, $driver, $enlevement);
+                if ($transportOrder->status === 'ASSIGNED' && $transportOrder->pickup_country !== 'BE') {
+                    TransportOrder::whereKey($transportOrder->id)->update(['approche_km' => FretRetour::approchePour($transportOrder, $vehicle)]);
+                }
             } catch (TransitionRefusee $e) {
                 // L'ordre a change d'etat entre-temps : sa carte change
                 // d'onglet au retour, le message doit rester visible.

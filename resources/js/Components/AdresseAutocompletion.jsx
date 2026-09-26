@@ -58,14 +58,15 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const PAYS = useMemo(() => {
         const noms = new Intl.DisplayNames([langue], { type: 'region' });
 
-        // Un pays impose (l'enlevement se fait en Belgique) reduit la liste
-        // a ce seul pays, plutot que d'accepter une adresse que le serveur
-        // refusera.
-        return (paysImpose ? [paysImpose] : CODES_EUROPE)
+        // Une chaine impose un pays (liste verrouillee) ; un tableau donne
+        // les pays permis (les pays d'enlevement ouverts en ligne), plutot
+        // que d'accepter une adresse que le serveur refusera.
+        return (Array.isArray(paysImpose) ? paysImpose : paysImpose ? [paysImpose] : CODES_EUROPE)
             .map((code) => ({ code, nom: noms.of(code) }))
             .sort((a, b) => a.nom.localeCompare(b.nom, langue));
     }, [langue, paysImpose]);
-    const [pays, setPays] = useState(paysImpose ?? 'BE');
+    const paysVerrouille = typeof paysImpose === 'string';
+    const [pays, setPays] = useState(paysVerrouille ? paysImpose : Array.isArray(paysImpose) && ! paysImpose.includes('BE') ? paysImpose[0] : 'BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
     const [cp, setCp] = useState('');
@@ -624,7 +625,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
-                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysImpose !== null} className={selectCls}>
+                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysVerrouille} className={selectCls}>
                         {PAYS.map((p) => (
                             <option key={p.code} value={p.code}>{p.nom}</option>
                         ))}

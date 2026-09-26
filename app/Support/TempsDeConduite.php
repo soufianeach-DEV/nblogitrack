@@ -23,6 +23,9 @@ class TempsDeConduite
 
     public const REPOS_JOURNALIER = 11.0;
 
+    /** Journee de service : 24 h moins le repos journalier de 11 h. */
+    public const AMPLITUDE_MAX = 13.0;
+
     public static function heuresDeConduite(?int $km): float
     {
         return $km === null ? 0.0 : round($km / self::VITESSE_MOYENNE, 2);
@@ -115,13 +118,13 @@ class TempsDeConduite
             ->where(fn ($q) => $q->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
                 ->orWhere(fn ($l) => $l->where('status', 'DELIVERED')
                     ->whereBetween('pickup_date', [$du->copy()->startOfDay(), $au->copy()->endOfDay()])))
-            ->get(['id', 'status', 'pickup_date', 'picked_up_at', 'distance_km', 'vehicle_registration', 'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng'])
+            ->get(['id', 'status', 'pickup_date', 'picked_up_at', 'distance_km', 'approche_km', 'vehicle_registration', 'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng'])
             ->map(fn (TransportOrder $m) => [
                 'jour' => ($m->status === 'DELIVERED'
                     ? Carbon::instance($m->picked_up_at ?? $m->pickup_date)->startOfDay()
                     : ControleAffectation::occupation($m)[0])->toDateString(),
                 'cle' => self::tournee($m->vehicle_registration, $m),
-                'km' => (int) $m->distance_km,
+                'km' => (int) $m->distance_km + (int) $m->approche_km,
             ])
             ->filter(fn (array $d) => $d['jour'] >= $du->toDateString() && $d['jour'] <= $au->toDateString())
             ->values();
