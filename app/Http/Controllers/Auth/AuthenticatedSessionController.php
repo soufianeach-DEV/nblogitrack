@@ -38,6 +38,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // On reste dans la langue ou l'on etait.
+        return redirect('/'.app()->getLocale());
     }
 }

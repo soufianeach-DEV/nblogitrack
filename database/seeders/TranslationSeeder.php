@@ -1187,6 +1187,10 @@ class TranslationSeeder extends Seeder
             'receptionnaire_aide' => ['Nom de la personne qui reçoit la marchandise', 'Naam van de persoon die de goederen ontvangt', 'Name of the person receiving the goods'],
             'reserves' => ['Réserves (facultatif)', 'Voorbehouden (optioneel)', 'Reservations (optional)'],
             'reserves_aide' => ['Colis abîmé, manquant, emballage ouvert…', 'Beschadigd pakket, ontbrekend, verpakking geopend…', 'Damaged parcel, missing item, packaging opened…'],
+            'annulee_le' => ['Annulée le :date', 'Geannuleerd op :date', 'Cancelled on :date'],
+            'relire_note' => ['Relire la note d\'information', 'Informatienota herlezen', 'Read the information note again'],
+            'fermer' => ['Fermer', 'Sluiten', 'Close'],
+            'localisation' => ['Localisation…', 'Locatie bepalen…', 'Locating…'],
         ],
 
         'journal' => [
@@ -2585,6 +2589,8 @@ class TranslationSeeder extends Seeder
             'supplement_annulee' => ['Cette expédition a été annulée sans frais : aucun supplément ne peut y être ajouté.', 'Deze zending werd kosteloos geannuleerd: er kan geen toeslag worden toegevoegd.', 'This shipment was cancelled free of charge: no surcharge can be added.'],
             'supplement_facture' => ['Ce supplément est déjà facturé : annulez la facture par un avoir pour le corriger.', 'Deze toeslag is al gefactureerd: annuleer de factuur met een creditnota om hem te corrigeren.', 'This surcharge is already invoiced: cancel the invoice with a credit note to correct it.'],
             'supplement_retire' => ['Supplément retiré.', 'Toeslag verwijderd.', 'Surcharge removed.'],
+            'mission_retiree' => ['Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.', 'Deze opdracht is u niet meer toegewezen: de planner heeft ze aan een andere bestuurder gegeven of terug in wacht gezet.', 'This job is no longer assigned to you: the planner gave it to another driver or put it back on hold.'],
+            'mission_annulee' => ['Cette mission a été annulée : ne chargez pas la marchandise.', 'Deze opdracht werd geannuleerd: laad de goederen niet.', 'This job has been cancelled: do not load the goods.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2604,6 +2610,16 @@ class TranslationSeeder extends Seeder
         'grille' => [
             'national' => ['National (BE)', 'Nationaal (BE)', 'Domestic (BE)'],
             'export' => ['Export :pays', 'Export :pays', 'Export :pays'],
+        ],
+        'vocab.vehicule' => [
+            'plateau' => ['Plateau', 'Platte wagen', 'Flatbed'],
+            'benne' => ['Benne', 'Kipper', 'Tipper'],
+            'porteur' => ['Porteur', 'Bakwagen', 'Rigid truck'],
+            'fourgon' => ['Fourgon', 'Bestelwagen', 'Van'],
+            'semi_remorque' => ['Semi-remorque', 'Oplegger', 'Semi-trailer'],
+            'citerne' => ['Citerne', 'Tankwagen', 'Tanker'],
+            'frigo' => ['Frigo', 'Koelwagen', 'Refrigerated truck'],
+            'camionnette' => ['Camionnette', 'Kleine bestelwagen', 'Light van'],
         ],
     ];
 }

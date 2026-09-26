@@ -13,6 +13,19 @@ const STATUTS = {
     CANCELLED: { cle: 'mission.annulee', libelle: 'Annulée', pastille: 'bg-status-incident/10 text-status-incident', barre: 'border-l-status-incident' },
 };
 
+const memeJour = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** « 09:00 » aujourd'hui, « mar. 29/09 · 09:00 » un autre jour, dans la langue de l'ecran. */
+function quand(iso, locale, { avecHeure = true } = {}) {
+    if (! iso) return null;
+    const d = new Date(iso);
+    const heure = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    if (avecHeure && memeJour(d, new Date())) return heure;
+    const jour = d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
+
+    return avecHeure ? `${jour} · ${heure}` : jour;
+}
+
 function Etape({ intitule, heure, lieu }) {
     return (
         <div>
@@ -27,6 +40,7 @@ function Etape({ intitule, heure, lieu }) {
 function CarteMission({ mission, active, onClick }) {
     const t = useTraduction();
     const v = useVocabulaire();
+    const locale = useLocale();
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
     return (
@@ -47,8 +61,13 @@ function CarteMission({ mission, active, onClick }) {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                    <Etape intitule={t('ordres.chargement', 'Chargement')} heure={mission.heure_enlevement} lieu={mission.enlevement} />
-                    <Etape intitule={t('commun.livraison', 'livraison')} heure={mission.date_livraison} lieu={mission.livraison} />
+                    <Etape intitule={t('ordres.chargement', 'Chargement')} heure={quand(mission.enlevement_iso, locale)} lieu={mission.enlevement} />
+                    <Etape intitule={t('commun.livraison', 'livraison')} heure={quand(mission.date_livraison, locale, { avecHeure: false })} lieu={mission.livraison} />
+                    {mission.annulee_le && (
+                        <p className="text-xs font-semibold text-status-incident">
+                            {t('mission.annulee_le', 'Annulée le :date', { date: quand(mission.annulee_le, locale, { avecHeure: false }) })}
+                        </p>
+                    )}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
@@ -71,6 +90,7 @@ function BoutonAvancement({ mission }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [localisation, setLocalisation] = useState(false);
     const [receptionnaire, setReceptionnaire] = useState('');
     const [reserves, setReserves] = useState('');
     const livraison = mission.action.statut === 'DELIVERED';
@@ -83,8 +103,11 @@ function BoutonAvancement({ mission }) {
         }
 
         setProcessing(true);
+        setLocalisation(true);
 
         const point = await positionActuelle();
+
+        setLocalisation(false);
 
         router.patch(route('missions.status', mission.id), {
             statut: mission.action.statut,
@@ -100,7 +123,9 @@ function BoutonAvancement({ mission }) {
     };
 
     return (
-        <div className="sticky bottom-20 mt-4 lg:bottom-0">
+        // Le formulaire de livraison, ouvert, ne recouvre pas la fiche :
+        // il n'est plus colle au bas de l'ecran.
+        <div className={arme && livraison ? 'mt-4' : 'sticky bottom-20 mt-4 lg:bottom-0'}>
             {arme && livraison && (
                 <div className="mb-3 space-y-2 rounded-xl bg-white p-3 shadow-lg">
                     <label className="block text-sm font-medium text-marine">
@@ -139,7 +164,7 @@ function BoutonAvancement({ mission }) {
                 }`}
             >
                 {processing
-                    ? t('action.enregistrement', 'Enregistrement…')
+                    ? (localisation ? t('mission.localisation', 'Localisation…') : t('action.enregistrement', 'Enregistrement…'))
                     : arme
                         ? t('mission.confirmer', 'Appuyez à nouveau pour confirmer')
                         : mission.action.libelle}
@@ -157,11 +182,11 @@ function BoutonAvancement({ mission }) {
     );
 }
 
-function NoteInformation({ note }) {
+function NoteInformation({ note, ouverte, onFermer }) {
     const t = useTraduction();
     const [envoi, setEnvoi] = useState(false);
 
-    if (! note) return null;
+    if (! note || (! note.a_accuser && ! ouverte)) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-marine-deep/60 p-4 sm:items-center">
@@ -179,6 +204,15 @@ function NoteInformation({ note }) {
                     {t('note.portee', 'Cette déclaration atteste que vous avez été informé. Elle ne vous demande pas votre accord : le traitement repose sur l\'exécution de votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, pas sur votre consentement.')}
                 </p>
 
+                {! note.a_accuser ? (
+                    <button
+                        type="button"
+                        onClick={onFermer}
+                        className="mt-5 w-full rounded-xl border border-marine px-6 py-3.5 text-base font-bold text-marine transition hover:bg-marine/5"
+                    >
+                        {t('mission.fermer', 'Fermer')}
+                    </button>
+                ) : (
                 <button
                     type="button"
                     disabled={envoi}
@@ -195,6 +229,7 @@ function NoteInformation({ note }) {
                         ? t('action.enregistrement', 'Enregistrement…')
                         : t('note.accuser', 'J\'ai pris connaissance')}
                 </button>
+                )}
             </div>
         </div>
     );
@@ -264,11 +299,11 @@ function SuiviDirect({ mission }) {
     if (! partage) return null;
 
     return (
-        <div className={`mt-4 rounded-lg px-3 py-2.5 text-xs ${refuse ? 'bg-status-incident/10' : 'bg-brand-blue/10'}`}>
+        <div className={`mb-4 rounded-lg px-3 py-2.5 text-xs ${refuse ? 'bg-status-incident/10' : 'bg-brand-blue/10'}`}>
             <p className={`font-semibold ${refuse ? 'text-status-incident' : 'text-brand-blue'}`}>
                 {refuse
                     ? t('suivi_direct.refuse', 'Position non partagée')
-                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission')}
+                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission') + ' · ' + mission.numero}
             </p>
             <p className="mt-0.5 text-slate-600">
                 {refuse
@@ -318,7 +353,7 @@ function Fiche({ mission, onRetour }) {
                         <span className="mt-1 flex h-3 w-3 shrink-0 rounded-full border-2 border-marine bg-white" />
                         <div>
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                {t('commun.enlevement', 'enlèvement')}{mission.enlevement_prevu && ' • ' + mission.enlevement_prevu}
+                                {t('commun.enlevement', 'enlèvement')}{mission.enlevement_iso && ' • ' + quand(mission.enlevement_iso, locale)}
                             </p>
                             <p className="font-bold leading-snug text-marine">{mission.adresse_enlevement}</p>
                         </div>
@@ -327,7 +362,7 @@ function Fiche({ mission, onRetour }) {
                         <span className="mt-1 h-3 w-3 shrink-0 rounded-sm bg-marine" />
                         <div>
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                {t('commun.livraison', 'livraison')}{mission.livraison_prevue && ' • ' + mission.livraison_prevue}
+                                {t('commun.livraison', 'livraison')}{mission.date_livraison && ' • ' + quand(mission.date_livraison, locale, { avecHeure: false })}
                             </p>
                             <p className="font-bold leading-snug text-marine">{mission.adresse_livraison}</p>
                         </div>
@@ -384,12 +419,16 @@ function Fiche({ mission, onRetour }) {
                 </div>
 
                 {mission.livree_le && (
-                    <p className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm font-semibold text-status-delivered">
-                        {t('mission.livree_le', 'Livrée le')} {mission.livree_le}
-                    </p>
+                    <div className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm text-status-delivered">
+                        <p className="font-semibold">{t('mission.livree_le', 'Livrée le')} {quand(mission.livree_le, locale)}</p>
+                        {mission.receptionnaire && (
+                            <p className="mt-1 text-marine">{t('mission.receptionnaire', 'Réceptionné par')} : {mission.receptionnaire}</p>
+                        )}
+                        {mission.reserves && (
+                            <p className="mt-1 text-marine">{t('ordres.reserves', 'Réserves à la livraison')} : {mission.reserves}</p>
+                        )}
+                    </div>
                 )}
-
-                <SuiviDirect mission={mission} />
             </div>
 
             {mission.action && <BoutonAvancement mission={mission} />}
@@ -408,24 +447,45 @@ export default function Missions({ missions = [], mission = null, introuvable = 
         month: 'long',
     });
 
+    // Le message d'une mission ne suit pas le chauffeur sur la suivante :
+    // le flash est recharge avec la fiche.
     const ouvrir = (numero) => router.get(
         route('missions.index'),
         numero ? { mission: numero } : {},
-        { preserveState: true, preserveScroll: true, only: ['mission', 'introuvable'] },
+        { preserveState: true, preserveScroll: true, only: ['mission', 'introuvable', 'flash'] },
     );
+
+    // Les changements du planificateur (suivi active, mission retiree ou
+    // reaffectee) arrivent sans recharger la page.
+    useEffect(() => {
+        const minuteur = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                router.reload({ only: ['missions', 'mission', 'note'] });
+            }
+        }, 60 * 1000);
+
+        return () => clearInterval(minuteur);
+    }, []);
+
+    const [noteOuverte, setNoteOuverte] = useState(false);
+    const enPartage = missions.find((m) => m.statut === 'IN_PROGRESS' && m.suivi_direct);
 
     return (
         <ChauffeurLayout>
             <Head title={t('mission.mes_missions', 'Mes missions')} />
 
-            <NoteInformation note={note} />
+            <NoteInformation note={note} ouverte={noteOuverte} onFermer={() => setNoteOuverte(false)} />
+
+            {/* Le partage de position tourne tant que l'ecran des missions
+                est ouvert, sur la liste comme sur une fiche. */}
+            {enPartage && <SuiviDirect mission={enPartage} />}
 
             <div className="lg:flex lg:gap-4">
                 <div className={`lg:w-[360px] lg:shrink-0 ${mission ? 'hidden lg:block' : ''}`}>
                     <div className="mb-4 flex items-end justify-between gap-3">
                         <div>
                             <h1 className="text-2xl font-bold text-marine">{t('mission.mes_missions', 'Mes missions')}</h1>
-                            <p className="text-sm capitalize text-slate-600">{aujourdhui}</p>
+                            <p className="text-sm text-slate-600 first-letter:uppercase">{aujourdhui}</p>
                         </div>
                         <span className="shrink-0 rounded-full bg-brand-blue/10 px-3 py-1 text-sm font-bold text-brand-blue">
                             {actives} {actives > 1 ? t('mission.actives', 'actives') : t('mission.active', 'active')}
@@ -456,6 +516,12 @@ export default function Missions({ missions = [], mission = null, introuvable = 
                                 />
                             ))}
                         </ul>
+                    )}
+
+                    {note && ! note.a_accuser && (
+                        <button type="button" onClick={() => setNoteOuverte(true)} className="mt-4 text-sm font-semibold text-brand-blue hover:text-marine">
+                            {t('mission.relire_note', 'Relire la note d\'information')}
+                        </button>
                     )}
                 </div>
 

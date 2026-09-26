@@ -473,4 +473,58 @@ class ParcoursNavigateurTest extends TestCase
 
         $this->assertSame(0, ShipmentPosition::where('transport_order_id', $ordre->id)->count());
     }
+
+    // --- Chauffeur (deuxieme parcours) ---------------------------------------
+
+    public function test_une_mission_retiree_renvoie_le_chauffeur_a_sa_liste_avec_un_message(): void
+    {
+        $ancien = $this->chauffeur();
+        $ordre = TransportOrder::factory()->affectee()->create(['driver_id' => $this->chauffeur()->id]);
+
+        $this->actingAs(User::find($ancien->id))
+            ->patch(route('missions.status', $ordre), ['statut' => 'IN_PROGRESS'])
+            ->assertRedirect(route('missions.index'))
+            ->assertSessionHas('error');
+
+        $this->actingAs(User::find($ancien->id))
+            ->postJson(route('missions.position', $ordre), ['lat' => 50.85, 'lng' => 4.35])
+            ->assertOk()
+            ->assertJson(['suivi' => false, 'motif' => 'retiree']);
+    }
+
+    public function test_une_mission_annulee_le_dit_au_chauffeur(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $ordre = TransportOrder::factory()->create([
+            'driver_id' => $chauffeur->id,
+            'status' => 'CANCELLED',
+            'cancelled_at' => now(),
+        ]);
+
+        $this->actingAs(User::find($chauffeur->id))
+            ->patch(route('missions.status', $ordre), ['statut' => 'IN_PROGRESS'])
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'annulée'));
+    }
+
+    public function test_la_deconnexion_garde_la_langue(): void
+    {
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->post('/nl/logout')
+            ->assertRedirect('/nl');
+    }
+
+    public function test_l_historique_du_chauffeur_montre_les_plus_recentes_d_abord(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $ancienne = TransportOrder::factory()->livree()->create(['driver_id' => $chauffeur->id, 'delivered_at' => now()->subDays(10)]);
+        $recente = TransportOrder::factory()->livree()->create(['driver_id' => $chauffeur->id, 'delivered_at' => now()->subDay()]);
+        $aFaire = TransportOrder::factory()->affectee()->create(['driver_id' => $chauffeur->id]);
+
+        $this->actingAs(User::find($chauffeur->id))
+            ->get(route('missions.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('missions.0.id', $aFaire->id)
+                ->where('missions.1.id', $recente->id)
+                ->where('missions.2.id', $ancienne->id));
+    }
 }

@@ -119,10 +119,13 @@ export default function AuthenticatedLayout({ header, children }) {
                         {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
-                {}
-                <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
-                    {t('nav.suivi', 'Suivre un envoi')}
-                </LienMenu>
+                {/* Le suivi public ne montre rien a un chauffeur : ses
+                    missions sont sur son propre ecran. */}
+                {! estChauffeur && (
+                    <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
+                        {t('nav.suivi', 'Suivre un envoi')}
+                    </LienMenu>
+                )}
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
                         {t('nav.devis_demandes', 'Demandes de devis')}

@@ -32,14 +32,26 @@ class MissionController extends Controller
     {
         $chauffeur = $request->user();
 
-        $missions = TransportOrder::with([
-            'client:id,company_name',
-            'vehicle:registration,brand,model,vehicle_type',
-        ])
+        $relations = ['client:id,company_name', 'vehicle:registration,brand,model,vehicle_type'];
+
+        // Les missions a faire d'abord, dans l'ordre du chargement ; puis
+        // l'historique, du plus recent au plus ancien, limite aux trente
+        // dernieres.
+        $aFaire = TransportOrder::with($relations)
             ->where('driver_id', $chauffeur->id)
-            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 WHEN 'ASSIGNED' THEN 1 ELSE 2 END")
+            ->whereIn('status', ['IN_PROGRESS', 'ASSIGNED'])
+            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END")
             ->orderBy('pickup_date')
             ->get();
+
+        $terminees = TransportOrder::with($relations)
+            ->where('driver_id', $chauffeur->id)
+            ->whereIn('status', ['DELIVERED', 'CANCELLED'])
+            ->orderByRaw('COALESCE(delivered_at, cancelled_at, updated_at) DESC')
+            ->limit(30)
+            ->get();
+
+        $missions = $aFaire->concat($terminees);
 
         $numero = trim((string) $request->query('mission', ''));
         $ouverte = $numero !== ''
@@ -54,18 +66,29 @@ class MissionController extends Controller
             'missions' => $missions->map(fn (TransportOrder $ordre) => $this->carte($ordre))->all(),
             'mission' => $ouverte ? $this->fiche($ouverte) : null,
             'introuvable' => $numero !== '' && $ouverte === null,
-            'note' => $aInformer ? [
+            'note' => $note === null ? null : [
                 'titre' => $note->titre($langue),
                 'corps' => $note->corps($langue),
                 'version' => $note->updated_at?->toIso8601String(),
                 'mise_a_jour' => $note->updated_at?->format('d/m/Y'),
-            ] : null,
+                'a_accuser' => $aInformer,
+            ],
         ]);
     }
 
     public function updateStatus(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
-        abort_if($transportOrder->driver_id !== $request->user()->id, 404);
+        // Le planificateur a pu retirer ou reaffecter la mission pendant
+        // que le chauffeur l'avait a l'ecran : il revient a sa liste avec
+        // une explication, pas sur une erreur 404.
+        if ($transportOrder->driver_id !== $request->user()->id) {
+            return redirect()->route('missions.index')->with('error', Traductions::t('msg.mission_retiree', 'Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.'));
+        }
+
+        if ($transportOrder->status === 'CANCELLED') {
+            return redirect()->route('missions.index', ['mission' => $transportOrder->tracking_number])
+                ->with('error', Traductions::t('msg.mission_annulee', 'Cette mission a été annulée : ne chargez pas la marchandise.'));
+        }
 
         $donnees = $request->validate([
             'statut' => 'required|in:'.implode(',', array_keys(self::TRANSITIONS)),
@@ -147,7 +170,10 @@ class MissionController extends Controller
 
     public function position(Request $request, TransportOrder $transportOrder): JsonResponse
     {
-        abort_if($transportOrder->driver_id !== $request->user()->id, 404);
+        // Mission retiree en route : le telephone arrete de partager.
+        if ($transportOrder->driver_id !== $request->user()->id) {
+            return response()->json(['suivi' => false, 'motif' => 'retiree']);
+        }
 
         if ($transportOrder->status !== 'IN_PROGRESS' || ! $transportOrder->suivi_direct) {
             return response()->json(['suivi' => false]);
@@ -224,11 +250,15 @@ class MissionController extends Controller
             'numero' => $ordre->tracking_number,
             'statut' => $ordre->status,
             'priorite' => $ordre->priority,
-            'enlevement' => Adresse::localite($ordre->pickup_address),
-            'livraison' => Adresse::localite($ordre->delivery_address),
-            'heure_enlevement' => $ordre->pickup_date?->format('H\hi'),
-            'date_enlevement' => $ordre->pickup_date?->format('d/m'),
-            'date_livraison' => $ordre->requested_delivery_date?->format('d/m'),
+            'enlevement' => Traductions::vocabulaire('ville', Adresse::localite($ordre->pickup_address)),
+            'livraison' => Traductions::vocabulaire('ville', Adresse::localite($ordre->delivery_address)),
+            // L'heure et la date se mettent en forme dans la langue du
+            // telephone ; la carte montre la date quand ce n'est pas
+            // aujourd'hui.
+            'enlevement_iso' => $ordre->pickup_date?->toIso8601String(),
+            'date_livraison' => $ordre->requested_delivery_date?->toDateString(),
+            'annulee_le' => $ordre->status === 'CANCELLED' ? $ordre->cancelled_at?->toIso8601String() : null,
+            'suivi_direct' => (bool) $ordre->suivi_direct,
             'marchandise' => $ordre->goods_type,
             'adr' => (bool) $ordre->is_hazardous,
         ];
@@ -242,19 +272,18 @@ class MissionController extends Controller
         return array_merge($this->carte($ordre), [
             'adresse_enlevement' => $ordre->pickup_address,
             'adresse_livraison' => $ordre->delivery_address,
-            'enlevement_prevu' => $ordre->pickup_date?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
-            'livraison_prevue' => $ordre->requested_delivery_date?->format('d/m/Y'),
-            'livree_le' => $ordre->actual_delivery_date?->format('d/m/Y'),
+            'livree_le' => $ordre->delivered_at?->toIso8601String() ?? $ordre->actual_delivery_date?->toDateString(),
+            'receptionnaire' => $ordre->received_by,
+            'reserves' => $ordre->delivery_reserves,
             'poids' => $ordre->weight,
             'volume' => $ordre->volume,
             'distance_km' => $ordre->distance_km,
             'consignes' => $ordre->special_instructions,
-            'suivi_direct' => (bool) $ordre->suivi_direct,
             'client' => $ordre->client?->company_name,
             'vehicule' => $ordre->vehicle ? [
                 'immatriculation' => $ordre->vehicle->registration,
                 'modele' => trim($ordre->vehicle->brand.' '.$ordre->vehicle->model),
-                'type' => $ordre->vehicle->vehicle_type,
+                'type' => Traductions::vocabulaire('vehicule', $ordre->vehicle->vehicle_type),
             ] : null,
             'action' => match ($ordre->status) {
                 'ASSIGNED' => [
