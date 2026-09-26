@@ -30,12 +30,16 @@ class VatController extends Controller
 
         $tva = $identifiant['tva'];
 
-        // Un numero belge dont le controle modulo 97 echoue n'existe pas :
-        // inutile de le demander a VIES.
+        // Format ou cle de controle faux : le numero n'existe pas, inutile
+        // d'interroger le registre.
         if (! IdentifiantEntreprise::controleLocal($tva)) {
             return response()->json([
                 'statut' => 'format',
-                'message' => Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'),
+                'message' => $identifiant['pays'] === 'BE'
+                    ? Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).')
+                    : Traductions::t('msg.tva_format_pays', 'Ce numéro ne respecte pas le format de son pays : vérifiez-le (ex. :exemple).', [
+                        'exemple' => IdentifiantEntreprise::exemple($tva) ?? 'BE0123456749',
+                    ]),
             ]);
         }
 
@@ -45,7 +49,14 @@ class VatController extends Controller
             return response()->json($this->traduire($cache));
         }
 
-        $resultat = $this->interrogerVies($tva, $identifiant);
+        // Suisse, Royaume-Uni et Norvege ne sont pas dans VIES : chacun
+        // son registre.
+        $resultat = match ($identifiant['pays']) {
+            'CH' => $this->registreSuisse($identifiant),
+            'NO' => $this->registreNorvegien($identifiant),
+            'GB' => $this->registreBritannique($identifiant),
+            default => $this->interrogerVies($tva, $identifiant),
+        };
 
         if (in_array($resultat['statut'], ['valide', 'invalide'], true)) {
             Cache::put($cle, $resultat, now()->addDay());
@@ -64,7 +75,10 @@ class VatController extends Controller
     private function traduire(array $resultat): array
     {
         $message = match ($resultat['statut'] ?? null) {
-            'invalide' => Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.'),
+            'invalide' => ($resultat['registre'] ?? 'VIES') === 'VIES'
+                ? Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.')
+                : Traductions::t('msg.tva_inactive_registre', 'Ce numéro n\'est pas actif dans le registre :registre.', ['registre' => $resultat['registre']]),
+            'non_verifie' => Traductions::t('msg.tva_non_verifiee', 'Format valide. Le registre :registre n\'est pas interrogé : complétez les informations vous-même.', ['registre' => $resultat['registre'] ?? '']),
             'indisponible' => Traductions::t('msg.tva_registre_sature', 'Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.'),
             default => null,
         };
@@ -115,8 +129,9 @@ class VatController extends Controller
             if ($corps['isValid'] ?? false) {
                 return [
                     'statut' => 'valide',
+                    'registre' => 'VIES',
                     'nom' => $this->nettoyer($corps['name'] ?? ''),
-                    'adresse' => $this->decomposerAdresse($corps['address'] ?? ''),
+                    'adresse' => [...$this->decomposerAdresse($corps['address'] ?? ''), 'pays' => $identifiant['pays']],
                     'tva' => $identifiant['tva'],
                     'peppol' => $identifiant['peppol'],
                     'entreprise' => match ($identifiant['pays']) {
@@ -145,6 +160,186 @@ class VatController extends Controller
             return $this->indisponible();
         }
     }
+
+    /**
+     * Registre suisse des entreprises (UID), service public sans cle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreSuisse(array $identifiant): array
+    {
+        $enveloppe = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:uid="http://www.uid.admin.ch/xmlns/uid-wse" xmlns:ns="http://www.ech.ch/xmlns/eCH-0097/5">'
+            .'<soapenv:Body><uid:GetByUID><uid:uid><ns:uidOrganisationIdCategorie>CHE</ns:uidOrganisationIdCategorie>'
+            .'<ns:uidOrganisationId>'.$identifiant['national'].'</ns:uidOrganisationId></uid:uid></uid:GetByUID></soapenv:Body></soapenv:Envelope>';
+
+        try {
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->withHeaders(['SOAPAction' => 'http://www.uid.admin.ch/xmlns/uid-wse/IPublicServices/GetByUID'])
+                ->withBody($enveloppe, 'text/xml; charset=utf-8')
+                ->post('https://www.uid-wse.admin.ch/V5.0/PublicServices.svc');
+
+            if ($reponse->serverError() && ! str_contains($reponse->body(), 'Data_validation_failed')) {
+                return $this->indisponible();
+            }
+
+            $xml = $reponse->body();
+            $valeur = fn (string $balise) => preg_match('/<(?:\w+:)?'.$balise.'>([^<]*)</u', $xml, $m) ? $this->nettoyer(html_entity_decode($m[1])) : '';
+            $nom = $valeur('organisationName');
+
+            if ($nom === '') {
+                return ['statut' => 'invalide', 'registre' => 'UID (Suisse)'];
+            }
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'UID (Suisse)',
+                'nom' => $nom,
+                'adresse' => [
+                    'rue' => trim($valeur('street').' '.$valeur('houseNumber')),
+                    'code_postal' => $valeur('swissZipCode'),
+                    'ville' => $valeur('town'),
+                    'pays' => 'CH',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => [
+                    'dirigeant' => null,
+                    'secteur' => null,
+                    'forme_juridique' => $valeur('legalForm') ?: null,
+                    // 2 : inscrite ; 3 : radiee (eCH-0097).
+                    'situation' => $valeur('uidregStatusEnterpriseDetail') === '3'
+                        ? ['libelle' => 'Entreprise cessée', 'acceptable' => false]
+                        : ['libelle' => 'Entreprise active', 'acceptable' => true],
+                ],
+            ];
+        } catch (\Throwable) {
+            return $this->indisponible();
+        }
+    }
+
+    /**
+     * Registre norvegien des entites (Bronnoysund), service public sans cle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreNorvegien(array $identifiant): array
+    {
+        try {
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->acceptJson()
+                ->get('https://data.brreg.no/enhetsregisteret/api/enheter/'.$identifiant['national']);
+
+            if ($reponse->status() === 404 || $reponse->status() === 410) {
+                return ['statut' => 'invalide', 'registre' => 'Brønnøysund (Norvège)'];
+            }
+
+            if (! $reponse->ok()) {
+                return $this->indisponible();
+            }
+
+            $e = $reponse->json();
+
+            // Hors du registre de la TVA, le numero n'est pas un numero de TVA.
+            if (! ($e['registrertIMvaregisteret'] ?? false)) {
+                return ['statut' => 'invalide', 'registre' => 'Brønnøysund (Norvège)'];
+            }
+
+            $cessee = ($e['konkurs'] ?? false) || ($e['underAvvikling'] ?? false) || ($e['underTvangsavviklingEllerTvangsopplosning'] ?? false);
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'Brønnøysund (Norvège)',
+                'nom' => $this->nettoyer($e['navn'] ?? ''),
+                'adresse' => [
+                    'rue' => $this->nettoyer(implode(', ', $e['forretningsadresse']['adresse'] ?? [])),
+                    'code_postal' => (string) ($e['forretningsadresse']['postnummer'] ?? ''),
+                    'ville' => $this->casseNom((string) ($e['forretningsadresse']['poststed'] ?? '')),
+                    'pays' => 'NO',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => [
+                    'dirigeant' => null,
+                    'secteur' => $this->secteurDepuisNace($e['naeringskode1']['kode'] ?? null),
+                    'forme_juridique' => $e['organisasjonsform']['kode'] ?? null,
+                    'situation' => $cessee
+                        ? ['libelle' => 'Entreprise cessée', 'acceptable' => false]
+                        : ['libelle' => 'Entreprise active', 'acceptable' => true],
+                ],
+            ];
+        } catch (\Throwable) {
+            return $this->indisponible();
+        }
+    }
+
+    /**
+     * Registre britannique de la TVA (HMRC). Il exige une application
+     * declaree : sans identifiants, seul le format est controle.
+     *
+     * @param  array{pays: ?string, tva: ?string, national: ?string, peppol: ?string}  $identifiant
+     * @return array<string, mixed>
+     */
+    private function registreBritannique(array $identifiant): array
+    {
+        $client = config('services.hmrc.client_id');
+        $secret = config('services.hmrc.client_secret');
+
+        if (! $client || ! $secret) {
+            return ['statut' => 'non_verifie', 'registre' => 'HMRC (Royaume-Uni)', 'tva' => $identifiant['tva'], 'peppol' => $identifiant['peppol']];
+        }
+
+        $base = rtrim((string) config('services.hmrc.base', 'https://api.service.hmrc.gov.uk'), '/');
+
+        try {
+            $jeton = Cache::remember('hmrc:jeton', now()->addMinutes(200), fn () => Http::asForm()
+                ->timeout(self::DELAI_REGISTRE)
+                ->post($base.'/oauth/token', ['client_id' => $client, 'client_secret' => $secret, 'grant_type' => 'client_credentials'])
+                ->throw()
+                ->json('access_token'));
+
+            $reponse = Http::timeout(self::DELAI_REGISTRE)
+                ->withToken($jeton)
+                ->accept('application/vnd.hmrc.2.0+json')
+                ->get($base.'/organisations/vat/check-vat-number/lookup/'.substr((string) $identifiant['tva'], 2));
+
+            if ($reponse->status() === 404) {
+                return ['statut' => 'invalide', 'registre' => 'HMRC (Royaume-Uni)'];
+            }
+
+            if (! $reponse->ok()) {
+                return $this->indisponible();
+            }
+
+            $adresse = $reponse->json('target.address', []);
+
+            return [
+                'statut' => 'valide',
+                'registre' => 'HMRC (Royaume-Uni)',
+                'nom' => $this->nettoyer((string) $reponse->json('target.name', '')),
+                'adresse' => [
+                    'rue' => $this->nettoyer(implode(', ', array_filter([$adresse['line1'] ?? null, $adresse['line2'] ?? null]))),
+                    'code_postal' => (string) ($adresse['postcode'] ?? ''),
+                    'ville' => $this->nettoyer((string) ($adresse['line3'] ?? $adresse['line4'] ?? '')),
+                    'pays' => 'GB',
+                ],
+                'tva' => $identifiant['tva'],
+                'peppol' => $identifiant['peppol'],
+                'entreprise' => null,
+            ];
+        } catch (\Throwable) {
+            Cache::forget('hmrc:jeton');
+
+            return $this->indisponible();
+        }
+    }
+
+    /** Categories juridiques INSEE les plus courantes. */
+    private const FORMES_FRANCAISES = [
+        '1000' => 'Entrepreneur individuel', '5410' => 'SARL', '5498' => 'EURL', '5499' => 'SARL',
+        '5599' => 'SA', '5710' => 'SAS', '5720' => 'SASU', '6540' => 'SCI', '9220' => 'Association',
+    ];
 
     private const SECTEURS_NACE = [
         '01' => 'Agriculture', '02' => 'Agriculture', '03' => 'Agriculture',
@@ -192,6 +387,7 @@ class VatController extends Controller
             return [
                 'dirigeant' => $this->premierDirigeant($reponse->json('results.0.dirigeants', [])),
                 'secteur' => $this->secteurDepuisNace($reponse->json('results.0.activite_principale')),
+                'forme_juridique' => self::FORMES_FRANCAISES[(string) $reponse->json('results.0.nature_juridique')] ?? null,
                 'situation' => $etat === null ? null : [
                     'libelle' => $etat === 'A' ? 'Entreprise active' : 'Entreprise cessée',
                     'acceptable' => $etat === 'A',
@@ -265,6 +461,7 @@ class VatController extends Controller
                 'dirigeant' => $this->dirigeantBelge($texte),
                 'secteur' => $this->premierSecteurConnu($codes[1] ?? []),
                 'situation' => $this->situationBelge($texte),
+                'forme_juridique' => preg_match('/Forme l[ée]gale\s*:?\s*([\p{L}\'\- ]{2,80}?)\s*(?:Depuis|Type|Situation|$)/u', $texte, $f) ? $this->nettoyer($f[1]) : null,
             ];
         } catch (\Throwable $e) {
             return null;

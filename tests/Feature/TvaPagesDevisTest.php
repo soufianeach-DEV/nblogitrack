@@ -77,10 +77,15 @@ class TvaPagesDevisTest extends TestCase
         }
     }
 
-    public function test_les_autres_pays_ne_sont_pas_controles_sur_place(): void
+    public function test_chaque_pays_europeen_a_son_format_et_sa_cle(): void
     {
-        foreach (['FR12345678901', 'NL123456789B01', 'DE123456789', '123456789'] as $numero) {
+        foreach (['FR40303265045', 'NL123456789B01', 'DE123456789', '123456789', 'ATU12345678', 'CHE-116.281.710 MWST', 'NO923609016MVA', 'GB123456789', 'US123'] as $numero) {
             $this->assertTrue(IdentifiantEntreprise::controleLocal($numero), $numero);
+        }
+
+        // Cle francaise fausse, chiffre en trop, cle suisse et norvegienne fausses.
+        foreach (['FR12345678901', 'DE1234567890', 'ATU1234567', 'CHE-116.281.711', 'NO923609017', 'NL123456789'] as $numero) {
+            $this->assertFalse(IdentifiantEntreprise::controleLocal($numero), $numero);
         }
     }
 
@@ -277,6 +282,7 @@ class TvaPagesDevisTest extends TestCase
             'frequency' => 'Transport ponctuel', 'date_flexibility' => 'Flexible',
             'goods_type' => TransportOrder::MARCHANDISES[0], 'vehicle_type' => 'Porteur',
             'insurance_value' => 'Plus de 50 000 €', 'weight' => 1000,
+            'correspondence_language' => 'fr', 'preferred_channel' => 'email', 'privacy' => true,
         ])->assertSessionHasNoErrors();
 
         $devis = QuoteRequest::firstOrFail();
