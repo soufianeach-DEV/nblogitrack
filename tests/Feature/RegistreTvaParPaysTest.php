@@ -22,7 +22,7 @@ class RegistreTvaParPaysTest extends TestCase
      * formulaire doit recevoir : [raison sociale, rue, code postal, localite].
      */
     private const CAS = [
-        'AT' => ['ATU12345678', 'Muster GmbH', "Stephansplatz 1\nAT-1010 Wien", ['Muster GmbH', 'Stephansplatz 1', 'AT-1010', 'Wien']],
+        'AT' => ['ATU12345678', 'Muster GmbH', "Stephansplatz 1\nAT-1010 Wien", ['Muster GmbH', 'Stephansplatz 1', '1010', 'Wien']],
         'BE' => ['BE0202239951', 'Proximus SA', "Boulevard du Roi Albert II 27\n1030 Schaerbeek", ['Proximus SA', 'Boulevard du Roi Albert II 27', '1030', 'Schaerbeek']],
         'BG' => ['BG131468980', 'А1 България - ЕАД', 'ул. КУКУШ №1 обл.СОФИЯ, гр.СОФИЯ 1309', ['A1 Balgaria - EAD (А1 България - ЕАД)', 'ul. KUKUSH №1', '1309', 'SOFIA']],
         'CY' => ['CY12345678L', 'EXAMPLE LTD', "ARCH. MAKARIOU III 1\n1065 LEFKOSIA", ['EXAMPLE LTD', 'ARCH. MAKARIOU III 1', '1065', 'LEFKOSIA']],
@@ -84,6 +84,19 @@ class RegistreTvaParPaysTest extends TestCase
             ->assertJsonPath('adresse.rue', 'GORDON HOUSE, BARROW STREET')
             ->assertJsonPath('adresse.code_postal', '')
             ->assertJsonPath('adresse.ville', 'DUBLIN 4');
+    }
+
+    public function test_le_code_postal_roumain_au_milieu_de_la_ligne(): void
+    {
+        Http::fake(['ec.europa.eu/*' => Http::response([
+            'isValid' => true, 'name' => 'AUTOMOBILE-DACIA SA',
+            'address' => 'LOC. MIOVENI - ORŞ. MIOVENI 115400 STR. UZINEI Nr. 1',
+        ])]);
+
+        $this->getJson('/verification-tva?tva=RO160796')
+            ->assertJsonPath('adresse.rue', 'STR. UZINEI Nr. 1')
+            ->assertJsonPath('adresse.code_postal', '115400')
+            ->assertJsonPath('adresse.ville', 'MIOVENI');
     }
 
     public function test_un_operateur_telecom_n_est_pas_classe_en_electronique(): void

@@ -199,8 +199,9 @@ export default function Create({ choix, listes }) {
                     billing_country: adresse.pays,
                 });
             } else if (['invalide', 'format'].includes(resultat.statut)) {
-                // Numero refuse : rien de l'ancienne entreprise ne reste.
-                reprendreDuRegistre({});
+                // Numero refuse : rien de l'ancienne entreprise ne reste ;
+                // le pays suit le prefixe saisi.
+                reprendreDuRegistre({ billing_country: paysDuNumero(tva) });
             } else if (tva !== reprisPour.current) {
                 // Registre muet sur un autre numero : l'ancienne entreprise
                 // s'efface, le pays se deduit du prefixe (EL -> Grece).

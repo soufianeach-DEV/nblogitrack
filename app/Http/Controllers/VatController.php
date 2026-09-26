@@ -620,6 +620,18 @@ class VatController extends Controller
             $lignes = array_values(array_filter(array_map('trim', explode(',', $lignes[0]))));
         }
 
+        // Roumanie : « LOC. MIOVENI - ORŞ. MIOVENI 115400 STR. UZINEI Nr. 1 »,
+        // localite, code postal puis rue sur une seule ligne.
+        if ($pays === 'RO') {
+            foreach ($lignes as $i => $ligne) {
+                if (preg_match('/^(.*\S)\s+(\d{6})\s+(\S.*)$/u', $ligne, $m)) {
+                    $segments = preg_split('/\s+-\s+|,/u', $m[1]);
+                    array_splice($lignes, $i, 1, [$m[3], $m[2].' '.trim((string) end($segments))]);
+                    break;
+                }
+            }
+        }
+
         $codePostal = '';
         $ville = '';
         $rang = null;
@@ -700,6 +712,15 @@ class VatController extends Controller
             if (preg_match('/^(?:NR\.?|NO\.?|N°)\s*\S+$/iu', $ligne) && $rue !== $ligne) {
                 $rue .= ' '.$ligne;
             }
+        }
+
+        // « ORŞ. MIOVENI », « MUN. PITEŞTI » : le type de localite roumain.
+        $ville = preg_replace('/^(?:LOC\.|LOCALITATEA|ORŞ\.|ORAŞ|ORAS|ORS\.|MUN\.|MUNICIPIUL|COM\.|COMUNA|SAT)\s*/iu', '', $ville);
+
+        // « AT-5330 » : le prefixe du pays n'appartient au code postal
+        // qu'au Luxembourg, en Lettonie et en Lituanie.
+        if (! in_array($pays, ['LU', 'LV', 'LT'], true)) {
+            $codePostal = preg_replace('/^[A-Z]{1,2}-(?=\d)/', '', $codePostal);
         }
 
         // « ROMA RM » : le sigle de la province italienne suit la localite.
