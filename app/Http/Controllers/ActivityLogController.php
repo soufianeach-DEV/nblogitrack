@@ -28,6 +28,8 @@ class ActivityLogController extends Controller
         'order.charge_added' => 'Supplément ajouté',
         'order.charge_removed' => 'Supplément retiré',
         'invoice.credited' => 'Avoir émis',
+        'company.user_invited' => 'Collègue invité',
+        'company.user_updated' => 'Droits d\'un collègue modifiés',
         'order.cancelled_by_client' => 'Annulation par le client',
         'order.tracking_opened' => 'Suivi direct ouvert',
         'order.tracking_closed' => 'Suivi direct fermé',

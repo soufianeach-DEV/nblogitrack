@@ -225,7 +225,7 @@ class SocleFacturationTest extends TestCase
         $client = Client::factory()->create();
         $ordre = $this->livree($client);
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.charges.store', $ordre), ['libelle' => 'Remise', 'montant' => 50])
             ->assertForbidden();
     }

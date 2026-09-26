@@ -26,7 +26,7 @@ class RechercheController extends Controller
 
         $suggestions = $personnel
             ? $this->pourLePersonnel($terme)
-            : $this->pourLeClient($terme, $utilisateur->id);
+            : $this->pourLeClient($terme, (int) $utilisateur->client_id);
 
         return response()->json(['suggestions' => array_slice($suggestions, 0, self::MAXIMUM)]);
     }

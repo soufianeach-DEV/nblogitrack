@@ -6,7 +6,6 @@ use App\Mail\CompteActive;
 use App\Mail\InscriptionRefusee;
 use App\Models\ActivityLog;
 use App\Models\Client;
-use App\Models\User;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +23,7 @@ class ClientValidationController extends Controller
         $etat = $request->query('etat', 'attente');
 
         $query = Client::with([
-            'user:id,first_name,last_name,email',
+            'user:id,client_id,first_name,last_name,email',
             'contacts',
             'validator:id,first_name,last_name',
         ]);
@@ -84,10 +83,10 @@ class ClientValidationController extends Controller
             return back()->withErrors(['client' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
         }
 
-        $utilisateur = User::find($client->id);
+        $utilisateur = $client->compte();
         $refusPrecedent = $client->rejection_reason;
 
-        DB::transaction(function () use ($client, $utilisateur) {
+        DB::transaction(function () use ($client) {
             $client->update([
                 'is_validated' => true,
                 'validated_at' => now(),
@@ -95,7 +94,7 @@ class ClientValidationController extends Controller
                 'rejection_reason' => null,
             ]);
 
-            $utilisateur?->update(['is_active' => true]);
+            $client->users()->update(['is_active' => true]);
         });
 
         // La validation est deja enregistree. Un courriel qui ne part pas
@@ -149,16 +148,16 @@ class ClientValidationController extends Controller
             return back()->withErrors(['motif' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
         }
 
-        $utilisateur = User::find($client->id);
+        $utilisateur = $client->compte();
 
-        DB::transaction(function () use ($client, $data, $utilisateur) {
+        DB::transaction(function () use ($client, $data) {
             $client->update([
                 'validated_at' => now(),
                 'validated_by' => Auth::id(),
                 'rejection_reason' => $data['motif'],
             ]);
 
-            $utilisateur?->update(['is_active' => false]);
+            $client->users()->update(['is_active' => false]);
         });
 
         $envoye = $utilisateur === null

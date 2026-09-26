@@ -33,6 +33,7 @@ export default function Index({ orders, filters }) {
     const locale = useLocale();
     const v = useVocabulaire();
     const estClient = usePage().props.auth.user.role === 'CLIENT';
+    const peutCommander = usePage().props.auth.canOrder;
     const [search, setSearch] = useState({
         tracking: filters.tracking ?? '',
         client: filters.client ?? '',
@@ -68,7 +69,7 @@ export default function Index({ orders, filters }) {
                             {orders.total} {orders.total > 1 ? t('ordres.resultats', 'résultats') : t('ordres.resultat', 'résultat')}
                         </p>
                     </div>
-                    {estClient && (
+                    {estClient && peutCommander && (
                         <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
                             + {t('commande.titre', 'Nouvelle expédition')}
                         </Link>

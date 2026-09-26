@@ -47,7 +47,7 @@ function Groupe({ titre, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet, canOrder, canSeeInvoices, canManageCompany } = usePage().props.auth;
     const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
 
@@ -153,10 +153,18 @@ export default function AuthenticatedLayout({ header, children }) {
                 )}
             </Groupe>
 
-            {! estChauffeur && (
+            {canSeeInvoices && (
                 <Groupe titre={t('nav.finance', 'Finance & data')}>
                     <LienMenu href={route('invoices.index')} active={route().current('invoices.*') || route().current('purchases.*')} icone="facture" onClick={fermer}>
                         {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
+                    </LienMenu>
+                </Groupe>
+            )}
+
+            {canManageCompany && (
+                <Groupe titre={t('nav.mon_entreprise', 'Mon entreprise')}>
+                    <LienMenu href={route('company.users.index')} active={route().current('company.users.*')} icone="profil" onClick={fermer}>
+                        {t('nav.utilisateurs_entreprise', 'Utilisateurs')}
                     </LienMenu>
                 </Groupe>
             )}
@@ -216,7 +224,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const panneau = (
         <>
             {marque}
-            {estClient && nouvelleExpedition}
+            {estClient && canOrder && nouvelleExpedition}
             <nav className="mt-1 flex-1">{navigation}</nav>
             {pied}
         </>

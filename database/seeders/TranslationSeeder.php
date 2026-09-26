@@ -60,6 +60,8 @@ class TranslationSeeder extends Seeder
             'langue_actuelle' => ['Langue : :nom', 'Taal: :nom', 'Language: :nom'],
             'fermer_menu' => ['Fermer le menu', 'Menu sluiten', 'Close the menu'],
             'ouvrir_menu' => ['Ouvrir le menu', 'Menu openen', 'Open the menu'],
+            'mon_entreprise' => ['Mon entreprise', 'Mijn onderneming', 'My company'],
+            'utilisateurs_entreprise' => ['Utilisateurs', 'Gebruikers', 'Users'],
         ],
 
         'temoins' => [
@@ -1261,6 +1263,8 @@ class TranslationSeeder extends Seeder
             'action_order_charge_added' => ['Supplément ajouté', 'Toeslag toegevoegd', 'Surcharge added'],
             'action_order_charge_removed' => ['Supplément retiré', 'Toeslag verwijderd', 'Surcharge removed'],
             'action_invoice_credited' => ['Avoir émis', 'Creditnota uitgereikt', 'Credit note issued'],
+            'action_company_user_invited' => ['Collègue invité', 'Collega uitgenodigd', 'Colleague invited'],
+            'action_company_user_updated' => ['Droits d\'un collègue modifiés', 'Rechten van een collega gewijzigd', 'Colleague\'s permissions changed'],
         ],
 
         'parc' => [
@@ -1367,6 +1371,9 @@ class TranslationSeeder extends Seeder
                 'Deze actie is definitief. Voer uw wachtwoord in om te bevestigen.',
                 'This action is permanent. Enter your password to confirm.',
             ],
+            'prenom' => ['Prénom', 'Voornaam', 'First name'],
+            'nom' => ['Nom', 'Naam', 'Last name'],
+            'email' => ['Adresse e-mail', 'E-mailadres', 'Email address'],
         ],
 
         'ferie' => [
@@ -2591,6 +2598,11 @@ class TranslationSeeder extends Seeder
             'supplement_retire' => ['Supplément retiré.', 'Toeslag verwijderd.', 'Surcharge removed.'],
             'mission_retiree' => ['Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.', 'Deze opdracht is u niet meer toegewezen: de planner heeft ze aan een andere bestuurder gegeven of terug in wacht gezet.', 'This job is no longer assigned to you: the planner gave it to another driver or put it back on hold.'],
             'mission_annulee' => ['Cette mission a été annulée : ne chargez pas la marchandise.', 'Deze opdracht werd geannuleerd: laad de goederen niet.', 'This job has been cancelled: do not load the goods.'],
+            'dernier_admin_entreprise' => ['Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.', 'U bent de enige beheerder van uw onderneming: duid eerst een andere aan voordat u uw account verwijdert.', 'You are the only administrator of your company: appoint another one before deleting your account.'],
+            'collegue_invite' => [':email est invité : il choisit son mot de passe par le lien reçu.', ':email is uitgenodigd: hij kiest zijn wachtwoord via de ontvangen link.', ':email is invited: they choose their password with the link received.'],
+            'collegue_invite_sans_lien' => ['Le compte de :email est créé, mais le courriel n\'est pas parti. Il peut utiliser « Mot de passe oublié ».', 'Het account van :email is aangemaakt, maar de e-mail is niet vertrokken. Hij kan « Wachtwoord vergeten » gebruiken.', 'The account for :email is created, but the email was not sent. They can use "Forgot password".'],
+            'collegue_modifie' => ['Droits enregistrés.', 'Rechten opgeslagen.', 'Permissions saved.'],
+            'dernier_admin_societe' => ['L\'entreprise doit garder au moins un administrateur actif.', 'De onderneming moet minstens één actieve beheerder behouden.', 'The company must keep at least one active administrator.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2620,6 +2632,23 @@ class TranslationSeeder extends Seeder
             'citerne' => ['Citerne', 'Tankwagen', 'Tanker'],
             'frigo' => ['Frigo', 'Koelwagen', 'Refrigerated truck'],
             'camionnette' => ['Camionnette', 'Kleine bestelwagen', 'Light van'],
+        ],
+        'entreprise' => [
+            'titre' => ['Utilisateurs de l\'entreprise', 'Gebruikers van de onderneming', 'Company users'],
+            'vous' => ['vous', 'u', 'you'],
+            'role' => ['Rôle', 'Rol', 'Role'],
+            'role_admin' => ['Administrateur', 'Beheerder', 'Administrator'],
+            'role_admin_aide' => ['Commandes, factures et gestion des comptes', 'Bestellingen, facturen en beheer van accounts', 'Orders, invoices and account management'],
+            'role_commandes' => ['Commandes', 'Bestellingen', 'Orders'],
+            'role_commandes_aide' => ['Passe, suit et annule les expéditions', 'Plaatst, volgt en annuleert zendingen', 'Places, tracks and cancels shipments'],
+            'role_comptabilite' => ['Comptabilité', 'Boekhouding', 'Accounting'],
+            'role_comptabilite_aide' => ['Consulte et règle les factures', 'Raadpleegt en betaalt facturen', 'Views and pays invoices'],
+            'confirmer_fermeture' => ['Fermer l\'accès de ce compte ?', 'De toegang van dit account afsluiten?', 'Close this account\'s access?'],
+            'fermer_acces' => ['Fermer l\'accès', 'Toegang afsluiten', 'Close access'],
+            'rouvrir_acces' => ['Rouvrir l\'accès', 'Toegang heropenen', 'Reopen access'],
+            'inviter' => ['Inviter un collègue', 'Een collega uitnodigen', 'Invite a colleague'],
+            'inviter_aide' => ['Il reçoit un lien pour choisir son mot de passe.', 'Hij ontvangt een link om zijn wachtwoord te kiezen.', 'They receive a link to choose their password.'],
+            'envoyer_invitation' => ['Envoyer l\'invitation', 'Uitnodiging versturen', 'Send the invitation'],
         ],
     ];
 }

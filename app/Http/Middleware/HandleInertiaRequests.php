@@ -36,6 +36,10 @@ class HandleInertiaRequests extends Middleware
                 'canValidateClients' => (bool) $request->user()?->isAdmin(),
                 'canManageUsers' => (bool) $request->user()?->isAdmin(),
                 'canViewFleet' => (bool) $request->user()?->isStaff(),
+                // Les droits d'un compte au sein de son entreprise cliente.
+                'canOrder' => (bool) $request->user()?->peutCommander(),
+                'canSeeInvoices' => (bool) ($request->user()?->isStaff() || $request->user()?->voitFacturesEntreprise()),
+                'canManageCompany' => (bool) $request->user()?->gereEntreprise(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

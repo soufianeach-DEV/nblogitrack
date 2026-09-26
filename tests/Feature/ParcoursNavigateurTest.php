@@ -210,7 +210,7 @@ class ParcoursNavigateurTest extends TestCase
         // Vingt suggestions de villes pendant la saisie d'une adresse ne
         // doivent pas epuiser le quota, bien plus serre, de l'annulation.
         $ordre = TransportOrder::factory()->create(['status' => 'PENDING']);
-        $client = User::find($ordre->client_id);
+        $client = Client::find($ordre->client_id)->compte();
 
         foreach (range(1, 20) as $i) {
             $this->actingAs($client)->getJson('/geo/villes?q=Bru');
@@ -303,9 +303,9 @@ class ParcoursNavigateurTest extends TestCase
     public function test_une_entreprise_refusee_apprend_que_sa_demande_n_est_pas_retenue(): void
     {
         $client = Client::factory()->create(['is_validated' => false, 'rejection_reason' => 'Numéro de TVA inactif']);
-        User::find($client->id)->update(['is_active' => false]);
+        $client->compte()->update(['is_active' => false]);
 
-        $this->post(route('login'), ['email' => User::find($client->id)->email, 'password' => 'password'])
+        $this->post(route('login'), ['email' => $client->compte()->email, 'password' => 'password'])
             ->assertSessionHasErrors(['email' => 'Votre demande d\'inscription n\'a pas été retenue. Le motif vous a été envoyé par e-mail.']);
     }
 
@@ -334,11 +334,11 @@ class ParcoursNavigateurTest extends TestCase
         ]);
         $facture = app(Facturier::class)->facturer()->first();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->get(route('invoices.show', $facture))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('peutPayerEnLigne', false));
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('payments.payer', $facture))
             ->assertRedirect()
             ->assertSessionHas('error');
@@ -347,7 +347,7 @@ class ParcoursNavigateurTest extends TestCase
     public function test_changer_d_adresse_change_celle_des_factures(): void
     {
         $client = Client::factory()->create();
-        $compte = User::find($client->id);
+        $compte = $client->compte();
         ClientContact::create([
             'client_id' => $client->id, 'first_name' => $compte->first_name, 'last_name' => $compte->last_name,
             'email' => $compte->email, 'is_primary' => true,
@@ -424,7 +424,7 @@ class ParcoursNavigateurTest extends TestCase
             'created_by' => User::factory()->administrateur()->create()->id,
         ]);
 
-        User::find($client->id)->update(['is_active' => false]);
+        $client->compte()->update(['is_active' => false]);
 
         $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])->assertForbidden();
     }
@@ -454,7 +454,7 @@ class ParcoursNavigateurTest extends TestCase
         $this->assertSame('IN_PROGRESS', $ordre->status);
         $this->assertSame($chauffeur->id, $ordre->driver_id);
 
-        $this->actingAs(User::find($ordre->client_id))
+        $this->actingAs(Client::find($ordre->client_id)->compte())
             ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
             ->assertSessionHas('error');
     }

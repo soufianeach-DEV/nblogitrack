@@ -91,9 +91,10 @@ class ApiKey extends Model
         // l'API avec une cle obtenue plus tot.
         if ($this->client_id !== null) {
             $client = $this->client;
-            $compte = User::find($this->client_id);
 
-            if ($client === null || ! $client->is_validated || ! $compte?->is_active) {
+            // Une entreprise dont plus aucun compte n'est actif est
+            // consideree comme desactivee.
+            if ($client === null || ! $client->is_validated || ! $client->users()->where('is_active', true)->exists()) {
                 return 'entreprise_inactive';
             }
         }

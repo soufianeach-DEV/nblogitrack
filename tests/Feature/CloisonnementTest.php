@@ -26,7 +26,7 @@ class CloisonnementTest extends TestCase
         TransportOrder::factory()->count(3)->create(['client_id' => $sien->id]);
         TransportOrder::factory()->count(2)->create(['client_id' => $autre->id]);
 
-        $reponse = $this->actingAs(User::find($sien->id))
+        $reponse = $this->actingAs($sien->compte())
             ->get(route('transport-orders.index'));
 
         $reponse->assertOk();
@@ -43,7 +43,7 @@ class CloisonnementTest extends TestCase
         $autre = $this->client();
         $ordre = TransportOrder::factory()->create(['client_id' => $autre->id]);
 
-        $this->actingAs(User::find($sien->id))
+        $this->actingAs($sien->compte())
             ->get(route('transport-orders.show', $ordre))
             ->assertNotFound();
     }
@@ -76,7 +76,7 @@ class CloisonnementTest extends TestCase
         $this->actingAs(User::factory()->administrateur()->create())
             ->get(route('transport-orders.create'))->assertForbidden();
 
-        $this->actingAs(User::find($this->client()->id))
+        $this->actingAs($this->client()->compte())
             ->get(route('transport-orders.create'))->assertOk();
     }
 
@@ -88,7 +88,7 @@ class CloisonnementTest extends TestCase
         $this->factures($sien, 2);
         $this->factures($autre, 3);
 
-        $reponse = $this->actingAs(User::find($sien->id))->get(route('invoices.index'));
+        $reponse = $this->actingAs($sien->compte())->get(route('invoices.index'));
 
         $reponse->assertOk();
         $this->assertSame(2, $reponse->viewData('page')['props']['factures']['total']);

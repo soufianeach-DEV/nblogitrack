@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Client;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\User;
@@ -138,7 +139,7 @@ class PriseEnChargeTest extends TestCase
     {
         $chauffeur = $this->chauffeur();
         $ordre = TransportOrder::factory()->affectee()->create(['driver_id' => $chauffeur->id]);
-        $client = User::find($ordre->client_id);
+        $client = Client::find($ordre->client_id)->compte();
 
         $this->actingAs($client)
             ->get(route('tracking.show', ['tracking_number' => $ordre->tracking_number]))

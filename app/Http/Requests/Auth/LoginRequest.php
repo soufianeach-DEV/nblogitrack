@@ -68,7 +68,7 @@ class LoginRequest extends FormRequest
             // on lui dit que sa demande n'a pas ete retenue, comme dans le
             // courriel qu'elle a recu.
             $refusee = $user->isClient()
-                && Client::where('id', $user->id)->whereNotNull('rejection_reason')->exists();
+                && Client::where('id', $user->client_id)->whereNotNull('rejection_reason')->exists();
 
             throw ValidationException::withMessages([
                 'email' => $refusee
@@ -77,7 +77,7 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if ($user->isClient() && Client::where('id', $user->id)->where('is_validated', false)->exists()) {
+        if ($user->isClient() && Client::where('id', $user->client_id)->where('is_validated', false)->exists()) {
             Auth::logout();
             $this->session()->invalidate();
 

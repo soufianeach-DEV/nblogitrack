@@ -215,7 +215,6 @@ class PaymentController extends Controller
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void
     {
-        abort_if($request->user()->cannot('view-all-orders')
-            && $invoice->client_id !== $request->user()->id, 404);
+        abort_unless($request->user()->can('view-all-orders') || $request->user()->can('pay', $invoice), 404);
     }
 }

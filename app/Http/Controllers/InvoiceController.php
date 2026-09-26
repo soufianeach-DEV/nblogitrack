@@ -27,12 +27,12 @@ class InvoiceController extends Controller
     {
         $utilisateur = $request->user();
 
-        abort_if($utilisateur->isDriver(), 403);
+        abort_unless($utilisateur->can('viewAny', Invoice::class), 403);
 
         $estClient = $utilisateur->cannot('view-all-orders');
 
         $perimetre = fn () => Invoice::query()
-            ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->id));
+            ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->client_id));
         $aPayer = fn () => $perimetre()->where('type', Invoice::FACTURE)->where('status', 'SENT');
 
         return Inertia::render('Factures/Index', [
@@ -136,8 +136,7 @@ class InvoiceController extends Controller
             'peutEnvoyer' => $gestion && $invoice->status !== 'DRAFT',
             'peutPayerEnLigne' => $invoice->estAPayer()
                 && ! empty(config('services.stripe.secret'))
-                && $utilisateur->cannot('view-all-orders')
-                && $invoice->client_id === $utilisateur->id,
+                && $utilisateur->can('pay', $invoice),
         ]);
     }
 
@@ -259,10 +258,7 @@ class InvoiceController extends Controller
 
     private function autoriserLecture(User $utilisateur, Invoice $invoice): void
     {
-        abort_if($utilisateur->isDriver(), 403);
-        abort_if(
-            $utilisateur->cannot('view-all-orders') && $invoice->client_id !== $utilisateur->id,
-            404,
-        );
+        abort_if($utilisateur->isDriver() || $utilisateur->cannot('viewAny', Invoice::class), 403);
+        abort_unless($utilisateur->can('view', $invoice), 404);
     }
 }

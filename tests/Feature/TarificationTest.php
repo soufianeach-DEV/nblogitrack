@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Client;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -53,7 +52,7 @@ class TarificationTest extends TestCase
         $client = Client::factory()->create();
         $grille = $this->grilleBelge();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id]))
             ->assertSessionHasNoErrors();
 
@@ -70,7 +69,7 @@ class TarificationTest extends TestCase
         $client = Client::factory()->create();
         $grille = $this->grilleBelge();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande([
                 'tariff_grid_id' => $grille->id,
                 'pickup_lat' => 48.8534,
@@ -86,7 +85,7 @@ class TarificationTest extends TestCase
         $client = Client::factory()->create();
         $grille = $this->grilleBelge();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande([
                 'tariff_grid_id' => $grille->id,
                 'delivery_lat' => 50.9311,
@@ -104,7 +103,7 @@ class TarificationTest extends TestCase
         $this->grilleBelge();
         $grilleFrancaise = TariffGrid::factory()->zone('FR', 'France')->create();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande([
                 'tariff_grid_id' => $grilleFrancaise->id,
                 'delivery_country' => 'BE',
@@ -119,7 +118,7 @@ class TarificationTest extends TestCase
         $client = Client::factory()->create();
         $grille = $this->grilleBelge();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande([
                 'tariff_grid_id' => $grille->id,
                 'delivery_address' => 'Rue Machin 1, 9999 Zzzzville, Belgique',
@@ -134,7 +133,7 @@ class TarificationTest extends TestCase
         $client = Client::factory()->create();
         $grille = $this->grilleBelge();
 
-        $this->actingAs(User::find($client->id))
+        $this->actingAs($client->compte())
             ->post(route('transport-orders.store'), $this->commande([
                 'tariff_grid_id' => $grille->id,
                 'estimated_cost' => 1,

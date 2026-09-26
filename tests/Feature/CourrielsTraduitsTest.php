@@ -39,9 +39,10 @@ class CourrielsTraduitsTest extends TestCase
 
     private function client(string $langue): Client
     {
-        return Client::factory()->create([
-            'id' => User::factory()->create(['locale' => $langue, 'first_name' => 'Nadia'])->id,
-        ]);
+        $client = Client::factory()->create();
+        $client->compte()->update(['locale' => $langue, 'first_name' => 'Nadia']);
+
+        return $client;
     }
 
     /** @return array<string, array{string, string, string}> */
@@ -58,7 +59,7 @@ class CourrielsTraduitsTest extends TestCase
     public function test_les_courriels_du_client_suivent_sa_langue(string $langue, string $activation, string $ordre): void
     {
         $client = $this->client($langue);
-        $utilisateur = User::find($client->id);
+        $utilisateur = $client->compte();
 
         $courriel = new CompteActive($client, $utilisateur);
         $courriel->assertSeeInHtml($activation);
@@ -72,7 +73,7 @@ class CourrielsTraduitsTest extends TestCase
     {
         $client = $this->client('nl');
 
-        $courriel = new InscriptionRefusee($client, User::find($client->id), 'Numéro de TVA inactif');
+        $courriel = new InscriptionRefusee($client, $client->compte(), 'Numéro de TVA inactif');
 
         $courriel->assertSeeInHtml('Uw aanvraag werd niet aanvaard');
         $courriel->assertDontSeeInHtml('Bonjour');

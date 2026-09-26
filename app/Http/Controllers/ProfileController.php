@@ -6,11 +6,13 @@ use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\ClientContact;
 use App\Models\Invoice;
 use App\Models\TransportOrder;
+use App\Models\User;
 use App\Support\Traductions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +30,8 @@ class ProfileController extends Controller
 
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        $ancienneAdresse = $request->user()->email;
+
         $request->user()->fill($request->safe()->except('current_password'));
 
         if ($request->user()->isDirty('email')) {
@@ -36,12 +40,13 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        // Les factures partent au contact principal de l'entreprise. Pour
-        // le compte client, ce contact, c'est lui : son adresse et son nom
-        // suivent, sinon les factures continuaient vers l'ancienne adresse.
-        if ($request->user()->isClient()) {
-            ClientContact::where('client_id', $request->user()->id)
+        // Les factures partent au contact principal de l'entreprise. Quand
+        // ce contact, c'est ce compte, son adresse et son nom suivent :
+        // sinon les factures continuaient vers l'ancienne adresse.
+        if ($request->user()->isClient() && $request->user()->client_id !== null) {
+            ClientContact::where('client_id', $request->user()->client_id)
                 ->where('is_primary', true)
+                ->whereRaw('lower(email) = ?', [mb_strtolower((string) $ancienneAdresse)])
                 ->update([
                     'email' => $request->user()->email,
                     'first_name' => $request->user()->first_name,
@@ -65,12 +70,26 @@ class ProfileController extends Controller
         // pleine mission. Les supprimer d'ici contournait ces gardes.
         abort_unless($user->role === 'CLIENT', 403);
 
-        // Une entreprise qui a deja transporte ou ete facturee garde ses
-        // pieces : la loi impose de conserver les factures, et les cles
-        // etrangeres refusaient de toute facon la suppression, par une
-        // erreur cinq cents apres avoir deja deconnecte l'utilisateur.
-        $historique = TransportOrder::where('client_id', $user->id)->exists()
-            || Invoice::where('client_id', $user->id)->exists();
+        $collegues = User::where('client_id', $user->client_id)->where('id', '!=', $user->id);
+
+        // L'entreprise ne se retrouve pas sans administrateur : il faut en
+        // designer un autre avant de partir.
+        if ($user->company_role === 'ADMIN'
+            && (clone $collegues)->exists()
+            && ! (clone $collegues)->where('company_role', 'ADMIN')->where('is_active', true)->exists()) {
+            return back()->withErrors([
+                'password' => Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.'),
+            ]);
+        }
+
+        // Dernier compte de l'entreprise : l'entreprise part avec lui, sauf
+        // si elle a deja transporte ou ete facturee. Elle garde alors ses
+        // pieces, que la loi impose de conserver.
+        $derniere = ! (clone $collegues)->exists();
+        $historique = $derniere && $user->client_id !== null && (
+            TransportOrder::where('client_id', $user->client_id)->exists()
+            || Invoice::where('client_id', $user->client_id)->exists()
+        );
 
         if ($historique) {
             return back()->withErrors([
@@ -78,9 +97,14 @@ class ProfileController extends Controller
             ]);
         }
 
+        $entreprise = $derniere ? $user->client : null;
+
         Auth::logout();
 
-        $user->delete();
+        DB::transaction(function () use ($user, $entreprise) {
+            $user->delete();
+            $entreprise?->delete();
+        });
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

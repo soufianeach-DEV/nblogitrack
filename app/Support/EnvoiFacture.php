@@ -6,7 +6,6 @@ use App\Mail\FactureEmise;
 use App\Models\ActivityLog;
 use App\Models\ClientContact;
 use App\Models\Invoice;
-use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -41,7 +40,7 @@ class EnvoiFacture
         try {
             // Le courriel et ses pieces jointes suivent la langue choisie
             // par le compte de l'entreprise.
-            $langue = User::find($facture->client_id)?->locale ?: 'fr';
+            $langue = $facture->client?->compte()?->locale ?: 'fr';
 
             Mail::to($adresse)->send(new FactureEmise($facture, $prenom, $langue));
         } catch (\Throwable $e) {
@@ -86,7 +85,7 @@ class EnvoiFacture
             return [$contact->email, (string) $contact->first_name];
         }
 
-        $compte = User::find($facture->client_id);
+        $compte = $facture->client?->compte();
 
         return [$compte?->email, (string) $compte?->first_name];
     }

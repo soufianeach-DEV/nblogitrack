@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\ClientValidationController;
+use App\Http\Controllers\CompanyUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\GeoController;
@@ -69,6 +70,16 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->whereNumber('transportOrder')
             ->middleware('throttle:10,1,annulation')
             ->name('transport-orders.cancel');
+
+        Route::middleware('can:manage-company')->group(function () {
+            Route::get('/entreprise/utilisateurs', [CompanyUserController::class, 'index'])->name('company.users.index');
+            Route::post('/entreprise/utilisateurs', [CompanyUserController::class, 'store'])
+                ->middleware('throttle:10,1,invitation')
+                ->name('company.users.store');
+            Route::patch('/entreprise/utilisateurs/{utilisateur}', [CompanyUserController::class, 'update'])
+                ->whereNumber('utilisateur')
+                ->name('company.users.update');
+        });
 
         Route::middleware(['can:plan-orders', 'throttle:30,1,supplement'])->group(function () {
             Route::post('/transport-orders/{transportOrder}/supplements', [OrderChargeController::class, 'store'])

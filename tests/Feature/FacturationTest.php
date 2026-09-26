@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\TransportOrder;
-use App\Models\User;
 use App\Support\Facturier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -216,7 +215,7 @@ class FacturationTest extends TestCase
 
         app(Facturier::class)->facturer();
 
-        $reponse = $this->actingAs(User::find($client->id))
+        $reponse = $this->actingAs($client->compte())
             ->get(route('transport-orders.index'));
 
         $reponse->assertOk();

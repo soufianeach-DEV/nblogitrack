@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -63,7 +62,8 @@ class RegistrationTest extends TestCase
 
         $this->assertNotNull($utilisateur);
         $this->assertSame('CLIENT', $utilisateur->role);
-        $this->assertNotNull(Client::find($utilisateur->id));
+        $this->assertNotNull($utilisateur->client);
+        $this->assertSame('ADMIN', $utilisateur->company_role);
     }
 
     public function test_le_role_ne_se_choisit_pas_dans_le_formulaire(): void

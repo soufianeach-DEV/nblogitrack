@@ -35,7 +35,7 @@ class TransportOrderController extends Controller
         $query = TransportOrder::with('client:id,company_name')->orderBy('id', 'desc');
 
         if ($request->user()->cannot('view-all-orders')) {
-            $query->where('client_id', $request->user()->id);
+            $query->where('client_id', $request->user()->client_id);
         }
 
         if ($request->filled('tracking')) {
@@ -74,10 +74,7 @@ class TransportOrderController extends Controller
 
     public function show(Request $request, TransportOrder $transportOrder): Response
     {
-        abort_if(
-            $request->user()->cannot('view-all-orders') && $transportOrder->client_id !== $request->user()->id,
-            404,
-        );
+        abort_unless($request->user()->can('view', $transportOrder), 404);
 
         $transportOrder->load([
             'client:id,company_name,city,country',
@@ -130,7 +127,7 @@ class TransportOrderController extends Controller
             ] : null,
             // Seul le client de l'expedition l'annule lui-meme ; le personnel
             // passe par la planification, sans indemnite.
-            'annulation' => $transportOrder->client_id === $request->user()->id
+            'annulation' => $request->user()->can('cancel', $transportOrder)
                 && $transportOrder->fraisAnnulation() !== null ? [
                     'frais' => $transportOrder->fraisAnnulation(),
                     'taux' => TransportOrder::TAUX_ANNULATION,
@@ -141,7 +138,7 @@ class TransportOrderController extends Controller
 
     public function annuler(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
-        abort_if($transportOrder->client_id !== $request->user()->id, 404);
+        abort_unless($request->user()->can('cancel', $transportOrder), 404);
 
         $donnees = $request->validate([
             'frais' => 'required|numeric|min:0',
@@ -227,7 +224,7 @@ class TransportOrderController extends Controller
 
     public function create(Request $request): Response
     {
-        abort_unless($request->user()->isClient(), 403);
+        abort_unless($request->user()->can('create', TransportOrder::class), 403);
 
         return Inertia::render('TransportOrders/Create', [
             'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'delivery_days', 'service_level']),
@@ -241,7 +238,7 @@ class TransportOrderController extends Controller
      */
     public function estimation(Request $request): JsonResponse
     {
-        abort_unless($request->user()->isClient(), 403);
+        abort_unless($request->user()->can('create', TransportOrder::class), 403);
 
         $data = $request->validate([
             'delivery_country' => 'required|string|size:2|exists:tariff_grids,zone',
@@ -275,7 +272,7 @@ class TransportOrderController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->isClient(), 403);
+        abort_unless($request->user()->can('create', TransportOrder::class), 403);
 
         $data = $request->validate([
             'pickup_address' => 'required|string|max:255',
@@ -362,7 +359,7 @@ class TransportOrderController extends Controller
         $hazardous = $request->boolean('is_hazardous');
 
         $order = TransportOrder::deposer([
-            'client_id' => $request->user()->id,
+            'client_id' => $request->user()->client_id,
             'pickup_address' => $data['pickup_address'],
             'delivery_address' => $data['delivery_address'],
             'pickup_lat' => $data['pickup_lat'],

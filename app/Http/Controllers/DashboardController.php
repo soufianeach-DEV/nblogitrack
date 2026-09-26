@@ -33,7 +33,7 @@ class DashboardController extends Controller
         $query = TransportOrder::query();
 
         if (! $personnel) {
-            $query->where('client_id', $utilisateur->id);
+            $query->where('client_id', $utilisateur->client_id);
         }
 
         $stats = [
@@ -58,7 +58,7 @@ class DashboardController extends Controller
             'carte' => $this->carte(clone $query),
             'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
             'alertes' => $this->alertes(clone $query, $personnel),
-            'facturation' => $this->facturation($utilisateur, $personnel),
+            'facturation' => $utilisateur->can('viewAny', Invoice::class) ? $this->facturation($utilisateur, $personnel) : null,
             'exploitation' => $personnel ? [
                 'entreprises_a_valider' => Client::where('is_validated', false)->whereNull('rejection_reason')->count(),
                 'chauffeurs_disponibles' => Driver::where('is_available', true)->count(),
@@ -286,7 +286,7 @@ class DashboardController extends Controller
         $requete = Invoice::query();
 
         if (! $personnel) {
-            $requete->where('client_id', $utilisateur->id);
+            $requete->where('client_id', $utilisateur->client_id);
         }
 
         if ((clone $requete)->doesntExist()) {

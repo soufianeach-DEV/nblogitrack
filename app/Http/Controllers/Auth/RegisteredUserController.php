@@ -224,20 +224,9 @@ class RegisteredUserController extends Controller
         }
 
         $user = DB::transaction(function () use ($data, $identifiants) {
-            $user = User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'password' => Hash::make($data['password']),
-                'role' => 'CLIENT',
-                // La langue de l'inscription devient celle de ses courriels.
-                'locale' => app()->getLocale(),
-                'is_active' => true,
-            ]);
-
-            Client::create([
-                'id' => $user->id,
+            // L'entreprise d'abord, avec sa propre numerotation ; le compte
+            // qui l'inscrit en devient l'administrateur.
+            $client = Client::create([
                 'company_name' => $data['company_name'],
                 'vat_number' => $data['vat_number'],
                 'enterprise_number' => $identifiants['national'],
@@ -250,8 +239,22 @@ class RegisteredUserController extends Controller
                 'is_validated' => false,
             ]);
 
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => 'CLIENT',
+                'client_id' => $client->id,
+                'company_role' => 'ADMIN',
+                // La langue de l'inscription devient celle de ses courriels.
+                'locale' => app()->getLocale(),
+                'is_active' => true,
+            ]);
+
             ClientContact::create([
-                'client_id' => $user->id,
+                'client_id' => $client->id,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],

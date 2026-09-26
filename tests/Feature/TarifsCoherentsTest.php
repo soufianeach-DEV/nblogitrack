@@ -79,7 +79,7 @@ class TarifsCoherentsTest extends TestCase
         $grilles = $this->grillesFrance();
         $client = Client::factory()->create();
 
-        $reponse = $this->actingAs(User::find($client->id))
+        $reponse = $this->actingAs($client->compte())
             ->postJson(route('transport-orders.estimation'), [
                 'delivery_country' => 'FR',
                 'pickup_lat' => 50.8504, 'pickup_lng' => 4.3488,

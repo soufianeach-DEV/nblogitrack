@@ -63,7 +63,7 @@ class TrackingController extends Controller
             ])->where('tracking_number', $numero);
 
             if ($utilisateur->cannot('view-all-orders')) {
-                $requete->where('client_id', $utilisateur->id);
+                $requete->where('client_id', $utilisateur->client_id);
             }
 
             $ordre = $requete->first();
@@ -173,10 +173,7 @@ class TrackingController extends Controller
 
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
     {
-        abort_if(
-            $request->user()->cannot('view-all-orders') && $ordre->client_id !== $request->user()->id,
-            404,
-        );
+        abort_unless($request->user()->can('view', $ordre), 404);
 
         abort_if($ordre->pickup_lat === null || $ordre->delivery_lat === null, 404);
     }
@@ -356,7 +353,7 @@ class TrackingController extends Controller
             ->whereNotNull('delivery_lat');
 
         if ($utilisateur->cannot('view-all-orders')) {
-            $requete->where('client_id', $utilisateur->id);
+            $requete->where('client_id', $utilisateur->client_id);
         }
 
         $expeditions = $requete

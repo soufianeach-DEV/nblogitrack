@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -13,12 +14,10 @@ class Client extends Model
 
     protected $table = 'clients';
 
-    public $incrementing = false;
-
     public $timestamps = false;
 
     protected $fillable = [
-        'id', 'company_name', 'vat_number', 'enterprise_number', 'peppol_id',
+        'company_name', 'vat_number', 'enterprise_number', 'peppol_id',
         'billing_address', 'city', 'postal_code', 'country',
         'is_validated', 'business_sector', 'credit_limit', 'payment_terms',
         'validated_at', 'validated_by', 'rejection_reason',
@@ -32,9 +31,24 @@ class Client extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    // Les roles d'un compte au sein de son entreprise.
+    public const ROLES = ['ADMIN', 'ORDERS', 'BILLING'];
+
+    /** Les comptes qui travaillent pour l'entreprise. */
+    public function users(): HasMany
     {
-        return $this->belongsTo(User::class, 'id');
+        return $this->hasMany(User::class)->orderBy('id');
+    }
+
+    /** L'administrateur principal : le premier compte administrateur. */
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class)->where('company_role', 'ADMIN')->orderBy('id');
+    }
+
+    public function compte(): ?User
+    {
+        return $this->user()->first();
     }
 
     public function contacts(): HasMany
