@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Support\IdentifiantEntreprise;
 use App\Support\Traductions;
+use App\Support\Translitteration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -130,8 +131,10 @@ class VatController extends Controller
                 return [
                     'statut' => 'valide',
                     'registre' => 'VIES',
-                    'nom' => $this->nettoyer($corps['name'] ?? ''),
-                    'adresse' => [...$this->decomposerAdresse($corps['address'] ?? ''), 'pays' => $identifiant['pays']],
+                    // Cyrillique (Bulgarie) ou grec (Grece) : en lettres latines,
+                    // la raison sociale garde l'original entre parentheses.
+                    'nom' => Translitteration::avecOriginal($this->nettoyer($corps['name'] ?? '')),
+                    'adresse' => [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '')), 'pays' => $identifiant['pays']],
                     'tva' => $identifiant['tva'],
                     'peppol' => $identifiant['peppol'],
                     'entreprise' => match ($identifiant['pays']) {
@@ -572,40 +575,106 @@ class VatController extends Controller
     }
 
     /**
+     * Codes postaux europeens tels que VIES les renvoie : 1000, 75002,
+     * 1012 LG, 110 00, 00-950, 1100-048, L-1234, LV-1050, VLT 1234 (Malte),
+     * D02 X285 (Irlande).
+     */
+    private const CODE_POSTAL = '(?:[A-Z]{1,2}-)?(?:\d{4}\s?[A-Z]{2}(?![A-Z])|\d{3}\s\d{2}(?!\d)|\d{2}-\d{3}(?!\d)|\d{4}-\d{3}(?!\d)|\d{4,6}(?!\d)|[A-Z]{3}\s?\d{4}|[A-Z]\d{2}\s[A-Z0-9]{4})';
+
+    /**
+     * L'adresse de VIES, dans la forme de chaque pays : sur plusieurs
+     * lignes ou une seule, code postal avant ou apres la localite. La ligne
+     * qui porte le code postal donne la localite ; la premiere des autres
+     * lignes est la rue.
+     *
      * @return array{rue: string, code_postal: string, ville: string}
      */
     private function decomposerAdresse(string $brut): array
     {
-        $lignes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $brut))));
+        $lignes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $brut)), fn ($l) => $l !== '' && $l !== '---'));
 
-        if ($lignes === [] || $lignes === ['---']) {
+        if ($lignes === []) {
             return ['rue' => '', 'code_postal' => '', 'ville' => ''];
         }
 
-        // Adresse sur une seule ligne (Bulgarie, Roumanie...) : la localite
-        // est le dernier segment apres une virgule. « ул. КУКУШ №1
-        // обл.СОФИЯ, гр.СОФИЯ 1309 » : rue, puis ville et code postal.
+        // Une seule ligne : les virgules separent rue, quartier et localite.
         if (count($lignes) === 1 && str_contains($lignes[0], ',')) {
-            $segments = array_map('trim', explode(',', $lignes[0]));
-            $lignes = [implode(', ', array_slice($segments, 0, -1)), end($segments)];
+            $lignes = array_values(array_filter(array_map('trim', explode(',', $lignes[0]))));
         }
 
-        $derniere = array_pop($lignes);
         $codePostal = '';
-        $ville = $derniere;
+        $ville = '';
+        $rang = null;
 
-        if (preg_match('/^([A-Z]{0,2}[\s-]?\d{4,6}(?:\s?[A-Z]{2})?)\s+(.+)$/u', $derniere, $m)) {
-            $codePostal = trim($m[1]);
-            $ville = trim($m[2]);
-        } elseif (preg_match('/^(.+?)\s+([A-Z]{0,2}[\s-]?\d{4,6}(?:\s?[A-Z]{2})?)$/u', $derniere, $m)) {
-            $ville = trim($m[1]);
-            $codePostal = trim($m[2]);
+        foreach (array_reverse(array_keys($lignes)) as $i) {
+            $ligne = $lignes[$i];
+
+            // Code postal seul (Estonie, Lettonie) : la localite est le
+            // segment precedent qui n'est ni un comte ni un quartier.
+            if (preg_match('/^('.self::CODE_POSTAL.')$/u', $ligne)) {
+                $codePostal = $ligne;
+
+                for ($j = $i - 1; $j > 0; $j--) {
+                    if (! preg_match('/maakond|linnaosa|vald|novads|apskritis|county/iu', $lignes[$j])) {
+                        [$ville, $rang] = [$lignes[$j], $j];
+                        break;
+                    }
+                }
+
+                $rang ??= $i;
+                break;
+            }
+
+            if (preg_match('/^('.self::CODE_POSTAL.')\s+(\D.*)$/u', $ligne, $m)
+                || preg_match('/^(.*\D)\s+('.self::CODE_POSTAL.')$/u', $ligne, $n)) {
+                [$codePostal, $ville] = isset($m[1]) ? [$m[1], $m[2]] : [$n[2], $n[1]];
+                $rang = $i;
+                break;
+            }
         }
 
-        // Abreviations bulgares : « гр. » (ville) devant la localite,
-        // « обл. » (region) qui n'a rien a faire dans la rue.
+        // Sans code postal (Roumanie, Irlande sans Eircode) : la localite est
+        // le « municipiul » roumain, sinon le dernier segment.
+        if ($rang === null) {
+            foreach ($lignes as $i => $ligne) {
+                if (preg_match('/^(?:MUNICIPIUL|MUN\.|ORAŞ|ORAS|JUD\.)\s+(.+)$/iu', $ligne, $m)) {
+                    [$ville, $rang] = [$m[1], $i];
+                    break;
+                }
+            }
+
+            if ($rang === null && count($lignes) > 1) {
+                $rang = count($lignes) - 1;
+                $ville = $lignes[$rang];
+            }
+        }
+
+        // La rue : la premiere ligne qui n'est ni la localite, ni un quartier
+        // repetant la localite, ni un secteur administratif.
+        $rue = '';
+
+        foreach ($lignes as $i => $ligne) {
+            if ($i === $rang || mb_strtolower($ligne) === mb_strtolower($ville) || $ligne === $codePostal
+                || preg_match('/^(?:SECTOR|SECTORUL|обл\.)\s*\S+$/iu', $ligne)
+                || preg_match('/maakond|linnaosa|vald|novads|apskritis/iu', $ligne)) {
+                continue;
+            }
+
+            $rue = $rue === '' ? $ligne : $rue;
+
+            // Rue et numero sur deux segments (« STR. X », « NR. 1 »).
+            if (preg_match('/^(?:NR\.?|NO\.?|N°)\s*\S+$/iu', $ligne) && $rue !== $ligne) {
+                $rue .= ' '.$ligne;
+            }
+        }
+
+        // « 10563 - ΑΘΗΝΑ » (Grece) : le tiret n'appartient pas a la localite.
+        $ville = preg_replace('/^[\s\-–]+|[\s\-–]+$/u', '', $ville);
+
+        // Abreviations bulgares : « гр. » (ville) ou « с. » (village) devant
+        // la localite, « обл. » (region) en fin de rue.
         $ville = preg_replace('/^(?:гр\.|с\.)\s*/u', '', $ville);
-        $rue = preg_replace('/\s*,?\s*обл\.\s*\S+$/u', '', implode(', ', $lignes));
+        $rue = preg_replace('/\s*,?\s*обл\.\s*\S+$/u', '', $rue);
 
         return [
             'rue' => $this->nettoyer($rue),
