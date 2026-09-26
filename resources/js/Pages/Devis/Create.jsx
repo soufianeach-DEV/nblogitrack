@@ -127,6 +127,8 @@ export default function Create({ choix, listes }) {
     // Ce que le registre a rempli : un autre numero le remplace, un numero
     // refuse l'efface. Un champ retouche a la main n'est plus touche.
     const repris = useRef({});
+    // Le numero dont viennent ces donnees.
+    const reprisPour = useRef('');
 
     const reprendreDuRegistre = (valeurs) => setData((actuel) => {
         const suivant = { ...actuel };
@@ -148,6 +150,7 @@ export default function Create({ choix, listes }) {
         }
 
         repris.current = nouveaux;
+        if (Object.keys(nouveaux).length === 0) reprisPour.current = '';
 
         return suivant;
     });
@@ -178,6 +181,7 @@ export default function Create({ choix, listes }) {
                 const adresse = resultat.adresse ?? {};
 
                 if (resultat.tva) setData('vat_number', resultat.tva);
+                reprisPour.current = resultat.tva || tva;
                 reprendreDuRegistre({
                     company_name: resultat.nom,
                     contact_name: dirigeant ? `${dirigeant.prenom} ${dirigeant.nom}`.trim() : '',
@@ -189,8 +193,9 @@ export default function Create({ choix, listes }) {
                     billing_city: adresse.ville,
                     billing_country: adresse.pays,
                 });
-            } else if (['invalide', 'format'].includes(resultat.statut)) {
-                // Numero refuse : rien de l'ancienne entreprise ne reste.
+            } else if (['invalide', 'format'].includes(resultat.statut) || tva !== reprisPour.current) {
+                // Numero refuse, ou registre muet sur un autre numero : rien
+                // de l'ancienne entreprise ne reste sous le nouveau numero.
                 reprendreDuRegistre({});
             }
 
@@ -202,6 +207,7 @@ export default function Create({ choix, listes }) {
                 minuteurRelance.current = setTimeout(() => verifierTva(true), delai * 1000);
             }
         } catch {
+            if (tva !== reprisPour.current) reprendreDuRegistre({});
             setVies({ statut: 'indisponible', message: t('devis.registre_injoignable', 'Le registre européen est momentanément injoignable.') });
         } finally {
             setVerification(false);

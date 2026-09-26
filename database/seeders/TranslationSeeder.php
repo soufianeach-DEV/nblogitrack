@@ -1108,6 +1108,9 @@ class TranslationSeeder extends Seeder
             'machines_et_equipements' => ['Machines et équipements', 'Machines en uitrusting', 'Machinery and equipment'],
             'materiaux_de_construction' => ['Matériaux de construction', 'Bouwmaterialen', 'Construction materials'],
             'sante' => ['Santé', 'Gezondheidszorg', 'Healthcare'],
+            'telecommunications' => ['Télécommunications', 'Telecommunicatie', 'Telecommunications'],
+            'informatique' => ['Informatique', 'IT', 'IT'],
+            'finance_et_assurance' => ['Finance et assurance', 'Financiën en verzekeringen', 'Finance and insurance'],
         ],
 
         'vocab.marchandise' => [

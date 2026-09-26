@@ -134,7 +134,7 @@ class VatController extends Controller
                     // Cyrillique (Bulgarie) ou grec (Grece) : en lettres latines,
                     // la raison sociale garde l'original entre parentheses.
                     'nom' => Translitteration::avecOriginal($this->nettoyer($corps['name'] ?? '')),
-                    'adresse' => [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '')), 'pays' => $identifiant['pays']],
+                    'adresse' => [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '', $identifiant['pays'])), 'pays' => $identifiant['pays']],
                     'tva' => $identifiant['tva'],
                     'peppol' => $identifiant['peppol'],
                     'entreprise' => match ($identifiant['pays']) {
@@ -358,7 +358,8 @@ class VatController extends Controller
         '45' => 'Automobile', '46' => 'Distribution', '47' => 'Grande distribution',
         '49' => 'Transport', '50' => 'Transport', '51' => 'Transport',
         '52' => 'Logistique', '53' => 'Logistique',
-        '62' => 'Électronique', '63' => 'Électronique',
+        '61' => 'Télécommunications', '62' => 'Informatique', '63' => 'Informatique',
+        '64' => 'Finance et assurance', '65' => 'Finance et assurance', '66' => 'Finance et assurance',
         '86' => 'Santé', '87' => 'Santé', '88' => 'Santé',
     ];
 
@@ -589,7 +590,13 @@ class VatController extends Controller
      *
      * @return array{rue: string, code_postal: string, ville: string}
      */
-    private function decomposerAdresse(string $brut): array
+    /** « 3RD FLOOR », « 2ÈME ÉTAGE », « UNIT 4 », « SUITE 200 » : pas une rue. */
+    private const ETAGE = '/^(?:(?:\d+\s*(?:ST|ND|RD|TH|E|ÈME|EME|ER)?|GROUND|FIRST|SECOND|THIRD|FOURTH|FIFTH|TOP)\s+(?:FLOOR|ÉTAGE|ETAGE)|(?:FLOOR|UNIT|SUITE|FLAT|APT\.?|APARTMENT)\s+\S+)$/iu';
+
+    /** Type de voie d'une adresse anglaise. */
+    private const VOIE_ANGLAISE = '/\b(?:STREET|ST\.?|ROAD|RD\.?|AVENUE|AVE\.?|LANE|QUAY|PLACE|SQUARE|DRIVE|TERRACE|CRESCENT|PARADE|ROW|WAY|WALK|HILL|GREEN|MALL|BOULEVARD)$/iu';
+
+    private function decomposerAdresse(string $brut, string $pays = ''): array
     {
         $lignes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $brut)), fn ($l) => $l !== '' && $l !== '---'));
 
@@ -650,15 +657,31 @@ class VatController extends Controller
         }
 
         // La rue : la premiere ligne qui n'est ni la localite, ni un quartier
-        // repetant la localite, ni un secteur administratif.
+        // repetant la localite, ni un secteur administratif, ni un etage.
         $rue = '';
+        $restantes = [];
 
         foreach ($lignes as $i => $ligne) {
             if ($i === $rang || mb_strtolower($ligne) === mb_strtolower($ville) || $ligne === $codePostal
                 || preg_match('/^(?:SECTOR|SECTORUL|обл\.)\s*\S+$/iu', $ligne)
-                || preg_match('/maakond|linnaosa|vald|novads|apskritis/iu', $ligne)) {
+                || preg_match('/maakond|linnaosa|vald|novads|apskritis/iu', $ligne)
+                || preg_match(self::ETAGE, $ligne)) {
                 continue;
             }
+
+            $restantes[] = $ligne;
+        }
+
+        // Adresse anglaise (Irlande, Malte, Chypre) : « GORDON HOUSE,
+        // BARROW STREET » garde le nom du batiment devant la rue.
+        foreach (in_array($pays, ['IE', 'MT', 'CY', 'GB'], true) ? $restantes : [] as $k => $ligne) {
+            if ($k > 0 && preg_match(self::VOIE_ANGLAISE, $ligne)) {
+                $restantes = [implode(', ', array_slice($restantes, 0, $k + 1)), ...array_slice($restantes, $k + 1)];
+                break;
+            }
+        }
+
+        foreach ($restantes as $ligne) {
 
             $rue = $rue === '' ? $ligne : $rue;
 
@@ -666,6 +689,11 @@ class VatController extends Controller
             if (preg_match('/^(?:NR\.?|NO\.?|N°)\s*\S+$/iu', $ligne) && $rue !== $ligne) {
                 $rue .= ' '.$ligne;
             }
+        }
+
+        // « ROMA RM » : le sigle de la province italienne suit la localite.
+        if ($pays === 'IT') {
+            $ville = preg_replace('/\s+[A-Z]{2}$/u', '', $ville);
         }
 
         // « 10563 - ΑΘΗΝΑ » (Grece) : le tiret n'appartient pas a la localite.

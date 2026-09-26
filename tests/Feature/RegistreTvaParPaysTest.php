@@ -35,7 +35,7 @@ class RegistreTvaParPaysTest extends TestCase
         'HR' => ['HR12345678901', 'PRIMJER D.O.O.', "ILICA 1\n10000 ZAGREB", ['PRIMJER D.O.O.', 'ILICA 1', '10000', 'ZAGREB']],
         'HU' => ['HU12345678', 'PÉLDA KFT.', '1051 BUDAPEST, NÁDOR UTCA 1.', ['PÉLDA KFT.', 'NÁDOR UTCA 1.', '1051', 'BUDAPEST']],
         'IE' => ['IE1234567T', 'EXAMPLE LIMITED', "1 GRAFTON STREET\nDUBLIN 2\nD02 X285", ['EXAMPLE LIMITED', '1 GRAFTON STREET', 'D02 X285', 'DUBLIN 2']],
-        'IT' => ['IT12345678901', 'ESEMPIO SRL', "VIA ROMA 1 \n00184 ROMA RM\n", ['ESEMPIO SRL', 'VIA ROMA 1', '00184', 'ROMA RM']],
+        'IT' => ['IT12345678901', 'ESEMPIO SRL', "VIA ROMA 1 \n00184 ROMA RM\n", ['ESEMPIO SRL', 'VIA ROMA 1', '00184', 'ROMA']],
         'LT' => ['LT123456789', 'UAB PAVYZDYS', 'Gedimino pr. 1, LT-01103 Vilnius', ['UAB PAVYZDYS', 'Gedimino pr. 1', 'LT-01103', 'Vilnius']],
         'LU' => ['LU12345678', 'EXEMPLE SARL', "12, RUE DU FORT\nL-1234 LUXEMBOURG", ['EXEMPLE SARL', '12, RUE DU FORT', 'L-1234', 'LUXEMBOURG']],
         'LV' => ['LV12345678901', 'SIA PIEMĒRS', 'Brīvības iela 1, Rīga, LV-1050', ['SIA PIEMĒRS', 'Brīvības iela 1', 'LV-1050', 'Rīga']],
@@ -70,6 +70,31 @@ class RegistreTvaParPaysTest extends TestCase
                 $reponse->json('nom'), $reponse->json('adresse.rue'), $reponse->json('adresse.code_postal'), $reponse->json('adresse.ville'),
             ], $pays);
         }
+    }
+
+    public function test_l_etage_d_un_bureau_irlandais_n_est_pas_la_rue(): void
+    {
+        Http::fake(['ec.europa.eu/*' => Http::response([
+            'isValid' => true,
+            'name' => 'EXAMPLE IRELAND LIMITED',
+            'address' => '3RD FLOOR, GORDON HOUSE, BARROW STREET, DUBLIN 4',
+        ])]);
+
+        $this->getJson('/verification-tva?tva=IE6388047V')
+            ->assertJsonPath('adresse.rue', 'GORDON HOUSE, BARROW STREET')
+            ->assertJsonPath('adresse.code_postal', '')
+            ->assertJsonPath('adresse.ville', 'DUBLIN 4');
+    }
+
+    public function test_un_operateur_telecom_n_est_pas_classe_en_electronique(): void
+    {
+        Http::fake([
+            'ec.europa.eu/*' => Http::response(['isValid' => true, 'name' => 'SA DPU PROXIMUS', 'address' => "Boulevard du Roi Albert II 27\n1030 Schaerbeek"]),
+            'kbopub.economie.fgov.be/*' => Http::response('<html><body>Activités TVA 2008 61.100 - Télécommunications filaires 26.300 - Fabrication d\'équipements de communication</body></html>'),
+            '*' => Http::response([], 200),
+        ]);
+
+        $this->getJson('/verification-tva?tva=BE0202239951')->assertJsonPath('entreprise.secteur', 'Télécommunications');
     }
 
     public function test_allemagne_et_espagne_ne_donnent_ni_nom_ni_adresse(): void
