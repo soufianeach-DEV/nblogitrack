@@ -44,10 +44,10 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Comptes & rôles** | Inscription, connexion, autorisations par rôle (Breeze + Gate) | ✅ alpha |
 | **Vérification des entreprises** | Contrôle du numéro de taxe sur la valeur ajoutée (TVA) auprès du service européen VIES, lecture des registres belge et français, identifiant sur le réseau Peppol des 27 pays | ✅ alpha |
 | **Validation des inscriptions** | Examen par l'administrateur, e-mails d'activation et de refus motivé | ✅ alpha |
-| **Création de commande** | Saisie guidée de l'adresse en entonnoir (pays, ville, code postal, rue, numéro : chaque niveau limite le suivant ; un numéro que la cartographie ne connaît pas est accepté et localisé à la rue), distance routière réelle, estimation du prix en temps réel calculée par le serveur : Éco ≤ Standard ≤ Express, et le groupage ne coûte jamais plus qu'un camion dédié. Pour les marchandises souvent soumises à l'ADR, le client déclare explicitement si son envoi l'est ; une commande plus lourde que le plus gros camion de la flotte est refusée ; le volume se saisit. Les livraisons vers la Grèce, dont les codes postaux ne sont pas publiés, sont vérifiées en ligne | ✅ alpha |
+| **Création de commande** | Saisie guidée de l'adresse en entonnoir (pays, ville, code postal, rue, numéro : chaque niveau limite le suivant ; un numéro que la cartographie ne connaît pas est accepté et localisé à la rue), distance routière réelle, estimation du prix en temps réel calculée par le serveur : Éco ≤ Standard ≤ Express, et le groupage ne coûte jamais plus qu'un camion dédié. Pour les marchandises souvent soumises à l'ADR, le client déclare explicitement si son envoi l'est ; une commande plus lourde que le plus gros camion de la flotte est refusée ; le volume se saisit. Les livraisons vers la Grèce, dont GeoNames ne publie pas les codes postaux, voient leur localité vérifiée en ligne (Photon) | ✅ alpha |
 | **Catalogue des ordres** | Liste, recherche par colonne, filtrage selon le rôle, fiche détaillée d'une expédition | ✅ alpha |
 | **Annulation par le client** | Gratuite avant l'affectation d'un camion, indemnité de 25 % du prix (50 € minimum) ensuite, portée sur la facture du mois ; impossible en ligne une fois la marchandise chargée (article 8 bis des conditions générales) | ✅ beta |
-| **Planification** | Affectation véhicule et chauffeur contrôlée par un service unique, sur toute la durée de la mission : permis exigé par le véhicule (un tracteur de 44 t exige le CE, quelle que soit sa carrosserie), documents du chauffeur (permis, visite médicale, code 95, carte tachygraphe), véhicule équipé et chauffeur certifié ADR jusqu'au dernier jour, charge et volume cumulés en groupage, contrôle technique, congés et immobilisations datés, chevauchements, temps de conduite (9 h par jour, 56 h par semaine, repos du septième jour). L'écran grise ce que le serveur refuserait, à la date de la mission ; une mission devenue non conforme (document expiré, fiche corrigée) est signalée, et le chauffeur ne peut plus la prendre en charge. Transitions de statut (en attente, affecté, en cours, livré, annulé) centralisées et atomiques, affectation sous verrou : deux planificateurs ne réservent pas le même camion ; une marchandise chargée ne revient jamais en attente, elle se réaffecte à un autre camion ; la livraison garde l'heure, le réceptionnaire et les réserves | ✅ alpha |
+| **Planification** | Affectation véhicule et chauffeur contrôlée par un service unique, sur toute la durée de la mission : permis exigé par le véhicule (un tracteur de 44 t exige le CE, quelle que soit sa carrosserie), documents du chauffeur (permis, visite médicale, code 95, carte tachygraphe), véhicule équipé et chauffeur certifié ADR jusqu'au dernier jour, charge et volume cumulés en groupage, contrôle technique, congés et immobilisations datés, chevauchements, temps de conduite (9 h par jour, 56 h par semaine, repos du septième jour). L'écran grise, à la date de la mission, les camions et chauffeurs qui ne conviennent pas (documents, permis, certification et équipement ADR, capacité, volume, hayon, contrôle technique, congés et immobilisations) ; les chevauchements, la charge et le volume cumulés du groupage et les temps de conduite se vérifient à l'enregistrement de l'affectation ; une mission devenue non conforme (document expiré, fiche corrigée) est signalée, et le chauffeur ne peut plus la prendre en charge. Transitions de statut (en attente, affecté, en cours, livré, annulé) centralisées et atomiques, affectation sous verrou : deux planificateurs ne réservent pas le même camion ; une marchandise chargée ne revient jamais en attente, elle se réaffecte à un autre camion ; la livraison garde l'heure, le réceptionnaire et les réserves | ✅ alpha |
 | **Suivi public** | Consultation d'un envoi (numéro + code), état de livraison | ✅ alpha |
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
@@ -57,7 +57,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Multilingue** | Français, néerlandais et anglais partout : écrans, messages, courriels et facture PDF, dans la langue de chaque utilisateur ; écran d'administration des traductions, et un test qui refuse toute clé sans ses trois traductions | ✅ beta |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
 | **Devis** | Demande de devis publique, traitement par le personnel | ✅ beta |
-| **Suivi géolocalisé** | Jalons horodatés et position en direct, activables par mission, purgés à sept jours ; carte vectorielle aux couleurs de Waze (itinéraire routier, péages, camion en route), avec repli sur la carte OpenStreetMap standard | ✅ beta |
+| **Suivi géolocalisé** | Jalons horodatés (enlèvement, livraison), conservés avec le dossier, et position en direct, activable par mission, effacée sept jours après la livraison ou l'annulation ; carte vectorielle aux couleurs de Waze (itinéraire routier, péages, camion en route), avec repli sur la carte OpenStreetMap standard | ✅ beta |
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
@@ -76,11 +76,11 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | **Banque-Carrefour des Entreprises** (Belgique) | Dirigeant, secteur d'activité, situation juridique |
 | **Recherche d'entreprises** (France) | Dirigeant, code d'activité NACE, état administratif |
 | **GeoNames** | Villes et codes postaux des pays desservis (la Grèce, que GeoNames ne publie pas, est vérifiée par Photon) |
-| **Photon** et **Overpass** (OpenStreetMap) | Villes, rues et numéros de police existants |
+| **Photon** et **Overpass** (OpenStreetMap) | Villes, rues et numéros de police existants ; péages le long de l'itinéraire (Overpass) |
 | **Base Adresse Nationale** (France) et **PDOK** (Pays-Bas) | Rues françaises et néerlandaises |
 | **OSRM** (Open Source Routing Machine) | Distance routière et itinéraire entre deux adresses |
 | **OpenFreeMap** | Fond de carte vectoriel (tuiles OpenMapTiles), sans clé ni quota |
-| **OpenStreetMap** | Carte de repli, pour les navigateurs sans WebGL 2 |
+| **OpenStreetMap** | Carte de repli, pour les navigateurs sans WebGL 2 ou quand OpenFreeMap ne répond pas |
 
 ---
 
@@ -131,7 +131,7 @@ php artisan migrate --seed
 
 Après une mise à jour du code, lancez `composer install`, `npm install` puis `php artisan migrate` : il synchronise aussi le dictionnaire des traductions (nouvelles clés ajoutées, textes retouchés à la main dans l'écran Traductions conservés) et vide son cache, quand au moins une migration est jouée. La commande `php artisan traductions:synchroniser` fait la même chose seule.
 
-Une base créée avant le contrôle des affectations garde ses données, mais les règles s'appliquent aussitôt : renseignez la date de fin du certificat ADR des chauffeurs certifiés (sans elle, aucune marchandise dangereuse ne leur est confiée) et cochez « Équipé ADR » sur les véhicules concernés (les citernes le sont d'office). `php artisan migrate:fresh --seed` repart d'un jeu de démonstration cohérent, en effaçant les données.
+Une base créée avant le contrôle des affectations garde ses données, mais les règles s'appliquent aussitôt : renseignez la date de fin du certificat ADR des chauffeurs certifiés (sans elle, aucune marchandise dangereuse ne leur est confiée) ainsi que l'échéance du code 95 et de la carte tachygraphe de chaque chauffeur (sans elles, il ne peut plus être affecté), et cochez « Équipé ADR » sur les véhicules concernés (les citernes le sont d'office). `php artisan migrate:fresh --seed` repart d'un jeu de démonstration cohérent, en effaçant les données.
 
 Importez enfin les codes postaux européens, indispensables à la saisie guidée des adresses (environ 610 000 entrées, quelques minutes ; GeoNames ne publie pas la Grèce, dont les localités se vérifient alors en ligne) :
 
@@ -186,7 +186,7 @@ Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit êt
 | Quand | Commande | Rôle |
 |---|---|---|
 | Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture les transports livrés du mois écoulé et envoie chaque facture par courriel |
-| Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route au-delà de sept jours |
+| Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route des expéditions livrées ou annulées depuis plus de sept jours ; les jalons sont conservés |
 | Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
 | Chaque nuit à 0 h 15 | `chauffeurs:cloturer-departs` | Ferme le compte d'un chauffeur le jour de son départ enregistré à l'avance |
 
@@ -205,7 +205,7 @@ Le jeu de données ne s'exécute qu'en environnement `local` ou `testing` : lanc
 | Client — comptabilité (même entreprise) | `comptabilite@nblogitrack.be` | `Nblogitrack2026@` |
 | Chauffeur (une mission en cours) | `wim.peeters121@nblogitrack.be` | `password` |
 
-Le mot de passe `Nblogitrack2026@` s'écrit avec un seul N majuscule et se termine par `@`. Les deux cent soixante-quatre autres comptes du jeu de données utilisent `password`. Ces identifiants sont publics et ne valent que pour une base de démonstration : en production, créez de vrais comptes et ne lancez pas le jeu de données.
+Le mot de passe `Nblogitrack2026@` s'écrit avec un seul N majuscule et se termine par `@`. Deux cent trente-sept autres comptes du jeu de données utilisent `password` ; les vingt-sept comptes `…@nblogitrack-test.eu`, créés par le formulaire d'inscription, ont chacun un mot de passe différent. Ces identifiants sont publics et ne valent que pour une base de démonstration : en production, créez de vrais comptes et ne lancez pas le jeu de données.
 
 ---
 
