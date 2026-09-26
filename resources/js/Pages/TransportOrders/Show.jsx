@@ -137,7 +137,7 @@ function Annulation({ order, annulation, euros }) {
     );
 }
 
-function Supplements({ order, supplements, peutAjouter, euros }) {
+function Supplements({ order, supplements, peutAjouter, peutRetirer = false, euros }) {
     const t = useTraduction();
     const { data, setData, post, processing, errors, reset } = useForm({ libelle: '', montant: '' });
     const retirer = useForm({});
@@ -168,12 +168,12 @@ function Supplements({ order, supplements, peutAjouter, euros }) {
                             <span className="text-slate-700">
                                 {s.libelle}
                                 <span className="block text-xs text-slate-500">
-                                    {s.date} · {s.facture ? t('ordres.supplement_facture', 'facturé') : t('ordres.supplement_a_facturer', 'sur la prochaine facture')}
+                                    {s.date} · {s.facture ? t('ordres.supplement_facture', 'facturé') : annuleeSansFrais ? t('ordres.supplement_non_facture', 'non facturé : expédition annulée sans frais') : t('ordres.supplement_a_facturer', 'sur la prochaine facture')}
                                 </span>
                             </span>
                             <span className="flex items-center gap-2">
                                 <span className="font-semibold text-marine">{euros(s.montant)}</span>
-                                {peutAjouter && ! s.facture && (
+                                {peutRetirer && ! s.facture && (
                                     <button
                                         type="button"
                                         onClick={() => retirer.delete(route('transport-orders.charges.destroy', [order.id, s.id]), { preserveScroll: true })}
@@ -222,7 +222,7 @@ function Supplements({ order, supplements, peutAjouter, euros }) {
     );
 }
 
-export default function Show({ order, chauffeur, facture = null, annulation = null, supplements = [], peutAjouterSupplement = false }) {
+export default function Show({ order, chauffeur, facture = null, annulation = null, supplements = [], peutAjouterSupplement = false, peutRetirerSupplement = false }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -373,7 +373,7 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                     </p>
                 ))}
 
-                <Supplements order={order} supplements={supplements} peutAjouter={peutAjouterSupplement} euros={euros} />
+                <Supplements order={order} supplements={supplements} peutAjouter={peutAjouterSupplement} peutRetirer={peutRetirerSupplement} euros={euros} />
 
                 {annulation && <Annulation order={order} annulation={annulation} euros={euros} />}
             </div>

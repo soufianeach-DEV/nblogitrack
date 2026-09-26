@@ -318,9 +318,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * @return array<int, array<string, mixed>>
-     */
-    /**
      * @return array<string, mixed>
      */
     private function calendrier(): array
@@ -330,7 +327,7 @@ class DashboardController extends Controller
 
         $enlevements = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereBetween('pickup_date', [$debut, $fin->copy()->endOfDay()])
-            ->selectRaw('pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes')
+            ->selectRaw("pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes, count(*) FILTER (WHERE status = 'ASSIGNED') AS a_partir")
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
 
         $livraisons = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
@@ -366,6 +363,9 @@ class DashboardController extends Controller
                 'chome' => JoursFeries::chome($date),
                 'enlevements' => $enlevement,
                 'a_affecter' => $aAffecter,
+                // Enlevements affectes pas encore partis : sans eux, le jour
+                // ne compte que des missions deja en route.
+                'a_partir' => (int) ($enlevements[$cle]->a_partir ?? 0),
                 'livraisons' => (int) ($livraisons[$cle]->nombre ?? 0),
                 'sature' => $enlevement > $capacite,
             ];

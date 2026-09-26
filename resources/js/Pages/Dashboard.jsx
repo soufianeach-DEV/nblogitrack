@@ -165,9 +165,11 @@ function PlanDeCharge({ calendrier }) {
                 {jours.map((j) => {
                     // La planification filtre sur le jour d'enlevement : un jour
                     // sans enlevement menerait a une liste vide, il ne se clique
-                    // donc pas. Un jour tout affecte ouvre les missions affectees.
+                    // donc pas. Un jour tout affecte ouvre les missions affectees,
+                    // ou celles en route si toutes sont deja parties.
+                    const onglet = j.a_affecter > 0 ? 'PENDING' : (j.a_partir > 0 ? 'ASSIGNED' : 'IN_PROGRESS');
                     const lien = j.enlevements > 0
-                        ? route('planning.index', { status: j.a_affecter > 0 ? 'PENDING' : 'ASSIGNED', jour: j.date })
+                        ? route('planning.index', { status: onglet, jour: j.date })
                         : null;
                     const Tuile = lien ? Link : 'div';
 

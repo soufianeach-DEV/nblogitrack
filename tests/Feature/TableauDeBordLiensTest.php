@@ -220,6 +220,27 @@ class TableauDeBordLiensTest extends TestCase
         $this->assertSame($dangereuse->id, $liste['orders']['data'][0]['id']);
     }
 
+    public function test_un_jour_du_calendrier_ouvre_l_onglet_ou_sont_ses_enlevements(): void
+    {
+        $demain = now()->addDay()->setTime(8, 0);
+        $apresDemain = now()->addDays(2)->setTime(8, 0);
+        $chauffeur = $this->chauffeur();
+
+        TransportOrder::factory()->affectee()->create(['pickup_date' => $demain, 'driver_id' => $chauffeur->id]);
+        TransportOrder::factory()->enRoute()->create(['pickup_date' => $demain, 'driver_id' => $chauffeur->id]);
+        // Jour dont toutes les missions sont deja parties : l'onglet
+        // « Affectees » serait vide.
+        TransportOrder::factory()->enRoute()->create(['pickup_date' => $apresDemain, 'driver_id' => $chauffeur->id]);
+
+        $jours = collect($this->props(User::factory()->planificateur()->create(), route('dashboard'))['calendrier']['jours'])
+            ->keyBy('date');
+
+        $this->assertSame(0, $jours[$demain->toDateString()]['a_affecter']);
+        $this->assertSame(1, $jours[$demain->toDateString()]['a_partir']);
+        $this->assertSame(0, $jours[$apresDemain->toDateString()]['a_partir']);
+        $this->assertSame(1, $jours[$apresDemain->toDateString()]['enlevements']);
+    }
+
     public function test_le_message_de_kilometrage_annonce_le_releve_affiche(): void
     {
         $camion = $this->camion('1-KMS-003', ['mileage' => 175661.64]);

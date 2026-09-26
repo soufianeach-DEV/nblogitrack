@@ -646,6 +646,7 @@ class TranslationSeeder extends Seeder
             'supplement_montant' => ['€ HT', '€ excl. btw', '€ excl. VAT'],
             'supplements' => ['Suppléments', 'Toeslagen', 'Surcharges'],
             'filtre_retard' => ['Seulement les expéditions en retard', 'Enkel de te late zendingen', 'Overdue shipments only'],
+            'supplement_non_facture' => ['non facturé : expédition annulée sans frais', 'niet gefactureerd: zending kosteloos geannuleerd', 'not invoiced: shipment cancelled free of charge'],
         ],
 
         'planif' => [

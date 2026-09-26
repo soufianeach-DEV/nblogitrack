@@ -220,6 +220,57 @@ class SocleFacturationTest extends TestCase
         $this->assertSame(0, OrderCharge::count());
     }
 
+    public function test_un_supplement_d_une_annulation_gratuite_ne_se_facture_pas_et_se_retire(): void
+    {
+        $client = Client::factory()->create();
+        $this->livree($client, 1000);
+        // Pose pendant la mission, avant que le client annule sans frais.
+        $annulee = TransportOrder::factory()->create([
+            'client_id' => $client->id,
+            'status' => 'CANCELLED',
+            'cancelled_at' => '2026-03-15 09:00',
+            'cancellation_fee' => 0,
+        ]);
+        $this->travelTo('2026-03-14 10:00');
+        $supplement = OrderCharge::create(['transport_order_id' => $annulee->id, 'label' => 'Attente au quai', 'amount' => 90]);
+        $this->travelTo('2026-04-10 10:00');
+
+        $facture = $this->facturer();
+        $this->assertEqualsWithDelta(1000.0, (float) $facture->amount_excl_tax, 0.001);
+        $this->assertSame(['TRANSPORT'], $facture->lines->pluck('kind')->all());
+
+        $planificateur = User::factory()->planificateur()->create();
+        $this->actingAs($planificateur)
+            ->get(route('transport-orders.show', $annulee))
+            ->assertInertia(fn ($page) => $page
+                ->where('peutAjouterSupplement', false)
+                ->where('peutRetirerSupplement', true)
+                ->etc());
+
+        $this->actingAs($planificateur)
+            ->delete(route('transport-orders.charges.destroy', [$annulee, $supplement]))
+            ->assertSessionHas('success');
+        $this->assertNull($supplement->fresh());
+    }
+
+    public function test_un_supplement_d_une_annulation_indemnisee_se_facture(): void
+    {
+        $client = Client::factory()->create();
+        $annulee = TransportOrder::factory()->create([
+            'client_id' => $client->id,
+            'status' => 'CANCELLED',
+            'cancelled_at' => '2026-03-15 09:00',
+            'cancellation_fee' => 150,
+        ]);
+        $this->travelTo('2026-03-14 10:00');
+        OrderCharge::create(['transport_order_id' => $annulee->id, 'label' => 'Attente au quai', 'amount' => 90]);
+        $this->travelTo('2026-04-10 10:00');
+
+        $facture = $this->facturer();
+        $this->assertEqualsWithDelta(240.0, (float) $facture->amount_excl_tax, 0.001);
+        $this->assertSame(['CANCELLATION', 'SURCHARGE'], $facture->lines->pluck('kind')->all());
+    }
+
     public function test_le_client_ne_pose_pas_de_supplement(): void
     {
         $client = Client::factory()->create();

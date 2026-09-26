@@ -116,9 +116,12 @@ class TransportOrderController extends Controller
                 'date' => $c->created_at->format('d/m/Y'),
                 'facture' => in_array($c->id, $facturees, true),
             ])->all(),
-            // Une expedition annulee sans indemnite ne sera jamais facturee.
+            // Une expedition annulee sans indemnite ne sera jamais facturee :
+            // on n'y ajoute plus rien, mais on peut toujours retirer un
+            // supplement pose avant l'annulation.
             'peutAjouterSupplement' => $request->user()->can('plan-orders')
                 && ! ($transportOrder->status === 'CANCELLED' && ! ($transportOrder->cancellation_fee > 0)),
+            'peutRetirerSupplement' => $request->user()->can('plan-orders'),
             'chauffeur' => $transportOrder->driver?->user
                 ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
                 : null,

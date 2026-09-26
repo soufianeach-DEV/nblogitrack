@@ -82,8 +82,13 @@ class Facturier
                 'montant' => round($o->montantFacturable(), 2),
             ]);
 
+        // Une annulation sans indemnite ne se facture pas : ses supplements
+        // non plus, sans quoi le client paierait un transport annule
+        // gratuitement.
         $supplements = OrderCharge::whereDoesntHave('invoiceLine')
-            ->whereHas('transportOrder', fn ($q) => $q->whereIn('status', ['DELIVERED', 'CANCELLED'])
+            ->whereHas('transportOrder', fn ($q) => $q
+                ->where(fn ($s) => $s->where('status', 'DELIVERED')
+                    ->orWhere(fn ($a) => $a->where('status', 'CANCELLED')->where('cancellation_fee', '>', 0)))
                 ->when($clientId !== null, fn ($c) => $c->where('client_id', $clientId)))
             ->with('transportOrder')
             ->get()
