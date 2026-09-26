@@ -17,6 +17,15 @@ class RegistreTvaParPaysTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Aucun registre reel n'est interroge : un appel non simule echoue,
+        // comme un registre en panne.
+        Http::preventStrayRequests();
+    }
+
     /**
      * Numero, nom et adresse tels que VIES les renvoie, puis ce que le
      * formulaire doit recevoir : [raison sociale, rue, code postal, localite].

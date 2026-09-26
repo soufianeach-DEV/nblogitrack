@@ -22,6 +22,10 @@ class RegistresNationauxTest extends TestCase
         parent::setUp();
 
         $this->withoutMiddleware(ThrottleRequests::class);
+
+        // Aucun registre reel n'est interroge : un appel non simule echoue,
+        // comme un registre en panne.
+        Http::preventStrayRequests();
     }
 
     /** VIES repond « actif » avec le nom et l'adresse donnes. */

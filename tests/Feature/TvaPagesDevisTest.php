@@ -24,6 +24,15 @@ class TvaPagesDevisTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Aucun registre reel n'est interroge : un appel non simule echoue,
+        // comme un registre en panne.
+        Http::preventStrayRequests();
+    }
+
     /** @return array<string, mixed> */
     private function inscription(array $remplace = []): array
     {
