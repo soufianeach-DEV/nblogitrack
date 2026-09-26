@@ -56,7 +56,10 @@ class RegistreTvaParPaysTest extends TestCase
 
         // VIES repond selon le pays demande dans l'adresse de l'appel.
         Http::fake(function ($requete) {
-            preg_match('#/ms/([A-Z]{2})/vat/#', $requete->url(), $m);
+            // Registres nationaux (Tchequie, Finlande...) : muets ici.
+            if (! preg_match('#/ms/([A-Z]{2})/vat/#', $requete->url(), $m)) {
+                return Http::response([], 404);
+            }
             [, $nom, $adresse] = self::CAS[$m[1]];
 
             return Http::response(['isValid' => true, 'name' => $nom, 'address' => $adresse]);

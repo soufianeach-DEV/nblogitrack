@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Support\FormeJuridique;
 use App\Support\IdentifiantEntreprise;
+use App\Support\RegistresNationaux;
 use App\Support\Traductions;
 use App\Support\Translitteration;
 use Illuminate\Http\JsonResponse;
@@ -147,19 +148,33 @@ class VatController extends Controller
             $corps = $reponse->json();
 
             if ($corps['isValid'] ?? false) {
+                // Tchequie, Finlande, Pologne, Roumanie : forme juridique et
+                // activite depuis le registre national ; l'ANAF roumaine
+                // donne aussi l'adresse deja decoupee.
+                $complement = RegistresNationaux::completer($identifiant['pays'], $tva);
+                $adresse = [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '', $identifiant['pays'])), 'pays' => $identifiant['pays']];
+
+                if (isset($complement['adresse'])) {
+                    $adresse = [...$complement['adresse'], 'pays' => $identifiant['pays']];
+                }
+
                 return [
                     'statut' => 'valide',
                     'registre' => 'VIES',
                     // Cyrillique (Bulgarie) ou grec (Grece) : en lettres latines,
                     // la raison sociale garde l'original entre parentheses.
                     'nom' => Translitteration::avecOriginal($this->nettoyer($corps['name'] ?? '')),
-                    'adresse' => [...array_map(fn (string $v) => Translitteration::latin($v), $this->decomposerAdresse($corps['address'] ?? '', $identifiant['pays'])), 'pays' => $identifiant['pays']],
+                    'adresse' => $adresse,
                     'tva' => $identifiant['tva'],
                     'peppol' => $identifiant['peppol'],
                     'entreprise' => match ($identifiant['pays']) {
                         'FR' => $this->registreFrancais($identifiant['national']),
                         'BE' => $this->registreBelge($identifiant['national']),
-                        default => null,
+                        default => $complement === null ? null : [
+                            'dirigeant' => null,
+                            'secteur' => $this->secteurDepuisNace($complement['nace']),
+                            'forme_juridique' => $complement['forme_juridique'],
+                        ],
                     },
                 ];
             }
