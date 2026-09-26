@@ -15,9 +15,9 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 1. L'**entreprise** s'inscrit ; son identité est vérifiée auprès des registres officiels européens
 2. Un **administrateur** valide la demande ; l'entreprise reçoit son e-mail d'activation
 3. Le **client** passe une commande de transport et obtient une estimation de prix en temps réel
-4. Le **planificateur** affecte la commande à un véhicule et à un chauffeur, puis organise les tournées
+4. Le **planificateur** affecte chaque commande à un véhicule et à un chauffeur, en contrôlant capacité, disponibilités et certification ADR
 5. Le **chauffeur** consulte ses missions et confirme la livraison
-6. La **facture** est générée, transmise au format électronique, puis réglée en ligne
+6. La **facture** est générée en PDF et au format électronique européen, envoyée par courriel, puis réglée en ligne
 
 **Règle métier — Suivi public :** chaque expédition reçoit un numéro de suivi unique, consultable sans compte depuis une page publique, à l'aide d'un code d'accès transmis au client.
 
@@ -31,7 +31,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 |---|---|
 | **Client** | Passe des commandes, suit ses expéditions, règle ses factures |
 | **Chauffeur** | Consulte ses missions, confirme l'enlèvement puis la livraison |
-| **Planificateur** | Affecte les véhicules et les chauffeurs, organise les tournées |
+| **Planificateur** | Affecte un véhicule et un chauffeur à chaque commande, réaffecte en cas d'imprévu |
 | **Administrateur** | Valide les entreprises clientes, consulte le journal d'activité, gère la flotte et les utilisateurs |
 | **Visiteur** | Suit une expédition via son numéro et son code, sans authentification |
 
@@ -52,7 +52,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Journal d'activité** | Date, utilisateur, type d'action et adresse IP, avec filtres | ✅ alpha |
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis et statut d'emploi | ✅ alpha |
-| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et format Peppol (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes | ✅ beta |
+| **Facturation** | Une facture par client et par mois, autoliquidation intracommunautaire, communication structurée belge, PDF et fichier UBL au format Peppol BIS 3.0 (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes. La transmission sur le réseau Peppol demande un point d'accès certifié, pas encore raccordé | ✅ beta |
 | **Paiement** | Règlement d'une facture en ligne (Stripe), notification signée vérifiée au centime | ✅ alpha |
 | **Multilingue** | Français, néerlandais et anglais partout : écrans, messages, courriels et facture PDF, dans la langue de chaque utilisateur ; écran d'administration des traductions, et un test qui refuse toute clé sans ses trois traductions | ✅ beta |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ beta |
@@ -92,7 +92,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Authentification | Laravel Breeze (session) |
 | Messagerie (développement) | Mailpit |
 | Paiement | Stripe |
-| Facturation électronique | Réseau Peppol — norme européenne EN 16931 |
+| Facturation électronique | UBL Peppol BIS 3.0 — norme européenne EN 16931 (fichier généré ; transmission par point d'accès à raccorder) |
 | Tests | PHPUnit sur PostgreSQL |
 | Intégration continue | GitHub Actions — style, tests et compilation |
 

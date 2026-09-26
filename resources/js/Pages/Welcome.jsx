@@ -159,7 +159,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                     {}
                     <div className="relative bg-marine-deep">
                         <ul className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-3 px-4 py-5 sm:px-6">
-                            <Certification icone="valide" texte={t('accueil.certif_cmr', 'e-CMR certifié')} />
+                            <Certification icone="valide" texte={t('accueil.certif_cmr', 'Contrats régis par la CMR')} />
                             <Certification icone="coche" texte="Viapass / OBU" />
                             <Certification icone="camion" texte={t('accueil.certif_adr', 'ADR compliant')} />
                         </ul>
@@ -196,7 +196,7 @@ export default function Welcome({ auth, canLogin, canRegister }) {
                             <Service
                                 icone="journal"
                                 titre={t('accueil.service_facturation', 'Facturation simplifiée')}
-                                texte={t('accueil.service_facturation_texte', 'Identifiant Peppol généré automatiquement à l\'inscription, pour une facturation électronique conforme dans toute l\'Union européenne.')}
+                                texte={t('accueil.service_facturation_texte', 'Identifiant Peppol déduit de votre numéro d\'entreprise à l\'inscription, et factures jointes au format électronique européen (UBL, norme EN 16931).')}
                             />
                         </div>
                     </div>

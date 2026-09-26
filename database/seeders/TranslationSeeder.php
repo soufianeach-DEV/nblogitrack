@@ -132,9 +132,9 @@ class TranslationSeeder extends Seeder
             ],
             'service_facturation' => ['Facturation simplifiée', 'Vereenvoudigde facturatie', 'Simplified invoicing'],
             'service_facturation_texte' => [
-                'Identifiant Peppol généré automatiquement à l\'inscription, pour une facturation électronique conforme dans toute l\'Union européenne.',
-                'Peppol-identificatie automatisch aangemaakt bij registratie, voor conforme elektronische facturatie in de hele Europese Unie.',
-                'A Peppol identifier generated automatically at sign-up, for compliant electronic invoicing across the European Union.',
+                'Identifiant Peppol déduit de votre numéro d\'entreprise à l\'inscription, et factures jointes au format électronique européen (UBL, norme EN 16931).',
+                'Peppol-identificatie afgeleid van uw ondernemingsnummer bij registratie, en facturen bijgevoegd in het Europese elektronische formaat (UBL, norm EN 16931).',
+                'A Peppol identifier derived from your company number at sign-up, and invoices attached in the European electronic format (UBL, EN 16931 standard).',
             ],
 
             'tarifs_titre' => ['Une tarification transparente', 'Transparante tarifering', 'Transparent pricing'],
@@ -183,7 +183,7 @@ class TranslationSeeder extends Seeder
             'inscrire' => ['Inscrire mon entreprise', 'Mijn onderneming registreren', 'Register my company'],
 
             'titre_page' => ['Transport et logistique B2B', 'B2B-transport en logistiek', 'B2B transport and logistics'],
-            'certif_cmr' => ['e-CMR certifié', 'e-CMR gecertificeerd', 'e-CMR certified'],
+            'certif_cmr' => ['Contrats régis par la CMR', 'Contracten onder CMR', 'Contracts governed by the CMR'],
             'pied_signature' => [
                 'L\'excellence logistique au service de l\'industrie belge. Précision, fiabilité, innovation.',
                 'Logistieke uitmuntendheid ten dienste van de Belgische industrie. Precisie, betrouwbaarheid, innovatie.',
