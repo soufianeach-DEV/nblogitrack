@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +15,7 @@ use Illuminate\Support\Str;
 
 class TransportOrder extends Model
 {
+    use DatesHeureDeBruxelles;
     use HasFactory;
 
     public const PRIORITES = ['URGENT', 'HIGH', 'NORMAL', 'LOW'];

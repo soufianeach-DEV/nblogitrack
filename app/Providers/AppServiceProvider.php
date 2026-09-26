@@ -5,8 +5,6 @@ namespace App\Providers;
 use App\Listeners\JournaliserAuthentification;
 use App\Models\User;
 use App\Support\Traductions;
-use Carbon\Carbon;
-use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -84,14 +82,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-company', fn (User $user) => $user->gereEntreprise());
 
         Event::subscribe(JournaliserAuthentification::class);
-
-        // Les dates partent vers les pages a l'heure de Bruxelles, sans
-        // fuseau : un navigateur regle sur un autre fuseau n'affiche plus
-        // une livraison du 20 au 19, ni un chargement de 18 h a 16 h. L'API
-        // publique formate ses dates elle-meme.
-        $heureLocale = fn ($date) => $date->copy()->setTimezone(config('app.timezone'))->format('Y-m-d\\TH:i:s');
-        Carbon::serializeUsing($heureLocale);
-        CarbonImmutable::serializeUsing($heureLocale);
 
         // Recherche « contient », insensible a la casse et aux accents ;
         // % et _ tapes par l'utilisateur se cherchent tels quels.

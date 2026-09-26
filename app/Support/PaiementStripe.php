@@ -6,6 +6,9 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
+use Stripe\Exception\ExceptionInterface;
 use Stripe\StripeClient;
 
 /**
@@ -25,8 +28,13 @@ class PaiementStripe
         return ! empty(config('services.stripe.secret'));
     }
 
-    public static function client(): StripeClient
+    public static function client(): object
     {
+        // Les tests remplacent le client par un double.
+        if (app()->bound('stripe.client')) {
+            return app('stripe.client');
+        }
+
         $options = ['api_key' => config('services.stripe.secret')];
 
         // Un emulateur local (stripe-mock, tests de bout en bout) remplace
@@ -36,6 +44,36 @@ class PaiementStripe
         }
 
         return new StripeClient($options);
+    }
+
+    /**
+     * La session a presenter au client : la session encore ouverte de la
+     * facture si elle porte le bon montant (deux onglets, un clic
+     * repete : une seule session, donc un seul paiement possible), sinon
+     * une nouvelle. L'ancienne session, perimee, est fermee chez Stripe.
+     */
+    public static function sessionPourPayer(Invoice $facture, User $payeur): object
+    {
+        if ($facture->stripe_session_id) {
+            try {
+                $ancienne = self::lireSession($facture->stripe_session_id);
+
+                if ($ancienne->status === 'open') {
+                    if ((int) $ancienne->amount_total === (int) round($facture->solde() * 100)) {
+                        return $ancienne;
+                    }
+
+                    self::client()->checkout->sessions->expire($ancienne->id);
+                }
+            } catch (ExceptionInterface $e) {
+                report($e);
+            }
+        }
+
+        $session = self::ouvrirSession($facture, $payeur);
+        $facture->update(['stripe_session_id' => $session->id]);
+
+        return $session;
     }
 
     public static function ouvrirSession(Invoice $facture, User $payeur): object
@@ -77,14 +115,49 @@ class PaiementStripe
         return self::client()->checkout->sessions->retrieve($identifiant);
     }
 
+    /** Un paiement differe a echoue : la facture redevient payable. */
+    public static function echec(object $session, Invoice $facture): void
+    {
+        if ((string) $session->client_reference_id === (string) $facture->id) {
+            $facture->forceFill(['online_payment_pending_at' => null])->save();
+        }
+    }
+
+    /**
+     * Les paiements en ligne recus en trop pour une facture, a rembourser
+     * depuis le tableau de bord Stripe.
+     *
+     * @return Collection<int, array{session: string, montant: string, date: CarbonInterface}>
+     */
+    public static function excedentsARembourser(Invoice $facture)
+    {
+        return ActivityLog::where('action', 'invoice.payment_duplicate')
+            ->where('subject_type', 'Invoice')
+            ->where('subject_id', (string) $facture->id)
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (ActivityLog $l) => [
+                'session' => (string) ($l->properties['session_stripe'] ?? ''),
+                'montant' => (string) ($l->properties['montant'] ?? ''),
+                'date' => $l->created_at,
+            ])
+            ->unique('session')
+            ->values();
+    }
+
     /**
      * @return 'enregistre'|'deja'|'excedent'|'en_attente'|'refuse'
      */
     public static function enregistrer(object $session, Invoice $facture): string
     {
         // Un virement SEPA, par exemple, ne sera paye que plus tard :
-        // Stripe enverra alors async_payment_succeeded.
+        // Stripe enverra alors async_payment_succeeded. D'ici la, la
+        // facture l'annonce et n'accepte pas un second paiement en ligne.
         if ($session->payment_status !== 'paid') {
+            if ($session->status === 'complete' && (string) $session->client_reference_id === (string) $facture->id) {
+                $facture->forceFill(['online_payment_pending_at' => $facture->online_payment_pending_at ?? now()])->save();
+            }
+
             return 'en_attente';
         }
 
@@ -103,6 +176,8 @@ class PaiementStripe
             return 'deja';
         }
 
+        $facture->forceFill(['online_payment_pending_at' => null])->save();
+
         $montant = ((int) $session->amount_total) / 100;
 
         // L'encaissement verrouille la facture : deux enregistrements
@@ -116,12 +191,16 @@ class PaiementStripe
                 return 'deja';
             }
 
-            ActivityLog::record(
-                'invoice.payment_duplicate',
-                'Paiement en ligne reçu pour '.$facture->reference.', déjà réglée : à rembourser',
-                $facture,
-                ['montant' => (string) $montant, 'session_stripe' => $session->id],
-            );
+            // Le webhook et le retour du client signalent le meme exces :
+            // il n'est journalise qu'une fois, pour un seul remboursement.
+            if (! self::excedentsARembourser($facture)->contains('session', (string) $session->id)) {
+                ActivityLog::record(
+                    'invoice.payment_duplicate',
+                    'Paiement en ligne reçu pour '.$facture->reference.', déjà réglée : à rembourser',
+                    $facture,
+                    ['montant' => (string) $montant, 'session_stripe' => $session->id],
+                );
+            }
 
             return 'excedent';
         }

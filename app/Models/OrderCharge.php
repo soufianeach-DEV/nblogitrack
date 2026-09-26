@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class OrderCharge extends Model
 {
+    use DatesHeureDeBruxelles;
+
     protected $fillable = ['transport_order_id', 'label', 'amount', 'created_by'];
 
     protected function casts(): array

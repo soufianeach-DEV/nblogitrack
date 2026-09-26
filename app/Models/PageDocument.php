@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PageDocument extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const TYPES = [
         'application/pdf' => 'PDF',
         'image/jpeg' => 'JPEG',

@@ -157,7 +157,7 @@ function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     );
 }
 
-export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvoir = false, peutPayerEnLigne = false, peutEnvoyer = false }) {
+export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvoir = false, peutPayerEnLigne = false, peutEnvoyer = false, paiementEnCours = null, aRembourser = [] }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
@@ -320,7 +320,11 @@ export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvo
                         )}
                     </div>
 
-                    {}
+                    {paiementEnCours && (
+                        <p className="mt-4 rounded-lg bg-white/10 px-3 py-2 text-xs leading-snug text-slate-200">
+                            {t('facture.paiement_en_cours_depuis', 'Paiement en ligne en cours de traitement par la banque depuis le :date : la facture sera marquée payée dès sa réception.', { date: paiementEnCours })}
+                        </p>
+                    )}
                     {peutPayerEnLigne && (
                         <div className="mt-4 border-t border-white/15 pt-4">
                             <BoutonPayerEnLigne facture={facture} pleineLargeur />
@@ -332,6 +336,21 @@ export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvo
                 </section>
                 )}
             </div>
+
+            {aRembourser.length > 0 && (
+                <section className="mt-4 rounded-2xl border border-status-incident/30 bg-white p-5 shadow-sm">
+                    <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-status-incident">{t('facture.a_rembourser', 'Paiements en ligne reçus en trop, à rembourser')}</h2>
+                    <p className="mb-2 text-xs text-slate-600">{t('facture.a_rembourser_aide', 'Remboursez-les depuis le tableau de bord Stripe (Paiements), en cherchant la session indiquée.')}</p>
+                    <ul className="divide-y divide-slate-100 text-sm">
+                        {aRembourser.map((r) => (
+                            <li key={r.session} className="flex items-center justify-between gap-3 py-2">
+                                <span className="text-slate-600">{r.date} · <span className="font-mono text-xs">{r.session}</span></span>
+                                <span className="font-semibold text-status-incident">{euros(r.montant)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             {facture.paiements.length > 0 && (
                 <section className="mt-4 rounded-2xl bg-white p-5 shadow-sm">

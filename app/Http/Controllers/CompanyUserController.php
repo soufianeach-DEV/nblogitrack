@@ -45,6 +45,11 @@ class CompanyUserController extends Controller
     {
         $moi = $request->user();
 
+        // L'adresse est comparee et enregistree en minuscules : la meme en
+        // majuscules faisait une erreur 500 au lieu du message « deja
+        // utilisee ».
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $donnees = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',

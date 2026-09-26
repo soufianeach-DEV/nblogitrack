@@ -7,6 +7,7 @@ use App\Support\PaiementStripe;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Stripe\Exception\ExceptionInterface as ErreurStripe;
@@ -30,8 +31,22 @@ class PaymentController extends Controller
             return back()->with('error', Traductions::t('msg.paiement_en_ligne_indisponible', 'Le paiement en ligne est momentanément indisponible. Réglez par virement avec la communication structurée.'));
         }
 
+        // Un virement lance depuis Stripe est en cours : un second paiement
+        // ferait payer deux fois la meme facture.
+        if ($invoice->online_payment_pending_at !== null) {
+            return back()->with('error', Traductions::t('msg.paiement_deja_en_cours', 'Un paiement en ligne de cette facture est en cours de traitement par la banque depuis le :date : il sera enregistré dès sa réception.', [
+                'date' => $invoice->online_payment_pending_at->format('d/m/Y'),
+            ]));
+        }
+
         try {
-            $session = PaiementStripe::ouvrirSession($invoice, $request->user());
+            // Le verrou sur la facture : deux clics simultanes ne creent
+            // qu'une session.
+            $session = DB::transaction(function () use ($invoice, $request) {
+                $facture = Invoice::whereKey($invoice->id)->lockForUpdate()->first();
+
+                return PaiementStripe::sessionPourPayer($facture, $request->user());
+            });
         } catch (ErreurStripe $e) {
             report($e);
 
@@ -67,7 +82,8 @@ class PaymentController extends Controller
             'reference' => $invoice->reference,
             'facture_id' => $invoice->id,
             'montant' => $montant ?? (float) $invoice->amount_incl_tax,
-            'regle' => in_array($etat, ['enregistre', 'deja'], true) || $invoice->status === 'PAID',
+            'regle' => in_array($etat, ['enregistre', 'deja'], true) || ($etat === null && $invoice->status === 'PAID'),
+            'double' => $etat === 'excedent',
             'en_attente' => $etat === 'en_attente',
             'solde' => $invoice->solde(),
             'enregistre' => in_array($etat, ['enregistre', 'deja'], true) || $invoice->status === 'PAID',
@@ -94,7 +110,7 @@ class PaymentController extends Controller
 
         // Un paiement differe (virement SEPA...) arrive par
         // async_payment_succeeded, apres un completed encore impaye.
-        if (! in_array($evenement->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)) {
+        if (! in_array($evenement->type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed'], true)) {
             return response()->json(['message' => 'Ignoré.']);
         }
 
@@ -103,6 +119,14 @@ class PaymentController extends Controller
 
         if ($invoice === null) {
             return response()->json(['message' => 'Sans effet.']);
+        }
+
+        // Le virement differe n'est pas arrive : la facture redevient
+        // payable.
+        if ($evenement->type === 'checkout.session.async_payment_failed') {
+            PaiementStripe::echec($session, $invoice);
+
+            return response()->json(['message' => 'Paiement échoué, facture de nouveau payable.']);
         }
 
         return response()->json(['message' => match (PaiementStripe::enregistrer($session, $invoice)) {

@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Vehicle extends Model
 {
+    use DatesHeureDeBruxelles;
     use HasFactory;
 
     protected $table = 'vehicles';

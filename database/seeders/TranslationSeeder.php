@@ -2021,6 +2021,11 @@ class TranslationSeeder extends Seeder
             'reste_du' => ['Reste dû', 'Nog verschuldigd', 'Balance due'],
             'paiement_en_cours' => ['Paiement en cours', 'Betaling in behandeling', 'Payment in progress'],
             'paiement_differe' => ['Votre banque traite le paiement de :montant (par exemple un virement SEPA). La facture :reference sera marquée payée dès sa réception, en général sous quelques jours ouvrables.', 'Uw bank verwerkt de betaling van :montant (bijvoorbeeld een SEPA-overschrijving). Factuur :reference wordt als betaald gemarkeerd zodra ze ontvangen is, meestal binnen enkele werkdagen.', 'Your bank is processing the payment of :montant (for example a SEPA transfer). Invoice :reference will be marked as paid as soon as it is received, usually within a few business days.'],
+            'paiement_en_cours_depuis' => ['Paiement en ligne en cours de traitement par la banque depuis le :date : la facture sera marquée payée dès sa réception.', 'Online betaling in behandeling bij de bank sinds :date: de factuur wordt als betaald gemarkeerd zodra ze ontvangen is.', 'Online payment being processed by the bank since :date: the invoice will be marked as paid as soon as it is received.'],
+            'a_rembourser' => ['Paiements en ligne reçus en trop, à rembourser', 'Te veel ontvangen online betalingen, terug te betalen', 'Online payments received in excess, to be refunded'],
+            'a_rembourser_aide' => ['Remboursez-les depuis le tableau de bord Stripe (Paiements), en cherchant la session indiquée.', 'Betaal ze terug via het Stripe-dashboard (Betalingen), door de vermelde sessie op te zoeken.', 'Refund them from the Stripe dashboard (Payments), by searching for the session shown.'],
+            'paiement_double' => ['Facture déjà réglée', 'Factuur al betaald', 'Invoice already paid'],
+            'paiement_double_texte' => ['La facture :reference était déjà payée : ce paiement de :montant vous sera remboursé, sans démarche de votre part.', 'Factuur :reference was al betaald: deze betaling van :montant wordt u terugbetaald, zonder dat u iets hoeft te doen.', 'Invoice :reference was already paid: this payment of :montant will be refunded to you, with nothing for you to do.'],
         ],
 
         'action' => [
@@ -2625,6 +2630,7 @@ class TranslationSeeder extends Seeder
             'cle_expiration_passee' => ['La date d\'expiration doit être postérieure à aujourd\'hui.', 'De vervaldatum moet na vandaag liggen.', 'The expiry date must be after today.'],
             'note_brouillon' => ['Publiez la note avant de l\'envoyer aux conducteurs.', 'Publiceer de nota voordat u ze naar de bestuurders stuurt.', 'Publish the note before sending it to the drivers.'],
             'mission_deja_livree' => ['La livraison était déjà enregistrée par le planificateur : vos informations y ont été ajoutées.', 'De levering was al geregistreerd door de planner: uw gegevens zijn toegevoegd.', 'The delivery had already been recorded by the planner: your details have been added.'],
+            'paiement_deja_en_cours' => ['Un paiement en ligne de cette facture est en cours de traitement par la banque depuis le :date : il sera enregistré dès sa réception.', 'Een online betaling van deze factuur wordt sinds :date door de bank verwerkt: ze wordt geregistreerd zodra ze ontvangen is.', 'An online payment for this invoice has been processed by the bank since :date: it will be recorded as soon as it is received.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DriverAcknowledgement extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const NOTE = 'information-chauffeurs';
 
     protected $fillable = ['user_id', 'version', 'acknowledged_at', 'ip_address'];

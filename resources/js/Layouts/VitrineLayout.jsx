@@ -20,9 +20,9 @@ export default function VitrineLayout({ children }) {
                     </Link>
 
                     <nav className="hidden items-center gap-6 md:flex">
-                        <a href="/#services" className={lienNav}>{t('nav.services', 'Services')}</a>
+                        <a href={route('accueil') + '#services'} className={lienNav}>{t('nav.services', 'Services')}</a>
                         <Link href={route('tarifs.index')} className={lienNav}>{t('nav.tarifs', 'Tarifs')}</Link>
-                        <a href="/#apropos" className={lienNav}>{t('nav.a_propos', 'À propos')}</a>
+                        <a href={route('accueil') + '#apropos'} className={lienNav}>{t('nav.a_propos', 'À propos')}</a>
                     </nav>
 
                     <div className="ml-auto flex items-center gap-3">

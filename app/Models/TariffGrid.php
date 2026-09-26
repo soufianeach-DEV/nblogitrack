@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TariffGrid extends Model
 {
+    use DatesHeureDeBruxelles;
     use HasFactory;
 
     protected $table = 'tariff_grids';

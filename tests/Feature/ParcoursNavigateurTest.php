@@ -627,4 +627,12 @@ class ParcoursNavigateurTest extends TestCase
         $this->assertSame('Nos services', Translation::where('cle', 'nav.services')->value('fr'));
         $this->assertSame('Tarieven', Translation::where('cle', 'nav.tarifs')->value('nl'));
     }
+
+    public function test_les_dates_partent_a_l_heure_de_bruxelles_sans_fuseau(): void
+    {
+        $ordre = TransportOrder::factory()->create(['requested_delivery_date' => '2026-10-02', 'pickup_date' => '2026-09-28 09:00']);
+
+        $this->assertSame('2026-10-02T00:00:00', $ordre->fresh()->toArray()['requested_delivery_date']);
+        $this->assertSame('2026-09-28T09:00:00', $ordre->fresh()->toArray()['pickup_date']);
+    }
 }

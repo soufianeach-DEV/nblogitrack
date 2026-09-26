@@ -116,4 +116,16 @@ class EntrepriseMultiComptesTest extends TestCase
         $this->assertNull(User::find($collegue->id));
         $this->assertNotNull(Client::find($client->id));
     }
+
+    public function test_une_adresse_deja_prise_en_majuscules_est_refusee_proprement(): void
+    {
+        $client = Client::factory()->create();
+        $this->collegue($client, 'ORDERS')->update(['email' => 'lotte@exemple.be']);
+
+        $this->actingAs($client->compte())
+            ->post(route('company.users.store'), [
+                'first_name' => 'Lotte', 'last_name' => 'Bis', 'email' => 'LOTTE@EXEMPLE.BE', 'role' => 'ORDERS',
+            ])
+            ->assertSessionHasErrors('email');
+    }
 }

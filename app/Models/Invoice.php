@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Invoice extends Model
 {
+    use DatesHeureDeBruxelles;
     use HasFactory;
 
     public const STATUTS = [
@@ -33,6 +35,7 @@ class Invoice extends Model
         'type', 'credited_invoice_id', 'credit_reason', 'vat_category',
         'buyer_name', 'buyer_vat_number', 'buyer_peppol_id', 'buyer_address',
         'buyer_postal_code', 'buyer_city', 'buyer_country',
+        'stripe_session_id', 'online_payment_pending_at',
     ];
 
     protected function casts(): array
@@ -44,6 +47,7 @@ class Invoice extends Model
             'period_end' => 'date',
             'paid_on' => 'date',
             'sent_at' => 'datetime',
+            'online_payment_pending_at' => 'datetime',
             'reverse_charge' => 'boolean',
             'amount_excl_tax' => 'decimal:2',
             'vat_rate' => 'decimal:2',

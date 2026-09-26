@@ -13,6 +13,7 @@ use App\Support\FacturePdf;
 use App\Support\FactureUbl;
 use App\Support\Formats;
 use App\Support\LigneFacture;
+use App\Support\PaiementStripe;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
@@ -54,7 +55,7 @@ class InvoiceController extends Controller
                     'autoliquidation' => (bool) $facture->reverse_charge,
                     'etat' => $this->etat($facture),
                     'payee_le' => $facture->paid_on?->format('d/m/Y'),
-                    'peut_payer' => $estClient && $facture->estAPayer(),
+                    'peut_payer' => $estClient && $facture->estAPayer() && $facture->online_payment_pending_at === null && PaiementStripe::actif(),
                 ]),
             'cartes' => [
                 'du' => round((float) $aPayer()->sum('amount_incl_tax')
@@ -134,8 +135,15 @@ class InvoiceController extends Controller
             'peutMarquerPayee' => $gestion && $invoice->estAPayer(),
             'peutEmettreAvoir' => $gestion && $invoice->estAPayer() && $invoice->montantPaye() == 0.0,
             'peutEnvoyer' => $gestion && $invoice->status !== 'DRAFT',
+            'paiementEnCours' => $invoice->estAPayer() ? $invoice->online_payment_pending_at?->format('d/m/Y') : null,
+            'aRembourser' => $gestion ? PaiementStripe::excedentsARembourser($invoice)->map(fn ($e) => [
+                'session' => $e['session'],
+                'montant' => (float) $e['montant'],
+                'date' => $e['date']->format('d/m/Y'),
+            ])->all() : [],
             'peutPayerEnLigne' => $invoice->estAPayer()
-                && ! empty(config('services.stripe.secret'))
+                && $invoice->online_payment_pending_at === null
+                && PaiementStripe::actif()
                 && $utilisateur->can('pay', $invoice),
         ]);
     }

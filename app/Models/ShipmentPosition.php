@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ShipmentPosition extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const UPDATED_AT = null;
 
     public const JALON = 'JALON';
