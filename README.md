@@ -194,10 +194,12 @@ Le jeu de données ne s'exécute qu'en environnement `local` ou `testing` : lanc
 |---|---|---|
 | Administrateur | `admin@nblogitrack.be` | `Nblogitrack2026@` |
 | Planificateur | `planner@nblogitrack.be` | `Nblogitrack2026@` |
-| Client | `client@nblogitrack.be` | `Nblogitrack2026@` |
-| Chauffeur | `wim.peeters121@nblogitrack.be` | `password` |
+| Client — administrateur de l'entreprise (Demo Transport SA) | `client@nblogitrack.be` | `Nblogitrack2026@` |
+| Client — commandes (même entreprise) | `commandes@nblogitrack.be` | `Nblogitrack2026@` |
+| Client — comptabilité (même entreprise) | `comptabilite@nblogitrack.be` | `Nblogitrack2026@` |
+| Chauffeur (une mission en cours) | `wim.peeters121@nblogitrack.be` | `password` |
 
-Les deux cent soixante autres comptes du jeu de données utilisent `password`. Ces identifiants sont publics et ne valent que pour une base de démonstration.
+Le mot de passe `Nblogitrack2026@` s'écrit avec un seul N majuscule et se termine par `@`. Les deux cent soixante-quatre autres comptes du jeu de données utilisent `password`. Ces identifiants sont publics et ne valent que pour une base de démonstration : en production, créez de vrais comptes et ne lancez pas le jeu de données.
 
 ---
 
