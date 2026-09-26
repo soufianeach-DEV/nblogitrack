@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Listeners\JournaliserAuthentification;
 use App\Models\User;
+use App\Support\MemoireRequete;
 use App\Support\Traductions;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -21,7 +22,11 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Une instance par requete : rien ne passe d'une requete a l'autre.
+        $this->app->scoped(MemoireRequete::class);
+    }
 
     public function boot(): void
     {

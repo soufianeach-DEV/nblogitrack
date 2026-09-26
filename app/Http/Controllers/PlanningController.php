@@ -11,6 +11,7 @@ use App\Support\Adresse;
 use App\Support\ControleAffectation;
 use App\Support\Formats;
 use App\Support\FretRetour;
+use App\Support\MemoireRequete;
 use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
 use App\Support\Traductions;
@@ -45,6 +46,10 @@ class PlanningController extends Controller
 
     public function index(Request $request): Response
     {
+        // Ecran de lecture : les candidats au fret retour et les missions
+        // par camion se calculent une fois pour toute la page.
+        MemoireRequete::activer();
+
         $statut = $request->query('status', 'PENDING');
         if (! array_key_exists($statut, self::TRANSITIONS)) {
             $statut = 'PENDING';

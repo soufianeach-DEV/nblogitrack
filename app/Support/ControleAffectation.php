@@ -97,10 +97,10 @@ final class ControleAffectation
      */
     public static function derniereMission(string $immatriculation, CarbonInterface $auPlusTard, ?int $exclu = null): ?TransportOrder
     {
-        return TransportOrder::where('vehicle_registration', $immatriculation)
+        return MemoireRequete::retenir('missions:'.$immatriculation.':'.$exclu, fn () => TransportOrder::where('vehicle_registration', $immatriculation)
             ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
             ->when($exclu !== null, fn ($q) => $q->where('id', '!=', $exclu))
-            ->get()
+            ->get())
             ->map(fn (TransportOrder $m) => [$m, self::occupation($m)[1]])
             ->filter(fn (array $p) => $p[1]->lte($auPlusTard))
             ->sortByDesc(fn (array $p) => $p[1]->timestamp * 1000000 + $p[0]->id)
@@ -398,12 +398,14 @@ final class ControleAffectation
      */
     private static function missionsSurLaPeriode($requete, CarbonInterface $debut, CarbonInterface $fin, ?int $exclu)
     {
-        return $requete->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+        $requete->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
             ->when($exclu !== null, fn ($q) => $q->where('id', '!=', $exclu))
             ->where(fn ($q) => $q->where('status', 'IN_PROGRESS')
                 ->orWhereNull('pickup_date')
-                ->orWhere('pickup_date', '<=', $fin->copy()->endOfDay()))
-            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'approche_km', 'weight', 'volume'])
+                ->orWhere('pickup_date', '<=', $fin->copy()->endOfDay()));
+
+        return MemoireRequete::retenir('periode:'.$requete->toRawSql(), fn () => $requete
+            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'assigned_at', 'distance_km', 'approche_km', 'weight', 'volume']))
             ->filter(function (TransportOrder $mission) use ($debut, $fin) {
                 [$premier, $dernier] = self::occupation($mission);
 

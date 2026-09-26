@@ -67,6 +67,21 @@ final class FretRetour
             return collect();
         }
 
+        // Les trois premiers candidats sont ceux des cinq premiers : un
+        // seul calcul par demande sert a toute la page de planification.
+        if ($demande->id !== null && $max <= 5) {
+            return MemoireRequete::retenir(
+                'porteuses:'.$demande->id.':'.(int) $pourPrix,
+                fn () => self::chercherPorteuses($demande, $pourPrix, 5),
+            )->take($max)->values();
+        }
+
+        return self::chercherPorteuses($demande, $pourPrix, $max);
+    }
+
+    private static function chercherPorteuses(TransportOrder $demande, bool $pourPrix, int $max): Collection
+    {
+
         $lat = (float) $demande->pickup_lat;
         $lng = (float) $demande->pickup_lng;
         $rayon = (float) config('fret.retour.approche_max_km', 150);
