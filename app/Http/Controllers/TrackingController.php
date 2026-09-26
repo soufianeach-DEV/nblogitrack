@@ -165,11 +165,17 @@ class TrackingController extends Controller
             return response()->json([]);
         }
 
-        return response()->json(Cache::remember(
-            'peages:'.$this->cleTrajet($transportOrder),
-            now()->addDays(30),
-            fn () => $this->peagesDuTrace($trajet['geometrie']),
-        ));
+        // Serveurs Overpass muets : pas de liste vide gardee un mois, on
+        // reessaie dans dix minutes.
+        $cle = 'peages:'.$this->cleTrajet($transportOrder);
+        $peages = Cache::get($cle);
+
+        if ($peages === null) {
+            $peages = $this->peagesDuTrace($trajet['geometrie']);
+            Cache::put($cle, $peages ?? [], $peages === null ? now()->addMinutes(10) : now()->addDays(30));
+        }
+
+        return response()->json($peages ?? []);
     }
 
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
@@ -192,16 +198,22 @@ class TrackingController extends Controller
      */
     private function trajet(TransportOrder $ordre): array
     {
-        return Cache::remember(
-            'itineraire:'.$this->cleTrajet($ordre),
-            now()->addDays(30),
-            fn () => $this->routeRoutiere(
+        $cle = 'itineraire:'.$this->cleTrajet($ordre);
+        $trajet = Cache::get($cle);
+
+        if ($trajet === null) {
+            $trajet = $this->routeRoutiere(
                 (float) $ordre->pickup_lat,
                 (float) $ordre->pickup_lng,
                 (float) $ordre->delivery_lat,
                 (float) $ordre->delivery_lng,
-            ),
-        );
+            );
+            // Le trace direct est un repli (OSRM injoignable) : il ne se
+            // garde que dix minutes, le vrai itineraire le remplacera.
+            Cache::put($cle, $trajet, $trajet['direct'] ? now()->addMinutes(10) : now()->addDays(30));
+        }
+
+        return $trajet;
     }
 
     /**
@@ -210,7 +222,7 @@ class TrackingController extends Controller
     private function routeRoutiere(float $latDepart, float $lngDepart, float $latArrivee, float $lngArrivee): array
     {
         try {
-            $reponse = Http::timeout(15)->get(
+            $reponse = Http::connectTimeout(3)->timeout(10)->get(
                 "https://router.project-osrm.org/route/v1/driving/{$lngDepart},{$latDepart};{$lngArrivee},{$latArrivee}",
                 ['overview' => 'full', 'geometries' => 'geojson'],
             );
@@ -243,18 +255,24 @@ class TrackingController extends Controller
      * @param  array<int, array{0: float, 1: float}>  $geometrie
      * @return array<int, array<string, mixed>>
      */
-    private function peagesDuTrace(array $geometrie): array
+    /** Null si aucun serveur Overpass n'a repondu. */
+    private function peagesDuTrace(array $geometrie): ?array
     {
         $latitudes = array_column($geometrie, 0);
         $longitudes = array_column($geometrie, 1);
 
-        $requete = '[out:json][timeout:60];'
+        $requete = '[out:json][timeout:25];'
             .'node["barrier"~"^(toll_booth|toll_gantry)$"]('
             .(min($latitudes) - 0.05).','.(min($longitudes) - 0.05).','
             .(max($latitudes) + 0.05).','.(max($longitudes) + 0.05).');'
             .'out body 400;';
 
         $noeuds = $this->interrogerOverpass($requete);
+
+        if ($noeuds === null) {
+            return null;
+        }
+
         $peages = [];
 
         foreach ($noeuds as $noeud) {
@@ -323,11 +341,12 @@ class TrackingController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function interrogerOverpass(string $requete): array
+    private function interrogerOverpass(string $requete): ?array
     {
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'] as $hote) {
             try {
-                $reponse = Http::timeout(90)
+                // Une requete web n'attend pas une minute et demie par serveur.
+                $reponse = Http::connectTimeout(5)->timeout(25)
                     ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
                     ->asForm()
                     ->post($hote, ['data' => $requete]);
@@ -340,7 +359,7 @@ class TrackingController extends Controller
             }
         }
 
-        return [];
+        return null;
     }
 
     /**

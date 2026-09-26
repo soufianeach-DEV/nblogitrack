@@ -198,8 +198,34 @@ Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit êt
 | Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route des expéditions livrées ou annulées depuis plus de sept jours ; les jalons sont conservés |
 | Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
 | Chaque nuit à 0 h 15 | `chauffeurs:cloturer-departs` | Ferme le compte d'un chauffeur le jour de son départ enregistré à l'avance |
+| Chaque minute | `queue:work --stop-when-empty` | Vide la file d'attente (note aux conducteurs) ; un worker permanent sous Supervisor peut la remplacer |
+| Chaque nuit | `queue:prune-failed`, `auth:clear-resets`, purge du cache périmé | Entretien |
+
+Une tâche qui échoue est signalée au journal d'activité (« Échec d'une tâche planifiée ») ; une tâche encore en cours n'est pas relancée par-dessus.
 
 Tous restent lançables à la main. `factures:generer` accepte `--mois=AAAA-MM`, `--tout`, `--essai` et `--sans-envoi` ; la relancer ne refacture rien, puisqu'elle ignore les expéditions qui portent déjà une ligne de facture.
+
+### Mise en production
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan migrate --force
+php artisan db:seed --class=TranslationSeeder --force   # textes de l'interface
+php artisan optimize                                     # configuration, routes, vues, événements en cache
+```
+
+- **Fichier `.env`** : `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` exact (seul ce domaine et ses sous-domaines sont servis), `LOG_STACK=daily`, `LOG_LEVEL=warning`, `MAIL_TIMEOUT=10`, compte PostgreSQL dédié.
+- **Derrière un répartiteur de charge ou un CDN** : `TRUSTED_PROXIES` avec leurs adresses (ou `*` si elles changent), sinon HTTPS n'est pas reconnu et tous les visiteurs partagent les mêmes limites d'essais.
+- **PHP** : OPcache actif (`opcache.validate_timestamps=0`, puis `php artisan optimize` et rechargement de PHP-FPM à chaque déploiement) ; `upload_max_filesize=10M` et `post_max_size=55M` (déjà dans `public/.user.ini` pour PHP-FPM) ; `max_execution_time` de 30 s suffit.
+- **Serveur web** : `public/.htaccess` compresse les réponses et met en cache un an les fichiers de `public/build`. Sous nginx, reprendre ces règles (`gzip on`, `expires 1y` sur `/build/assets/`).
+- **Facture électronique** : `PEPPOL_URL` et `PEPPOL_CLE` du point d'accès du prestataire choisi (obligatoire en B2B belge depuis 2026).
+
+### Sauvegardes
+
+- **Base de données** : `pg_dump -Fc` chaque nuit, gardé 30 jours hors du serveur, et archivage continu des WAL si une perte de quelques heures n'est pas acceptable.
+- **Fichiers** : `storage/app` (pièces jointes des devis, documents publiés), avec la même rétention.
+- **Test de restauration** : restaurer la sauvegarde sur une base vide au moins une fois par trimestre ; une sauvegarde jamais restaurée n'est pas une sauvegarde.
 
 ### Comptes de démonstration
 
