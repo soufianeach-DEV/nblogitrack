@@ -239,6 +239,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
 
                         {ouverte === d.id && (
                             <dl className="mt-3 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {d.end_client_name && ligne(t('devis.client_final', 'Entreprise pour laquelle vous demandez'), d.end_client_name)}
                                 {ligne(t('devis.forme_juridique', 'Forme juridique'), [d.legal_form, d.sector].filter(Boolean).join(' · '))}
                                 {ligne(t('devis.eori', 'Numéro EORI'), d.eori_number)}
                                 {ligne(t('devis.adresse_facturation', 'Adresse de facturation'), [d.billing_street, [d.billing_postal_code, d.billing_city].filter(Boolean).join(' '), d.billing_country].filter(Boolean).join(', '))}

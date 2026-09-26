@@ -192,8 +192,8 @@ class TvaPagesDevisTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Devis/Index')
                 ->where('demandes.data.0.customer_type', 'Nouvelle entreprise')
-                ->where('libelles.Nouvelle entreprise', 'Nieuwe klant (eerste aanvraag)')
-                ->where('libelles.Client régulier / entreprise', 'Al klant bij NBLogiTrack')
+                ->where('libelles.Nouvelle entreprise', 'Eerste aanvraag: ik ben nog geen klant')
+                ->where('libelles.Client régulier / entreprise', 'Ik ben al klant bij NBLogiTrack')
                 ->where('libelles.National (Belgique)', 'Nationaal (België)')
                 ->where('libelles.Import vers la Belgique', 'Import naar België')
                 ->where('libelles.Transport ponctuel', 'Eenmalig transport')

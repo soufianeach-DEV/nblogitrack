@@ -80,6 +80,9 @@ class QuoteController extends Controller
         ],
     ];
 
+    /** Le demandeur agit pour une autre entreprise. */
+    public const POUR_UN_TIERS = 'Intermédiaire / commissionnaire';
+
     private const CHAMPS_CHOIX = [
         'customer_type' => 'clients',
         'trip_type' => 'trajets',
@@ -162,6 +165,8 @@ class QuoteController extends Controller
             'phone' => 'required|string|max:20',
             'vat_number' => 'nullable|string|max:30',
             'customer_type' => 'required|in:'.implode(',', self::CHOIX['clients']),
+            // Commissionnaire ou transitaire : l'entreprise pour qui il demande.
+            'end_client_name' => [Rule::requiredIf(fn () => $request->input('customer_type') === self::POUR_UN_TIERS), 'nullable', 'string', 'max:150'],
             // Ce que le registre ne donne pas, le client le renseigne.
             'legal_form' => 'required|string|max:100',
             'sector' => ['required', Rule::in(Secteurs::valeurs())],
@@ -596,6 +601,10 @@ class QuoteController extends Controller
 
         if ($d->is_hazardous && $d->un_number) {
             $lignes[] = 'ADR : ONU '.$d->un_number.', classe '.$d->adr_class.($d->packing_group ? ', groupe '.$d->packing_group : '').'.';
+        }
+
+        if ($d->end_client_name) {
+            $lignes[] = 'Demande faite pour le compte de : '.$d->end_client_name.'.';
         }
 
         if ($d->special_instructions) {

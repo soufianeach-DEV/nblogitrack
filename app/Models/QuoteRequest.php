@@ -46,7 +46,7 @@ class QuoteRequest extends Model
         'needs_tail_lift', 'is_hazardous', 'needs_express', 'needs_ecmr',
         'special_instructions', 'status',
         'handled_by', 'handled_at', 'internal_note',
-        'legal_form', 'sector', 'eori_number', 'billing_street', 'billing_postal_code', 'billing_city',
+        'end_client_name', 'legal_form', 'sector', 'eori_number', 'billing_street', 'billing_postal_code', 'billing_city',
         'billing_country', 'correspondence_language', 'contact_function', 'mobile_phone', 'billing_email',
         'preferred_channel', 'callback_slot',
         'pickup_contact_name', 'pickup_contact_phone', 'pickup_opening_hours', 'pickup_time_slot',

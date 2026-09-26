@@ -97,6 +97,11 @@ class DevisCompletTest extends TestCase
         $this->post(route('devis.store'), $this->demande(['legal_form' => '', 'sector' => '', 'billing_street' => '', 'billing_postal_code' => '', 'billing_city' => '']))
             ->assertSessionHasErrors(['legal_form', 'sector', 'billing_street', 'billing_postal_code', 'billing_city']);
 
+        // Pour une autre entreprise : laquelle.
+        $this->post(route('devis.store'), $this->demande(['customer_type' => 'Intermédiaire / commissionnaire']))->assertSessionHasErrors('end_client_name');
+        $this->post(route('devis.store'), $this->demande(['customer_type' => 'Intermédiaire / commissionnaire', 'end_client_name' => 'Brasserie Dupont SA']))->assertSessionHasNoErrors();
+        $this->assertSame('Brasserie Dupont SA', QuoteRequest::latest('id')->value('end_client_name'));
+
         // Le secteur se choisit dans la nomenclature, pas en texte libre.
         $this->post(route('devis.store'), $this->demande(['sector' => 'Un peu de tout']))->assertSessionHasErrors('sector');
 

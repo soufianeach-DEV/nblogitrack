@@ -16,7 +16,7 @@ const PAYS = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 
 
 // Champs de chaque etape : une erreur du serveur ramene a son etape.
 const ETAPES = [
-    ['vat_number', 'company_name', 'legal_form', 'sector', 'eori_number', 'billing_street', 'billing_postal_code', 'billing_city', 'billing_country', 'correspondence_language', 'customer_type'],
+    ['vat_number', 'company_name', 'legal_form', 'sector', 'eori_number', 'billing_street', 'billing_postal_code', 'billing_city', 'billing_country', 'correspondence_language', 'customer_type', 'end_client_name'],
     ['contact_name', 'contact_function', 'email', 'phone', 'mobile_phone', 'billing_email', 'preferred_channel', 'callback_slot'],
     ['pickup_address', 'pickup_lat', 'delivery_address', 'delivery_lat', 'delivery_country', 'pickup_date', 'delivery_date', 'trip_type', 'frequency', 'date_flexibility', 'monthly_volume', 'pickup_', 'delivery_'],
     ['goods_type', 'weight', 'volume', 'packages', 'declared_value', 'vehicle_type', 'insurance_value', 'temperature_min', 'temperature_max', 'un_number', 'adr_class', 'packing_group'],
@@ -67,6 +67,7 @@ export default function Create({ choix, listes }) {
         billing_street: '', billing_postal_code: '', billing_city: '', billing_country: 'BE',
         correspondence_language: ['fr', 'nl', 'en'].includes(langue) ? langue : 'fr',
         customer_type: choix.clients[0],
+        end_client_name: '',
         contact_name: '', contact_function: '', email: '', phone: '', mobile_phone: '', billing_email: '',
         preferred_channel: 'email', callback_slot: 'indifferent',
         pickup_address: '', pickup_lat: '', pickup_lng: '', pickup_country: 'BE',
@@ -407,6 +408,7 @@ export default function Create({ choix, listes }) {
                 if (! String(data[cle] ?? '').trim()) m[cle] = requis;
             }
             if (data.billing_country !== 'IE' && ! data.billing_postal_code.trim()) m.billing_postal_code = requis;
+            if (data.customer_type === choix.clients[2] && ! data.end_client_name.trim()) m.end_client_name = requis;
             if (douane && ! data.eori_number.trim()) m.eori_number = t('msg.devis_eori_requis', 'Pour la Suisse, le Royaume-Uni et la Norvège, la douane exige votre numéro EORI.');
         }
         if (n === 1) {
@@ -598,10 +600,18 @@ export default function Create({ choix, listes }) {
                         </div>
 
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                            <div>
-                                {liste('customer_type', t('devis.vous_etes', 'Vous êtes'), choix.clients)}
-                                <p className="mt-1 text-xs text-slate-500">{t('devis.vous_etes_aide', 'Commissionnaire ou transitaire : précisez le client final à l\'étape « Précisions ».')}</p>
+                            <div className="sm:col-span-2">
+                                {liste('customer_type', t('devis.relation', 'Votre relation avec NBLogiTrack'), choix.clients)}
                             </div>
+                            {data.customer_type === choix.clients[2] && (
+                                <div className="sm:col-span-2">
+                                    {champ('end_client_name', t('devis.client_final', 'Entreprise pour laquelle vous demandez'), {
+                                        obligatoire: true,
+                                        exemple: t('devis.client_final_ex', 'Ex : Brasserie Dupont SA'),
+                                        aide: t('devis.client_final_aide', 'Vos coordonnées restent celles de votre société ; le transport est réalisé pour cette entreprise.'),
+                                    })}
+                                </div>
+                            )}
                             {liste('correspondence_language', t('devis.langue', 'Langue de correspondance'), ['fr', 'nl', 'en'], (l) => ({ fr: 'Français', nl: 'Nederlands', en: 'English' })[l])}
                         </div>
                     </Bloc>
