@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\QuoteRequest;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\Audience;
 use App\Support\Chronologie;
 use App\Support\FretRetour;
 use App\Support\IdentifiantEntreprise;
@@ -331,6 +332,8 @@ class QuoteController extends Controller
                 'type' => $f->getMimeType(),
             ])->all()]);
         }
+
+        Audience::noterEvenement($request, 'devis');
 
         return redirect()->route('devis.confirmation')->with('devis', $devis->reference);
     }

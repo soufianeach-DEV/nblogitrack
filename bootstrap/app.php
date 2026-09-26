@@ -4,7 +4,9 @@ use App\Http\Middleware\AuthentifierCleApi;
 use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\MesurerAudience;
 use App\Http\Middleware\VerifierCompteActif;
+use App\Support\Audience;
 use App\Support\Traductions;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -35,7 +37,12 @@ return Application::configure(basePath: dirname(__DIR__))
             DefinirLangue::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            MesurerAudience::class,
         ]);
+
+        // Le choix du bandeau est pose par le navigateur, en clair : le
+        // serveur le lit tel quel.
+        $middleware->encryptCookies(except: [Audience::TEMOIN]);
 
         // Un visiteur non connecte revient a l'ecran de connexion dans la
         // langue de l'adresse demandee (/nl/missions -> /nl/login).

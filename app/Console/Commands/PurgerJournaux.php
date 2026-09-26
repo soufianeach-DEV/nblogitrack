@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
 use App\Models\ApiRequest;
+use App\Models\PageView;
 use App\Models\QuoteRequest;
+use App\Support\Audience;
 use Illuminate\Console\Command;
 
 class PurgerJournaux extends Command
@@ -33,11 +35,16 @@ class PurgerJournaux extends Command
             ->where('created_at', '<', now()->subYears(2));
         $nombreDevis = $devis->count();
 
+        // Mesure d'audience : treize mois au plus.
+        $vues = PageView::where('jour', '<', now()->subMonths(Audience::CONSERVATION)->toDateString());
+        $nombreVues = $vues->count();
+
         if ($this->option('essai')) {
             $this->line("  $nombre entrée(s) antérieures au ".$limite->format('d/m/Y').' seraient effacées.');
             $this->line('  Total actuel : '.ActivityLog::count());
             $this->line("  $nombreAppels appel(s) d'API seraient effacés.");
             $this->line("  $nombreDevis demande(s) de devis sans suite seraient effacées.");
+            $this->line("  $nombreVues ligne(s) de mesure d'audience seraient effacées.");
 
             return self::SUCCESS;
         }
@@ -45,8 +52,9 @@ class PurgerJournaux extends Command
         $requete->delete();
         $appels->delete();
         $devis->delete();
+        $vues->delete();
 
-        $this->info("  $nombre entrée(s) effacée(s), $nombreAppels appel(s) d'API, $nombreDevis demande(s) de devis.");
+        $this->info("  $nombre entrée(s) effacée(s), $nombreAppels appel(s) d'API, $nombreDevis demande(s) de devis, $nombreVues ligne(s) d'audience.");
         $this->line('  Reste : '.ActivityLog::count().' entrée(s), la plus ancienne du '
             .(ActivityLog::min('created_at') ?? '—'));
 

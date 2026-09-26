@@ -642,16 +642,19 @@ TXT;
 Un témoin de connexion, ou cookie, est un petit fichier que le navigateur conserve pendant la visite d'un site. Il permet au serveur de reconnaître le navigateur d'une page à l'autre, par exemple pour maintenir une session ouverte après la connexion.
 
 ## La règle que suit ce site
-La loi n'exige un consentement que pour les témoins qui ne sont pas indispensables au service demandé, comme les témoins publicitaires ou de mesure d'audience. Ce site n'en dépose aucun. Les témoins énumérés ci-dessous sont strictement nécessaires au fonctionnement et à la sécurité ; ils sont dispensés de consentement. Le bandeau affiché lors de la première visite permet d'accepter, de continuer sans accepter ou de personnaliser ; comme aucun témoin facultatif n'existe à ce jour, ce choix n'active ni ne désactive rien, il est simplement enregistré.
+La loi n'exige un consentement que pour ce qui n'est pas indispensable au service demandé, comme la publicité ou la mesure d'audience. Les témoins énumérés ci-dessous sont strictement nécessaires au fonctionnement et à la sécurité ; ils sont dispensés de consentement. La mesure d'audience, elle, n'a lieu qu'avec votre accord : le bandeau affiché lors de la première visite permet de l'accepter, de la refuser (« Continuer sans accepter ») ou de choisir dans « Personnaliser ». Elle est désactivée tant que vous ne l'avez pas acceptée.
 
 ## Les témoins déposés
 - nblogitrack_session — maintient la session d'une page à l'autre ; expire après cent vingt minutes d'inactivité.
 - XSRF-TOKEN — protège les formulaires contre les requêtes forgées depuis un autre site ; même durée que la session.
 - remember_web — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de quatre cents jours.
-- temoins_vus — enregistre le choix exprimé dans le bandeau ; conservé cent quatre-vingts jours.
+- temoins_choix — enregistre le choix exprimé dans le bandeau (« essentiels » ou « audience ») ; conservé cent quatre-vingts jours.
+
+## La mesure d'audience, avec votre accord
+Si vous l'acceptez, NBLogiTrack compte lui-même les pages vues de son site public, sans outil ni service tiers. Pour chaque page, il garde la date, la page, la langue, le type d'appareil (ordinateur ou mobile) et, à l'arrivée sur le site, la provenance (moteur de recherche, réseau social, site d'origine ou campagne). Il compte aussi les demandes de devis, les inscriptions et les simulations de tarif. Aucun témoin de suivi n'est déposé, aucune adresse IP n'est conservée et rien ne relie deux pages au même visiteur. Les comptes connectés ne sont pas mesurés. Ces chiffres servent à améliorer le site ; ils sont conservés treize mois puis effacés.
 
 ## Ce que ce site ne dépose pas
-Aucun témoin publicitaire. Aucun traceur de mesure d'audience. Aucun témoin de réseau social. Aucune donnée n'est transmise à un tiers par ce moyen.
+Aucun témoin publicitaire. Aucun traceur de mesure d'audience d'un tiers. Aucun témoin de réseau social. Aucune donnée n'est transmise à un tiers par ce moyen.
 
 ## Le paiement en ligne
 Le règlement d'une facture s'effectue sur la page de paiement hébergée par Stripe, sur le domaine de Stripe. Les témoins que Stripe y dépose relèvent de sa propre politique, consultable sur son site. Aucun témoin de Stripe n'est déposé sur le présent site.
@@ -674,16 +677,19 @@ TXT;
 Een cookie is een klein bestand dat de browser bewaart tijdens het bezoek aan een website. Het laat de server toe de browser van pagina tot pagina te herkennen, bijvoorbeeld om een sessie open te houden na het aanmelden.
 
 ## De regel die deze website volgt
-De wet vereist enkel toestemming voor cookies die niet onmisbaar zijn voor de gevraagde dienst, zoals reclamecookies of cookies voor publieksmeting. Deze website plaatst er geen. De hieronder opgesomde cookies zijn strikt noodzakelijk voor de werking en de beveiliging; zij zijn vrijgesteld van toestemming. De banner bij het eerste bezoek laat toe te aanvaarden, door te gaan zonder te aanvaarden of aan te passen; aangezien er tot op heden geen enkele facultatieve cookie bestaat, schakelt die keuze niets in of uit, zij wordt enkel geregistreerd.
+De wet vereist enkel toestemming voor wat niet onmisbaar is voor de gevraagde dienst, zoals reclame of publieksmeting. De hieronder opgesomde cookies zijn strikt noodzakelijk voor de werking en de beveiliging; zij zijn vrijgesteld van toestemming. De publieksmeting gebeurt enkel met uw toestemming: de banner bij het eerste bezoek laat toe ze te aanvaarden, te weigeren (« Doorgaan zonder te aanvaarden ») of te kiezen via « Aanpassen ». Zolang u ze niet aanvaardt, staat ze uit.
 
 ## De geplaatste cookies
 - nblogitrack_session — houdt de sessie in stand van pagina tot pagina; vervalt na honderdtwintig minuten inactiviteit.
 - XSRF-TOKEN — beschermt de formulieren tegen vervalste verzoeken vanaf een andere website; zelfde duur als de sessie.
 - remember_web — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na vierhonderd dagen.
-- temoins_vus — registreert de keuze die in de banner werd gemaakt; honderdtachtig dagen bewaard.
+- temoins_choix — registreert de keuze die in de banner werd gemaakt (« essentiels » of « audience »); honderdtachtig dagen bewaard.
+
+## Publieksmeting, met uw toestemming
+Als u ermee instemt, telt NBLogiTrack zelf de bekeken pagina's van zijn publieke website, zonder tool of dienst van derden. Per pagina bewaart het de datum, de pagina, de taal, het type toestel (computer of mobiel) en, bij aankomst op de website, de herkomst (zoekmachine, sociaal netwerk, verwijzende website of campagne). Het telt ook de offerteaanvragen, de inschrijvingen en de tariefsimulaties. Er wordt geen trackingcookie geplaatst, geen IP-adres bewaard en niets verbindt twee pagina's met dezelfde bezoeker. Aangemelde accounts worden niet gemeten. Deze cijfers dienen om de website te verbeteren; ze worden dertien maanden bewaard en daarna gewist.
 
 ## Wat deze website niet plaatst
-Geen reclamecookies. Geen trackers voor publieksmeting. Geen cookies van sociale netwerken. Langs deze weg wordt geen enkel gegeven aan een derde doorgegeven.
+Geen reclamecookies. Geen trackers voor publieksmeting van derden. Geen cookies van sociale netwerken. Langs deze weg wordt geen enkel gegeven aan een derde doorgegeven.
 
 ## De onlinebetaling
 De betaling van een factuur gebeurt op de betaalpagina die Stripe host, op het domein van Stripe. De cookies die Stripe daar plaatst, vallen onder zijn eigen beleid, raadpleegbaar op zijn website. Op deze website wordt geen enkele cookie van Stripe geplaatst.
@@ -706,16 +712,19 @@ TXT;
 A cookie is a small file the browser keeps while visiting a website. It lets the server recognise the browser from one page to the next, for instance to keep a session open after signing in.
 
 ## The rule this website follows
-The law requires consent only for cookies that are not essential to the requested service, such as advertising or audience measurement cookies. This website places none. The cookies listed below are strictly necessary for operation and security; they are exempt from consent. The banner shown on the first visit lets you accept, continue without accepting or customise; as no optional cookie exists to date, this choice enables and disables nothing, it is simply recorded.
+The law requires consent only for what is not essential to the requested service, such as advertising or audience measurement. The cookies listed below are strictly necessary for operation and security; they are exempt from consent. Audience measurement only takes place with your consent: the banner shown on the first visit lets you accept it, refuse it (« Continue without accepting ») or choose under « Customise ». It stays off until you accept it.
 
 ## Cookies placed
 - nblogitrack_session — keeps the session alive from page to page; expires after one hundred and twenty minutes of inactivity.
 - XSRF-TOKEN — protects forms against requests forged from another website; same lifetime as the session.
 - remember_web — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after four hundred days.
-- temoins_vus — records the choice made in the banner; kept for one hundred and eighty days.
+- temoins_choix — records the choice made in the banner (« essentiels » or « audience »); kept for one hundred and eighty days.
+
+## Audience measurement, with your consent
+If you accept it, NBLogiTrack itself counts the pages viewed on its public website, without any third-party tool or service. For each page it keeps the date, the page, the language, the device type (computer or mobile) and, on arrival on the website, where the visit came from (search engine, social network, referring website or campaign). It also counts quote requests, sign-ups and rate simulations. No tracking cookie is placed, no IP address is kept and nothing links two pages to the same visitor. Signed-in accounts are not measured. These figures are used to improve the website; they are kept for thirteen months and then deleted.
 
 ## What this website does not place
-No advertising cookies. No audience measurement trackers. No social network cookies. No data is passed to any third party by this means.
+No advertising cookies. No third-party audience measurement trackers. No social network cookies. No data is passed to any third party by this means.
 
 ## Online payment
 Invoices are paid on the payment page hosted by Stripe, on Stripe's domain. The cookies Stripe places there fall under its own policy, available on its website. No Stripe cookie is placed on this website.

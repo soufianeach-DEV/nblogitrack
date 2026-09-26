@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\User;
+use App\Support\Audience;
 use App\Support\IdentifiantEntreprise;
 use App\Support\Pays;
 use App\Support\Secteurs;
@@ -252,6 +253,7 @@ class RegisteredUserController extends Controller
         });
 
         event(new Registered($user));
+        Audience::noterEvenement($request, 'inscription');
 
         ActivityLog::record(
             'client.registered',

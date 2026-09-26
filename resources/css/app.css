@@ -118,6 +118,126 @@
 }
 
 /*
+ * Apparition au defilement (composant Apparition) : le bloc monte de
+ * quelques pixels en devenant opaque. Rien n'est cache a qui a demande
+ * moins de mouvement.
+ */
+.apparition {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .7s cubic-bezier(.22, 1, .36, 1), transform .7s cubic-bezier(.22, 1, .36, 1);
+}
+
+.apparition[data-vu] {
+    opacity: 1;
+    transform: none;
+}
+
+/* Filet orange sous un titre de section, qui se deploie a l'apparition. */
+.apparition .filet {
+    display: block;
+    width: 0;
+    height: 4px;
+    margin: 1rem auto 0;
+    border-radius: 9999px;
+    background: theme('colors.action.DEFAULT');
+    transition: width .9s cubic-bezier(.22, 1, .36, 1) .25s;
+}
+
+.apparition[data-vu] .filet {
+    width: 4rem;
+}
+
+.filet-gauche.filet {
+    margin-left: 0;
+}
+
+/* Entree du heros : les elements arrivent l'un apres l'autre. Le titre,
+   plus grand element de la page, reste affiche tout de suite. */
+@keyframes entree {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+}
+
+.entree {
+    animation: entree .8s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* Reflet lent sur le texte orange du heros. */
+@keyframes reflet {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}
+
+.texte-reflet {
+    background: linear-gradient(100deg, theme('colors.action.DEFAULT') 40%, #ffe2b8 50%, theme('colors.action.DEFAULT') 60%) 0 0 / 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: reflet 6s ease-in-out 1s infinite;
+}
+
+/* Eclat qui traverse un bouton au survol. */
+.bouton-eclat {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.bouton-eclat::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / .35) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform .7s ease;
+}
+
+.bouton-eclat:hover::after,
+.bouton-eclat:focus-visible::after {
+    transform: translateX(120%);
+}
+
+/* Halo qui suit la souris sur une carte (variables --x et --y). */
+.carte-halo {
+    position: relative;
+    isolation: isolate;
+}
+
+.carte-halo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(22rem circle at var(--x, 50%) var(--y, 50%), rgb(11 97 161 / .10), transparent 60%);
+    opacity: 0;
+    transition: opacity .3s;
+}
+
+.carte-halo:hover::before {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .apparition {
+        opacity: 1;
+        transform: none;
+    }
+
+    .apparition .filet {
+        width: 4rem;
+    }
+
+    .texte-reflet {
+        animation: none;
+        background: none;
+        color: theme('colors.action.DEFAULT');
+    }
+}
+
+/*
  * Un libelle reserve aux lecteurs d'ecran (.sr-only) est positionne en
  * absolu : dans un tableau defilant, il se calait sur la page entiere et
  * l'elargissait sur mobile. Le conteneur defilant le retient.

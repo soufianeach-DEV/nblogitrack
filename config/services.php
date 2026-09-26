@@ -43,6 +43,14 @@ return [
         'base' => env('HMRC_API_BASE', 'https://api.service.hmrc.gov.uk'),
     ],
 
+    // Pages de l'entreprise sur les reseaux sociaux : liens du pied de page
+    // et fiche schema.org. Vides : rien n'est affiche.
+    'reseaux' => [
+        'linkedin' => env('RESEAU_LINKEDIN'),
+        'facebook' => env('RESEAU_FACEBOOK'),
+        'instagram' => env('RESEAU_INSTAGRAM'),
+    ],
+
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),

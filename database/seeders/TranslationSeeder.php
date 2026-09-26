@@ -36,6 +36,7 @@ class TranslationSeeder extends Seeder
     /** @var array<string, array<string, array{string, string, string}>> */
     private const TEXTES = [
         'nav' => [
+            'audience' => ['Audience du site', 'Websitebezoek', 'Website audience'],
             'services' => ['Services', 'Diensten', 'Services'],
             'tarifs' => ['Tarifs', 'Tarieven', 'Rates'],
             'a_propos' => ['À propos', 'Over ons', 'About'],
@@ -79,6 +80,11 @@ class TranslationSeeder extends Seeder
         ],
 
         'temoins' => [
+            'politique' => ['Lire la politique de cookies', 'Het cookiebeleid lezen', 'Read the cookie policy'],
+            'bandeau2' => ['Ce site utilise des témoins (cookies) indispensables à son fonctionnement. Avec votre accord, il mesure aussi sa fréquentation, lui-même, sans témoin de suivi ni partage avec des tiers.', 'Deze website gebruikt cookies die onmisbaar zijn voor de werking. Met uw toestemming meet ze ook zelf haar bezoek, zonder trackingcookie en zonder iets met derden te delen.', 'This website uses cookies that are essential to its operation. With your consent, it also measures its own traffic, without tracking cookies and without sharing anything with third parties.'],
+            'audience_detail2' => ['Pages vues et provenance des visites (moteur de recherche, réseau social, campagne), mesurées par NBLogiTrack lui-même : aucun témoin de suivi, aucune adresse IP conservée, rien n\'est transmis à un tiers. Données gardées 13 mois.', 'Bekeken pagina\'s en herkomst van de bezoeken (zoekmachine, sociaal netwerk, campagne), gemeten door NBLogiTrack zelf: geen trackingcookie, geen IP-adres bewaard, niets doorgegeven aan derden. Gegevens 13 maanden bewaard.', 'Pages viewed and where visits come from (search engine, social network, campaign), measured by NBLogiTrack itself: no tracking cookie, no IP address kept, nothing passed to third parties. Data kept for 13 months.'],
+            'active' => ['Activée', 'Ingeschakeld', 'On'],
+            'desactivee' => ['Désactivée', 'Uitgeschakeld', 'Off'],
             'bandeau' => [
                 'Ce site ne dépose que des témoins (cookies) indispensables à son fonctionnement et à la sécurité de votre session. Aucun témoin publicitaire, aucune mesure d\'audience.',
                 'Deze website plaatst enkel cookies die onmisbaar zijn voor de werking en de beveiliging van uw sessie. Geen reclamecookies, geen publieksmeting.',
@@ -1097,6 +1103,41 @@ class TranslationSeeder extends Seeder
             'choisir' => ['Tapez pour chercher…', 'Typ om te zoeken…', 'Type to search…'],
             'aucun' => ['Aucun résultat', 'Geen resultaten', 'No results'],
             'suggestions' => ['Suggestions', 'Suggesties', 'Suggestions'],
+        ],
+
+        'audience' => [
+            'campagnes' => ['Campagnes (utm_campaign)', 'Campagnes (utm_campaign)', 'Campaigns (utm_campaign)'],
+            'campagnes_vide' => ['Aucune campagne : ajoutez ?utm_source=linkedin&utm_campaign=nom aux liens que vous partagez.', 'Geen campagnes: voeg ?utm_source=linkedin&utm_campaign=naam toe aan de links die u deelt.', 'No campaigns: add ?utm_source=linkedin&utm_campaign=name to the links you share.'],
+            'conversion' => [':n % des arrivées', ':n % van de bezoeken', ':n % of arrivals'],
+            'devis' => ['Demandes de devis', 'Offerteaanvragen', 'Quote requests'],
+            'entrees' => ['Arrivées sur le site', 'Bezoeken aan de website', 'Arrivals on the website'],
+            'infobulle' => [':date : :vues pages vues, :entrees arrivées', ':date: :vues bekeken pagina\'s, :entrees bezoeken', ':date: :vues pages viewed, :entrees arrivals'],
+            'inscriptions' => ['Inscriptions', 'Inschrijvingen', 'Sign-ups'],
+            'intro' => ['Visites du site public par les personnes qui ont accepté la mesure d\'audience dans le bandeau des témoins. Les comptes connectés et les robots ne sont pas comptés ; aucune donnée ne permet d\'identifier un visiteur.', 'Bezoeken aan de publieke website door personen die de publieksmeting in de cookiebanner hebben aanvaard. Aangemelde accounts en robots worden niet geteld; geen enkel gegeven laat toe een bezoeker te identificeren.', 'Visits to the public website by people who accepted audience measurement in the cookie banner. Signed-in accounts and robots are not counted; no data can identify a visitor.'],
+            'jours' => [':n jours', ':n dagen', ':n days'],
+            'max' => ['Maximum : :n', 'Maximum: :n', 'Maximum: :n'],
+            'mobile' => [':n % sur mobile', ':n % op mobiel', ':n % on mobile'],
+            'pages' => ['Pages les plus vues', 'Meest bekeken pagina\'s', 'Most viewed pages'],
+            'par_jour' => ['Pages vues par jour', 'Bekeken pagina\'s per dag', 'Pages viewed per day'],
+            'simulations' => ['Simulations de tarif', 'Tariefsimulaties', 'Rate simulations'],
+            'sources' => ['Provenance des arrivées', 'Herkomst van de bezoeken', 'Where arrivals come from'],
+            'survoler' => ['Survolez une barre pour voir le détail du jour.', 'Beweeg over een balk om de details van de dag te zien.', 'Hover over a bar to see the details of the day.'],
+            'vide' => ['Aucune visite mesurée sur cette période.', 'Geen gemeten bezoeken in deze periode.', 'No visits measured over this period.'],
+            'vues' => ['Pages vues', 'Bekeken pagina\'s', 'Pages viewed'],
+        ],
+
+        'referencement' => [
+            'accueil_titre' => ['Transport B2B en Belgique et en Europe', 'B2B-transport in België en Europa', 'B2B transport in Belgium and Europe'],
+            'accueil_description' => ['Transport de marchandises pour les entreprises : enlèvement en Belgique et dans 21 pays européens, prix en ligne, suivi en temps réel et facturation Peppol.', 'Goederenvervoer voor bedrijven: ophaling in België en 21 Europese landen, prijzen online, realtime tracking en Peppol-facturatie.', 'Freight transport for businesses: collection in Belgium and 21 European countries, online prices, real-time tracking and Peppol invoicing.'],
+            'defaut_titre' => ['Espace client', 'Klantenzone', 'Customer area'],
+            'connexion_titre' => ['Connexion à l\'espace client', 'Aanmelden in de klantenzone', 'Sign in to the customer area'],
+            'connexion_description' => ['Accédez à votre espace client NBLogiTrack : commandes de transport, suivi des expéditions et factures.', 'Toegang tot uw NBLogiTrack-klantenzone: transportopdrachten, opvolging van zendingen en facturen.', 'Access your NBLogiTrack customer area: transport orders, shipment tracking and invoices.'],
+            'devis_titre' => ['Demander un devis de transport', 'Een transportofferte aanvragen', 'Request a transport quote'],
+            'devis_description' => ['Devis de transport gratuit et sans engagement : palettes, colis, ADR, température dirigée. Réponse d\'un conseiller sous 24 heures ouvrées.', 'Gratis en vrijblijvende transportofferte: pallets, colli, ADR, temperatuurgecontroleerd. Antwoord van een adviseur binnen 24 werkuren.', 'Free, no-obligation transport quote: pallets, parcels, ADR, temperature-controlled. Answer from an adviser within 24 working hours.'],
+            'inscription_titre' => ['Créer un espace client', 'Een klantenzone aanmaken', 'Create a customer area'],
+            'inscription_description' => ['Ouvrez un compte entreprise pour commander vos transports en ligne, suivre vos expéditions et retrouver vos factures.', 'Open een bedrijfsaccount om uw transporten online te bestellen, uw zendingen te volgen en uw facturen terug te vinden.', 'Open a business account to order your transports online, track your shipments and find your invoices.'],
+            'tarifs_titre' => ['Tarifs de transport et simulateur de prix', 'Transporttarieven en prijssimulator', 'Transport rates and price simulator'],
+            'tarifs_description' => ['Simulez le prix d\'un transport de marchandises depuis ou vers la Belgique : tarif au kilomètre et au kilo, délais, formules Éco, Standard et Express.', 'Simuleer de prijs van goederenvervoer van of naar België: tarief per kilometer en per kilo, termijnen, formules Eco, Standaard en Express.', 'Simulate the price of freight transport from or to Belgium: rate per kilometre and per kilo, lead times, Eco, Standard and Express options.'],
         ],
 
         'vocab.secteur' => [
@@ -2674,6 +2715,7 @@ class TranslationSeeder extends Seeder
             'motif_avoir' => ['Motif : :motif', 'Reden: :motif', 'Reason: :motif'],
         ],
         'adresse' => [
+            'afficher_liste' => ['Afficher les propositions', 'Voorstellen tonen', 'Show suggestions'],
             'ville' => ['Ville', 'Gemeente', 'City'],
             'ville_ex' => ['ex. Bruxelles', 'bv. Brussel', 'e.g. Brussels'],
             'code_postal' => ['Code postal', 'Postcode', 'Postcode'],

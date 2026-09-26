@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,8 +25,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
-
         // Une remise fret retour hors bornes vendrait a perte ou n'aurait
         // aucun sens : l'application refuse de demarrer.
         $remise = config('fret.retour.remise');

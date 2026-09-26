@@ -55,6 +55,8 @@ class HandleInertiaRequests extends Middleware
                 ? Cache::remember('pays-desservis', 3600, fn () => TariffGrid::where('is_active', true)->distinct()->count('zone'))
                 : null,
             'dictionnaire' => fn () => Traductions::pour(app()->getLocale()),
+            // Pages de l'entreprise sur les reseaux (pied du site public).
+            'reseaux' => array_filter(config('services.reseaux', [])),
             'pages_pied' => fn () => Cache::remember(
                 'pages.pied.'.app()->getLocale(),
                 Traductions::DUREE_CACHE,
