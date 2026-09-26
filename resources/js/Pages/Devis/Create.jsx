@@ -27,6 +27,10 @@ const ETAPES = [
 // fichiers ne se gardent pas : le brouillon ne les contient pas.
 const HORS_BROUILLON = ['pickup_address', 'pickup_lat', 'pickup_lng', 'pickup_country', 'delivery_address', 'delivery_lat', 'delivery_lng', 'delivery_country', 'attachments', 'privacy'];
 
+// Horaires de quai les plus courants ; « Autres horaires » ouvre un champ libre.
+const OUVERTURES = ['Lun-ven 7 h - 16 h', 'Lun-ven 8 h - 17 h', 'Lun-ven 6 h - 22 h', 'Lun-sam 7 h - 16 h', '24 h/24, 7 j/7'];
+const AUTRE = '__autre__';
+
 const colisVide = () => ({ type: 'palette_europe', quantite: 1, longueur: 120, largeur: 80, hauteur: '', poids_unitaire: '', empilable: true });
 
 // Dimensions usuelles, en cm.
@@ -333,9 +337,27 @@ export default function Create({ choix, listes }) {
             <fieldset className="rounded-xl border border-slate-200 p-4">
                 <legend className="px-1 text-sm font-semibold text-marine">{titre}</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
-                    {champ(lieu + '_contact_name', t('devis.contact_sur_place', 'Contact sur place'), { exemple: t('devis.contact_ex', 'Nom et prénom') })}
-                    {champ(lieu + '_contact_phone', t('devis.telephone_sur_place', 'Téléphone sur place'), { type: 'tel', exemple: '+32 470 00 00 00' })}
-                    {champ(lieu + '_opening_hours', t('devis.heures_ouverture', 'Heures d\'ouverture du quai'), { exemple: t('devis.heures_ex', 'Ex : lun-ven 7 h - 16 h') })}
+                    <div>
+                        {etiquette(lieu + '_opening_hours', t('devis.heures_ouverture', 'Heures d\'ouverture du quai'))}
+                        <select
+                            id={lieu + '_opening_hours'}
+                            value={OUVERTURES.includes(data[lieu + '_opening_hours']) || data[lieu + '_opening_hours'] === '' ? data[lieu + '_opening_hours'] : AUTRE}
+                            onChange={(e) => setData(lieu + '_opening_hours', e.target.value === AUTRE ? ' ' : e.target.value)}
+                            className={CHAMP}
+                        >
+                            <option value="">{t('devis.ne_sait_pas', 'Je ne sais pas')}</option>
+                            {OUVERTURES.map((o) => <option key={o} value={o}>{o}</option>)}
+                            <option value={AUTRE}>{t('devis.autres_horaires', 'Autres horaires…')}</option>
+                        </select>
+                        {data[lieu + '_opening_hours'] !== '' && ! OUVERTURES.includes(data[lieu + '_opening_hours']) && (
+                            <input
+                                value={data[lieu + '_opening_hours'].trimStart()}
+                                onChange={(e) => setData(lieu + '_opening_hours', e.target.value || ' ')}
+                                placeholder={t('devis.heures_ex', 'Ex : lun-ven 7 h - 16 h')}
+                                className={CHAMP + ' mt-2'}
+                            />
+                        )}
+                    </div>
                     <div>
                         {etiquette(lieu + '_time_slot', t('devis.creneau', 'Créneau souhaité'))}
                         <select id={lieu + '_time_slot'} value={data[lieu + '_time_slot']} onChange={(e) => setData(lieu + '_time_slot', e.target.value)} className={CHAMP}>
@@ -356,6 +378,12 @@ export default function Create({ choix, listes }) {
                         {t('devis.rendez_vous', 'Prise de rendez-vous obligatoire')}
                     </label>
                 </div>
+                <details className="mt-4 rounded-lg bg-surface/60 px-3 py-2" open={Boolean(data[lieu + '_contact_name'] || data[lieu + '_contact_phone'] || (data[lieu + '_access'] ?? []).length || data[lieu + '_access_notes'])}>
+                <summary className="cursor-pointer text-sm font-semibold text-marine">{t('devis.plus_details', 'Contact et accès (facultatif)')}</summary>
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    {champ(lieu + '_contact_name', t('devis.contact_sur_place', 'Contact sur place'), { exemple: t('devis.contact_ex', 'Nom et prénom') })}
+                    {champ(lieu + '_contact_phone', t('devis.telephone_sur_place', 'Téléphone sur place'), { type: 'tel', exemple: '+32 470 00 00 00' })}
+                </div>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-600">{t('devis.acces', 'Accès difficile')}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                     {listes.acces.map((a) => (
@@ -373,6 +401,7 @@ export default function Create({ choix, listes }) {
                 <div className="mt-3">
                     {champ(lieu + '_access_notes', t('devis.acces_precisions', 'Précisions sur l\'accès'), { exemple: t('devis.acces_precisions_ex', 'Ex : entrée par la rue arrière, hauteur limitée à 3,80 m') })}
                 </div>
+                </details>
             </fieldset>
         );
     };
@@ -678,11 +707,22 @@ export default function Create({ choix, listes }) {
 
                             {champ('pickup_date', t('devis.date_souhaitee', 'Date d\'enlèvement souhaitée'), { obligatoire: true, type: 'date', min: new Date().toISOString().slice(0, 10) })}
                             {champ('delivery_date', t('devis.date_livraison', 'Date de livraison souhaitée'), { type: 'date', min: data.pickup_date || new Date().toISOString().slice(0, 10) })}
-                            {liste('trip_type', t('devis.type_trajet', 'Type de trajet'), choix.trajets)}
                             {liste('date_flexibility', t('devis.flexibilite', 'Flexibilité de date'), choix.flexibilites)}
                             {liste('frequency', t('devis.frequence', 'Fréquence'), choix.frequences)}
                             {liste('monthly_volume', t('devis.volume_mensuel', 'Volume prévu'), choix.volumes)}
                         </div>
+                        {data.pickup_lat && data.delivery_lat && (
+                            <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-sm text-marine">
+                                <span className="font-semibold">{t('devis.type_trajet', 'Type de trajet')} : </span>
+                                {nomPays.of(data.pickup_country || 'BE')} → {nomPays.of(data.delivery_country)} · {
+                                    data.pickup_country === data.delivery_country
+                                        ? t('devis.trajet_national', 'national')
+                                        : douane
+                                            ? t('devis.trajet_hors_ue', 'hors Union européenne (douane)')
+                                            : t('devis.trajet_intracommunautaire', 'intracommunautaire')
+                                }
+                            </p>
+                        )}
                         {douane && (
                             <p className="mt-4 rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
                                 {t('devis.douane_aide', 'Trajet hors union douanière : prévoyez votre numéro EORI, la facture commerciale et le code des marchandises. Nous nous chargeons du transit.')}
