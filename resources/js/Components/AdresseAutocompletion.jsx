@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
@@ -58,14 +58,15 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const PAYS = useMemo(() => {
         const noms = new Intl.DisplayNames([langue], { type: 'region' });
 
-        // Un pays impose (l'enlevement se fait en Belgique) reduit la liste
-        // a ce seul pays, plutot que d'accepter une adresse que le serveur
-        // refusera.
-        return (paysImpose ? [paysImpose] : CODES_EUROPE)
+        // Une chaine impose un pays (liste verrouillee) ; un tableau donne
+        // les pays permis (les pays d'enlevement ouverts en ligne), plutot
+        // que d'accepter une adresse que le serveur refusera.
+        return (Array.isArray(paysImpose) ? paysImpose : paysImpose ? [paysImpose] : CODES_EUROPE)
             .map((code) => ({ code, nom: noms.of(code) }))
             .sort((a, b) => a.nom.localeCompare(b.nom, langue));
     }, [langue, paysImpose]);
-    const [pays, setPays] = useState(paysImpose ?? 'BE');
+    const paysVerrouille = typeof paysImpose === 'string';
+    const [pays, setPays] = useState(paysVerrouille ? paysImpose : Array.isArray(paysImpose) && ! paysImpose.includes('BE') ? paysImpose[0] : 'BE');
     const [ville, setVille] = useState('');
     const [villeCoords, setVilleCoords] = useState(null);
     const [cp, setCp] = useState('');
@@ -79,6 +80,11 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const [numChoisi, setNumChoisi] = useState(false);
     const [numsDispo, setNumsDispo] = useState([]);
     const [numsChargement, setNumsChargement] = useState(false);
+    // La liste complete des numeros peut arriver pendant une recherche
+    // Photon deja lancee : ces references disent ou elle en est.
+    const numsDispoRef = useRef([]);
+    const chargementRef = useRef(false);
+    const [reverifier, setReverifier] = useState(0);
     const numeroRef = useRef('');
     // Le point de la rue choisie : un numero non repertorie y est localise.
     const coordsRue = useRef(null);
@@ -533,7 +539,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         }
         setSuggNums([]);
         retenirNumero(v, [], false);
-        if (numsChargement) return;
+        // Pendant le chargement de la liste de la rue (Overpass, parfois
+        // lent), Photon propose deja les numeros qu'il connait.
         clearTimeout(timer.current);
         timer.current = setTimeout(async () => {
             try {
@@ -549,19 +556,22 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     if (!liste.some((n) => n.hn === hn)) liste.push({ hn, lat: flat, lng: flng, pc: f.properties.postcode || '' });
                 });
                 liste.sort((a, b) => (parseInt(a.hn) - parseInt(b.hn)) || a.hn.localeCompare(b.hn));
-                if (numeroRef.current !== v) return;
+                if (numeroRef.current !== v || numsDispoRef.current.length > 0) return;
                 setSuggNums(liste.slice(0, 30));
-                retenirNumero(v, liste, true);
+                retenirNumero(v, liste, ! chargementRef.current);
             } catch {
                 setSuggNums([]);
-                if (numeroRef.current === v) setAucunNum(true);
+                if (numeroRef.current === v && ! chargementRef.current) setAucunNum(true);
             }
         }, 150);
     };
 
     const chargerNumeros = async (nomRue, lat, lng, cpActuel) => {
         setNumsChargement(true);
+        chargementRef.current = true;
         setNumsDispo([]);
+        numsDispoRef.current = [];
+        let liste = [];
         try {
             const params = new URLSearchParams({ rue: nomRue, lat, lng });
             if (cpActuel) params.set('cp', cpActuel);
@@ -570,20 +580,30 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             const r = await fetch(`/geo/numeros?${params}`, { signal: chrono.signal });
             clearTimeout(minuteur);
             if (!r.ok) throw new Error(String(r.status));
-            const liste = (await r.json()).map((n) => ({ hn: n.numero, lat: n.lat, lng: n.lng, pc: n.cp }));
+            liste = (await r.json()).map((n) => ({ hn: n.numero, lat: n.lat, lng: n.lng, pc: n.cp }));
             setNumsDispo(liste);
+            numsDispoRef.current = liste;
             const attendu = numeroRef.current;
-            if (attendu) {
+            if (attendu && liste.length > 0) {
                 const filtres = liste.filter((n) => n.hn.toLowerCase().startsWith(attendu.toLowerCase()));
                 setSuggNums(filtres.slice(0, 30));
                 retenirNumero(attendu, liste, true);
             }
         } catch {
             setNumsDispo([]);
+            numsDispoRef.current = [];
         } finally {
             setNumsChargement(false);
+            chargementRef.current = false;
         }
+        // Liste vide ou indisponible : le numero deja tape est verifie
+        // aupres de Photon seul, au rendu suivant (rue a jour).
+        if (liste.length === 0 && numeroRef.current) setReverifier((n) => n + 1);
     };
+
+    useEffect(() => {
+        if (reverifier > 0 && numeroRef.current) chercherNums(numeroRef.current);
+    }, [reverifier]);
 
     const choisirNum = ({ hn, lat, lng, pc }) => {
         setNumero(hn);
@@ -624,7 +644,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
             <div className={compact ? 'mt-1 grid grid-cols-2 gap-x-2 gap-y-2' : 'mt-2 space-y-3'}>
                 <div className={compact ? 'col-span-2' : ''}>
                     <span className={sousLabel}>{t('auth.pays', 'Pays')} <span className="text-status-incident">*</span></span>
-                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysImpose !== null} className={selectCls}>
+                    <select value={pays} onChange={(e) => changerPays(e.target.value)} disabled={paysVerrouille} className={selectCls}>
                         {PAYS.map((p) => (
                             <option key={p.code} value={p.code}>{p.nom}</option>
                         ))}

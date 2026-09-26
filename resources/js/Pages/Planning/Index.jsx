@@ -42,6 +42,53 @@ const enHeures = (heures) => {
     return min === 0 ? `${h} h` : `${h} h ${String(min).padStart(2, '0')}`;
 };
 
+/**
+ * Fret retour : les binomes qui livrent pres du lieu de chargement a la
+ * bonne date, affectables d'un clic (le serveur recontrole tout), ou le
+ * depart du depot a prevoir.
+ */
+function FretRetour({ ordre }) {
+    const t = useTraduction();
+    const candidats = ordre.fret_retour ?? [];
+    const affecter = (c) => router.post(route('planning.assign', ordre.id), {
+        vehicle_registration: c.vehicle_registration, driver_id: c.driver_id, reaffectation: false,
+    }, { preserveScroll: true });
+
+    return (
+        <div className="mb-3 space-y-2 text-xs">
+            {ordre.porteuse_info && (
+                <p className={'rounded-lg px-3 py-2 ' + (ordre.porteuse_info.valide ? 'bg-status-delivered/10 text-status-delivered' : 'bg-status-incident/10 text-status-incident')} role={ordre.porteuse_info.valide ? 'status' : 'alert'}>
+                    {ordre.porteuse_info.valide
+                        ? t('planif.retour_vendu', 'Vendu au tarif fret retour sur :numero', { numero: ordre.porteuse_info.numero })
+                        : t('planif.retour_orphelin', 'Vendu au tarif fret retour, mais la mission :numero n\'est plus disponible : trouvez un autre camion, le prix reste acquis au client.', { numero: ordre.porteuse_info.numero ?? '—' })}
+                </p>
+            )}
+            {candidats.length > 0 && (
+                <div className="rounded-lg bg-status-delivered/10 px-3 py-2 text-status-delivered">
+                    <p className="font-semibold">{t('planif.fret_retour', 'Fret retour possible')}</p>
+                    <ul className="mt-1 space-y-1">
+                        {candidats.map((c) => (
+                            <li key={c.numero} className="flex flex-wrap items-center justify-between gap-2">
+                                <span>{t('planif.fret_retour_ligne', ':camion · :chauffeur — livre :numero à :ville le :date · :km km d\'approche · :reste t libres', {
+                                    camion: c.vehicle_registration, chauffeur: c.chauffeur, numero: c.numero, ville: c.ville, date: c.arrivee, km: c.approche_km, reste: c.reste_t,
+                                })}</span>
+                                <button type="button" onClick={() => affecter(c)} className="rounded-md bg-status-delivered px-2 py-1 font-semibold text-white hover:opacity-90">
+                                    {t('planif.affecter_binome', 'Affecter à ce binôme')}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+            {ordre.positionnement && (
+                <p className="rounded-lg bg-surface px-3 py-2 text-slate-600">
+                    {t('planif.positionnement', 'Aucun camion ne livre à moins de :rayon km : départ de Bruxelles au plus tard le :date (≈ :km km à vide).', { rayon: 150, date: ordre.positionnement.depart_au_plus_tard, km: ordre.positionnement.km })}
+                </p>
+            )}
+        </div>
+    );
+}
+
 function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffectation = false, onFermer }) {
     const t = useTraduction();
     const voc = useVocabulaire();
@@ -117,6 +164,12 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
             {ordre.volume && (
                 <span className={pastille + ' bg-surface text-marine'}>
                     {t('planif.volume_min', 'Volume ≥')} {Number(ordre.volume).toLocaleString(locale)} m³
+                </span>
+            )}
+
+            {ordre.trajet && ordre.trajet !== 'BE → BE' && (
+                <span className={pastille + ' bg-brand-blue/10 text-brand-blue'}>
+                    {ordre.trajet}
                 </span>
             )}
 
@@ -293,6 +346,7 @@ function BoutonsStatut({ ordre, onReaffecter }) {
 const LIBELLE_CONTRAINTE = {
     adr: ['planif.contrainte_adr', 'Matières dangereuses'],
     hayon: ['planif.contrainte_hayon', 'Hayon requis'],
+    etranger: ['planif.contrainte_etranger', 'Enlèvement à l\'étranger'],
 };
 
 export default function Index({
@@ -517,7 +571,10 @@ export default function Index({
 
                         <div className="mt-4 border-t border-slate-100 pt-4">
                             {ordre.status === 'PENDING' ? (
-                                <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} couverture={couverture} />
+                                <>
+                                    <FretRetour ordre={ordre} />
+                                    <LigneAffectation ordre={ordre} vehicles={vehicles} drivers={drivers} couverture={couverture} />
+                                </>
                             ) : enReaffectation === ordre.id ? (
                                 <LigneAffectation
                                     ordre={ordre}
@@ -541,6 +598,17 @@ export default function Index({
                                             ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
                                             : t('planif.non_affecte', 'non affecté')}
                                     </span>
+                                    {ordre.porteuse_info && <div className="basis-full"><FretRetour ordre={ordre} /></div>}
+                                    {(ordre.retours_possibles ?? []).length > 0 && (
+                                        <div className="basis-full rounded-lg bg-status-delivered/10 px-3 py-2 text-status-delivered">
+                                            <p className="font-semibold">{t('planif.retours_possibles', ':n fret(s) retour possible(s) près de la livraison', { n: ordre.retours_possibles.length })}</p>
+                                            <ul className="mt-1 list-disc pl-4">
+                                                {ordre.retours_possibles.map((r) => (
+                                                    <li key={r.numero}>{r.numero} · {r.ville} · {r.date} · {Number(r.poids).toLocaleString(locale)} kg · {r.approche_km} km</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                     {ordre.en_route_depuis && (
                                         <p className="basis-full rounded-lg bg-status-assigned/10 px-3 py-2 text-status-assigned" role="status">
                                             {t('planif.en_route_depuis', 'En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', { date: ordre.en_route_depuis })}

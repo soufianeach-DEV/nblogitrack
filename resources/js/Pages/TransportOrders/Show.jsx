@@ -300,6 +300,8 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         {ligne(t('suivi.destination', 'Destination'), order.delivery_address)}
                         {ligne(t('suivi.distance_routiere', 'Distance routière'), nombre(order.distance_km, 'km'))}
                         {ligne(t('ordres.chargement', 'Chargement'), date(order.pickup_date, true))}
+                        {order.shipper_name && ligne(t('commande.expediteur', 'Expéditeur au lieu de chargement'), order.shipper_name + (order.shipper_phone ? ' · ' + order.shipper_phone : ''))}
+                        {order.loading_reference && ligne(t('commande.reference_chargement', 'Référence de chargement'), order.loading_reference)}
                     </dl>
                 ))}
 
@@ -313,7 +315,7 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                             ? t('ordres.oui_adr', 'Oui — ADR')
                             : t('ordres.non', 'Non'))}
                         {ligne(t('ordres.formule', 'Formule'), order.tariff_grid
-                            ? (order.tariff_grid.libelle ?? order.tariff_grid.label) + ' — ' + order.tariff_grid.delivery_days + ' ' + t('ordres.j', 'j')
+                            ? (order.formule ?? order.tariff_grid.libelle ?? order.tariff_grid.label) + ' — ' + (order.delai_promis ?? order.tariff_grid.delivery_days) + ' ' + t('ordres.j', 'j')
                             : null)}
                         {ligne(t('commande.estimation', 'Prix estimé'), nombre(order.estimated_cost, '€', 2))}
                     </dl>

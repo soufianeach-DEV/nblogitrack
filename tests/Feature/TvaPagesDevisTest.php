@@ -181,6 +181,7 @@ class TvaPagesDevisTest extends TestCase
                 ->where('libelles.Nouvelle entreprise', 'Nieuwe onderneming')
                 ->where('libelles.Client régulier / entreprise', 'Vaste klant / onderneming')
                 ->where('libelles.National (Belgique)', 'Nationaal (België)')
+                ->where('libelles.Import vers la Belgique', 'Import naar België')
                 ->where('libelles.Transport ponctuel', 'Eenmalig transport')
                 ->where('libelles.Flexible', 'Flexibel')
                 ->where('libelles.Date fixe', 'Vaste datum')
@@ -259,5 +260,27 @@ class TvaPagesDevisTest extends TestCase
             ->assertJson(['statut' => 'format']);
 
         Http::assertNothingSent();
+    }
+
+    public function test_le_type_de_trajet_d_un_devis_se_deduit_des_deux_pays(): void
+    {
+        $this->post(route('devis.store'), [
+            'company_name' => 'Essai SRL', 'contact_name' => 'Nadia Peeters', 'email' => 'nadia@exemple.be',
+            'phone' => '+32 470 00 00 00', 'customer_type' => 'Nouvelle entreprise',
+            'pickup_address' => 'Rue Nationale 1, 59000 Lille, France', 'pickup_country' => 'FR',
+            'pickup_lat' => 50.6292, 'pickup_lng' => 3.0573,
+            'delivery_address' => 'Meir 50, 2000 Anvers, Belgique', 'delivery_country' => 'BE',
+            'delivery_lat' => 51.2194, 'delivery_lng' => 4.4025,
+            'pickup_date' => now()->addWeek()->toDateString(),
+            // Le formulaire a envoye « National » : le serveur a le dernier mot.
+            'trip_type' => 'National (Belgique)',
+            'frequency' => 'Transport ponctuel', 'date_flexibility' => 'Flexible',
+            'goods_type' => TransportOrder::MARCHANDISES[0], 'vehicle_type' => 'Porteur',
+            'insurance_value' => 'Plus de 50 000 €', 'weight' => 1000,
+        ])->assertSessionHasNoErrors();
+
+        $devis = QuoteRequest::firstOrFail();
+        $this->assertSame('Import vers la Belgique', $devis->trip_type);
+        $this->assertSame('FR', $devis->pickup_country);
     }
 }

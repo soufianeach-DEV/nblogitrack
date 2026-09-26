@@ -6,7 +6,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
 import { useLangue, useLocale, useTraduction, useVocabulaire } from '@/traduire';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const MARCHANDISES = [
@@ -33,19 +33,23 @@ const NOMS_OFFRE = {
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [] }) {
+export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [], paysEnlevement = ['BE'], remiseFretRetour = 0 }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
 
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
-    const { data, setData, post, processing, errors } = useForm({
-        pickup_address: '', delivery_address: '', delivery_country: '',
+    const { data, setData, post, processing, errors, transform } = useForm({
+        pickup_address: '', pickup_country: 'BE', delivery_address: '', delivery_country: '',
+        shipper_name: '', shipper_phone: '', loading_reference: '',
         pickup_lat: '', pickup_lng: '', delivery_lat: '', delivery_lng: '',
         weight: '', volume: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
         pickup_date: '', requested_delivery_date: '',
         tariff_grid_id: '', special_instructions: '',
     });
+
+    const paysDepart = data.pickup_country || 'BE';
+    const etranger = paysDepart !== 'BE';
 
     const [distance, setDistance] = useState(null);
     const [loadingDist, setLoadingDist] = useState(false);
@@ -55,34 +59,57 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
     const today = `${maintenant.getFullYear()}-${pad(maintenant.getMonth() + 1)}-${pad(maintenant.getDate())}`;
     const nowLocal = `${today}T${pad(maintenant.getHours())}:${pad(maintenant.getMinutes())}`;
 
-    const [prix, setPrix] = useState({});
+    // Tout ce que le serveur calcule : prix (ligne et fret retour), delais,
+    // premier enlevement possible hors de Belgique.
+    const [estim, setEstim] = useState({});
+    const [relance, setRelance] = useState(0);
+    const prix = estim.prix ?? {};
 
     // Le prix vient du serveur, qui calcule exactement ce qui sera
     // enregistre : les formules restent coherentes entre elles.
     useEffect(() => {
-        if (!data.pickup_lat || !data.delivery_lat || !data.delivery_country) { setDistance(null); setPrix({}); return; }
+        if (!data.pickup_lat || !data.delivery_lat || !data.delivery_country) { setDistance(null); setEstim({}); return; }
         setLoadingDist(true);
         const minuteur = setTimeout(() => {
             window.axios.post(route('transport-orders.estimation'), {
+                pickup_country: paysDepart,
+                pickup_address: data.pickup_address,
                 delivery_country: data.delivery_country,
                 pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng,
                 delivery_lat: data.delivery_lat, delivery_lng: data.delivery_lng,
+                pickup_date: data.pickup_date || null,
                 weight: data.weight || null,
+                volume: data.volume || null,
                 is_hazardous: Boolean(data.is_hazardous),
+                needs_tail_lift: Boolean(data.needs_tail_lift),
             })
-                .then(({ data: r }) => { setDistance(r.distance_km); setPrix(r.prix ?? {}); })
-                .catch(() => { setDistance(null); setPrix({}); })
+                .then(({ data: r }) => { setDistance(r.distance_km); setEstim(r ?? {}); })
+                .catch((e) => { setDistance(null); setEstim(e.response?.data?.erreur ? { erreur: e.response.data.erreur } : {}); })
                 .finally(() => setLoadingDist(false));
         }, 400);
         return () => clearTimeout(minuteur);
-    }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng, data.delivery_country, data.weight, data.is_hazardous]);
+    }, [data.pickup_lat, data.pickup_lng, data.delivery_lat, data.delivery_lng, data.delivery_country, paysDepart, data.pickup_date, data.weight, data.volume, data.is_hazardous, data.needs_tail_lift, relance]);
 
+    // Le tarif a change entre l'affichage et l'envoi : on relit le prix.
+    useEffect(() => {
+        if (errors.tariff_grid_id) setRelance((n) => n + 1);
+    }, [errors.tariff_grid_id]);
+
+    const premier = estim.premier_enlevement ?? null;
+    const minEnlevement = etranger && premier ? premier.local : nowLocal;
+
+    const dateHeure = (iso) => new Date(iso).toLocaleString(locale, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const fr = (n, dec = 2) => Number(n).toLocaleString(locale, { minimumFractionDigits: dec, maximumFractionDigits: dec });
     const kmTxt = distance != null ? distance.toLocaleString(locale, { maximumFractionDigits: 1 }) : '';
 
-    const grillesVisibles = data.delivery_country
-        ? tariffGrids.filter((g) => g.zone === data.delivery_country)
-        : [];
+    // La zone tarifaire est le pays etranger du trajet, comme Trajet::zone
+    // cote serveur : un import Lyon -> Bruxelles coute le prix de l'export
+    // Bruxelles -> Lyon. Deux pays etrangers : sur devis.
+    const zone = ! data.delivery_country ? null
+        : paysDepart === 'BE' ? data.delivery_country
+            : data.delivery_country === 'BE' ? paysDepart : null;
+    const surDevis = Boolean(data.delivery_country) && zone === null;
+    const grillesVisibles = zone ? tariffGrids.filter((g) => g.zone === zone) : [];
 
     const offres = [...grillesVisibles].sort((a, b) => (ORDRE_OFFRE[a.service_level] ?? 9) - (ORDRE_OFFRE[b.service_level] ?? 9));
 
@@ -96,24 +123,27 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
         ? Math.round((jourSeul(data.requested_delivery_date) - jourSeul(data.pickup_date ? data.pickup_date.slice(0, 10) : today)) / 86400000)
         : null;
 
+    // Delai promis par le serveur : la formule, jamais moins que la route.
+    const delai = (g) => Number(estim.delais?.[g.id] ?? g.delivery_days);
+
     const formuleAdaptee = () => {
         if (grillesVisibles.length === 0) return null;
-        const parDelai = [...grillesVisibles].sort((a, b) => Number(b.delivery_days) - Number(a.delivery_days));
+        const parDelai = [...grillesVisibles].sort((a, b) => delai(b) - delai(a));
         if (delaiJours === null) {
             return parDelai.find((g) => g.service_level === 'STANDARD') || parDelai[0];
         }
-        return parDelai.find((g) => Number(g.delivery_days) <= delaiJours) || parDelai[parDelai.length - 1];
+        return parDelai.find((g) => delai(g) <= delaiJours) || parDelai[parDelai.length - 1];
     };
 
     const grilleAuto = formuleAdaptee();
-    const delaiTropCourt = delaiJours !== null && grilleAuto && Number(grilleAuto.delivery_days) > delaiJours;
+    const delaiTropCourt = delaiJours !== null && grilleAuto && delai(grilleAuto) > delaiJours;
 
     useEffect(() => {
-        if (!data.delivery_country || !grilleAuto) return;
+        if (!zone || !grilleAuto) return;
         if (String(data.tariff_grid_id) !== String(grilleAuto.id)) {
             setData('tariff_grid_id', String(grilleAuto.id));
         }
-    }, [data.delivery_country, delaiJours, grillesVisibles.length]);
+    }, [zone, delaiJours, grillesVisibles.length, JSON.stringify(estim.delais ?? {})]);
 
     const urgence48h = delaiJours !== null && delaiJours <= 2;
 
@@ -162,13 +192,19 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
         adr: aDeclarer && data.is_hazardous === null ? t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.') : null,
         goods: !data.goods_type ? t('commande.manque_marchandise', 'Choisissez le type de marchandise.') : null,
         grille: !data.tariff_grid_id ? t('commande.manque_formule', 'Choisissez une formule de livraison.') : null,
-        delai: delaiTropCourt ? t('commande.delai_impossible', 'Aucune formule ne tient ce délai : comptez au moins :n jours vers cette destination.', { n: grilleAuto.delivery_days }) : null,
+        devis: surDevis || estim.erreur ? (estim.erreur ?? t('msg.trajet_sur_devis', 'Ce trajet ne commence ni ne finit en Belgique : il se traite sur devis.')) : null,
+        enlevement: etranger && ! data.pickup_date ? t('msg.enlevement_etranger_date_requise', 'Hors de Belgique, la date d\'enlèvement est obligatoire (au plus tôt le :date).', { date: premier ? dateHeure(premier.local) : '…' }) : null,
+        expediteur: etranger && (! data.shipper_name.trim() || ! data.shipper_phone.trim()) ? t('msg.expediteur_requis', 'Indiquez le nom et le téléphone de l\'expéditeur qui charge à l\'étranger.') : null,
+        delai: delaiTropCourt ? t('commande.delai_impossible', 'Aucune formule ne tient ce délai : comptez au moins :n jours vers cette destination.', { n: delai(grilleAuto) }) : null,
     };
 
     const submit = (e) => {
         e.preventDefault();
         setSoumis(true);
         if (Object.values(manque).some(Boolean)) return;
+        // Le prix vu part avec la commande : s'il a change entre-temps, le
+        // serveur refuse au lieu de facturer un montant jamais affiche.
+        transform((d) => ({ ...d, prix_annonce: total }));
         post(route('transport-orders.store'));
     };
     const selectCls = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-marine focus:ring-marine';
@@ -188,10 +224,10 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                     <AdresseAutocompletion
                         label={t('commande.adresse_depart', 'Adresse de départ')}
                         required
-                        pays="BE"
+                        pays={paysEnlevement}
                         onChange={(v) => setData({ ...data, pickup_address: v, pickup_lat: '', pickup_lng: '' })}
-                        onSelect={({ address, lat, lng }) => setData({ ...data, pickup_address: address, pickup_lat: lat, pickup_lng: lng })}
-                        error={(soumis && manque.pickup) || errors.pickup_address || errors.pickup_lat}
+                        onSelect={({ address, lat, lng, pays }) => setData({ ...data, pickup_address: address, pickup_lat: lat, pickup_lng: lng, pickup_country: pays, tariff_grid_id: '', pickup_date: pays !== 'BE' ? '' : data.pickup_date })}
+                        error={(soumis && manque.pickup) || errors.pickup_address || errors.pickup_lat || errors.pickup_country}
                     />
                     <AdresseAutocompletion
                         label={t('commande.adresse_destination', 'Adresse de destination')}
@@ -259,6 +295,26 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                     {(refusFlotte || errors.flotte) && (
                         <InputError message={refusFlotte || errors.flotte} className="sm:col-span-2" />
                     )}
+                    {etranger && (
+                        // Le chauffeur charge chez un tiers qu'il ne connait pas :
+                        // la lettre de voiture CMR (art. 6) nomme l'expediteur.
+                        <fieldset className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 p-4 sm:col-span-2 sm:grid-cols-3">
+                            <legend className="px-1 text-sm font-medium text-slate-700">{t('commande.expediteur_bloc', 'Lieu de chargement à l\'étranger')}</legend>
+                            <div>
+                                <InputLabel htmlFor="shipper_name">{t('commande.expediteur', 'Expéditeur au lieu de chargement')} <span className="text-status-incident">*</span></InputLabel>
+                                <TextInput id="shipper_name" value={data.shipper_name} maxLength={150} onChange={(e) => setData('shipper_name', e.target.value)} className="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <InputLabel htmlFor="shipper_phone">{t('commande.expediteur_telephone', 'Téléphone du lieu de chargement')} <span className="text-status-incident">*</span></InputLabel>
+                                <TextInput id="shipper_phone" type="tel" value={data.shipper_phone} maxLength={30} onChange={(e) => setData('shipper_phone', e.target.value)} className="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <InputLabel htmlFor="loading_reference">{t('commande.reference_chargement', 'Référence de chargement')}</InputLabel>
+                                <TextInput id="loading_reference" value={data.loading_reference} maxLength={60} onChange={(e) => setData('loading_reference', e.target.value)} className="mt-1 block w-full" />
+                            </div>
+                            <InputError message={(soumis && manque.expediteur) || errors.shipper_name || errors.shipper_phone} className="sm:col-span-3" />
+                        </fieldset>
+                    )}
                     <div className="sm:col-span-2">
                         <InputLabel htmlFor="priority">{t('commande.priorite', 'Priorité')} <span className="text-status-incident">*</span></InputLabel>
                         <select id="priority" value={data.priority} onChange={(e) => setData('priority', e.target.value)} className={selectCls} disabled={urgence48h}>
@@ -277,12 +333,18 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                             <TextInput
                                 id="pickup_date"
                                 type="datetime-local"
-                                min={nowLocal}
+                                min={minEnlevement}
                                 value={data.pickup_date}
-                                onChange={(e) => { const v = e.target.value; setData('pickup_date', v && v < nowLocal ? nowLocal : v); }}
+                                onChange={(e) => { const v = e.target.value; setData('pickup_date', v && v < minEnlevement ? minEnlevement : v); }}
                                 className="mt-1 block w-full"
                             />
-                            <InputError message={errors.pickup_date} className="mt-2" />
+                            {etranger && premier && (
+                                <p className="mt-1 text-xs text-slate-600">
+                                    {t('commande.enlevement_etranger_aide', 'Heure locale. Au plus tôt le :date : route depuis Bruxelles et repos du chauffeur compris.', { date: dateHeure(premier.local) })}
+                                    {premier.fuseau_different && ' ' + t('commande.heure_bruxelles', '(:heure à Bruxelles)', { heure: new Date(premier.bruxelles).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) })}
+                                </p>
+                            )}
+                            <InputError message={(soumis && manque.enlevement) || errors.pickup_date} className="mt-2" />
                         </div>
                         <div>
                             <InputLabel htmlFor="requested_delivery_date" value={t('ordres.livraison_souhaitee', 'Livraison souhaitée')} />
@@ -302,15 +364,22 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                 <div>
                     <InputLabel>
                         {t('commande.formule', 'Formule de livraison')}
-                        {data.delivery_country ? ' — ' + nomRegion.of(data.delivery_country) : ''}
+                        {zone ? ' — ' + nomRegion.of(paysDepart) + ' → ' + nomRegion.of(data.delivery_country) : ''}
                         {' '}<span className="text-status-incident">*</span>
                     </InputLabel>
-                    {data.delivery_country ? (
+                    {(surDevis || estim.erreur) ? (
+                        <div className="mt-1 rounded-xl bg-action/10 p-4 text-sm text-action-dark" role="alert">
+                            <p>{estim.erreur ?? t('msg.trajet_sur_devis', 'Ce trajet ne commence ni ne finit en Belgique : il se traite sur devis.')}</p>
+                            <Link href={route('devis.create')} className="mt-2 inline-block font-semibold underline">{t('commande.demander_devis', 'Demander un devis')}</Link>
+                        </div>
+                    ) : zone ? (
                         <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             {offres.map((g) => {
                                 const p = prixDe(g);
                                 const actif = String(data.tariff_grid_id) === String(g.id);
-                                const tropLent = delaiJours !== null && Number(g.delivery_days) > delaiJours;
+                                const tropLent = delaiJours !== null && delai(g) > delaiJours;
+                                const ligne = estim.prix_ligne?.[g.id] != null ? Number(estim.prix_ligne[g.id]) : null;
+                                const remise = estim.tarif === 'BACKHAUL' && ligne != null && p != null && p < ligne;
                                 return (
                                     <button
                                         type="button"
@@ -321,21 +390,34 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                         className={`rounded-xl border p-4 text-left transition ${actif ? 'border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue' : tropLent ? 'border-gray-200 bg-gray-50 opacity-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
                                     >
                                         <p className="text-sm font-semibold text-marine">{NOMS_OFFRE[g.service_level] ? t(...NOMS_OFFRE[g.service_level]) : g.label}</p>
-                                        <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {g.delivery_days} {t('ordres.j', 'j')}</p>
+                                        <p className="text-xs text-gray-500">{t('tarifs.livre_en', 'livré en')} {delai(g)} {t('ordres.j', 'j')}</p>
                                         <p className="mt-2 text-lg font-bold text-action-dark">{p != null ? `${fr(p)} €` : '—'}</p>
+                                        {remise && (
+                                            <p className="text-xs text-slate-500 line-through">{t('commande.au_lieu_de', 'au lieu de :montant', { montant: fr(ligne) + ' €' })}</p>
+                                        )}
                                         {tropLent && <p className="mt-1 text-xs text-gray-400">{t('commande.trop_lent', 'trop lent pour la date demandée')}</p>}
                                     </button>
                                 );
                             })}
                         </div>
                     ) : (
-                        <p className="mt-1 text-sm text-slate-600">{t('commande.destination_dabord', 'Choisissez d\'abord l\'adresse de destination : la zone tarifaire est déduite automatiquement.')}</p>
+                        <p className="mt-1 text-sm text-slate-600">{t('commande.destination_dabord', 'Choisissez d\'abord les adresses de départ et de destination : la zone tarifaire est déduite du trajet.')}</p>
+                    )}
+                    {zone && estim.tarif === 'BACKHAUL' && (
+                        // Jamais le camion ni sa position : un badge et un prix.
+                        <p className="mt-2 rounded-lg bg-status-delivered/10 px-3 py-2 text-xs text-status-delivered">
+                            <span className="font-semibold">{t('commande.tarif_fret_retour', 'Tarif fret retour')}</span>
+                            {' — '}{t('commande.tarif_fret_retour_aide', 'Un de nos camions revient de cette région à cette date : jusqu\'à :remise % de remise, jamais sous le tarif national belge.', { remise: remiseFretRetour })}
+                        </p>
+                    )}
+                    {zone && etranger && ! data.pickup_date && remiseFretRetour > 0 && (
+                        <p className="mt-2 text-xs text-slate-600">{t('commande.date_pour_fret_retour', 'Indiquez la date d\'enlèvement : un tarif fret retour peut s\'appliquer.')}</p>
                     )}
                     {data.delivery_country && delaiJours !== null && !delaiTropCourt && (
                         <p className="mt-2 text-xs text-slate-600">{t('commande.formule_auto', 'Livraison demandée en :n j : la formule la moins chère qui tient ce délai est appliquée.', { n: delaiJours })}</p>
                     )}
                     {delaiTropCourt && (
-                        <p className="mt-2 text-xs text-status-incident">{t('commande.delai_court', 'Délai demandé (:n j) trop court pour cette destination : notre meilleur délai est de :min j.', { n: delaiJours, min: grilleAuto.delivery_days })}</p>
+                        <p className="mt-2 text-xs text-status-incident">{t('commande.delai_court', 'Délai demandé (:n j) trop court pour cette destination : notre meilleur délai est de :min j.', { n: delaiJours, min: delai(grilleAuto) })}</p>
                     )}
                     <InputError message={(soumis && manque.grille) || errors.tariff_grid_id} className="mt-2" />
                 </div>
@@ -354,7 +436,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                     </p>
                                     {total != null ? (
                                         <p className="text-xs text-gray-500">
-                                            {selectedGrid.service_level === 'EXPRESS' ? t('tarifs.dedie', 'Véhicule dédié') : t('tarifs.groupage', 'Groupage')} · {kmTxt} km · {data.weight} kg{data.is_hazardous ? ' · ADR' : ''} · {t('tarifs.livre_en', 'livré en')} {selectedGrid.delivery_days} {t('ordres.j', 'j')}
+                                            {selectedGrid.service_level === 'EXPRESS' ? t('tarifs.dedie', 'Véhicule dédié') : t('tarifs.groupage', 'Groupage')} · {kmTxt} km · {data.weight} kg{data.is_hazardous ? ' · ADR' : ''} · {t('tarifs.livre_en', 'livré en')} {delai(selectedGrid)} {t('ordres.j', 'j')}
                                         </p>
                                     ) : (
                                         <p className={'text-xs ' + (messagePoids || messageVolume || refusFlotte ? 'text-status-incident' : 'text-gray-500')}>

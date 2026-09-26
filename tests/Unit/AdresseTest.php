@@ -55,4 +55,22 @@ class AdresseTest extends TestCase
         $this->assertNull(Adresse::pays('Hasselt'));
         $this->assertNull(Adresse::pays(''));
     }
+
+    public function test_les_codes_postaux_de_chaque_pays_se_lisent(): void
+    {
+        $cas = [
+            'Damrak 1, 1012 LG Amsterdam, Pays-Bas' => ['1012 LG', 'Amsterdam'],
+            'Damrak 1, 1012LG Amsterdam, Pays-Bas' => ['1012LG', 'Amsterdam'],
+            'Marszałkowska 1, 00-950 Varsovie, Pologne' => ['00-950', 'Varsovie'],
+            'Rua Augusta 1, 1000-001 Lisbonne, Portugal' => ['1000-001', 'Lisbonne'],
+            'Brīvības iela 1, LV-1050 Riga, Lettonie' => ['LV-1050', 'Riga'],
+            'Václavské náměstí 1, 110 00 Prague, Tchéquie' => ['110 00', 'Prague'],
+            'Rue Haute 1, 1000 Bruxelles, Belgique' => ['1000', 'Bruxelles'],
+        ];
+
+        foreach ($cas as $adresse => [$cp, $ville]) {
+            $this->assertSame($ville, Adresse::localite($adresse), $adresse);
+            $this->assertSame($cp, Adresse::codePostal($adresse), $adresse);
+        }
+    }
 }

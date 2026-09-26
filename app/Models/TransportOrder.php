@@ -3,6 +3,10 @@
 namespace App\Models;
 
 use App\Models\Concerns\DatesHeureDeBruxelles;
+use App\Support\Pays;
+use App\Support\Tarificateur;
+use App\Support\Traductions;
+use App\Support\Trajet;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -122,6 +126,8 @@ class TransportOrder extends Model
         'vehicle_registration', 'driver_id', 'assigned_at', 'picked_up_at', 'suivi_direct',
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
         'cancelled_at', 'cancelled_by', 'cancellation_fee',
+        'pickup_country', 'delivery_country', 'pricing_basis', 'backhaul_order_id', 'approche_km',
+        'shipper_name', 'shipper_phone', 'loading_reference',
     ];
 
     protected function casts(): array
@@ -140,6 +146,7 @@ class TransportOrder extends Model
             'cancelled_at' => 'datetime',
             'cancellation_fee' => 'decimal:2',
             'distance_km' => 'integer',
+            'approche_km' => 'integer',
         ];
     }
 
@@ -180,6 +187,54 @@ class TransportOrder extends Model
     public function tariffGrid(): BelongsTo
     {
         return $this->belongsTo(TariffGrid::class);
+    }
+
+    /** La mission dont le camion porte ce fret retour. */
+    public function porteuse(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'backhaul_order_id');
+    }
+
+    /** Les frets retour vendus sur le retour de cette mission. */
+    public function fretsRetour(): HasMany
+    {
+        return $this->hasMany(self::class, 'backhaul_order_id');
+    }
+
+    public function trajet(): Trajet
+    {
+        return new Trajet((string) ($this->pickup_country ?: 'BE'), (string) ($this->delivery_country ?: 'BE'));
+    }
+
+    /**
+     * « Import France — Standard · Tarif fret retour », dans la langue du
+     * lecteur.
+     */
+    public function formule(): string
+    {
+        $trajet = $this->trajet();
+        $niveau = $this->tariffGrid?->service_level;
+        $libelle = match ($trajet->type()) {
+            Trajet::IMPORT => Traductions::t('grille.import', 'Import :pays', ['pays' => Pays::libelle($trajet->depart) ?? $trajet->depart]),
+            Trajet::EXPORT => Traductions::t('grille.export', 'Export :pays', ['pays' => Pays::libelle($trajet->arrivee) ?? $trajet->arrivee]),
+            default => Traductions::t('grille.national', 'National (BE)'),
+        };
+
+        if ($niveau !== null) {
+            $libelle .= ' — '.Traductions::t('commande.offre_'.strtolower($niveau), ucfirst(strtolower($niveau)));
+        }
+
+        if ($this->pricing_basis === 'BACKHAUL') {
+            $libelle .= ' · '.Traductions::t('commande.tarif_fret_retour', 'Tarif fret retour');
+        }
+
+        return $libelle;
+    }
+
+    /** Delai promis en jours : la formule, jamais moins que la route. */
+    public function delaiPromis(): ?int
+    {
+        return $this->tariffGrid === null ? null : Tarificateur::delai($this->tariffGrid, $this->distance_km);
     }
 
     /** La ligne qui facture cette expedition, tant qu'aucun avoir ne l'a liberee. */

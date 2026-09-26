@@ -392,6 +392,23 @@ function Fiche({ mission, onRetour }) {
                     )}
                 </div>
 
+                {mission.expediteur && (
+                    <div className="mt-4 rounded-lg bg-brand-blue/10 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-blue">
+                            {t('commande.expediteur', 'Expéditeur au lieu de chargement')}{mission.pays_enlevement ? ` (${mission.pays_enlevement})` : ''}
+                        </p>
+                        <p className="mt-0.5 text-sm text-marine">
+                            {mission.expediteur}
+                            {mission.telephone_expediteur && (
+                                <> · <a href={`tel:${mission.telephone_expediteur.replace(/[^0-9+]/g, '')}`} className="font-semibold underline">{mission.telephone_expediteur}</a></>
+                            )}
+                        </p>
+                        {mission.reference_chargement && (
+                            <p className="mt-0.5 text-sm text-marine">{t('commande.reference_chargement', 'Référence de chargement')}{deuxPoints}{mission.reference_chargement}</p>
+                        )}
+                    </div>
+                )}
+
                 {mission.consignes && (
                     <div className="mt-4 rounded-lg bg-action/10 p-3">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-action-dark">

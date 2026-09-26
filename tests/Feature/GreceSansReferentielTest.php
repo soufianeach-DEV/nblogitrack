@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\JoursFeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -123,7 +124,7 @@ class GreceSansReferentielTest extends TestCase
             'pays_livraison' => 'GR',
             'poids' => 850,
             'marchandise' => TransportOrder::MARCHANDISES[0],
-            'date_enlevement' => now()->addDays(2)->toDateString(),
+            'date_enlevement' => JoursFeries::prochainJourOuvrable(now()->addDays(2))->toDateString(),
             'date_livraison' => now()->addDays(9)->toDateString(),
         ];
     }

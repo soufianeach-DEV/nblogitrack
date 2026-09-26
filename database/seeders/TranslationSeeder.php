@@ -730,6 +730,14 @@ class TranslationSeeder extends Seeder
             'retraite_passee' => ['retraite prévue le :date, fiche à revoir', 'pensioen gepland op :date, fiche na te kijken', 'retirement planned on :date, record to review'],
             'en_route_depuis' => ['En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', 'Onderweg sinds :date: de levering is niet geregistreerd. Zolang dat niet gebeurt, blijven deze vrachtwagen en chauffeur bezet.', 'On the road since :date: the delivery has not been recorded. Until it is, this truck and driver stay busy.'],
             'volume_min' => ['Volume ≥', 'Volume ≥', 'Volume ≥'],
+            'affecter_binome' => ['Affecter à ce binôme', 'Aan dit duo toewijzen', 'Assign to this pair'],
+            'contrainte_etranger' => ['Enlèvement à l\'étranger', 'Ophaling in het buitenland', 'Pickup abroad'],
+            'fret_retour' => ['Fret retour possible', 'Mogelijke retourvracht', 'Possible return load'],
+            'fret_retour_ligne' => [':camion · :chauffeur — livre :numero à :ville le :date · :km km d\'approche · :reste t libres', ':camion · :chauffeur — levert :numero in :ville op :date · :km km aanrijden · :reste t vrij', ':camion · :chauffeur — delivers :numero in :ville on :date · :km km approach · :reste t free'],
+            'positionnement' => ['Aucun camion ne livre à moins de :rayon km : départ de Bruxelles au plus tard le :date (≈ :km km à vide).', 'Geen vrachtwagen levert binnen :rayon km: vertrek uit Brussel uiterlijk op :date (≈ :km lege km).', 'No truck delivers within :rayon km: leave Brussels by :date (≈ :km empty km).'],
+            'retour_orphelin' => ['Vendu au tarif fret retour, mais la mission :numero n\'est plus disponible : trouvez un autre camion, le prix reste acquis au client.', 'Verkocht tegen retourvrachttarief, maar rit :numero is niet meer beschikbaar: zoek een andere vrachtwagen, de prijs blijft gelden voor de klant.', 'Sold at the return-load rate, but trip :numero is no longer available: find another truck; the price still stands for the customer.'],
+            'retour_vendu' => ['Vendu au tarif fret retour sur :numero', 'Verkocht tegen retourvrachttarief op :numero', 'Sold at the return-load rate on :numero'],
+            'retours_possibles' => [':n fret(s) retour possible(s) près de la livraison', ':n mogelijke retourvracht(en) bij de levering', ':n possible return load(s) near the delivery'],
         ],
 
         'personnel' => [
@@ -1490,9 +1498,9 @@ class TranslationSeeder extends Seeder
         'tarifs' => [
             'calculez' => ['Calculez votre tarif', 'Bereken uw tarief', 'Calculate your rate'],
             'intro' => [
-                'Un prix indicatif en quelques secondes, sans compte et sans engagement. Départ de Belgique vers :n destinations européennes.',
-                'Een indicatieve prijs in enkele seconden, zonder account en zonder verplichting. Vertrek vanuit België naar :n Europese bestemmingen.',
-                'An indicative price in seconds, without an account and without commitment. Departing from Belgium to :n European destinations.',
+                'Un prix indicatif en quelques secondes, sans compte et sans engagement. Enlèvement ou livraison en Belgique, :n pays européens desservis.',
+                'Een indicatieve prijs in enkele seconden, zonder account en zonder verplichting. Ophaling of levering in België, :n Europese landen bediend.',
+                'An indicative price in seconds, without an account and without commitment. Pickup or delivery in Belgium, :n European countries served.',
             ],
             'enlevement_be' => ['Enlèvement en Belgique', 'Ophaling in België', 'Pickup in Belgium'],
             'villes_ex' => ['Bruxelles, Anvers, Liège…', 'Brussel, Antwerpen, Luik…', 'Brussels, Antwerp, Liège…'],
@@ -1542,6 +1550,9 @@ class TranslationSeeder extends Seeder
                 'Groupage with other shipments, at the lowest rate.',
             ],
             'groupage' => ['Groupage', 'Groepage', 'Groupage'],
+            'localite_enlevement' => ['Localité d\'enlèvement', 'Ophaalgemeente', 'Pickup locality'],
+            'note_fret_retour' => ['Import vers la Belgique : si l\'un de nos camions revient de la région à votre date, un tarif fret retour (jusqu\'à :remise % de remise) s\'applique à la commande.', 'Invoer naar België: keert een van onze vrachtwagens op uw datum uit de regio terug, dan geldt bij de bestelling een retourvrachttarief (tot :remise % korting).', 'Import into Belgium: if one of our trucks is returning from the area on your date, a return-load rate (up to :remise% off) applies when you order.'],
+            'pays_enlevement' => ['Pays d\'enlèvement', 'Land van ophaling', 'Pickup country'],
         ],
 
         'devis' => [
@@ -1678,6 +1689,8 @@ class TranslationSeeder extends Seeder
             'choix_moins_de_10_000' => ['Moins de 10 000 €', 'Minder dan 10 000 €', 'Less than €10,000'],
             'choix_de_10_000_a_50_000' => ['De 10 000 à 50 000 €', 'Van 10 000 tot 50 000 €', '€10,000 to €50,000'],
             'choix_plus_de_50_000' => ['Plus de 50 000 €', 'Meer dan 50 000 €', 'More than €50,000'],
+            'choix_import_vers_la_belgique' => ['Import vers la Belgique', 'Import naar België', 'Import into Belgium'],
+            'choix_entre_deux_pays_hors_belgique' => ['Entre deux pays hors Belgique', 'Tussen twee landen buiten België', 'Between two countries outside Belgium'],
         ],
 
         'priorite' => [
@@ -1726,9 +1739,9 @@ class TranslationSeeder extends Seeder
                 'too slow for the requested date',
             ],
             'destination_dabord' => [
-                'Choisissez d\'abord l\'adresse de destination : la zone tarifaire est déduite automatiquement.',
-                'Kies eerst het bestemmingsadres: de tariefzone wordt automatisch afgeleid.',
-                'Choose the destination address first: the rate zone is derived automatically.',
+                'Choisissez d\'abord les adresses de départ et de destination : la zone tarifaire est déduite du trajet.',
+                'Kies eerst het vertrek- en bestemmingsadres: de tariefzone wordt afgeleid uit het traject.',
+                'Choose the departure and destination addresses first: the rate zone is derived from the route.',
             ],
             'formule_auto' => [
                 'Livraison demandée en :n j : la formule la moins chère qui tient ce délai est appliquée.',
@@ -1799,6 +1812,17 @@ class TranslationSeeder extends Seeder
             'adr_non' => ['Non, non soumis à l\'ADR', 'Nee, niet onder ADR', 'No, not subject to ADR'],
             'cond_adr' => ['équipement ADR', 'ADR-uitrusting', 'ADR equipment'],
             'cond_hayon' => ['hayon élévateur', 'laadklep', 'tail lift'],
+            'au_lieu_de' => ['au lieu de :montant', 'in plaats van :montant', 'instead of :montant'],
+            'date_pour_fret_retour' => ['Indiquez la date d\'enlèvement : un tarif fret retour peut s\'appliquer.', 'Geef de ophaaldatum op: mogelijk geldt een retourvrachttarief.', 'Enter the pickup date: a return-load rate may apply.'],
+            'demander_devis' => ['Demander un devis', 'Offerte aanvragen', 'Request a quote'],
+            'enlevement_etranger_aide' => ['Heure locale. Au plus tôt le :date : route depuis Bruxelles et repos du chauffeur compris.', 'Lokale tijd. Ten vroegste op :date: rit vanuit Brussel en rusttijd van de chauffeur inbegrepen.', 'Local time. No earlier than :date: drive from Brussels and driver rest included.'],
+            'expediteur' => ['Expéditeur au lieu de chargement', 'Afzender op de laadplaats', 'Shipper at the loading place'],
+            'expediteur_bloc' => ['Lieu de chargement à l\'étranger', 'Laadplaats in het buitenland', 'Loading place abroad'],
+            'expediteur_telephone' => ['Téléphone du lieu de chargement', 'Telefoon van de laadplaats', 'Loading place phone'],
+            'heure_bruxelles' => ['(:heure à Bruxelles)', '(:heure in Brussel)', '(:heure in Brussels)'],
+            'reference_chargement' => ['Référence de chargement', 'Laadreferentie', 'Loading reference'],
+            'tarif_fret_retour' => ['Tarif fret retour', 'Retourvrachttarief', 'Return-load rate'],
+            'tarif_fret_retour_aide' => ['Un de nos camions revient de cette région à cette date : jusqu\'à :remise % de remise, jamais sous le tarif national belge.', 'Een van onze vrachtwagens keert op die datum uit deze regio terug: tot :remise % korting, nooit onder het Belgische binnenlandse tarief.', 'One of our trucks is returning from this area on that date: up to :remise% off, never below the Belgian domestic rate.'],
         ],
 
         'suivi' => [
@@ -2568,7 +2592,7 @@ class TranslationSeeder extends Seeder
             'choisir_adresse_destination' => ['Sélectionne une adresse de destination dans la liste de suggestions.', 'Selecteer een bestemmingsadres in de lijst met suggesties.', 'Select a destination address from the list of suggestions.'],
             'enlevement_passe' => ['La date d\'enlèvement ne peut pas être dans le passé.', 'De ophaaldatum kan niet in het verleden liggen.', 'The pickup date cannot be in the past.'],
             'livraison_passee' => ['La date de livraison souhaitée ne peut pas être dans le passé.', 'De gewenste leverdatum kan niet in het verleden liggen.', 'The requested delivery date cannot be in the past.'],
-            'grille_pays' => ['La grille tarifaire ne correspond pas au pays de destination.', 'De tarieventabel komt niet overeen met het land van bestemming.', 'The rate card does not match the destination country.'],
+            'grille_pays' => ['La grille tarifaire ne correspond pas au trajet.', 'De tarieventabel komt niet overeen met het traject.', 'The rate card does not match the route.'],
             'enlevement_jour_chome' => ['Aucun enlèvement le :jour. Le premier jour ouvrable est le :date.', 'Geen ophaling op :jour. De eerstvolgende werkdag is :date.', 'No pickup on :jour. The first working day is :date.'],
             'dimanche' => ['dimanche', 'zondag', 'Sunday'],
             'formule_trop_lente' => ['La formule choisie ne permet pas de livrer à la date demandée.', 'Met de gekozen formule kan niet op de gevraagde datum worden geleverd.', 'The chosen service cannot deliver by the requested date.'],
@@ -2586,7 +2610,7 @@ class TranslationSeeder extends Seeder
             'poids_min' => ['Le poids doit être d\'au moins un kilogramme.', 'Het gewicht moet minstens één kilogram bedragen.', 'The weight must be at least one kilogram.'],
             'poids_max_tarif' => ['Au-delà de 44 tonnes, la charge dépasse la masse maximale autorisée : demandez un devis.', 'Boven 44 ton overschrijdt de lading de maximaal toegelaten massa: vraag een offerte aan.', 'Above 44 tonnes, the load exceeds the maximum authorised mass: please request a quote.'],
             'poids_nombre' => ['Le poids doit être un nombre.', 'Het gewicht moet een getal zijn.', 'The weight must be a number.'],
-            'depart_introuvable' => ['Localité de départ introuvable en Belgique.', 'Vertrekgemeente niet gevonden in België.', 'Departure town not found in Belgium.'],
+            'depart_introuvable' => ['Localité de départ introuvable dans ce pays.', 'Vertrekgemeente niet gevonden in dit land.', 'Departure town not found in this country.'],
             'destination_introuvable' => ['Localité de destination introuvable dans ce pays.', 'Bestemmingsgemeente niet gevonden in dit land.', 'Destination town not found in this country.'],
             'compte_non_supprimable' => ['Votre entreprise a des expéditions ou des factures, que nous devons conserver. Écrivez-nous pour clôturer le compte.', 'Uw onderneming heeft zendingen of facturen die wij moeten bewaren. Schrijf ons om het account af te sluiten.', 'Your company has shipments or invoices that we must keep. Write to us to close the account.'],
             'entreprise_deja_validee' => ['Cette entreprise est déjà validée.', 'Deze onderneming is al goedgekeurd.', 'This company has already been approved.'],
@@ -2699,6 +2723,16 @@ class TranslationSeeder extends Seeder
             'planif_chauffeur_occupe_par' => ['Ce chauffeur a déjà une mission ce jour-là avec un autre camion (:mission).', 'Deze chauffeur heeft die dag al een opdracht met een andere vrachtwagen (:mission).', 'This driver already has a job that day with another truck (:mission).'],
             'planif_binome_en_route_par' => ['Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission (:mission).', 'Deze vrachtwagen en chauffeur zijn die dag nog onderweg voor een andere opdracht (:mission).', 'This truck and driver are still on the road that day for another job (:mission).'],
             'planif_camion_occupe_par' => ['Ce camion est déjà affecté à un autre chauffeur ce jour-là (:mission).', 'Deze vrachtwagen is die dag al aan een andere chauffeur toegewezen (:mission).', 'This truck is already assigned to another driver that day (:mission).'],
+            'enlevement_etranger_date_requise' => ['Hors de Belgique, la date d\'enlèvement est obligatoire (au plus tôt le :date).', 'Buiten België is de ophaaldatum verplicht (ten vroegste op :date).', 'Outside Belgium, the pickup date is required (no earlier than :date).'],
+            'enlevement_etranger_trop_tot' => ['Un camion ne peut pas être sur place avant le :date (heure locale) : route depuis Bruxelles et repos du chauffeur compris.', 'Een vrachtwagen kan er niet vóór :date (lokale tijd) zijn: rit vanuit Brussel en rusttijd van de chauffeur inbegrepen.', 'A truck cannot be there before :date (local time): drive from Brussels and driver rest included.'],
+            'enlevement_ile' => ['Les îles et territoires hors TVA (Corse, Baléares, Canaries, Sardaigne, Sicile, Madère…) se traitent sur devis.', 'Eilanden en gebieden buiten de btw-zone (Corsica, Balearen, Canarische Eilanden, Sardinië, Sicilië, Madeira…) verlopen via een offerte.', 'Islands and territories outside the VAT area (Corsica, Balearics, Canaries, Sardinia, Sicily, Madeira…) are handled by quotation.'],
+            'enlevement_non_desservi' => ['Nous n\'enlevons pas encore en ligne dans ce pays : demandez un devis.', 'In dit land halen we nog niet online op: vraag een offerte aan.', 'We do not yet offer online pickup in this country: request a quote.'],
+            'enlevement_sur_devis' => ['Nous enlevons en :pays sur devis (douane, ferry ou îles) : demandez un devis.', 'Ophaling in :pays gebeurt op offerte (douane, veerboot of eilanden): vraag een offerte aan.', 'Pickup in :pays is by quotation (customs, ferry or islands): request a quote.'],
+            'expediteur_requis' => ['Indiquez le nom et le téléphone de l\'expéditeur qui charge à l\'étranger.', 'Vermeld de naam en het telefoonnummer van de afzender die in het buitenland laadt.', 'Enter the name and phone number of the shipper loading abroad.'],
+            'pays_adresse_incoherent' => ['Le pays de l\'adresse ne correspond pas au pays choisi. Resélectionnez l\'adresse dans la liste.', 'Het land van het adres komt niet overeen met het gekozen land. Selecteer het adres opnieuw in de lijst.', 'The country in the address does not match the selected country. Select the address from the list again.'],
+            'planif_approche_impossible' => ['Ce camion livre à :ville le :date, à :km km d\'ici : il ne peut pas charger ici le :jour.', 'Deze vrachtwagen levert op :date in :ville, op :km km hiervandaan: hij kan hier niet laden op :jour.', 'This truck delivers in :ville on :date, :km km from here: it cannot load here on :jour.'],
+            'tarif_change' => ['Le tarif vient de changer (:nouveau HT au lieu de :ancien). Vérifiez-le et confirmez à nouveau.', 'Het tarief is net gewijzigd (:nouveau excl. btw in plaats van :ancien). Controleer het en bevestig opnieuw.', 'The rate has just changed (:nouveau excl. VAT instead of :ancien). Check it and confirm again.'],
+            'trajet_sur_devis' => ['Ce trajet ne commence ni ne finit en Belgique : il se traite sur devis.', 'Deze rit begint noch eindigt in België: hij verloopt via een offerte.', 'This trip neither starts nor ends in Belgium: it is handled by quotation.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2718,6 +2752,7 @@ class TranslationSeeder extends Seeder
         'grille' => [
             'national' => ['National (BE)', 'Nationaal (BE)', 'Domestic (BE)'],
             'export' => ['Export :pays', 'Export :pays', 'Export :pays'],
+            'import' => ['Import :pays', 'Import :pays', 'Import :pays'],
         ],
         'vocab.vehicule' => [
             'plateau' => ['Plateau', 'Platte wagen', 'Flatbed'],

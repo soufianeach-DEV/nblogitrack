@@ -28,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
+        // Une remise fret retour hors bornes vendrait a perte ou n'aurait
+        // aucun sens : l'application refuse de demarrer.
+        $remise = config('fret.retour.remise');
+
+        if (! is_numeric($remise) || $remise < 0 || $remise > 0.25) {
+            throw new \InvalidArgumentException('fret.retour.remise doit etre comprise entre 0 et 0,25 (valeur : '.var_export($remise, true).').');
+        }
+
         URL::defaults(['langue' => 'fr']);
 
         // Le lien de mot de passe, qui sert aussi d'invitation au personnel,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\QuoteRequest;
 use App\Support\Traductions;
+use App\Support\Trajet;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,8 @@ class QuoteController extends Controller
         'trajets' => [
             'National (Belgique)',
             'International (Union européenne)',
+            'Import vers la Belgique',
+            'Entre deux pays hors Belgique',
         ],
         'frequences' => [
             'Transport ponctuel',
@@ -114,6 +117,7 @@ class QuoteController extends Controller
             'customer_type' => 'required|in:'.implode(',', self::CHOIX['clients']),
 
             'pickup_address' => 'required|string|max:255',
+            'pickup_country' => 'nullable|string|size:2',
             'pickup_lat' => 'required|numeric|between:-90,90',
             'pickup_lng' => 'required|numeric|between:-180,180',
             'delivery_address' => 'required|string|max:255',
@@ -148,6 +152,16 @@ class QuoteController extends Controller
         ]);
 
         $data['goods_type'] = Traductions::vocabulaireEnFrancais('marchandise', trim($data['goods_type']));
+
+        // Le type de trajet se deduit des deux pays : un Lille -> Bruxelles
+        // s'enregistrait « National (Belgique) ».
+        $data['pickup_country'] = strtoupper($data['pickup_country'] ?? 'BE');
+        $data['trip_type'] = self::CHOIX['trajets'][match ((new Trajet($data['pickup_country'], $data['delivery_country']))->type()) {
+            Trajet::NATIONAL => 0,
+            Trajet::EXPORT => 1,
+            Trajet::IMPORT => 2,
+            default => 3,
+        }];
 
         $devis = QuoteRequest::create($data);
 
