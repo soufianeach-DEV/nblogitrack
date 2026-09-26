@@ -23,3 +23,11 @@ Schedule::command('factures:generer')
 Schedule::command('chauffeurs:cloturer-departs')
     ->dailyAt('00:15')
     ->onOneServer();
+
+// File d'attente (note aux conducteurs...) : videe chaque minute par la
+// meme tache cron que le reste, sans service a installer. Un worker
+// permanent (queue:work sous Supervisor) peut la remplacer.
+Schedule::command('queue:work --stop-when-empty --tries=1 --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();

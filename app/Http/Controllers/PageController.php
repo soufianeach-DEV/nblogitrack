@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\NoteInformation;
+use App\Jobs\EnvoyerNoteAuxConducteurs;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\Page;
@@ -11,7 +11,6 @@ use App\Models\User;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -127,42 +126,12 @@ class PageController extends Controller
             return back()->with('error', Traductions::t('msg.note_brouillon', 'Publiez la note avant de l\'envoyer aux conducteurs.'));
         }
 
-        $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
+        $nombre = User::where('role', 'DRIVER')->where('is_active', true)->count();
 
-        // Un envoi qui echoue n'arrete pas les suivants, et le journal
-        // retient qui a recu la note et qui ne l'a pas recue.
-        $echecs = [];
+        // Envoi en file d'attente : le journal d'activite dira qui l'a recue.
+        EnvoyerNoteAuxConducteurs::dispatch($page);
 
-        foreach ($conducteurs as $conducteur) {
-            try {
-                Mail::to($conducteur->email)->send(
-                    new NoteInformation($page, $conducteur, $conducteur->locale ?? 'fr'),
-                );
-            } catch (\Throwable $e) {
-                report($e);
-                $echecs[] = $conducteur->email;
-            }
-        }
-
-        $recus = $conducteurs->count() - count($echecs);
-
-        ActivityLog::record(
-            'driver.notice_sent',
-            'Note d\'information adressée à '.$recus.' conducteur(s)',
-            $page,
-            array_filter([
-                'version' => $page->updated_at?->toIso8601String(),
-                'echecs' => $echecs,
-            ]),
-        );
-
-        return $echecs === []
-            ? back()->with('success', Traductions::t('msg.note_recue', ':n conducteur(s) ont reçu la note.', ['n' => $recus]))
-            : back()->with('error', Traductions::t(
-                'msg.note_echecs',
-                ':n conducteur(s) ont reçu la note, :echecs envoi(s) ont échoué : réessayez plus tard.',
-                ['n' => $recus, 'echecs' => count($echecs)],
-            ));
+        return back()->with('success', Traductions::t('msg.note_en_cours', 'Envoi de la note en cours à :n conducteur(s). Le journal d\'activité indiquera les éventuels échecs.', ['n' => $nombre]));
     }
 
     public function destroy(Page $page): RedirectResponse
