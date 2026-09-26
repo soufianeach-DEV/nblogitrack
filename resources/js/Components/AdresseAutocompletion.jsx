@@ -340,16 +340,30 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         })();
     };
 
+    // Entonnoir : changer le code postal efface la rue et le numero choisis,
+    // comme changer de ville.
+    const oublierRue = () => {
+        if (! rue) return;
+        setRue('');
+        setRueChoisie(false);
+        setCoords(null);
+        coordsRue.current = null;
+        setSuggRues([]);
+        setAucuneRue(false);
+        resetNumero();
+    };
+
     const chercherCps = (brut) => {
         const v = formatCp(brut);
+        if (v !== cp) oublierRue();
         setCp(v);
         setCpChoisi(false);
         setAucunCp(false);
         if (cpsLibres) {
-            publier({ cp: v });
+            publier({ cp: v, rue: '', numero: '', coords: null });
             return;
         }
-        publier({ cp: '' });
+        publier({ cp: '', rue: '', numero: '', coords: null });
         const liste = cpsDispo.filter((c) => c.cp.startsWith(v));
         setSuggCps(liste);
         setAucunCp(v.length > 0 && liste.length === 0);
@@ -357,13 +371,14 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
 
     const choisirCp = ({ cp: code, localite, f }) => {
         const [lng, lat] = f.geometry.coordinates;
+        if (code !== cp) oublierRue();
         setCp(code);
         setCpLocalite(localite || '');
         setCpChoisi(true);
         setVilleCoords({ lat, lng });
         setSuggCps([]);
         setAucunCp(false);
-        publier({ cp: code });
+        publier(code !== cp ? { cp: code, rue: '', numero: '', coords: null } : { cp: code });
     };
 
     const chercherRues = (brut) => {
@@ -380,16 +395,26 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         timer.current = setTimeout(async () => {
             try {
                 const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
+                // Un code postal choisi (ou saisi en entier quand la liste
+                // manque) limite les rues proposees a ce code.
+                const cpFiltre = cp && (cpChoisi || (cpsLibres && cp.length >= (CP_NUMERIQUE[pays] ?? 4))) ? cp : '';
+                const compact = (c) => formatCp(String(c)).replace(/\s+/g, '');
+                const memeCp = (f) => (f.properties.postcode || '').split(/[;,]/).some((c) => c.trim() !== '' && compact(c.trim()) === compact(cpFiltre));
                 let res = [];
-                if (pays === 'FR') {
+                if (cpFiltre) {
+                    res = (await photon(`${v} ${cpFiltre}`, `&layer=street${centre}`, pays, 30).catch(() => [])).filter(memeCp);
+                }
+                if (res.length > 0) {
+                    // deja limite au code postal
+                } else if (pays === 'FR') {
                     res = await banRues(`${v} ${cpLocalite || ville}`);
                     if (res.length === 0) res = await banRues(v);
                 } else if (pays === 'NL') {
                     res = await pdokRues(`${v} ${cpLocalite || ville}`);
                     if (res.length === 0) res = await pdokRues(v);
                 }
-                if (res.length === 0) {
-                    res = await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30);
+                if (res.length === 0 || (cpFiltre && ! res.some(memeCp))) {
+                    res = [...res, ...await photon(`${v} ${cpLocalite || ville}`, `&layer=street${centre}`, pays, 30)];
                 }
                 if (res.length === 0) {
                     res = await photon(v, `&layer=street${centre}`, pays, 30);
@@ -417,9 +442,17 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     vus.add(cle);
                     return true;
                 });
-                if (cp) {
-                    const memeCp = (f) => (f.properties.postcode || '').split(';').some((c) => c.trim() === cp);
-                    res = [...res].sort((a, b) => (memeCp(b) ? 1 : 0) - (memeCp(a) ? 1 : 0));
+                if (cpFiltre) {
+                    const dansCp = res.filter(memeCp);
+                    // Sans rue portant ce code, une rue dont le code n'est pas
+                    // connu reste proposee si elle est au coeur du code postal.
+                    res = dansCp.length > 0
+                        ? dansCp
+                        : res.filter((f) => {
+                            if (f.properties.postcode || ! villeCoords) return false;
+                            const [flng, flat] = f.geometry.coordinates;
+                            return kmEntre(villeCoords.lat, villeCoords.lng, flat, flng) <= 3;
+                        });
                 }
                 setSuggRues(res.slice(0, 8));
                 setAucuneRue(res.length === 0);
@@ -770,8 +803,8 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     {aucuneRue && rue.length >= 2 && (
                         <p className="mt-1 text-xs text-status-incident">
                             {pays === 'BE'
-                                ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cpLocalite || ville || nomPays })
-                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cpLocalite || ville || nomPays })}
+                                ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })
+                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })}
                         </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
