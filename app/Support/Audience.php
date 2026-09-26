@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\PageView;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 /**
@@ -73,17 +74,34 @@ final class Audience
         $interne = $request->header('X-Inertia') !== null || $hoteReferent === Str::lower($request->getHost());
         $entree = $evenement === null && ! $interne;
 
+        // Le temoin de consentement se pose a la main : un script pourrait
+        // remplir la table. Au-dela de 120 vues par minute pour une meme
+        // adresse, les suivantes ne sont pas comptees. L'adresse ne sert
+        // qu'au compteur en memoire, elle n'est pas enregistree.
+        if (RateLimiter::tooManyAttempts('audience:'.sha1((string) $request->ip()), 120)) {
+            return;
+        }
+        RateLimiter::hit('audience:'.sha1((string) $request->ip()), 60);
+
         PageView::create([
             'jour' => now()->toDateString(),
             'chemin' => self::chemin($request),
             'langue' => substr(app()->getLocale(), 0, 2),
             'entree' => $entree,
             'source' => $entree ? self::source($request->query('utm_source'), $hoteReferent) : null,
-            'support' => $entree ? Str::limit((string) $request->query('utm_medium'), 50, '') ?: null : null,
-            'campagne' => $entree ? Str::limit((string) $request->query('utm_campaign'), 100, '') ?: null : null,
+            'support' => $entree ? self::nettoyer($request->query('utm_medium'), 50) : null,
+            'campagne' => $entree ? self::nettoyer($request->query('utm_campaign'), 100) : null,
             'appareil' => preg_match('/Mobile|Android|iPhone|iPad/i', (string) $request->userAgent()) ? 'mobile' : 'ordinateur',
             'evenement' => $evenement,
         ]);
+    }
+
+    /** Parametre de campagne : lettres, chiffres, tirets, points ; en minuscules. */
+    private static function nettoyer(mixed $valeur, int $longueur): ?string
+    {
+        $propre = Str::lower((string) preg_replace('/[^\p{L}\p{N}._\- ]+/u', '', is_string($valeur) ? $valeur : ''));
+
+        return Str::limit(trim($propre), $longueur, '') ?: null;
     }
 
     /** « /fr/tarifs » -> « /tarifs », sans parametres. */
@@ -109,8 +127,8 @@ final class Audience
             }
         }
 
-        if (is_string($utm) && trim($utm) !== '') {
-            return Str::limit(Str::ucfirst(trim($utm)), 100, '');
+        if (($propre = self::nettoyer($utm, 60)) !== null) {
+            return Str::ucfirst($propre);
         }
 
         if ($hote === null || $hote === '') {

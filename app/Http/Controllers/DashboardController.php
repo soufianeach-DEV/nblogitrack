@@ -37,13 +37,13 @@ class DashboardController extends Controller
             $query->where('client_id', $utilisateur->client_id);
         }
 
-        $stats = [
-            'total' => (clone $query)->count(),
-            'pending' => (clone $query)->where('status', 'PENDING')->count(),
-            'assigned' => (clone $query)->where('status', 'ASSIGNED')->count(),
-            'in_progress' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
-            'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
-        ];
+        // Un seul passage sur la table pour les cinq compteurs.
+        $comptes = (clone $query)->selectRaw("count(*) AS total,
+            count(*) FILTER (WHERE status = 'PENDING') AS pending,
+            count(*) FILTER (WHERE status = 'ASSIGNED') AS assigned,
+            count(*) FILTER (WHERE status = 'IN_PROGRESS') AS in_progress,
+            count(*) FILTER (WHERE status = 'DELIVERED') AS delivered")->toBase()->first();
+        $stats = array_map('intval', (array) $comptes);
 
         $recent = (clone $query)
             ->with('client:id,company_name')
@@ -57,7 +57,7 @@ class DashboardController extends Controller
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
             'carte' => $this->carte(clone $query),
-            'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
+            'carteTotal' => $stats['in_progress'],
             'alertes' => $this->alertes(clone $query, $personnel),
             'facturation' => $utilisateur->can('viewAny', Invoice::class) ? $this->facturation($utilisateur, $personnel) : null,
             'exploitation' => $personnel ? [

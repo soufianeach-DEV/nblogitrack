@@ -135,4 +135,18 @@ class AudienceReferencementTest extends TestCase
 
         $this->assertSame(1, PageView::count());
     }
+
+    /** Parametres de campagne nettoyes, et un meme visiteur ne remplit pas la table. */
+    public function test_les_campagnes_sont_nettoyees_et_les_vues_plafonnees(): void
+    {
+        $this->avecAccord()->get('/fr/tarifs?utm_source=<script>X</script>&utm_campaign=Promo<b>2026</b>')->assertOk();
+        $vue = PageView::firstOrFail();
+        $this->assertStringNotContainsString('<', (string) $vue->source.$vue->campagne);
+        $this->assertSame('promob2026b', $vue->campagne);
+
+        for ($i = 0; $i < 130; $i++) {
+            $this->avecAccord()->get('/fr/tarifs');
+        }
+        $this->assertSame(120, PageView::count());
+    }
 }
