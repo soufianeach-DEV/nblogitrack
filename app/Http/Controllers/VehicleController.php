@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\ControleAffectation;
@@ -71,28 +72,34 @@ class VehicleController extends Controller
             ->flip();
 
         return Inertia::render('Parc/Vehicules', [
-            'vehicules' => $requete->orderBy('registration')->get()->map(fn (Vehicle $v) => [
-                'immatriculation' => $v->registration,
-                'marque' => trim($v->brand.' '.$v->model),
-                'type' => $v->vehicle_type,
-                'permis_requis' => $v->permisRequis(),
-                'adr_equipe' => (bool) $v->adr_equipe,
-                'norme' => $v->euro_standard,
-                'carburant' => $v->fuel_type,
-                'capacite' => (float) $v->capacity_tonnes,
-                'volume' => (float) $v->capacity_volume,
-                'hayon' => (bool) $v->has_tail_lift,
-                'kilometrage' => (int) $v->mileage,
-                'controle' => $v->inspection_date?->format('Y-m-d'),
-                'controle_affiche' => $v->inspection_date?->format('d/m/Y'),
-                'controle_valide' => $v->inspection_valid_until?->format('Y-m-d'),
-                'controle_valide_affiche' => $v->inspection_valid_until?->format('d/m/Y'),
-                'controle_depasse' => $v->inspection_valid_until !== null
-                    && $v->inspection_valid_until->lt(now()->startOfDay()),
-                'disponible' => (bool) $v->is_available,
-                'engage' => $engages->has($v->registration),
-                'vin' => $v->vin,
-            ])->all(),
+            'vehicules' => $requete->with(['indisponibilites' => fn ($q) => $q->where('au', '>=', today()->toDateString())->orderBy('du')])
+                ->orderBy('registration')->get()->map(fn (Vehicle $v) => [
+                    'immatriculation' => $v->registration,
+                    'marque' => trim($v->brand.' '.$v->model),
+                    'type' => $v->vehicle_type,
+                    'permis_requis' => $v->permisRequis(),
+                    'adr_equipe' => (bool) $v->adr_equipe,
+                    'indisponibilites' => $v->indisponibilites->map(fn (Indisponibilite $i) => [
+                        'id' => $i->id,
+                        'resume' => $i->resume(),
+                        'commentaire' => $i->commentaire,
+                    ])->all(),
+                    'norme' => $v->euro_standard,
+                    'carburant' => $v->fuel_type,
+                    'capacite' => (float) $v->capacity_tonnes,
+                    'volume' => (float) $v->capacity_volume,
+                    'hayon' => (bool) $v->has_tail_lift,
+                    'kilometrage' => (int) $v->mileage,
+                    'controle' => $v->inspection_date?->format('Y-m-d'),
+                    'controle_affiche' => $v->inspection_date?->format('d/m/Y'),
+                    'controle_valide' => $v->inspection_valid_until?->format('Y-m-d'),
+                    'controle_valide_affiche' => $v->inspection_valid_until?->format('d/m/Y'),
+                    'controle_depasse' => $v->inspection_valid_until !== null
+                        && $v->inspection_valid_until->lt(now()->startOfDay()),
+                    'disponible' => (bool) $v->is_available,
+                    'engage' => $engages->has($v->registration),
+                    'vin' => $v->vin,
+                ])->all(),
             'types' => Vehicle::distinct()->orderBy('vehicle_type')->pluck('vehicle_type'),
             'normes' => Vehicle::whereNotNull('euro_standard')->distinct()->orderBy('euro_standard')->pluck('euro_standard'),
             'compteurs' => [

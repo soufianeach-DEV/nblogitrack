@@ -76,9 +76,12 @@ class PlanningController extends Controller
             ->orWhereContient('delivery_address', (string) $q)
             ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', (string) $q)));
 
-        $parcDisponible = Vehicle::where('is_available', true)->orderBy('registration')->get();
+        // Les indisponibilites a venir sont chargees une fois : le grisage
+        // de chaque mission les consulte sans requete supplementaire.
+        $aVenir = fn ($q) => $q->where('au', '>=', today()->toDateString());
+        $parcDisponible = Vehicle::with(['indisponibilites' => $aVenir])->where('is_available', true)->orderBy('registration')->get();
 
-        $chauffeursDisponibles = Driver::with('user:id,first_name,last_name,is_active')
+        $chauffeursDisponibles = Driver::with(['user:id,first_name,last_name,is_active', 'indisponibilites' => $aVenir])
             ->where('is_available', true)
             ->whereHas('user', fn ($q) => $q->where('is_active', true))
             ->get();
@@ -166,6 +169,11 @@ class PlanningController extends Controller
                     'license_type' => $d->license_type,
                     'adr_certified' => $d->adr_certified,
                     'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
+                    // Une retraite prevue passee sans depart enregistre
+                    // n'interdit pas de conduire, mais la fiche est a revoir.
+                    'retraite_passee' => $d->left_on === null && $d->retirement_planned_on?->lt(today())
+                        ? $d->retirement_planned_on->format('d/m/Y')
+                        : null,
                 ])
                 ->sortBy('nom')
                 ->values(),

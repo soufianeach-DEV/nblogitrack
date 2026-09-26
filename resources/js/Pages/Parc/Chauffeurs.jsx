@@ -1,4 +1,5 @@
 import BarreFiltres from '@/Components/BarreFiltres';
+import Indisponibilites from '@/Components/Indisponibilites';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTraduction } from '@/traduire';
@@ -136,6 +137,15 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
                     {errors.is_available && <p className="text-xs text-status-incident">{errors.is_available}</p>}
                     {errors.adr_certified && <p className="text-xs text-status-incident">{errors.adr_certified}</p>}
+
+                    <div className="border-t border-slate-100 pt-4">
+                        <Indisponibilites
+                            liste={chauffeur.indisponibilites}
+                            motifs={['CONGE', 'MALADIE', 'FORMATION', 'AUTRE']}
+                            routeAjout={route('drivers.unavailability', chauffeur.id)}
+                            peutModifier={peutModifier}
+                        />
+                    </div>
 
                     {chauffeur.engage && (
                         <p className="rounded-lg bg-action/10 px-3 py-2 text-xs text-action-dark">
@@ -336,7 +346,10 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
 
 export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {}, motifsSortie = {}, compteurs, filtres = {}, peutModifier = false }) {
     const t = useTraduction();
-    const [ouvert, setOuvert] = useState(null);
+    // La fiche garde l'identifiant, pas une copie : apres un ajout
+    // (indisponibilite, echeance), elle montre les donnees rechargees.
+    const [ouvertId, setOuvert] = useState(null);
+    const ouvert = chauffeurs.find((c) => c.id === ouvertId) ?? null;
 
     return (
         <AuthenticatedLayout
@@ -388,7 +401,7 @@ export default function Chauffeurs({ chauffeurs = [], permis = [], statuts = {},
                             {chauffeurs.map((c) => (
                                 <tr
                                     key={c.id}
-                                    onClick={() => setOuvert(c)}
+                                    onClick={() => setOuvert(c.id)}
                                     className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-surface"
                                 >
                                     <td className="px-4 py-3">

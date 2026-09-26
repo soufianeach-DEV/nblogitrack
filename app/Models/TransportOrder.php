@@ -38,6 +38,12 @@ class TransportOrder extends Model
         'Autre',
     ];
 
+    /**
+     * Marchandises souvent soumises a l'ADR (produits chimiques, batteries
+     * au lithium, airbags...) : le client doit dire explicitement si son
+     * envoi l'est. Une case decochee par defaut faisait partir des
+     * produits chimiques sans chauffeur ni vehicule ADR.
+     */
     public const MARCHANDISES_ADR = [
         'Produits chimiques',
         'Produits pharmaceutiques',

@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Driver extends Model
 {
@@ -156,6 +157,19 @@ class Driver extends Model
         }
 
         return null;
+    }
+
+    public function indisponibilites(): HasMany
+    {
+        return $this->hasMany(Indisponibilite::class);
+    }
+
+    /**
+     * La premiere indisponibilite (conge, maladie...) qui croise la periode.
+     */
+    public function indisponibleEntre(CarbonInterface $debut, CarbonInterface $fin): ?Indisponibilite
+    {
+        return $this->indisponibilites->first(fn (Indisponibilite $i) => $i->croise($debut, $fin));
     }
 
     public function estApte(): bool

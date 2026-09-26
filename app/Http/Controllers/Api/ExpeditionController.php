@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\GeocodageIndisponible;
 use App\Support\Localite;
@@ -68,11 +69,14 @@ class ExpeditionController extends Controller
         $donnees = $request->validate([
             'enlevement' => 'required|string|max:255',
             'livraison' => 'required|string|max:255',
-            'poids' => 'required|numeric|min:1|max:44000',
+            'poids' => 'required|numeric|min:1|max:'.Vehicle::chargeUtileMaxKg(),
+            'volume' => 'nullable|numeric|min:0.1|max:120',
             'marchandise' => ['required', Rule::in(TransportOrder::MARCHANDISES)],
             'date_enlevement' => 'required|date|after_or_equal:today',
             'date_livraison' => 'required|date|after_or_equal:date_enlevement',
-            'matieres_dangereuses' => 'boolean',
+            // Pour les marchandises souvent soumises a l'ADR, l'appelant
+            // declare explicitement si l'envoi l'est.
+            'matieres_dangereuses' => [Rule::requiredIf(fn () => in_array($request->input('marchandise'), TransportOrder::MARCHANDISES_ADR, true)), 'boolean'],
             'hayon' => 'boolean',
             'instructions' => 'nullable|string|max:500',
             'pays_livraison' => 'nullable|string|size:2|exists:tariff_grids,zone',
@@ -119,6 +123,7 @@ class ExpeditionController extends Controller
             'delivery_lat' => $points['livraison']->lat,
             'delivery_lng' => $points['livraison']->lng,
             'weight' => $donnees['poids'],
+            'volume' => $donnees['volume'] ?? null,
             'goods_type' => $donnees['marchandise'],
             'is_hazardous' => $adr,
             'needs_tail_lift' => $request->boolean('hayon'),

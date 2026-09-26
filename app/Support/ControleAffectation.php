@@ -49,9 +49,18 @@ final class ControleAffectation
     public static function conformite(TransportOrder $ordre, Vehicle $vehicule, Driver $chauffeur, CarbonInterface $fin): array
     {
         $refus = [];
+        $debut = self::debut($ordre, $fin);
 
         if ($empechements = $chauffeur->empechements($fin)) {
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)])];
+        }
+
+        if ($absence = $chauffeur->indisponibleEntre($debut, $fin)) {
+            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_absent', 'Ce chauffeur est indisponible pendant la mission : :periode.', ['periode' => $absence->resume()])];
+        }
+
+        if ($immobilisation = $vehicule->indisponibleEntre($debut, $fin)) {
+            $refus[] = ['champ' => 'vehicle_registration', 'message' => Traductions::t('msg.planif_vehicule_immobilise', 'Ce véhicule est immobilisé pendant la mission : :periode.', ['periode' => $immobilisation->resume()])];
         }
 
         if ($vehicule->capacity_tonnes * 1000 < $ordre->weight) {
@@ -106,6 +115,10 @@ final class ControleAffectation
      */
     public static function refusVehiculeCourt(TransportOrder $ordre, Vehicle $vehicule, CarbonInterface $fin): ?string
     {
+        if ($immobilisation = $vehicule->indisponibleEntre(self::debut($ordre, $fin), $fin)) {
+            return $immobilisation->resume();
+        }
+
         return match (true) {
             $vehicule->capacity_tonnes * 1000 < $ordre->weight => Traductions::t('planif.capacite_insuffisante', 'capacité insuffisante'),
             $ordre->volume !== null && $vehicule->capacity_volume !== null && (float) $vehicule->capacity_volume < (float) $ordre->volume => Traductions::t('planif.volume_insuffisant', 'volume insuffisant'),
@@ -127,7 +140,17 @@ final class ControleAffectation
             return $empechements[0];
         }
 
+        if ($absence = $chauffeur->indisponibleEntre(self::debut($ordre, $fin), $fin)) {
+            return $absence->resume();
+        }
+
         return $ordre->is_hazardous ? $chauffeur->motifAdr($fin) : null;
+    }
+
+    /** Premier jour d'une mission qui se termine a $fin. */
+    private static function debut(TransportOrder $ordre, CarbonInterface $fin): CarbonInterface
+    {
+        return $fin->copy()->startOfDay()->subDays(TempsDeConduite::journees($ordre->distance_km) - 1);
     }
 
     /**

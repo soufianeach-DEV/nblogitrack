@@ -189,6 +189,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                         <option key={d.id} value={d.id} disabled={! chauffeurCompatible(d)}>
                             {d.nom} · {t('suivi.permis', 'Permis').toLowerCase()} {d.license_type}{d.adr_certified ? ' · ADR' : ''}
                             {d.conduite_semaine > 0 ? ` · ${enHeures(d.conduite_semaine)} ${t('planif.cette_semaine', 'cette semaine')}` : ''}
+                            {d.retraite_passee ? ' · ' + t('planif.retraite_passee', 'retraite prévue le :date, fiche à revoir', { date: d.retraite_passee }) : ''}
                             {motifChauffeur(d)}
                         </option>
                     ))}

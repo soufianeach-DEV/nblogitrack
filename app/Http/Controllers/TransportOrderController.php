@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceLine;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
+use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Formats;
 use App\Support\GeocodageIndisponible;
@@ -255,6 +256,8 @@ class TransportOrderController extends Controller
 
         return Inertia::render('TransportOrders/Create', [
             'tariffGrids' => TariffGrid::where('is_active', true)->get(['id', 'label', 'zone', 'delivery_days', 'service_level']),
+            'marchandisesAdr' => TransportOrder::MARCHANDISES_ADR,
+            'poidsMax' => Vehicle::chargeUtileMaxKg(),
         ]);
     }
 
@@ -309,9 +312,10 @@ class TransportOrderController extends Controller
             'pickup_lng' => 'required|numeric|between:-180,180',
             'delivery_lat' => 'required|numeric|between:-90,90',
             'delivery_lng' => 'required|numeric|between:-180,180',
-            'weight' => 'required|numeric|min:1|max:44000',
+            'weight' => 'required|numeric|min:1|max:'.Vehicle::chargeUtileMaxKg(),
+            'volume' => 'nullable|numeric|min:0.1|max:120',
             'goods_type' => 'required|in:'.implode(',', TransportOrder::MARCHANDISES),
-            'is_hazardous' => 'boolean',
+            'is_hazardous' => [Rule::requiredIf(fn () => in_array($request->input('goods_type'), TransportOrder::MARCHANDISES_ADR, true)), 'nullable', 'boolean'],
             'needs_tail_lift' => 'boolean',
             'priority' => 'required|in:LOW,NORMAL,HIGH,URGENT',
             'pickup_date' => 'nullable|date|after_or_equal:now',
@@ -326,6 +330,10 @@ class TransportOrderController extends Controller
             'delivery_country.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
             'pickup_date.after_or_equal' => Traductions::t('msg.enlevement_passe', 'La date d\'enlèvement ne peut pas être dans le passé.'),
             'requested_delivery_date.after_or_equal' => Traductions::t('msg.livraison_passee', 'La date de livraison souhaitée ne peut pas être dans le passé.'),
+            'is_hazardous.required' => Traductions::t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.'),
+            'weight.max' => Traductions::t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', [
+                'max' => Formats::nombre(Vehicle::chargeUtileMaxKg() / 1000, 1),
+            ]),
         ]);
 
         $grid = TariffGrid::find($data['tariff_grid_id']);
@@ -394,6 +402,7 @@ class TransportOrderController extends Controller
             'delivery_lat' => $data['delivery_lat'],
             'delivery_lng' => $data['delivery_lng'],
             'weight' => $data['weight'],
+            'volume' => $data['volume'] ?? null,
             'goods_type' => $data['goods_type'],
             'is_hazardous' => $hazardous,
             'needs_tail_lift' => $request->boolean('needs_tail_lift'),

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApiKey;
+use App\Models\Client;
 use App\Models\Driver;
+use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -248,5 +251,88 @@ class ControleAffectationTest extends TestCase
         $affectees = AssertableInertia::fromTestResponse($this->actingAs($planificateur)->get(route('planning.index', ['status' => 'ASSIGNED'])))->toArray()['props'];
         $carte = collect($affectees['orders']['data'])->firstWhere('id', $affectee->id);
         $this->assertSame(['Permis inadapté : ce véhicule exige le permis CE (permis C).'], $carte['alertes']);
+    }
+
+    public function test_un_chauffeur_en_conge_ou_un_camion_au_garage_ne_s_affecte_pas(): void
+    {
+        $ordre = $this->ordre(['pickup_date' => now()->addDays(10)->setTime(8, 0)]);
+        $chauffeur = $this->chauffeur();
+        $camion = $this->camion('1-GAR-001');
+
+        Indisponibilite::create(['driver_id' => $chauffeur->id, 'du' => now()->addDays(9)->toDateString(), 'au' => now()->addDays(12)->toDateString(), 'motif' => 'CONGE']);
+        $this->affecter($ordre, $camion, $chauffeur)
+            ->assertSessionHasErrors('driver_id');
+        $this->assertStringContainsString('congé du', session('errors')->first('driver_id'));
+
+        Indisponibilite::create(['vehicle_registration' => $camion->registration, 'du' => now()->addDays(10)->toDateString(), 'au' => now()->addDays(10)->toDateString(), 'motif' => 'ENTRETIEN']);
+        $this->affecter($ordre, $camion, $this->chauffeur())->assertSessionHasErrors('vehicle_registration');
+
+        // Hors de la periode, rien ne s'y oppose.
+        $this->affecter($this->ordre(['pickup_date' => now()->addDays(20)->setTime(8, 0)]), $camion, $chauffeur)->assertSessionHasNoErrors();
+    }
+
+    public function test_poser_un_conge_sur_une_mission_affectee_la_signale(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $ordre = $this->ordre(['pickup_date' => now()->addDays(5)->setTime(8, 0)]);
+        $this->affecter($ordre, $this->camion('1-CON-001'), $chauffeur)->assertSessionHasNoErrors();
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->post(route('drivers.unavailability', $chauffeur), ['du' => now()->addDays(4)->toDateString(), 'au' => now()->addDays(8)->toDateString(), 'motif' => 'MALADIE'])
+            ->assertSessionHas('success')
+            ->assertSessionHas('error', fn (string $m) => str_contains($m, $ordre->tracking_number));
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->post(route('drivers.unavailability', $chauffeur), ['du' => now()->subDay()->toDateString(), 'au' => now()->addDay()->toDateString(), 'motif' => 'CONGE'])
+            ->assertSessionHasErrors('du');
+    }
+
+    public function test_un_produit_chimique_exige_une_declaration_adr_explicite(): void
+    {
+        $client = Client::factory()->create();
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), ['goods_type' => 'Produits chimiques', 'weight' => 500])
+            ->assertSessionHasErrors('is_hazardous');
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), ['goods_type' => 'Produits chimiques', 'weight' => 500, 'is_hazardous' => false])
+            ->assertSessionDoesntHaveErrors('is_hazardous');
+
+        [, $jeton] = ApiKey::generer([
+            'name' => 'Cle', 'client_id' => $client->id, 'abilities' => ['lecture', 'ecriture'],
+            'created_by' => User::factory()->administrateur()->create()->id,
+        ]);
+        $this->postJson('/api/v1/expeditions', [
+            'enlevement' => 'Rue Neuve 43, 3500 Hasselt', 'livraison' => 'Avenue Louise 200, 1000 Bruxelles',
+            'poids' => 500, 'marchandise' => 'Produits chimiques',
+            'date_enlevement' => now()->addDays(2)->toDateString(), 'date_livraison' => now()->addDays(9)->toDateString(),
+        ], ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('matieres_dangereuses');
+    }
+
+    public function test_une_commande_plus_lourde_que_toute_la_flotte_est_refusee_a_la_commande(): void
+    {
+        $this->camion('1-MAX-001', ['capacity_tonnes' => 26.9]);
+
+        $this->actingAs(Client::factory()->create()->compte())
+            ->post(route('transport-orders.store'), ['weight' => 30000, 'goods_type' => 'Palettes'])
+            ->assertSessionHasErrors('weight');
+        $this->assertStringContainsString('26,9 t', session('errors')->first('weight'));
+    }
+
+    public function test_le_volume_se_verifie_seul_et_en_cumul(): void
+    {
+        $fourgon = $this->camion('1-VOL-001', ['capacity_volume' => 45]);
+        $chauffeur = $this->chauffeur();
+        $jour = now()->addDays(3)->setTime(8, 0);
+
+        $this->affecter($this->ordre(['volume' => 90]), $fourgon, $chauffeur)->assertSessionHasErrors('vehicle_registration');
+
+        $this->affecter($this->ordre(['volume' => 30, 'pickup_date' => $jour]), $fourgon, $chauffeur)->assertSessionHasNoErrors();
+        $this->affecter($this->ordre(['volume' => 20, 'pickup_date' => $jour->copy()->setTime(9, 0)]), $fourgon, $chauffeur)
+            ->assertSessionHasErrors('vehicle_registration');
+        $this->assertStringStartsWith('Volume cumulé', session('errors')->first('vehicle_registration'));
     }
 }

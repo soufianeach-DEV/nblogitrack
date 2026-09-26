@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Models\Concerns\DatesHeureDeBruxelles;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vehicle extends Model
 {
@@ -47,6 +49,32 @@ class Vehicle extends Model
     public function permisRequis(): string
     {
         return $this->permis_requis ?? self::permisDeduit((string) $this->vehicle_type, (float) $this->capacity_tonnes);
+    }
+
+    public function indisponibilites(): HasMany
+    {
+        return $this->hasMany(Indisponibilite::class, 'vehicle_registration', 'registration');
+    }
+
+    /**
+     * La premiere immobilisation (entretien, reparation...) qui croise la
+     * periode.
+     */
+    public function indisponibleEntre(CarbonInterface $debut, CarbonInterface $fin): ?Indisponibilite
+    {
+        return $this->indisponibilites->first(fn (Indisponibilite $i) => $i->croise($debut, $fin));
+    }
+
+    /**
+     * La plus lourde charge que la flotte sait porter, en kilos : au-dela,
+     * aucune affectation ne sera jamais possible, autant le dire a la
+     * commande (les camions au garage comptent, ils reviendront).
+     */
+    public static function chargeUtileMaxKg(): float
+    {
+        $max = (float) self::max('capacity_tonnes');
+
+        return $max > 0 ? $max * 1000 : 44000.0;
     }
 
     public static function permisDeduit(string $type, float $chargeUtile): string

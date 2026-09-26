@@ -33,7 +33,7 @@ const NOMS_OFFRE = {
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-export default function Create({ tariffGrids }) {
+export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000 }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -42,7 +42,7 @@ export default function Create({ tariffGrids }) {
     const { data, setData, post, processing, errors } = useForm({
         pickup_address: '', delivery_address: '', delivery_country: '',
         pickup_lat: '', pickup_lng: '', delivery_lat: '', delivery_lng: '',
-        weight: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
+        weight: '', volume: '', goods_type: '', is_hazardous: false, needs_tail_lift: false, priority: 'NORMAL',
         pickup_date: '', requested_delivery_date: '',
         tariff_grid_id: '', special_instructions: '',
     });
@@ -68,7 +68,7 @@ export default function Create({ tariffGrids }) {
                 pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng,
                 delivery_lat: data.delivery_lat, delivery_lng: data.delivery_lng,
                 weight: data.weight || null,
-                is_hazardous: data.is_hazardous,
+                is_hazardous: Boolean(data.is_hazardous),
             })
                 .then(({ data: r }) => { setDistance(r.distance_km); setPrix(r.prix ?? {}); })
                 .catch(() => { setDistance(null); setPrix({}); })
@@ -122,11 +122,18 @@ export default function Create({ tariffGrids }) {
     }, [urgence48h]);
 
     const [soumis, setSoumis] = useState(false);
+    // Produits chimiques, batteries, airbags... : le client dit
+    // explicitement si l'envoi est soumis a l'ADR, la case decochee par
+    // defaut ne vaut pas declaration.
+    const aDeclarer = marchandisesAdr.includes(data.goods_type);
 
     const manque = {
         pickup: !data.pickup_lat ? t('commande.manque_depart', 'Complétez l\'adresse de départ : pays, ville, code postal, rue et numéro.') : null,
         delivery: !data.delivery_lat ? t('commande.manque_destination', 'Complétez l\'adresse de destination : pays, ville, code postal, rue et numéro.') : null,
-        weight: !data.weight ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.') : null,
+        weight: !data.weight
+            ? t('commande.manque_poids', 'Indiquez le poids de la marchandise.')
+            : (Number(data.weight) > poidsMax ? t('msg.poids_flotte', 'Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', { max: (poidsMax / 1000).toLocaleString() }) : null),
+        adr: aDeclarer && data.is_hazardous === null ? t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.') : null,
         goods: !data.goods_type ? t('commande.manque_marchandise', 'Choisissez le type de marchandise.') : null,
         grille: !data.tariff_grid_id ? t('commande.manque_formule', 'Choisissez une formule de livraison.') : null,
         delai: delaiTropCourt ? t('commande.delai_impossible', 'Aucune formule ne tient ce délai : comptez au moins :n jours vers cette destination.', { n: grilleAuto.delivery_days }) : null,
@@ -173,7 +180,15 @@ export default function Create({ tariffGrids }) {
                     </div>
                     <div>
                         <InputLabel htmlFor="goods_type">{t('commande.marchandise', 'Type de marchandise')} <span className="text-status-incident">*</span></InputLabel>
-                        <select id="goods_type" value={data.goods_type} onChange={(e) => setData('goods_type', e.target.value)} className={selectCls}>
+                        <select
+                            id="goods_type"
+                            value={data.goods_type}
+                            onChange={(e) => {
+                                const type = e.target.value;
+                                setData({ ...data, goods_type: type, is_hazardous: marchandisesAdr.includes(type) ? null : Boolean(data.is_hazardous) });
+                            }}
+                            className={selectCls}
+                        >
                             <option value="">{t('commande.choisir', '— Choisir —')}</option>
                             {}
                             {MARCHANDISES.map((m) => (
@@ -182,10 +197,34 @@ export default function Create({ tariffGrids }) {
                         </select>
                         <InputError message={(soumis && manque.goods) || errors.goods_type} className="mt-2" />
                     </div>
-                    <label className="flex items-center gap-2 sm:col-span-2">
-                        <Checkbox name="is_hazardous" checked={data.is_hazardous} onChange={(e) => setData('is_hazardous', e.target.checked)} />
-                        <span className="text-sm text-slate-600">{t('devis.adr', 'Marchandise dangereuse (ADR)')}</span>
-                    </label>
+                    <div>
+                        <InputLabel htmlFor="volume">{t('commande.volume_m3', 'Volume (m³)')}</InputLabel>
+                        <TextInput id="volume" type="number" step="0.1" min="0" value={data.volume} onChange={(e) => setData('volume', e.target.value)} placeholder={t('commande.volume_ex', 'facultatif, ex. 12')} className="mt-1 block w-full" />
+                        <InputError message={errors.volume} className="mt-2" />
+                    </div>
+                    {aDeclarer ? (
+                        <fieldset className="sm:col-span-2">
+                            <legend className="text-sm font-medium text-slate-700">
+                                {t('commande.adr_question', 'Cet envoi est-il soumis à l\'ADR (matière dangereuse) ?')} <span className="text-status-incident">*</span>
+                            </legend>
+                            <div className="mt-1 flex gap-6">
+                                <label className="flex items-center gap-2 text-sm text-slate-600">
+                                    <input type="radio" name="is_hazardous" checked={data.is_hazardous === true} onChange={() => setData('is_hazardous', true)} className="text-marine focus:ring-marine" />
+                                    {t('commande.adr_oui', 'Oui, matière dangereuse (ADR)')}
+                                </label>
+                                <label className="flex items-center gap-2 text-sm text-slate-600">
+                                    <input type="radio" name="is_hazardous" checked={data.is_hazardous === false} onChange={() => setData('is_hazardous', false)} className="text-marine focus:ring-marine" />
+                                    {t('commande.adr_non', 'Non, non soumis à l\'ADR')}
+                                </label>
+                            </div>
+                            <InputError message={(soumis && manque.adr) || errors.is_hazardous} className="mt-2" />
+                        </fieldset>
+                    ) : (
+                        <label className="flex items-center gap-2 sm:col-span-2">
+                            <Checkbox name="is_hazardous" checked={Boolean(data.is_hazardous)} onChange={(e) => setData('is_hazardous', e.target.checked)} />
+                            <span className="text-sm text-slate-600">{t('devis.adr', 'Marchandise dangereuse (ADR)')}</span>
+                        </label>
+                    )}
                     <label className="flex items-center gap-2 sm:col-span-2">
                         <Checkbox name="needs_tail_lift" checked={data.needs_tail_lift} onChange={(e) => setData('needs_tail_lift', e.target.checked)} />
                         <span className="text-sm text-slate-600">{t('commande.hayon_long', 'Hayon élévateur nécessaire (pas de quai au chargement ou à la livraison)')}</span>

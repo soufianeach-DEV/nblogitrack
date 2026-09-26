@@ -7,6 +7,7 @@ use App\Http\Controllers\CompanyUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\GeoController;
+use App\Http\Controllers\IndisponibiliteController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LangueController;
 use App\Http\Controllers\MissionController;
@@ -161,6 +162,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::middleware('can:manage-fleet')->group(function () {
             Route::patch('/vehicules/{vehicle:registration}', [VehicleController::class, 'update'])->name('vehicles.update');
             Route::patch('/chauffeurs/{driver}', [DriverController::class, 'update'])->name('drivers.update');
+            Route::post('/chauffeurs/{driver}/indisponibilites', [IndisponibiliteController::class, 'chauffeur'])->name('drivers.unavailability');
+            Route::post('/vehicules/{vehicle:registration}/indisponibilites', [IndisponibiliteController::class, 'vehicule'])->name('vehicles.unavailability');
+            Route::delete('/indisponibilites/{indisponibilite}', [IndisponibiliteController::class, 'destroy'])->name('unavailability.destroy');
         });
 
         Route::middleware('can:manage-users')->group(function () {

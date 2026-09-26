@@ -727,6 +727,7 @@ class TranslationSeeder extends Seeder
             'controle_expire' => ['contrôle technique jusqu\'au :date', 'keuring tot :date', 'roadworthiness test until :date'],
             'vehicule_adr' => ['Véhicule équipé ADR', 'ADR-uitgerust voertuig', 'ADR-equipped vehicle'],
             'non_conforme' => ['Affectation non conforme : réaffectez cette mission.', 'Niet-conforme toewijzing: wijs deze opdracht opnieuw toe.', 'Non-compliant assignment: reassign this mission.'],
+            'retraite_passee' => ['retraite prévue le :date, fiche à revoir', 'pensioen gepland op :date, fiche na te kijken', 'retirement planned on :date, record to review'],
         ],
 
         'personnel' => [
@@ -1788,6 +1789,11 @@ class TranslationSeeder extends Seeder
             'offre_eco' => ['Éco', 'Eco', 'Economy'],
             'offre_standard' => ['Standard', 'Standaard', 'Standard'],
             'offre_express' => ['Express', 'Express', 'Express'],
+            'volume_m3' => ['Volume (m³)', 'Volume (m³)', 'Volume (m³)'],
+            'volume_ex' => ['facultatif, ex. 12', 'optioneel, bv. 12', 'optional, e.g. 12'],
+            'adr_question' => ['Cet envoi est-il soumis à l\'ADR (matière dangereuse) ?', 'Valt deze zending onder ADR (gevaarlijke stof)?', 'Is this shipment subject to ADR (dangerous goods)?'],
+            'adr_oui' => ['Oui, matière dangereuse (ADR)', 'Ja, gevaarlijke stof (ADR)', 'Yes, dangerous goods (ADR)'],
+            'adr_non' => ['Non, non soumis à l\'ADR', 'Nee, niet onder ADR', 'No, not subject to ADR'],
         ],
 
         'suivi' => [
@@ -2674,6 +2680,14 @@ class TranslationSeeder extends Seeder
             'mission_depart_refuse' => ['Vous ne pouvez pas prendre cette mission en charge : :motif Contactez le planificateur.', 'U kunt deze opdracht niet opnemen: :motif Neem contact op met de planner.', 'You cannot take on this mission: :motif Please contact the planner.'],
             'vehicule_engage_adr' => ['Ce véhicule transporte une matière dangereuse : son équipement ADR ne peut pas être retiré maintenant.', 'Dit voertuig vervoert gevaarlijke stoffen: de ADR-uitrusting kan nu niet worden verwijderd.', 'This vehicle is carrying dangerous goods: its ADR equipment cannot be removed now.'],
             'missions_a_reaffecter' => ['Attention : ces missions ne sont plus conformes et doivent être réaffectées : :missions.', 'Let op: deze opdrachten zijn niet meer conform en moeten opnieuw worden toegewezen: :missions.', 'Warning: these missions are no longer compliant and must be reassigned: :missions.'],
+            'declaration_adr_requise' => ['Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.', 'Geef voor dit type goederen aan of de zending onder ADR valt (gevaarlijke stof) of niet.', 'For this type of goods, state whether the shipment is subject to ADR (dangerous goods) or not.'],
+            'poids_flotte' => ['Aucun camion de notre flotte ne charge plus de :max t : demandez un devis.', 'Geen enkele vrachtwagen van onze vloot laadt meer dan :max t: vraag een offerte aan.', 'No truck in our fleet carries more than :max t: please request a quote.'],
+            'planif_chauffeur_absent' => ['Ce chauffeur est indisponible pendant la mission : :periode.', 'Deze chauffeur is onbeschikbaar tijdens de opdracht: :periode.', 'This driver is unavailable during the mission: :periode.'],
+            'planif_vehicule_immobilise' => ['Ce véhicule est immobilisé pendant la mission : :periode.', 'Dit voertuig staat stil tijdens de opdracht: :periode.', 'This vehicle is out of service during the mission: :periode.'],
+            'indispo_supprimee' => ['Indisponibilité supprimée.', 'Onbeschikbaarheid verwijderd.', 'Unavailability removed.'],
+            'indispo_enregistree' => ['Indisponibilité enregistrée : :periode.', 'Onbeschikbaarheid geregistreerd: :periode.', 'Unavailability recorded: :periode.'],
+            'indispo_passee' => ['Une indisponibilité ne commence pas dans le passé.', 'Een onbeschikbaarheid begint niet in het verleden.', 'An unavailability cannot start in the past.'],
+            'indispo_fin_avant_debut' => ['La fin ne peut pas précéder le début.', 'Het einde kan niet voor het begin liggen.', 'The end cannot be before the start.'],
         ],
         'annulation' => [
             'titre' => ['Annuler l\'expédition', 'Zending annuleren', 'Cancel the shipment'],
@@ -2736,6 +2750,22 @@ class TranslationSeeder extends Seeder
             'texte_fr' => ['texte en français', 'Franse tekst', 'French text'],
             'texte_nl' => ['texte en néerlandais', 'Nederlandse tekst', 'Dutch text'],
             'texte_en' => ['texte en anglais', 'Engelse tekst', 'English text'],
+        ],
+        'indispo' => [
+            'conge' => ['Congé', 'Verlof', 'Leave'],
+            'maladie' => ['Maladie', 'Ziekte', 'Sick leave'],
+            'formation' => ['Formation', 'Opleiding', 'Training'],
+            'entretien' => ['Entretien', 'Onderhoud', 'Maintenance'],
+            'reparation' => ['Réparation', 'Herstelling', 'Repair'],
+            'controle' => ['Contrôle technique', 'Keuring', 'Roadworthiness test'],
+            'autre' => ['Autre', 'Andere', 'Other'],
+            'resume' => [':motif du :du au :au', ':motif van :du tot :au', ':motif from :du to :au'],
+            'titre' => ['Indisponibilités à venir', 'Komende onbeschikbaarheden', 'Upcoming unavailability'],
+            'aucune' => ['Aucune indisponibilité prévue.', 'Geen onbeschikbaarheid gepland.', 'No unavailability planned.'],
+            'du' => ['Du', 'Van', 'From'],
+            'au' => ['Au', 'Tot', 'To'],
+            'motif' => ['Motif', 'Reden', 'Reason'],
+            'ajouter' => ['Ajouter', 'Toevoegen', 'Add'],
         ],
     ];
 }

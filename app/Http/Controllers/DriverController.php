@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Driver;
+use App\Models\Indisponibilite;
 use App\Models\TransportOrder;
 use App\Support\ControleAffectation;
 use App\Support\Traductions;
@@ -81,47 +82,53 @@ class DriverController extends Controller
             ->flip();
 
         return Inertia::render('Parc/Chauffeurs', [
-            'chauffeurs' => $requete->get()->map(fn (Driver $d) => [
-                'id' => $d->id,
-                'nom' => trim(($d->user?->first_name ?? '').' '.($d->user?->last_name ?? '')) ?: Traductions::t('msg.compte_supprime', 'Compte supprimé'),
-                'email' => $d->user?->email,
-                'telephone' => $d->user?->phone,
-                'actif' => (bool) ($d->user?->is_active ?? false),
-                'permis' => $d->license_type,
-                'numero_permis' => $d->license_number,
-                'permis_echeance' => $d->license_expiry?->format('d/m/Y'),
-                'permis_bientot' => $d->license_expiry !== null
-                    && $d->license_expiry->lte(now()->addDays(60)),
-                'adr' => (bool) $d->adr_certified,
-                'visite' => $d->medical_exam_date?->format('Y-m-d'),
-                'visite_affichee' => $d->medical_exam_date?->format('d/m/Y'),
-                'visite_perimee' => $d->medical_exam_date !== null
-                    && $d->medical_exam_date->lt(now()->subYear()),
-                'code95' => $d->cpc_expiry?->format('Y-m-d'),
-                'code95_affiche' => $d->cpc_expiry?->format('d/m/Y'),
-                'tacho' => $d->tacho_card_expiry?->format('Y-m-d'),
-                'adr_fin' => $d->adr_expiry?->format('Y-m-d'),
-                'tacho_affiche' => $d->tacho_card_expiry?->format('d/m/Y'),
-                'statut' => self::statuts()[$d->employment_status] ?? $d->employment_status,
-                'statut_code' => $d->employment_status,
-                'embauche' => $d->hired_on?->format('d/m/Y'),
-                'naissance' => $d->birth_date?->format('Y-m-d'),
-                'naissance_affichee' => $d->birth_date?->format('d/m/Y'),
-                'age' => $d->birth_date?->age,
-                'retraite_prevue' => $d->retirement_planned_on?->format('Y-m-d'),
-                'retraite_affichee' => $d->retirement_planned_on?->format('d/m/Y'),
-                'sorti_le' => $d->left_on?->format('d/m/Y'),
-                'depart_futur' => $d->left_on !== null && $d->left_on->gt(today()),
-                'motif_sortie' => $d->departure_reason !== null
-                    ? (self::motifsSortie()[$d->departure_reason] ?? $d->departure_reason)
-                    : null,
-                'motif_sortie_code' => $d->departure_reason,
-                'empechements' => $d->empechements(),
-                'heures' => (float) $d->daily_driving_hours,
-                'disponible' => (bool) $d->is_available,
-                'missions' => (int) ($missions[$d->id] ?? 0),
-                'engage' => $enCours->has($d->id),
-            ])->sortBy('nom')->values()->all(),
+            'chauffeurs' => $requete->with(['indisponibilites' => fn ($q) => $q->where('au', '>=', today()->toDateString())->orderBy('du')])
+                ->get()->map(fn (Driver $d) => [
+                    'id' => $d->id,
+                    'nom' => trim(($d->user?->first_name ?? '').' '.($d->user?->last_name ?? '')) ?: Traductions::t('msg.compte_supprime', 'Compte supprimé'),
+                    'email' => $d->user?->email,
+                    'telephone' => $d->user?->phone,
+                    'actif' => (bool) ($d->user?->is_active ?? false),
+                    'permis' => $d->license_type,
+                    'numero_permis' => $d->license_number,
+                    'permis_echeance' => $d->license_expiry?->format('d/m/Y'),
+                    'permis_bientot' => $d->license_expiry !== null
+                        && $d->license_expiry->lte(now()->addDays(60)),
+                    'adr' => (bool) $d->adr_certified,
+                    'visite' => $d->medical_exam_date?->format('Y-m-d'),
+                    'visite_affichee' => $d->medical_exam_date?->format('d/m/Y'),
+                    'visite_perimee' => $d->medical_exam_date !== null
+                        && $d->medical_exam_date->lt(now()->subYear()),
+                    'code95' => $d->cpc_expiry?->format('Y-m-d'),
+                    'code95_affiche' => $d->cpc_expiry?->format('d/m/Y'),
+                    'tacho' => $d->tacho_card_expiry?->format('Y-m-d'),
+                    'adr_fin' => $d->adr_expiry?->format('Y-m-d'),
+                    'indisponibilites' => $d->indisponibilites->map(fn (Indisponibilite $i) => [
+                        'id' => $i->id,
+                        'resume' => $i->resume(),
+                        'commentaire' => $i->commentaire,
+                    ])->all(),
+                    'tacho_affiche' => $d->tacho_card_expiry?->format('d/m/Y'),
+                    'statut' => self::statuts()[$d->employment_status] ?? $d->employment_status,
+                    'statut_code' => $d->employment_status,
+                    'embauche' => $d->hired_on?->format('d/m/Y'),
+                    'naissance' => $d->birth_date?->format('Y-m-d'),
+                    'naissance_affichee' => $d->birth_date?->format('d/m/Y'),
+                    'age' => $d->birth_date?->age,
+                    'retraite_prevue' => $d->retirement_planned_on?->format('Y-m-d'),
+                    'retraite_affichee' => $d->retirement_planned_on?->format('d/m/Y'),
+                    'sorti_le' => $d->left_on?->format('d/m/Y'),
+                    'depart_futur' => $d->left_on !== null && $d->left_on->gt(today()),
+                    'motif_sortie' => $d->departure_reason !== null
+                        ? (self::motifsSortie()[$d->departure_reason] ?? $d->departure_reason)
+                        : null,
+                    'motif_sortie_code' => $d->departure_reason,
+                    'empechements' => $d->empechements(),
+                    'heures' => (float) $d->daily_driving_hours,
+                    'disponible' => (bool) $d->is_available,
+                    'missions' => (int) ($missions[$d->id] ?? 0),
+                    'engage' => $enCours->has($d->id),
+                ])->sortBy('nom')->values()->all(),
             'permis' => Driver::distinct()->orderBy('license_type')->pluck('license_type'),
             'statuts' => self::statuts(),
             'motifsSortie' => self::motifsSortie(),

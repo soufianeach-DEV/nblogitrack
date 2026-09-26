@@ -1,4 +1,5 @@
 import BarreFiltres from '@/Components/BarreFiltres';
+import Indisponibilites from '@/Components/Indisponibilites';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
@@ -134,6 +135,15 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                     </div>
                     {errors.adr_equipe && <p className="text-xs text-status-incident">{errors.adr_equipe}</p>}
 
+                    <div className="border-t border-slate-100 pt-4">
+                        <Indisponibilites
+                            liste={vehicule.indisponibilites}
+                            motifs={['ENTRETIEN', 'REPARATION', 'CONTROLE', 'AUTRE']}
+                            routeAjout={route('vehicles.unavailability', vehicule.immatriculation)}
+                            peutModifier={peutModifier}
+                        />
+                    </div>
+
                     <div>
                         <label htmlFor="km" className="text-xs uppercase tracking-wide text-slate-600">
                             {t('parc.kilometrage_releve', 'Kilométrage relevé')}
@@ -173,7 +183,10 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
     const t = useTraduction();
     const voc = useVocabulaire();
     const locale = useLocale();
-    const [ouvert, setOuvert] = useState(null);
+    // La fiche garde l'immatriculation, pas une copie : apres un ajout,
+    // elle montre les donnees rechargees.
+    const [ouvertId, setOuvert] = useState(null);
+    const ouvert = vehicules.find((v) => v.immatriculation === ouvertId) ?? null;
 
     const nombre = (valeur, unite, decimales = 0) => Number(valeur).toLocaleString(locale, {
         minimumFractionDigits: decimales,
@@ -241,7 +254,7 @@ export default function Vehicules({ vehicules = [], types = [], normes = [], com
                             {vehicules.map((v) => (
                                 <tr
                                     key={v.immatriculation}
-                                    onClick={() => setOuvert(v)}
+                                    onClick={() => setOuvert(v.immatriculation)}
                                     className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-surface"
                                 >
                                     <td className="whitespace-nowrap px-4 py-3 font-mono font-semibold text-marine">{v.immatriculation}</td>
