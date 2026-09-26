@@ -217,7 +217,7 @@ Toute personne estimant qu'un contenu publié porte atteinte à ses droits peut 
 ## Règlement des litiges
 Les parties recherchent une solution amiable avant toute procédure. À défaut, les litiges relèvent des tribunaux visés aux conditions générales.
 
-Le présent site s'adresse à des professionnels. La plateforme européenne de règlement en ligne des litiges de consommation n'a donc pas vocation à s'appliquer aux relations qu'il régit.
+Le présent site s'adresse exclusivement à des professionnels : les règles propres aux litiges de consommation ne s'appliquent pas aux relations qu'il régit.
 
 ## Droit applicable
 Le présent site et son utilisation sont régis par le droit belge.
@@ -231,7 +231,7 @@ TXT;
 NBLogiTrack BV, besloten vennootschap naar Belgisch recht.
 Maatschappelijke zetel: Havenlaan 86C, 1000 Brussel, België.
 Ondernemingsnummer en btw-nummer: BE 0123.456.749.
-Rechtspersonenregister Brussel.
+Rechtspersonenregister Brussel, Franstalige afdeling.
 Telefoon: +32 (0) 2 456 78 90 — E-mail: info@nblogitrack.be
 
 ## Vervoersvergunning
@@ -257,7 +257,7 @@ Vermelde merken, benamingen en logo's van derden blijven eigendom van hun respec
 Links naar websites van derden worden aangeboden voor het gemak van de gebruiker. NBLogiTrack BV heeft geen controle over die websites en wijst elke aansprakelijkheid af voor de inhoud, de beschikbaarheid en het gegevensbeleid ervan.
 
 ## Waarde van de gepubliceerde informatie
-De prijzen van de tariefsimulator zijn indicatief. Zij berusten op een automatisch berekende afstand en op standaardaannames inzake belading, en houden geen rekening met de bijzonderheden van een zending. Zij vormen geen aanbod, noch een contractuele verbintenis. Alleen een schriftelijk aanbod van NBLogiTrack BV verbindt de vennootschap.
+De prijzen van de tariefsimulator zijn indicatief. Zij berusten op een automatisch berekende afstand en op standaardaannames inzake belading, en houden geen rekening met de bijzonderheden van een zending. Zij vormen geen aanbod in de zin van artikel 5.16 van het Burgerlijk Wetboek, noch een contractuele verbintenis. Alleen een schriftelijk aanbod van NBLogiTrack BV verbindt de vennootschap.
 
 ## Beschikbaarheid van de dienst
 NBLogiTrack BV stelt alles redelijkerwijs in het werk om de website en de klantenzone toegankelijk te houden. Zij behoudt zich het recht voor de toegang te onderbreken voor onderhoud, zonder dat die onderbreking recht geeft op schadevergoeding.
@@ -268,7 +268,7 @@ Wie meent dat gepubliceerde inhoud zijn rechten schendt, kan dit schriftelijk me
 ## Geschillenregeling
 Partijen zoeken eerst een minnelijke oplossing. Bij gebreke daarvan zijn de rechtbanken bevoegd die in de algemene voorwaarden zijn aangeduid.
 
-Deze website richt zich tot professionelen. Het Europese platform voor onlinegeschillenbeslechting voor consumenten is dan ook niet van toepassing op de betrekkingen die hij regelt.
+Deze website richt zich uitsluitend tot professionelen: de regels voor consumentengeschillen zijn niet van toepassing op de betrekkingen die hij regelt.
 
 ## Toepasselijk recht
 Deze website en het gebruik ervan worden beheerst door het Belgisch recht.
@@ -282,7 +282,7 @@ TXT;
 NBLogiTrack SRL, a limited liability company under Belgian law.
 Registered office: Avenue du Port 86C, 1000 Brussels, Belgium.
 Company and VAT number: BE 0123.456.749.
-Register of Legal Entities, Brussels.
+Register of Legal Entities, Brussels, French-speaking division.
 Phone: +32 (0) 2 456 78 90 — Email: info@nblogitrack.be
 
 ## Transport licence
@@ -308,7 +308,7 @@ Third-party trademarks, names and logos remain the property of their respective 
 Links to third-party websites are provided for the user's convenience. NBLogiTrack SRL exercises no control over those websites and accepts no liability for their content, availability or data practices.
 
 ## Status of published information
-Prices shown by the rate simulator are indicative. They rely on an automatically calculated distance and on standard loading assumptions, and do not account for the specific constraints of a consignment. They constitute neither an offer nor a contractual commitment. Only a written offer issued by NBLogiTrack SRL binds the company.
+Prices shown by the rate simulator are indicative. They rely on an automatically calculated distance and on standard loading assumptions, and do not account for the specific constraints of a consignment. They constitute neither an offer within the meaning of Article 5.16 of the Belgian Civil Code nor a contractual commitment. Only a written offer issued by NBLogiTrack SRL binds the company.
 
 ## Service availability
 NBLogiTrack SRL takes reasonable steps to keep the website and the customer area accessible. It reserves the right to interrupt access for maintenance, without such interruption giving rise to compensation.
@@ -319,7 +319,7 @@ Anyone who considers that published content infringes their rights may report it
 ## Dispute resolution
 The parties shall seek an amicable solution before any proceedings. Failing that, disputes fall to the courts designated in the general conditions.
 
-This website is addressed to professionals. The European online dispute resolution platform for consumers therefore does not apply to the relationships it governs.
+This website is addressed exclusively to professionals: the rules specific to consumer disputes do not apply to the relationships it governs.
 
 ## Governing law
 This website and its use are governed by Belgian law.
@@ -356,6 +356,7 @@ Visiteurs : données strictement nécessaires au fonctionnement du site et à sa
 - Établir les documents de transport, dont la lettre de voiture CMR, et les déclarations en douane — obligation légale.
 - Assurer la sécurité de l'application, détecter les accès anormaux — intérêt légitime.
 - Répondre aux demandes de devis — mesures précontractuelles.
+- Mesurer la fréquentation du site public, sans identifier les visiteurs — consentement, retirable à tout moment par le lien « Gérer les cookies ».
 
 ## Suivi géolocalisé des envois
 Le suivi repose sur trois éléments, et trois seulement.
@@ -385,9 +386,10 @@ Le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à plani
 ## Destinataires et sous-traitants
 Les données ne sont ni vendues, ni louées, ni échangées. Elles sont communiquées, dans la limite du nécessaire :
 - à l'hébergeur de l'application, établi dans l'Union européenne ;
-- au prestataire de paiement en ligne, pour les seules données que la transaction exige ;
+- au prestataire de paiement en ligne Stripe (Stripe Payments Europe, Irlande), pour les seules données que la transaction exige ;
 - au service de calcul d'itinéraire fondé sur OpenStreetMap, qui reçoit les coordonnées des points d'enlèvement et de livraison, sans nom ni référence de dossier ;
-- au service VIES de la Commission européenne et aux registres d'entreprises belge et français, pour vérifier un numéro de TVA ou l'identité d'une entreprise ;
+- au service VIES de la Commission européenne et aux registres d'entreprises nationaux (Belgique, France, Suisse, Norvège, Royaume-Uni, Tchéquie, Finlande, Pologne, Roumanie), qui reçoivent le seul numéro de TVA saisi, pour vérifier l'identité d'une entreprise ;
+- aux services de recherche d'adresses et de fonds de carte (Photon de komoot, Base adresse nationale française, PDOK néerlandais, OpenFreeMap), qui reçoivent le texte d'adresse saisi et l'adresse IP du navigateur, pour proposer les adresses et afficher les cartes ;
 - aux sous-traitants de transport lorsqu'un envoi leur est confié ;
 - au cabinet comptable, à l'assureur et, le cas échéant, au conseil juridique ;
 - aux administrations lorsque la loi l'impose, notamment en matière fiscale, douanière et sociale.
@@ -395,14 +397,18 @@ Les données ne sont ni vendues, ni louées, ni échangées. Elles sont communiq
 Chaque sous-traitant est lié par un contrat conforme à l'article 28 du RGPD.
 
 ## Transferts hors de l'Union européenne
-Les données sont traitées au sein de l'Union européenne. Un transfert vers un pays tiers n'a lieu que lorsqu'une livraison l'exige, et sur la base des garanties prévues au chapitre V du RGPD.
+Les données sont traitées au sein de l'Union européenne. Font exception :
+- la vérification d'un numéro de TVA suisse ou britannique, transmis au registre de ce pays, qui bénéficie d'une décision d'adéquation de la Commission européenne ;
+- le paiement en ligne : Stripe appartient à un groupe établi aux États-Unis, adhérent au cadre de protection des données UE–États-Unis, et lié par les clauses contractuelles types de la Commission ;
+- une livraison hors de l'Union, qui exige de transmettre les données du destinataire, sur la base des garanties prévues au chapitre V du RGPD.
 
 ## Durées de conservation
-- Pièces comptables et factures : sept ans, conformément au Code de la TVA.
+- Factures : dix ans, conformément à l'article 60 du Code de la TVA ; autres pièces comptables : sept ans.
 - Documents de transport et lettres de voiture : cinq ans.
 - Dates de validité des permis, certificats ADR et cartes de conducteur : la durée de la relation de travail, puis les délais de prescription sociale.
 - Journaux d'activité de l'application, qui enregistrent la date, l'utilisateur, l'action et l'adresse IP : douze mois.
-- Demandes de devis restées sans suite : deux ans.
+- Demandes de devis restées sans suite, pièces jointes comprises : deux ans ; transformées en commande : cinq ans.
+- Mesure d'audience, sans donnée permettant d'identifier un visiteur : treize mois.
 - Compte client : la durée de la relation commerciale, puis les délais de prescription applicables.
 
 ## Sécurité
@@ -414,7 +420,7 @@ La sauvegarde et la restauration des données relèvent du contrat d'hébergemen
 Aucune décision produisant des effets juridiques n'est prise sur le seul fondement d'un traitement automatisé. Le calcul tarifaire et les propositions d'affectation d'un véhicule ou d'un conducteur sont des aides à la décision : un planificateur valide.
 
 ## Témoins de connexion
-Le site utilise les seuls témoins nécessaires à son fonctionnement et à la sécurité de la session. Aucun témoin publicitaire ni aucun traceur de mesure d'audience tiers n'est déposé.
+Le site dépose les témoins nécessaires à son fonctionnement et à la sécurité de la session. Avec votre accord seulement, il mesure aussi sa fréquentation, par ses propres moyens : aucune adresse IP ni aucun identifiant n'est conservé, et aucun service tiers n'intervient. Ce choix se modifie à tout moment par le lien « Gérer les cookies » en bas de page ; la politique de cookies en donne le détail. Aucun témoin publicitaire n'est déposé.
 
 ## Vos droits
 Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité. Ces droits s'exercent par écrit à info@nblogitrack.be. Une réponse est apportée dans le mois, prorogeable de deux mois si la demande est complexe.
@@ -459,6 +465,7 @@ Bezoekers: uitsluitend de gegevens die nodig zijn voor de werking en de beveilig
 - Vervoersdocumenten opmaken, waaronder de CMR-vrachtbrief, en douaneaangiften — wettelijke verplichting.
 - De toepassing beveiligen en afwijkende toegang opsporen — gerechtvaardigd belang.
 - Offerteaanvragen beantwoorden — precontractuele maatregelen.
+- Het bezoek aan de openbare website meten, zonder bezoekers te identificeren — toestemming, op elk ogenblik in te trekken via de link „Cookies beheren”.
 
 ## Gelokaliseerde opvolging van zendingen
 De opvolging steunt op drie elementen, en niet meer.
@@ -488,9 +495,10 @@ De tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient 
 ## Ontvangers en verwerkers
 Gegevens worden niet verkocht, verhuurd of geruild. Zij worden meegedeeld, beperkt tot het noodzakelijke:
 - aan de hostingpartij van de toepassing, gevestigd in de Europese Unie;
-- aan de aanbieder van onlinebetalingen, enkel de gegevens die de transactie vereist;
+- aan de aanbieder van onlinebetalingen Stripe (Stripe Payments Europe, Ierland), enkel de gegevens die de transactie vereist;
 - aan de routeberekeningsdienst op basis van OpenStreetMap, die de coördinaten van het ophaal- en leverpunt ontvangt, zonder naam of dossierreferentie;
-- aan de VIES-dienst van de Europese Commissie en aan het Belgische en het Franse ondernemingsregister, om een btw-nummer of de identiteit van een onderneming te verifiëren;
+- aan de VIES-dienst van de Europese Commissie en aan de nationale ondernemingsregisters (België, Frankrijk, Zwitserland, Noorwegen, Verenigd Koninkrijk, Tsjechië, Finland, Polen, Roemenië), die enkel het ingevoerde btw-nummer ontvangen, om de identiteit van een onderneming te verifiëren;
+- aan de diensten voor adresopzoeking en kaartachtergronden (Photon van komoot, de Franse Base adresse nationale, het Nederlandse PDOK, OpenFreeMap), die de ingevoerde adrestekst en het IP-adres van de browser ontvangen, om adressen voor te stellen en kaarten te tonen;
 - aan onderaannemers in het vervoer wanneer een zending hen wordt toevertrouwd;
 - aan het boekhoudkantoor, de verzekeraar en, in voorkomend geval, de juridisch raadsman;
 - aan de overheid wanneer de wet dat oplegt, met name inzake fiscaliteit, douane en sociale zekerheid.
@@ -498,14 +506,18 @@ Gegevens worden niet verkocht, verhuurd of geruild. Zij worden meegedeeld, beper
 Elke verwerker is gebonden door een overeenkomst conform artikel 28 AVG.
 
 ## Doorgifte buiten de Europese Unie
-Gegevens worden binnen de Europese Unie verwerkt. Doorgifte naar een derde land gebeurt enkel wanneer een levering dat vereist, op basis van de waarborgen van hoofdstuk V AVG.
+Gegevens worden binnen de Europese Unie verwerkt. Uitzonderingen:
+- de verificatie van een Zwitsers of Brits btw-nummer, doorgegeven aan het register van dat land, dat een adequaatheidsbesluit van de Europese Commissie geniet;
+- de onlinebetaling: Stripe behoort tot een groep gevestigd in de Verenigde Staten, aangesloten bij het EU-VS-kader voor gegevensbescherming en gebonden door de modelcontractbepalingen van de Commissie;
+- een levering buiten de Unie, die de doorgifte van de gegevens van de geadresseerde vereist, op basis van de waarborgen van hoofdstuk V AVG.
 
 ## Bewaartermijnen
-- Boekhoudkundige stukken en facturen: zeven jaar, conform het Btw-wetboek.
+- Facturen: tien jaar, conform artikel 60 van het Btw-wetboek; andere boekhoudkundige stukken: zeven jaar.
 - Vervoersdocumenten en vrachtbrieven: vijf jaar.
 - Geldigheidsdata van rijbewijzen, ADR-certificaten en bestuurderskaarten: de duur van de arbeidsrelatie, vervolgens de sociale verjaringstermijnen.
 - Activiteitenlogboeken van de toepassing, met datum, gebruiker, actie en IP-adres: twaalf maanden.
-- Offerteaanvragen zonder gevolg: twee jaar.
+- Offerteaanvragen zonder gevolg, bijlagen inbegrepen: twee jaar; omgezet in een bestelling: vijf jaar.
+- Bezoekersmeting, zonder gegevens die een bezoeker identificeren: dertien maanden.
 - Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen.
 
 ## Beveiliging
@@ -517,7 +529,7 @@ Back-up en herstel van de gegevens vallen onder de hostingovereenkomst. Zij word
 Er wordt geen besluit met rechtsgevolgen genomen op de enkele grondslag van een geautomatiseerde verwerking. De tariefberekening en de voorstellen tot toewijzing van een voertuig of chauffeur zijn hulpmiddelen: een planner beslist.
 
 ## Cookies
-De website gebruikt uitsluitend de cookies die nodig zijn voor de werking en de beveiliging van de sessie. Er worden geen reclamecookies of externe analysetrackers geplaatst.
+De website plaatst de cookies die nodig zijn voor de werking en de beveiliging van de sessie. Enkel met uw toestemming meet hij ook het bezoek, met eigen middelen: er wordt geen IP-adres of identificatiemiddel bewaard en er komt geen externe dienst aan te pas. Die keuze wijzigt u op elk ogenblik via de link „Cookies beheren” onderaan de pagina; het cookiebeleid geeft de details. Er worden geen reclamecookies geplaatst.
 
 ## Uw rechten
 U beschikt over een recht op inzage, verbetering, wissing, beperking, bezwaar en overdraagbaarheid. Deze rechten worden schriftelijk uitgeoefend op info@nblogitrack.be. Een antwoord volgt binnen de maand, verlengbaar met twee maanden bij een complexe aanvraag.
@@ -562,6 +574,7 @@ Visitors: strictly the data required for the website to work and remain secure.
 - Producing transport documents, including the CMR consignment note, and customs declarations — legal obligation.
 - Securing the application and detecting abnormal access — legitimate interest.
 - Answering quotation requests — pre-contractual measures.
+- Measuring visits to the public website without identifying visitors — consent, which can be withdrawn at any time through the “Manage cookies” link.
 
 ## Geolocated shipment tracking
 Tracking rests on three elements, and three only.
@@ -591,9 +604,10 @@ The tachograph is not read. The daily driving hours total serves to plan within 
 ## Recipients and processors
 Data is never sold, rented or exchanged. It is disclosed, limited to what is necessary:
 - to the application's hosting provider, established in the European Union;
-- to the online payment provider, for the data the transaction requires only;
+- to the online payment provider Stripe (Stripe Payments Europe, Ireland), for the data the transaction requires only;
 - to the OpenStreetMap-based routing service, which receives the coordinates of the pickup and delivery points, without any name or file reference;
-- to the European Commission's VIES service and to the Belgian and French company registers, to verify a VAT number or a company's identity;
+- to the European Commission's VIES service and to national company registers (Belgium, France, Switzerland, Norway, United Kingdom, Czechia, Finland, Poland, Romania), which receive only the VAT number entered, to verify a company's identity;
+- to address lookup and map background services (komoot's Photon, the French Base adresse nationale, the Dutch PDOK, OpenFreeMap), which receive the address text entered and the browser's IP address, to suggest addresses and display maps;
 - to transport subcontractors when a consignment is entrusted to them;
 - to the accounting firm, the insurer and, where applicable, legal counsel;
 - to public authorities where the law so requires, in particular in tax, customs and social security matters.
@@ -601,14 +615,18 @@ Data is never sold, rented or exchanged. It is disclosed, limited to what is nec
 Every processor is bound by a contract compliant with Article 28 GDPR.
 
 ## Transfers outside the European Union
-Data is processed within the European Union. Transfer to a third country occurs only where a delivery requires it, on the basis of the safeguards provided for in Chapter V GDPR.
+Data is processed within the European Union, with these exceptions:
+- checking a Swiss or British VAT number, sent to that country's register, which benefits from an adequacy decision of the European Commission;
+- online payment: Stripe belongs to a group established in the United States, certified under the EU–US Data Privacy Framework and bound by the Commission's standard contractual clauses;
+- a delivery outside the Union, which requires sending the consignee's data, on the basis of the safeguards provided for in Chapter V GDPR.
 
 ## Retention periods
-- Accounting records and invoices: seven years, under the Belgian VAT Code.
+- Invoices: ten years, under Article 60 of the Belgian VAT Code; other accounting records: seven years.
 - Transport documents and consignment notes: five years.
 - Licence, ADR certificate and driver card validity dates: the duration of the employment relationship, then the applicable social limitation periods.
 - Application activity logs, recording date, user, action and IP address: twelve months.
-- Quotation requests left without follow-up: two years.
+- Quotation requests left without follow-up, attachments included: two years; converted into an order: five years.
+- Audience measurement, without data identifying a visitor: thirteen months.
 - Customer account: the duration of the commercial relationship, then the applicable limitation periods.
 
 ## Security
@@ -620,7 +638,7 @@ Backup and restoration of data fall under the hosting contract. They will be set
 No decision producing legal effects is taken on the sole basis of automated processing. Rate calculation and vehicle or driver assignment suggestions are decision aids: a planner validates them.
 
 ## Cookies
-The website uses only the cookies required for its operation and session security. No advertising cookies and no third-party analytics trackers are placed.
+The website places the cookies required for its operation and session security. Only with your consent does it also measure visits, by its own means: no IP address or identifier is kept and no third-party service is involved. You can change this choice at any time through the “Manage cookies” link at the bottom of the page; the cookie policy gives the details. No advertising cookies are placed.
 
 ## Your rights
 You have the right of access, rectification, erasure, restriction, objection and portability. These rights are exercised in writing at info@nblogitrack.be. A reply is given within one month, extendable by two months where the request is complex.
@@ -803,12 +821,12 @@ Les factures sont émises par voie électronique et payables à trente jours de 
 À défaut de paiement à l'échéance, et sans mise en demeure préalable, sont dus de plein droit :
 - un intérêt de retard au taux prévu par la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales ;
 - une indemnité forfaitaire de quarante euros pour frais de recouvrement, conformément à la même loi ;
-- une indemnité complémentaire de dix pour cent du montant impayé, avec un minimum de cent cinquante euros, à titre de dommage forfaitaire couvrant les frais administratifs et de suivi.
+- au-delà de ce forfait, le remboursement des autres frais de recouvrement raisonnablement exposés, sur justificatif, conformément à l'article 6 de la même loi.
 
 Le non-paiement d'une facture à son échéance rend immédiatement exigibles toutes les autres factures, même non échues, et autorise le transporteur à suspendre les prestations en cours après notification écrite.
 
 ## Article 10 — Contestation d'une facture
-Toute contestation doit parvenir par écrit dans les dix jours calendrier de la date de facture, avec l'indication précise des motifs. Passé ce délai, la facture est réputée acceptée.
+Toute contestation doit parvenir par écrit dans les dix jours calendrier de la date de facture, avec l'indication précise des motifs. Passé ce délai, la facture est présumée acceptée, sauf preuve contraire.
 
 Une contestation portant sur une partie de la facture ne dispense pas du paiement du solde non contesté.
 
@@ -919,12 +937,12 @@ Facturen worden elektronisch uitgereikt en zijn betaalbaar binnen dertig dagen n
 Bij niet-betaling op de vervaldag zijn van rechtswege en zonder ingebrekestelling verschuldigd:
 - een verwijlintrest tegen de rentevoet van de wet van 2 augustus 2002 betreffende de bestrijding van de betalingsachterstand bij handelstransacties;
 - een forfaitaire vergoeding van veertig euro voor invorderingskosten, conform diezelfde wet;
-- een bijkomende vergoeding van tien procent van het onbetaalde bedrag, met een minimum van honderdvijftig euro, als forfaitaire schade voor administratie- en opvolgingskosten.
+- boven dat forfait, de terugbetaling van de andere redelijkerwijs gemaakte invorderingskosten, op bewijs, conform artikel 6 van diezelfde wet.
 
 De niet-betaling van één factuur op haar vervaldag maakt alle andere facturen onmiddellijk opeisbaar, ook de niet-vervallen, en machtigt de vervoerder om lopende prestaties op te schorten na schriftelijke kennisgeving.
 
 ## Artikel 10 — Betwisting van een factuur
-Elke betwisting moet schriftelijk toekomen binnen tien kalenderdagen na factuurdatum, met nauwkeurige opgave van de redenen. Na die termijn wordt de factuur geacht te zijn aanvaard.
+Elke betwisting moet schriftelijk toekomen binnen tien kalenderdagen na factuurdatum, met nauwkeurige opgave van de redenen. Na die termijn wordt de factuur vermoed aanvaard te zijn, behoudens tegenbewijs.
 
 Een betwisting over een deel van de factuur ontslaat niet van de betaling van het onbetwiste saldo.
 
@@ -1035,12 +1053,12 @@ Invoices are issued electronically and payable within thirty days of the invoice
 Failing payment on the due date, and without prior notice, the following are due as of right:
 - late payment interest at the rate provided for by the Belgian Act of 2 August 2002 on combating late payment in commercial transactions;
 - a fixed sum of forty euros for recovery costs, under the same Act;
-- an additional indemnity of ten per cent of the unpaid amount, with a minimum of one hundred and fifty euros, as liquidated damages covering administrative and follow-up costs.
+- beyond that fixed sum, reimbursement of other recovery costs reasonably incurred, on proof, under Article 6 of the same Act.
 
 Non-payment of one invoice on its due date makes all other invoices immediately payable, including those not yet due, and entitles the carrier to suspend ongoing services after written notice.
 
 ## Article 10 — Disputing an invoice
-Any dispute must be received in writing within ten calendar days of the invoice date, stating precise grounds. After that period, the invoice is deemed accepted.
+Any dispute must be received in writing within ten calendar days of the invoice date, stating precise grounds. After that period, the invoice is presumed accepted, unless proven otherwise.
 
 A dispute concerning part of an invoice does not release the customer from paying the undisputed balance.
 

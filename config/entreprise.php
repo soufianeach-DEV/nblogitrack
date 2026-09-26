@@ -11,4 +11,8 @@ return [
     'tva' => 'BE 0123.456.749',
     'iban' => 'BE68 5390 0754 7034',
     'peppol' => '0208:0123456749',
+    // Mentions exigees sur les factures (Code des societes, art. 2:20).
+    'rpm' => 'RPM Bruxelles',
+    'courriel' => 'info@nblogitrack.be',
+    'site' => 'www.nblogitrack.be',
 ];

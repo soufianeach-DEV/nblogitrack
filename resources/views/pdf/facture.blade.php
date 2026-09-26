@@ -195,12 +195,12 @@
         @endif
 
         <p class="mention">
-            {{ $t::t('pdf.conditions', 'Paiement au comptant sauf convention contraire. À défaut de paiement à l\'échéance, intérêts de retard conformément à la loi du 2 août 2002 concernant la lutte contre le retard de paiement dans les transactions commerciales.') }}
+            {{ $t::t('pdf.conditions_echeance', 'Payable au plus tard le :date, sans escompte. À défaut de paiement à l\'échéance, sont dus de plein droit un intérêt de retard au taux de la loi du 2 août 2002 et une indemnité forfaitaire de 40 € pour frais de recouvrement (article 9 des conditions générales).', ['date' => $facture->due_on?->format('d/m/Y')]) }}
         </p>
     </div>
 
     <div class="pied">
-        {{ config('entreprise.nom') }} — {{ config('entreprise.adresse') }}, {{ config('entreprise.localite') }} — {{ config('entreprise.tva') }}
+        {{ config('entreprise.nom') }} — {{ config('entreprise.adresse') }}, {{ config('entreprise.localite') }} — {{ config('entreprise.tva') }} — {{ config('entreprise.rpm') }} — {{ config('entreprise.courriel') }} — {{ config('entreprise.site') }}
     </div>
 </body>
 </html>
