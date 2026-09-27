@@ -93,8 +93,12 @@ export default function Login({ status, canResetPassword }) {
             </form>
 
             <div className="mt-8 flex justify-between text-xs text-slate-600">
-                <span>{t('commun.copyright', '© :annee NBLogiTrack Belgium', { annee: new Date().getFullYear() })}</span>
-                <span>{t('auth.aide', 'Aide · Confidentialité')}</span>
+                <span>{t('commun.copyright', '© :annee NBLogiTrack SRL', { annee: new Date().getFullYear() })}</span>
+                {/* Des liens, et un retour a l'accueil, absent sur mobile. */}
+                <span className="flex gap-3">
+                    <Link href={route('accueil')} className="hover:text-marine hover:underline">{t('nav.accueil', 'Accueil')}</Link>
+                    <Link href={route('pages.show', 'confidentialite')} className="hover:text-marine hover:underline">{t('auth.confidentialite', 'Confidentialité')}</Link>
+                </span>
             </div>
         </GuestLayout>
     );

@@ -39,7 +39,7 @@
                 <span style="color:#4a5568; font-size:12px; text-transform:uppercase; letter-spacing:1px;">{{ $t::t('courriel.virement', 'Virement') }}</span>
                 <div style="color:#14324F; font-size:15px; margin-top:4px;">
                     {{ config('entreprise.iban') }}<br>
-                    {{ $t::t('courriel.communication', 'Communication') }} : <strong>{{ $facture->payment_reference }}</strong>
+                    {{ $t::t('courriel.communication', 'Communication') }}{{ app()->getLocale() === 'fr' ? ' :' : ':' }} <strong>{{ $facture->payment_reference }}</strong>
                 </div>
             </td>
         </tr>

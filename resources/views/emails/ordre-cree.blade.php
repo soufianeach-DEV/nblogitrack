@@ -61,7 +61,7 @@
             </tr>
         @endif
         <tr>
-            <td style="padding:12px 0; color:#94a3b8; border-top:1px solid #e2e8f0;">{{ $t::t('courriel.prix_estime', 'Prix estimé') }}</td>
+            <td style="padding:12px 0; color:#94a3b8; border-top:1px solid #e2e8f0;">{{ $t::t('courriel.prix_estime', 'Prix estimé HT') }}</td>
             <td style="padding:12px 0; border-top:1px solid #e2e8f0; color:#14324F; font-size:16px; font-weight:bold;">{{ $f::montant($ordre->estimated_cost) }}</td>
         </tr>
     </table>

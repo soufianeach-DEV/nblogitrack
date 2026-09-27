@@ -161,10 +161,11 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
             <span className="font-semibold uppercase tracking-wide text-slate-600">{t('planif.besoins', 'Besoins')}</span>
 
-            {/* Tronque au centieme : arrondi au dixieme, 850 kg s'affichaient
-                0,9 t et semblaient ecarter un camion de 0,85 t qui convient. */}
+            {/* Arrondi au centieme superieur : c'est un minimum. Tronque,
+                14 213,86 kg donnaient « ≥ 14,21 t », alors qu'un camion de
+                14,21 t est ecarte. 850 kg restent 0,85 t. */}
             <span className={pastille + ' bg-surface text-marine'}>
-                {t('planif.charge_utile', 'Charge utile ≥')} {(Math.floor(Number(ordre.weight) / 10) / 100).toLocaleString(locale, { maximumFractionDigits: 2 })} t
+                {t('planif.charge_utile', 'Charge utile ≥')} {(Math.ceil(Number(ordre.weight) / 10) / 100).toLocaleString(locale, { maximumFractionDigits: 2 })} t
             </span>
 
             {ordre.volume && (

@@ -18,7 +18,7 @@ export default {
             colors: {
                 marine: { DEFAULT: '#14324F', deep: '#001D36' },
                 'brand-blue': '#0B61A1',
-                action: { DEFAULT: '#F59E0B', dark: '#D97706' },
+                action: { DEFAULT: '#F59E0B', dark: '#D97706', texte: '#B45309' },
                 ink: '#1A202C',
                 surface: '#F5F7FA',
                 // Teintes calibrees pour rester lisibles sur fond clair :

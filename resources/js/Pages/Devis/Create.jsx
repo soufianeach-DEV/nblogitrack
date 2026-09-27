@@ -553,8 +553,8 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
             if (! data.phone.trim()) m.phone = requis;
         }
         if (n === 2) {
-            if (! data.pickup_lat) m.pickup_address = t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.');
-            if (! data.delivery_lat) m.delivery_address = t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.');
+            if (! data.pickup_lat) m.pickup_address = t('msg.devis_adresse_enlevement', 'Sélectionnez l\'adresse d\'enlèvement dans les listes proposées.');
+            if (! data.delivery_lat) m.delivery_address = t('msg.devis_adresse_livraison', 'Sélectionnez l\'adresse de livraison dans les listes proposées.');
             if (! data.pickup_date) m.pickup_date = requis;
             // Les pays du trajet se choisissent ici : c'est ici que la douane
             // se sait, et que l'EORI se demande.

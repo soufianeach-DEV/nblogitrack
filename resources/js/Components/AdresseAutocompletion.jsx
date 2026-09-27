@@ -691,6 +691,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     <div className="relative">
                         <TextInput
                             value={ville}
+                            aria-label={t('adresse.ville', 'Ville')}
                             onChange={(e) => chercherVilles(e.target.value)}
                             onFocus={afficherVilles}
                             onClick={afficherVilles}
@@ -727,10 +728,10 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         )}
                     </div>
                     {aucuneVille && ville.length >= 2 && (
-                        <p className="mt-1 text-xs text-status-incident">{t('adresse.aucune_ville', 'Aucune ville trouvée en :pays — vérifie l\'orthographe ou le pays.', { pays: nomPays })}</p>
+                        <p className="mt-1 text-xs text-status-incident">{t('adresse.aucune_ville', 'Aucune ville trouvée en :pays — vérifiez l\'orthographe ou le pays.', { pays: nomPays })}</p>
                     )}
                     {!aucuneVille && ville.length >= 2 && !villeCoords && suggVilles.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_ville', 'Choisis la ville dans la liste de suggestions.')}</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_ville', 'Choisissez la ville dans la liste de suggestions.')}</p>
                     )}
                 </div>
                 <div>
@@ -738,6 +739,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                     <div className="relative">
                         <TextInput
                             value={cp}
+                            aria-label={t('adresse.code_postal', 'Code postal')}
                             onChange={(e) => chercherCps(e.target.value)}
                             onFocus={afficherCps}
                             onClick={afficherCps}
@@ -781,7 +783,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-status-incident">{t('adresse.cp_introuvable', 'Code postal introuvable pour cette ville — choisis-en un dans la liste.')}</p>
                     )}
                     {villeCoords && !cpsLibres && cp && !cpChoisi && !aucunCp && suggCps.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_cp', 'Choisis un code postal dans la liste de suggestions.')}</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_cp', 'Choisissez un code postal dans la liste de suggestions.')}</p>
                     )}
                     {villeCoords && cpsLibres && (
                         <p className="mt-1 text-xs text-slate-600">{t('adresse.cp_libres', 'Codes postaux non référencés pour cette ville — saisie libre.')}</p>
@@ -793,6 +795,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             <span className={sousLabel}>{t('adresse.rue', 'Rue')} <span className="text-status-incident">*</span></span>
                             <TextInput
                                 value={rue}
+                                aria-label={t('adresse.rue', 'Rue')}
                                 onChange={(e) => chercherRues(e.target.value)}
                                 onFocus={() => { if (rue.length >= 2 && !rueChoisie) chercherRues(rue); }}
                                 onBlur={() => setTimeout(() => setSuggRues([]), 150)}
@@ -825,6 +828,7 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             <div className="relative">
                             <TextInput
                                 value={numero}
+                                aria-label={t('adresse.numero', 'N°')}
                                 onChange={(e) => chercherNums(e.target.value)}
                                 onFocus={afficherNums}
                                 onClick={afficherNums}
@@ -870,11 +874,11 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                         <p className="mt-1 text-xs text-status-incident">
                             {pays === 'BE'
                                 ? t('adresse.aucune_rue_be', 'Aucune rue trouvée à :lieu — une rue porte son nom local (néerlandais en Flandre) : écris-le tel quel (ex. « Statiestraat ») ou tape un mot du nom (ex. « rubens »).', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })
-                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écris le nom complet (ex. « champ de mars ») et vérifie l\'orthographe.', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })}
+                                : t('adresse.aucune_rue', 'Aucune rue trouvée à :lieu — écrivez le nom complet (ex. « champ de mars ») et vérifiez l\'orthographe.', { lieu: cp ? `${cp} ${cpLocalite || ville}`.trim() : (cpLocalite || ville || nomPays) })}
                         </p>
                     )}
                     {!aucuneRue && rue.length >= 2 && !rueChoisie && suggRues.length === 0 && (
-                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_rue', 'Choisis la rue dans la liste de suggestions.')}</p>
+                        <p className="mt-1 text-xs text-slate-600">{t('adresse.choisir_rue', 'Choisissez la rue dans la liste de suggestions.')}</p>
                     )}
                     {numsChargement && (
                         <p className="mt-1 text-xs text-slate-600">{t('adresse.chargement_numeros', 'Chargement des numéros de la rue…')}</p>

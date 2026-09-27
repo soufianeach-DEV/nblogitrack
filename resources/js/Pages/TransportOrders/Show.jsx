@@ -165,7 +165,7 @@ function Supplements({ order, supplements, peutAjouter, peutRetirer = false, eur
                 <ul className="divide-y divide-slate-100 text-sm">
                     {supplements.map((s) => (
                         <li key={s.id} className="flex items-center justify-between gap-3 py-2">
-                            <span className="text-slate-700">
+                            <span className="min-w-0 break-words text-slate-700">
                                 {s.libelle}
                                 <span className="block text-xs text-slate-500">
                                     {s.date} · {s.facture ? t('ordres.supplement_facture', 'facturé') : annuleeSansFrais ? t('ordres.supplement_non_facture', 'non facturé : expédition annulée sans frais') : t('ordres.supplement_a_facturer', 'sur la prochaine facture')}
@@ -193,7 +193,7 @@ function Supplements({ order, supplements, peutAjouter, peutRetirer = false, eur
                         type="text"
                         value={data.libelle}
                         onChange={(e) => setData('libelle', e.target.value)}
-                        placeholder={t('ordres.supplement_libelle', 'Attente au quai 2 h, manutention…')}
+                        aria-label={t('ordres.supplement_libelle', 'Attente au quai 2 h, manutention…')} placeholder={t('ordres.supplement_libelle', 'Attente au quai 2 h, manutention…')}
                         className={champ}
                         minLength={3}
                         maxLength={200}
@@ -206,7 +206,7 @@ function Supplements({ order, supplements, peutAjouter, peutRetirer = false, eur
                         max="100000"
                         value={data.montant}
                         onChange={(e) => setData('montant', e.target.value)}
-                        placeholder={t('ordres.supplement_montant', '€ HT')}
+                        aria-label={t('ordres.supplement_montant', '€ HT')} placeholder={t('ordres.supplement_montant', '€ HT')}
                         className={champ}
                         required
                     />
@@ -322,7 +322,7 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         {ligne(t('ordres.formule', 'Formule'), order.tariff_grid
                             ? (order.formule ?? order.tariff_grid.libelle ?? order.tariff_grid.label) + ' — ' + (order.delai_promis ?? order.tariff_grid.delivery_days) + ' ' + t('ordres.j', 'j')
                             : null)}
-                        {ligne(t('commande.estimation', 'Prix estimé'), nombre(order.estimated_cost, '€', 2))}
+                        {ligne(t('commande.estimation', 'Prix estimé HT'), (order.estimated_cost !== null && order.estimated_cost !== undefined ? euros(order.estimated_cost) : '—'))}
                     </dl>
                 ))}
 
@@ -355,7 +355,7 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                                 {facture.reference}
                             </Link>
                         ))}
-                        {ligne(t('ordres.montant_ttc', 'Montant TTC'), nombre(facture.ttc, '€', 2))}
+                        {ligne(t('ordres.montant_ttc', 'Montant TTC'), euros(facture.ttc))}
                         {facture.payee_le
                             ? ligne(t('ordres.payee_le', 'Payée le'), facture.payee_le)
                             : ligne(t('facture.echeance', 'Échéance'), facture.echeance)}

@@ -24,6 +24,22 @@ class TransportOrderSeeder extends Seeder
             }
         });
 
+        // Le fichier couvre quatre mois devant nous : une commande pour
+        // novembre y etait aussi « creee » en novembre, et le journal
+        // s'ouvrait sur des entrees futures. Une commande a venir est passee
+        // ces derniers jours. Le numero de suivi porte l'annee ou la
+        // commande est creee, comme en production.
+        DB::table('transport_orders')->where('created_at', '>', now())->orderBy('id')->get(['id'])
+            ->each(function ($o) {
+                $cree = now()->subDays(1 + $o->id % 10)->setTime(9 + $o->id % 8, ($o->id * 7) % 60);
+                DB::table('transport_orders')->where('id', $o->id)->update([
+                    'created_at' => $cree,
+                    'created_date' => $cree->toDateString(),
+                    'updated_at' => $cree,
+                ]);
+            });
+        DB::statement("UPDATE transport_orders SET tracking_number = 'TRK-' || to_char(created_at, 'YYYY') || '-' || lpad(id::text, 5, '0')");
+
         (new CoherenceDesAffectations)();
         $this->call(ScenarioFretRetour::class);
     }

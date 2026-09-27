@@ -133,7 +133,7 @@ export default function Index({ traductions, groupes, langues, recherche, groupe
                 <input
                     value={terme}
                     onChange={(e) => setTerme(e.target.value)}
-                    placeholder={t('trad.chercher', 'Chercher une clé ou un texte…')}
+                    aria-label={t('trad.chercher', 'Chercher une clé ou un texte…')} placeholder={t('trad.chercher', 'Chercher une clé ou un texte…')}
                     className="min-w-[16rem] flex-1 rounded-lg border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                 />
                 <button type="submit" className="rounded-lg bg-marine px-4 py-2 text-sm font-semibold text-white transition hover:bg-marine-deep">

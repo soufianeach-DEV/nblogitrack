@@ -135,10 +135,19 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                 body: JSON.stringify({ depart, pays_depart: paysDepart, destination, pays, poids, adr }),
             });
 
-            const donnees = await reponse.json();
+            const donnees = await reponse.json().catch(() => ({}));
 
             if (! reponse.ok) {
-                setErreur(donnees.erreur ?? t('tarifs.erreur_simulation', 'La simulation a échoué. Vérifiez les localités saisies.'));
+                // Chaque cause a son message : la limite d'essais ou une
+                // valeur refusee passaient pour une localite mal saisie.
+                const premiere = donnees.errors ? Object.values(donnees.errors)[0]?.[0] : null;
+                setErreur(
+                    reponse.status === 429
+                        ? t('tarifs.trop_de_simulations', 'Trop de simulations en peu de temps. Réessayez dans une minute.')
+                        : reponse.status === 419
+                            ? t('msg.session_expiree_courte', 'Votre session a expiré, reconnectez-vous.')
+                            : donnees.erreur ?? premiere ?? t('tarifs.erreur_simulation', 'La simulation a échoué. Vérifiez les localités saisies.'),
+                );
                 setResultat(null);
             } else {
                 setResultat(donnees);

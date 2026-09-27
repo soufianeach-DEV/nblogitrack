@@ -113,9 +113,9 @@ export default function Index({ orders, filters }) {
                                 <th className="px-6 py-4 text-right font-semibold">{t('ordres.cout', 'Coût est.')}</th>
                             </tr>
                             <tr className="border-b border-slate-100">
-                                <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} placeholder="TRK-…" className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} placeholder={t('ordres.filtre_entreprise', 'Entreprise…')} className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} placeholder={t('ordres.filtre_ville', 'Ville, adresse…')} className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} aria-label={t('ordres.filtre_numero', 'Numéro de suivi')} placeholder="TRK-…" className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} aria-label={t('ordres.filtre_entreprise', 'Entreprise…')} placeholder={t('ordres.filtre_entreprise', 'Entreprise…')} className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} aria-label={t('ordres.filtre_ville', 'Ville, adresse…')} placeholder={t('ordres.filtre_ville', 'Ville, adresse…')} className={inputCls} /></th>
                                 <th className="px-6 py-2">
                                     <select value={search.status} onChange={(e) => update('status', e.target.value)} className={inputCls}>
                                         <option value="">{t('ordres.tous', 'Tous')}</option>

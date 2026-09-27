@@ -302,4 +302,14 @@ class CorrectionsQaTest extends TestCase
             ->get(route('planning.index', ['status' => 'PENDING', 'imminent' => 1]))
             ->assertInertia(fn ($page) => $page->where('orders.total', 2)->where('imminent', true));
     }
+
+    public function test_une_expedition_deja_annulee_le_dit(): void
+    {
+        $client = Client::factory()->create();
+        $ordre = TransportOrder::factory()->create(['client_id' => $client->id, 'status' => 'CANCELLED', 'cancelled_at' => now()]);
+
+        $this->actingAs($client->compte())
+            ->patch(route('transport-orders.cancel', $ordre), ['frais' => 0])
+            ->assertSessionHas('error', Traductions::t('annulation.deja_annulee', 'Cette expédition est déjà annulée.'));
+    }
 }

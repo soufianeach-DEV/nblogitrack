@@ -1,4 +1,4 @@
-import BandeauTemoins from '@/Components/BandeauTemoins';
+import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import BoutonRetour from '@/Components/BoutonRetour';
 import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
@@ -629,6 +629,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
 function SuiviVisiteur({ order, searched }) {
     const t = useTraduction();
+    const { pages_pied: pagesPied = [] } = usePage().props;
     const adresse = useAdresse();
     const locale = useLocale();
     // Le lien du courriel porte le numero et le code : les champs les
@@ -752,7 +753,18 @@ function SuiviVisiteur({ order, searched }) {
                 </main>
 
                 <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-600">
-                    {t('suivi.pied', 'NBLogiTrack Belgium — suivi d\'expédition')}
+                    {t('suivi.pied', 'NBLogiTrack SRL — suivi d\'expédition')}
+                    {/* Page mesuree : le choix des cookies et les pages legales
+                        doivent y etre accessibles. */}
+                    <nav className="mt-2 flex flex-wrap justify-center gap-4">
+                        <Link href={route('accueil')} className="hover:text-marine hover:underline">{t('nav.accueil', 'Accueil')}</Link>
+                        {pagesPied.map((p) => (
+                            <Link key={p.href} href={p.href} className="hover:text-marine hover:underline">{p.libelle}</Link>
+                        ))}
+                        <button type="button" onClick={ouvrirTemoins} className="hover:text-marine hover:underline">
+                            {t('temoins.gerer', 'Gérer les cookies')}
+                        </button>
+                    </nav>
                 </footer>
 
                 <BandeauTemoins />

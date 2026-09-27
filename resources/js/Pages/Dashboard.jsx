@@ -352,7 +352,7 @@ function ValidationsEnAttente({ validations }) {
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">{t('tdb.validations', 'Validations en attente')}</h2>
-                <Link href={route('clients.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('clients.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -497,7 +497,7 @@ function CarteEnCirculation({ carte, total }) {
             </div>
             <Link
                 href={route('tracking.show')}
-                className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-action transition hover:bg-surface"
+                className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-action-texte transition hover:bg-surface"
             >
                 {t('tdb.ouvrir_suivi', 'Ouvrir le suivi')}
             </Link>
@@ -518,7 +518,7 @@ function Facturation({ facturation }) {
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">{t('nav.facturation', 'Facturation')}</h2>
-                <Link href={route('invoices.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('invoices.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -584,7 +584,7 @@ function Conformite({ conformite }) {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">{titre}</h3>
                 {total > 0 && (
-                    <Link href={adresse} className="text-sm font-medium text-action hover:underline">
+                    <Link href={adresse} className="text-sm font-medium text-action-texte hover:underline">
                         {t('tdb.voir_les', 'Voir les')} {total}
                     </Link>
                 )}
@@ -659,7 +659,7 @@ function DernieresTraces({ journal }) {
         <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
                 <h2 className="font-semibold text-marine">{t('tdb.traces', 'Dernières traces')}</h2>
-                <Link href={route('activity-logs.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('activity-logs.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -831,7 +831,7 @@ export default function Dashboard({
                     <section className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
                             <h2 className="font-semibold text-marine">{t('tdb.derniers_ordres', 'Derniers ordres')}</h2>
-                            <Link href={route('transport-orders.index')} className="text-sm font-medium text-action hover:underline">
+                            <Link href={route('transport-orders.index')} className="text-sm font-medium text-action-texte hover:underline">
                                 {t('action.voir_tout', 'Voir tout')}
                             </Link>
                         </div>

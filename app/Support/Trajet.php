@@ -68,7 +68,7 @@ final class Trajet
     {
         if (! self::enLigne($this->depart)) {
             return self::surDevis($this->depart)
-                ? Traductions::t('msg.enlevement_sur_devis', 'Nous enlevons en :pays sur devis (douane, ferry ou îles) : demandez un devis.', ['pays' => Pays::libelle($this->depart) ?? $this->depart])
+                ? Traductions::t('msg.enlevement_sur_devis', 'Un enlèvement dans ce pays (:pays) se fait sur devis (douane, ferry ou îles) : demandez un devis.', ['pays' => Pays::libelle($this->depart) ?? $this->depart])
                 : Traductions::t('msg.enlevement_non_desservi', 'Nous n\'enlevons pas encore en ligne dans ce pays : demandez un devis.');
         }
 

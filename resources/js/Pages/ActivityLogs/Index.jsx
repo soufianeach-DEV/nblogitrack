@@ -79,7 +79,7 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <input
                         value={champs.utilisateur}
                         onChange={(e) => filtrer('utilisateur', e.target.value)}
-                        placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
+                        aria-label={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')} placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
                         className={champCls}
                     />
                     <ListeRecherche
@@ -93,7 +93,7 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <input
                         value={champs.ip}
                         onChange={(e) => filtrer('ip', e.target.value)}
-                        placeholder={t('journal.ip', 'Adresse IP')}
+                        aria-label={t('journal.ip', 'Adresse IP')} placeholder={t('journal.ip', 'Adresse IP')}
                         className={champCls}
                     />
                     <input type="date" value={champs.du} onChange={(e) => filtrer('du', e.target.value)} className={champCls} />

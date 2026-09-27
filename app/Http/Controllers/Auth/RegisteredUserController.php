@@ -187,8 +187,8 @@ class RegisteredUserController extends Controller
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
         ], [
-            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
-            'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionne l\'adresse du siège dans les listes proposées.'),
+            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisissez un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
+            'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionnez l\'adresse du siège dans les listes proposées.'),
             'marque_declaree.accepted' => Traductions::t('msg.marque_non_confirmee', 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.'),
             'conditions_acceptees.accepted' => Traductions::t('msg.conditions_non_acceptees', 'Vous devez accepter les conditions générales et la politique de confidentialité.'),
         ]);

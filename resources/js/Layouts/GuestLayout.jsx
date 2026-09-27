@@ -9,7 +9,7 @@ export default function GuestLayout({ children, large = false }) {
     const { paysDesservis = 0 } = usePage().props;
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-3">
+        <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden p-3">
             {}
             <div
                 className="absolute inset-0 scale-105 bg-cover bg-center blur-sm"

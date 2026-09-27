@@ -28,7 +28,7 @@ class VatController extends Controller
         if ($identifiant['tva'] === null) {
             return response()->json([
                 'statut' => 'format',
-                'message' => Traductions::t('msg.tva_format', 'Saisis un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
+                'message' => Traductions::t('msg.tva_format', 'Saisissez un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
             ]);
         }
 
@@ -92,7 +92,7 @@ class VatController extends Controller
                 ? Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.')
                 : Traductions::t('msg.tva_inactive_registre', 'Ce numéro n\'est pas actif dans le registre :registre.', ['registre' => $resultat['registre']]),
             'non_verifie' => Traductions::t('msg.tva_non_verifiee', 'Format valide. Le registre :registre n\'est pas interrogé : complétez les informations vous-même.', ['registre' => $resultat['registre'] ?? '']),
-            'indisponible' => Traductions::t('msg.tva_registre_sature', 'Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.'),
+            'indisponible' => Traductions::t('msg.tva_registre_sature', 'Le registre européen est momentanément saturé. Réessayez dans un instant ou saisissez les informations manuellement.'),
             default => null,
         };
 
@@ -589,7 +589,7 @@ class VatController extends Controller
     {
         return [
             'statut' => 'indisponible',
-            'message' => 'Le registre européen est momentanément saturé. Réessaie dans un instant ou saisis les informations manuellement.',
+            'message' => 'Le registre européen est momentanément saturé. Réessayez dans un instant ou saisissez les informations manuellement.',
         ];
     }
 

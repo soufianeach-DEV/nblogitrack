@@ -198,17 +198,27 @@ class TransportOrderController extends Controller
 
         $frais = $transportOrder->fraisAnnulation();
 
+        // Chaque refus dit ce qui s'est vraiment passe : une expedition deja
+        // annulee s'entendait dire que sa marchandise etait chargee.
+        if ($transportOrder->status === 'CANCELLED') {
+            return back()->with('error', Traductions::t('annulation.deja_annulee', 'Cette expédition est déjà annulée.'));
+        }
+
         if ($frais === null) {
             return back()->with('error', Traductions::t('annulation.trop_tard', 'La marchandise est déjà chargée : l\'expédition ne peut plus être annulée en ligne. Contactez-nous.'));
         }
 
-        // Le client confirme le montant qu'il a vu. Si un camion a ete
-        // affecte entre-temps, l'indemnite a change : on ne l'impose pas
-        // sans le lui montrer.
+        // Le client confirme le montant qu'il a vu. S'il a change entre-temps
+        // (camion affecte, ou au contraire retire), on ne l'impose pas sans
+        // le lui montrer.
         if (abs($frais - (float) $donnees['frais']) > 0.001) {
-            return back()->with('error', Traductions::t('annulation.montant_change', 'Un véhicule vient d\'être affecté à cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', [
-                'montant' => Formats::montant($frais),
-            ]));
+            return back()->with('error', $frais > (float) $donnees['frais']
+                ? Traductions::t('annulation.montant_change', 'Un véhicule vient d\'être affecté à cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', [
+                    'montant' => Formats::montant($frais),
+                ])
+                : Traductions::t('annulation.montant_baisse', 'Le véhicule prévu a été retiré de cette expédition : son annulation coûte désormais :montant HT. Vérifiez le montant et confirmez à nouveau.', [
+                    'montant' => Formats::montant($frais),
+                ]));
         }
 
         $ancien = $transportOrder->status;
@@ -484,11 +494,11 @@ class TransportOrderController extends Controller
             'loading_reference' => 'nullable|string|max:60',
             'prix_annonce' => 'nullable|numeric|min:0',
         ], [
-            'pickup_lat.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionne une adresse de départ dans la liste de suggestions.'),
-            'pickup_lng.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionne une adresse de départ dans la liste de suggestions.'),
-            'delivery_lat.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
-            'delivery_lng.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
-            'delivery_country.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionne une adresse de destination dans la liste de suggestions.'),
+            'pickup_lat.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionnez une adresse de départ dans la liste de suggestions.'),
+            'pickup_lng.required' => Traductions::t('msg.choisir_adresse_depart', 'Sélectionnez une adresse de départ dans la liste de suggestions.'),
+            'delivery_lat.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionnez une adresse de destination dans la liste de suggestions.'),
+            'delivery_lng.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionnez une adresse de destination dans la liste de suggestions.'),
+            'delivery_country.required' => Traductions::t('msg.choisir_adresse_destination', 'Sélectionnez une adresse de destination dans la liste de suggestions.'),
             'pickup_date.after_or_equal' => Traductions::t('msg.enlevement_passe', 'La date d\'enlèvement ne peut pas être dans le passé.'),
             'requested_delivery_date.after_or_equal' => Traductions::t('msg.livraison_passee', 'La date de livraison souhaitée ne peut pas être dans le passé.'),
             'is_hazardous.required' => Traductions::t('msg.declaration_adr_requise', 'Pour ce type de marchandise, indiquez si l\'envoi est soumis à l\'ADR (matière dangereuse) ou non.'),
@@ -570,7 +580,7 @@ class TransportOrderController extends Controller
             return back()->withErrors([
                 'pickup_date' => Traductions::t(
                     'msg.enlevement_jour_chome',
-                    'Aucun enlèvement le :jour. Le premier jour ouvrable est le :date.',
+                    'Aucun enlèvement ce jour-là (:jour). Le premier jour ouvrable est le :date.',
                     [
                         'jour' => $jourLocal->isSunday()
                             ? Traductions::t('msg.dimanche', 'dimanche')

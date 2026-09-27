@@ -168,7 +168,7 @@ class DevisCompletTest extends TestCase
         $this->assertSame('PENDING', $ordre->status);
         $this->assertGreaterThan(0, (float) $ordre->estimated_cost);
         $this->assertStringContainsString('Marc Dubois', $ordre->special_instructions);
-        $this->assertStringContainsString('de 2.0 à 8.0 °C', $ordre->special_instructions);
+        $this->assertStringContainsString('de 2,0 à 8,0 °C', $ordre->special_instructions);
         $this->assertSame(['ORDERED', $ordre->id], [$devis->fresh()->status, $devis->fresh()->converted_order_id]);
 
         // Une seconde fois : refuse.

@@ -154,7 +154,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </Groupe>
 
             {canSeeInvoices && (
-                <Groupe titre={t('nav.finance', 'Finance & data')}>
+                <Groupe titre={t('nav.finance', 'Finance et données')}>
                     <LienMenu href={route('invoices.index')} active={route().current('invoices.*') || route().current('purchases.*')} icone="facture" onClick={fermer}>
                         {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
                     </LienMenu>
@@ -219,7 +219,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </Link>
             <div className="flex items-center gap-2 px-4 pb-1 pt-2">
                 <span className="text-xs text-slate-500">{t('nav.langue', 'Langue')}</span>
-                <ChoixLangue sombre />
+                <ChoixLangue sombre haut />
             </div>
         </div>
     );

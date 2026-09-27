@@ -2,7 +2,9 @@ import { usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTraduction } from '@/traduire';
 
-export default function ChoixLangue({ className = '', sombre = false }) {
+// « haut » : le menu s'ouvre au-dessus du bouton, aligne a gauche. En bas
+// de la barre laterale, il s'ouvrait sous le bord de la fenetre.
+export default function ChoixLangue({ className = '', sombre = false, haut = false }) {
     const { langue, langues = {} } = usePage().props;
     const codes = Object.keys(langues);
     const [ouvert, setOuvert] = useState(false);
@@ -62,7 +64,9 @@ export default function ChoixLangue({ className = '', sombre = false }) {
             {ouvert && (
                 <div
                     role="menu"
-                    className="absolute end-0 z-50 mt-2 w-44 overflow-hidden rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5"
+                    className={`absolute z-50 w-44 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 ${
+                        haut ? 'bottom-full start-0 mb-2' : 'end-0 mt-2'
+                    }`}
                 >
                     {codes.map((code) => (
                         <a

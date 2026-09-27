@@ -43,7 +43,7 @@ export default function Register({ secteurs, fonctions }) {
     const verifierTva = async () => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
         if (tva.length < 6) {
-            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisis le numéro complet, code pays inclus (ex. BE0123456749).') });
+            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisissez le numéro complet, code pays inclus (ex. BE0123456749).') });
             return;
         }
 

@@ -169,7 +169,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                 <input
                     value={champ}
                     onChange={(e) => chercher(e.target.value)}
-                    placeholder={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')}
+                    aria-label={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')} placeholder={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')}
                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine sm:max-w-lg"
                 />
             </div>
@@ -289,7 +289,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                                 {ligne(t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'), d.declared_value ? euros(d.declared_value) : null)}
                                 {ligne(t('devis.budget', 'Budget indicatif (€ HT)'), d.budget ? euros(d.budget) : null)}
                                 {ligne(t('devis.reponse_avant', 'Réponse souhaitée avant le'), d.response_deadline ? date(d.response_deadline) : null)}
-                                {d.needs_temperature && ligne(t('devis.temperature', 'Température dirigée'), `${d.temperature_min} °C → ${d.temperature_max} °C`)}
+                                {d.needs_temperature && ligne(t('devis.temperature', 'Température dirigée'), `${Number(d.temperature_min).toLocaleString(locale)} °C → ${Number(d.temperature_max).toLocaleString(locale)} °C`)}
                                 {d.is_hazardous && ligne('ADR', [d.un_number && t('devis.onu', 'ONU') + ' ' + d.un_number, d.adr_class && t('devis.classe_adr', 'Classe ADR') + ' ' + d.adr_class, d.packing_group && t('devis.groupe_emballage', 'Groupe d\'emballage') + ' ' + d.packing_group].filter(Boolean).join(' · '))}
                                 {(d.packages ?? []).length > 0 && (
                                     <div className="sm:col-span-2 lg:col-span-3">
@@ -382,7 +382,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                         value={entreprise}
                         onChange={setEntreprise}
                         options={entreprises}
-                        placeholder={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')}
+                        aria-label={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')} placeholder={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')}
                         className="mt-1"
                     />
                     {aCommander && (aCommander.client_propose
@@ -427,7 +427,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs,
                         value={data.internal_note}
                         onChange={(e) => setData('internal_note', e.target.value)}
                         rows="3"
-                        placeholder={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')}
+                        aria-label={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')} placeholder={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')}
                         className="mt-4 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                     />
                     {errors.internal_note && <p className="mt-1 text-sm text-status-incident">{errors.internal_note}</p>}

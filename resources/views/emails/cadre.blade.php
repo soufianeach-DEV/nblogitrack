@@ -24,7 +24,7 @@
                     </tr>
                     <tr>
                         <td style="background-color:#F5F7FA; padding:16px 32px; color:#94a3b8; font-size:11px;">
-                            © {{ date('Y') }} NBLogiTrack Belgium — @hasSection('pied')@yield('pied')@else{{ $t::t('courriel.pied_automatique', 'cet e-mail a été envoyé automatiquement, merci de ne pas y répondre.') }}@endif
+                            © {{ date('Y') }} NBLogiTrack SRL — @hasSection('pied')@yield('pied')@else{{ $t::t('courriel.pied_automatique', 'cet e-mail a été envoyé automatiquement, merci de ne pas y répondre.') }}@endif
                         </td>
                     </tr>
                 </table>

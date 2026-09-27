@@ -317,10 +317,10 @@ class QuoteController extends Controller
 
             'special_instructions' => 'nullable|string|max:2000',
         ], [
-            'pickup_address.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.'),
-            'pickup_lat.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionne l\'adresse d\'enlèvement dans les listes proposées.'),
-            'delivery_address.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.'),
-            'delivery_lat.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionne l\'adresse de livraison dans les listes proposées.'),
+            'pickup_address.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionnez l\'adresse d\'enlèvement dans les listes proposées.'),
+            'pickup_lat.required' => Traductions::t('msg.devis_adresse_enlevement', 'Sélectionnez l\'adresse d\'enlèvement dans les listes proposées.'),
+            'delivery_address.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionnez l\'adresse de livraison dans les listes proposées.'),
+            'delivery_lat.required' => Traductions::t('msg.devis_adresse_livraison', 'Sélectionnez l\'adresse de livraison dans les listes proposées.'),
             'pickup_date.after_or_equal' => Traductions::t('msg.enlevement_passe', 'La date d\'enlèvement ne peut pas être dans le passé.'),
             'delivery_date.after_or_equal' => Traductions::t('msg.devis_livraison_avant', 'La livraison ne peut pas précéder l\'enlèvement.'),
             'weight.max' => Traductions::t('msg.poids_max_devis', 'Au-delà de 44 tonnes, contactez-nous par téléphone.'),
@@ -814,6 +814,9 @@ class QuoteController extends Controller
 
     private const LIBELLES_ACCES = ['centre_ville' => 'devis.acces_centre_ville', 'zone_basses_emissions' => 'devis.acces_zbe', 'limite_tonnage' => 'devis.acces_tonnage', 'rue_etroite' => 'devis.acces_rue_etroite', 'sans_stationnement' => 'devis.acces_stationnement'];
 
+    /** Les memes, en francais : sans traduction chargee, la note gardait le code (« centre_ville »). */
+    private const ACCES_FR = ['centre_ville' => 'Centre-ville', 'zone_basses_emissions' => 'Zone de basses émissions', 'limite_tonnage' => 'Limite de tonnage', 'rue_etroite' => 'Rue étroite', 'sans_stationnement' => 'Pas de stationnement pour un camion'];
+
     /**
      * Ce que le chauffeur et le planificateur doivent savoir, en une note,
      * dans la langue de l'entreprise cliente : elle la lit dans son espace.
@@ -830,10 +833,11 @@ class QuoteController extends Controller
                     $d->{$lieu.'_contact_name'} ? $t('consignes.contact', 'contact :nom', ['nom' => $d->{$lieu.'_contact_name'}.($d->{$lieu.'_contact_phone'} ? ' ('.$d->{$lieu.'_contact_phone'}.')' : '')]) : null,
                     $d->{$lieu.'_opening_hours'} ? $t('consignes.ouvert', 'ouvert :horaires', ['horaires' => self::ouverture($d->{$lieu.'_opening_hours'})]) : null,
                     $creneau ? mb_strtolower(Traductions::t(self::LIBELLES_CRENEAU[$creneau] ?? 'devis.indifferent', $creneau)) : null,
-                    $d->{$lieu.'_has_dock'} === false ? mb_strtolower($t('devis.quai_non', 'Non : hayon nécessaire')) : null,
+                    // « non : hayon necessaire » ne se lisait pas hors du formulaire.
+                    $d->{$lieu.'_has_dock'} === false ? $t('consignes.sans_quai', 'pas de quai : hayon nécessaire') : null,
                     $d->{$lieu.'_appointment'} ? mb_strtolower($t('devis.rendez_vous', 'Prise de rendez-vous obligatoire')) : null,
                     $d->{$lieu.'_access'} ? $t('consignes.acces', 'accès : :acces', ['acces' => implode(', ', array_map(
-                        fn ($a) => mb_strtolower(Traductions::t(self::LIBELLES_ACCES[$a] ?? $a, $a)),
+                        fn ($a) => mb_strtolower(Traductions::t(self::LIBELLES_ACCES[$a] ?? $a, self::ACCES_FR[$a] ?? $a)),
                         $d->{$lieu.'_access'},
                     ))]) : null,
                     $d->{$lieu.'_access_notes'},
@@ -845,7 +849,7 @@ class QuoteController extends Controller
             }
 
             if ($d->needs_temperature) {
-                $lignes[] = $t('consignes.temperature', 'Température dirigée : de :min à :max °C.', ['min' => $d->temperature_min, 'max' => $d->temperature_max]);
+                $lignes[] = $t('consignes.temperature', 'Température dirigée : de :min à :max °C.', ['min' => Formats::nombre((float) $d->temperature_min, 1), 'max' => Formats::nombre((float) $d->temperature_max, 1)]);
             }
 
             if ($d->is_hazardous && $d->un_number) {

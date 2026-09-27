@@ -20,7 +20,7 @@
         <tr>
             <td style="padding:18px 22px; color:#4a5568; font-size:13px; line-height:1.6;">
                 {{ $t::t('courriel.note_confirmation', 'À votre prochaine connexion, l\'application vous demandera de confirmer que vous avez pris connaissance de cette note.') }}
-                <strong>{{ $t::t('courriel.note_pas_accord', 'Il ne s\'agit pas d\'un accord') }}</strong> : {{ $t::t('courriel.note_base_legale', 'le traitement repose sur votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, non sur votre consentement.') }}
+                <strong>{{ $t::t('courriel.note_pas_accord', 'Il ne s\'agit pas d\'un accord') }}</strong>{{ app()->getLocale() === 'fr' ? ' :' : ':' }} {{ $t::t('courriel.note_base_legale', 'le traitement repose sur votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, non sur votre consentement.') }}
             </td>
         </tr>
     </table>
