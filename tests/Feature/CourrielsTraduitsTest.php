@@ -20,6 +20,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -55,7 +56,7 @@ class CourrielsTraduitsTest extends TestCase
         ];
     }
 
-    /** @dataProvider langues */
+    #[DataProvider('langues')]
     public function test_les_courriels_du_client_suivent_sa_langue(string $langue, string $activation, string $ordre): void
     {
         $client = $this->client($langue);
