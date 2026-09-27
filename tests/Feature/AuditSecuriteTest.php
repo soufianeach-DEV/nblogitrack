@@ -97,6 +97,27 @@ class AuditSecuriteTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_un_inconnu_ne_bloque_pas_le_titulaire_depuis_son_adresse_habituelle(): void
+    {
+        $compte = User::factory()->create();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])
+            ->post(route('login'), ['email' => $compte->email, 'password' => 'password']);
+        $this->assertAuthenticatedAs($compte);
+        auth()->logout();
+
+        foreach (range(1, 16) as $essai) {
+            $this->withServerVariables(['REMOTE_ADDR' => '10.0.2.'.$essai])
+                ->post(route('login'), ['email' => $compte->email, 'password' => 'mauvais-mot-de-passe']);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])
+            ->post(route('login'), ['email' => $compte->email, 'password' => 'password'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs($compte);
+    }
+
     public function test_un_chauffeur_sans_fiche_ne_voit_aucune_mission(): void
     {
         TransportOrder::factory()->create(['status' => 'CANCELLED', 'driver_id' => null]);

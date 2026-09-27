@@ -3,11 +3,14 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\Client;
+use App\Models\User;
 use App\Support\Traductions;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -35,14 +38,19 @@ class LoginRequest extends FormRequest
      */
     public function authenticate(): void
     {
+        $email = mb_strtolower(trim((string) $this->input('email')));
+
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt([
-            'email' => mb_strtolower(trim((string) $this->input('email'))),
+            'email' => $email,
             'password' => $this->input('password'),
         ], $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-            RateLimiter::hit($this->cleDuCompte(), 900);
+            // Une adresse inconnue coute le meme calcul qu'un mot de passe
+            // faux : le temps de reponse ne dit plus si le compte existe.
+            if (! User::where('email', $email)->exists()) {
+                Hash::check((string) $this->input('password'), Cache::rememberForever('connexion.leurre', fn () => Hash::make(Str::random(40))));
+            }
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -52,7 +60,7 @@ class LoginRequest extends FormRequest
         $this->ensureAccountIsUsable();
 
         RateLimiter::clear($this->throttleKey());
-        RateLimiter::clear($this->cleDuCompte());
+        Cache::put($this->cleAdresseConnue(), true, now()->addDays(180));
     }
 
     /**
@@ -94,12 +102,17 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        // Cinq essais par adresse IP, et quinze par compte toutes adresses
-        // confondues sur un quart d'heure : changer d'adresse ne suffit plus
-        // pour deviner le mot de passe d'un compte.
+        // Le compteur avance avant la verification du mot de passe : des
+        // essais envoyes en rafale ne passent plus tous sous la limite.
+        //
+        // Cinq essais par adresse IP. Et quinze par compte sur un quart
+        // d'heure, toutes adresses confondues, pour qu'on ne devine pas un
+        // mot de passe en changeant d'adresse. Ce second compteur ignore les
+        // adresses d'ou le compte s'est deja connecte : un inconnu qui
+        // l'epuise n'empeche plus son titulaire d'entrer.
         $cle = match (true) {
-            RateLimiter::tooManyAttempts($this->throttleKey(), 5) => $this->throttleKey(),
-            RateLimiter::tooManyAttempts($this->cleDuCompte(), 15) => $this->cleDuCompte(),
+            RateLimiter::hit($this->throttleKey()) > 5 => $this->throttleKey(),
+            ! Cache::has($this->cleAdresseConnue()) && RateLimiter::hit($this->cleDuCompte(), 900) > 15 => $this->cleDuCompte(),
             default => null,
         };
 
@@ -122,6 +135,11 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    private function cleAdresseConnue(): string
+    {
+        return 'connexion.adresse|'.sha1(Str::lower(trim((string) $this->string('email'))).'|'.$this->ip());
     }
 
     private function cleDuCompte(): string

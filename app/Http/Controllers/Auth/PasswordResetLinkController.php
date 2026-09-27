@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
+use function Illuminate\Support\defer;
+
 class PasswordResetLinkController extends Controller
 {
     public function create(): Response
@@ -24,9 +26,10 @@ class PasswordResetLinkController extends Controller
             'email' => 'required|email',
         ]);
 
-        Password::sendResetLink(
-            $request->only('email')
-        );
+        // L'envoi part apres la reponse : sa duree (connexion au serveur de
+        // courriel) ne trahit plus qu'un compte existe pour cette adresse.
+        $adresse = $request->only('email');
+        defer(fn () => Password::sendResetLink($adresse));
 
         // La reponse est la meme que l'adresse ait un compte ou non, et
         // que l'envoi ait ete retenu par la limite ou pas : une reponse
