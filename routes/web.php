@@ -47,15 +47,24 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['auth', 'verified'])->name('dashboard');
 
+    // Le profil reste ouvert a une adresse pas encore confirmee : c'est la
+    // qu'on corrige une adresse mal saisie.
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        // Le formulaire verifie le mot de passe actuel : sans limite, une
+        // session volee le devinait a volonte avant de changer l'adresse.
+        Route::patch('/profile', [ProfileController::class, 'update'])
+            ->middleware('throttle:6,1,profil-maj')
+            ->name('profile.update');
         Route::get('/profile/export', [ProfileController::class, 'exporter'])
             ->middleware('throttle:6,1,profil-export')
             ->name('profile.export');
         Route::delete('/profile', [ProfileController::class, 'destroy'])
             ->middleware('throttle:6,1,profil-suppression')
             ->name('profile.destroy');
+    });
+
+    Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
             ->name('transport-orders.create');
         Route::post('/transport-orders', [TransportOrderController::class, 'store'])
@@ -247,7 +256,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
 
 });
 
-Route::middleware(['auth', 'throttle:itineraires'])->group(function () {
+Route::middleware(['auth', 'verified', 'throttle:itineraires'])->group(function () {
     Route::get('/suivi/{transportOrder}/itineraire', [TrackingController::class, 'itineraire'])
         ->name('tracking.itineraire');
     Route::get('/suivi/{transportOrder}/peages', [TrackingController::class, 'peages'])

@@ -39,13 +39,15 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+// Le lien du courriel se suit sans etre connecte : sa signature suffit.
+Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+    ->middleware(['signed', 'throttle:6,1,verification'])
+    ->whereNumber('id')
+    ->name('verification.verify');
+
 Route::middleware('auth')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
-
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1,verification'])
-        ->name('verification.verify');
 
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1,verification-envoi')

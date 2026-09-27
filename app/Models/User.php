@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\DatesHeureDeBruxelles;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable implements HasLocalePreference
+// L'adresse est verifiee : les liens de mot de passe et les factures ne
+// partent que vers une adresse dont le titulaire a prouve qu'il la lit.
+class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use DatesHeureDeBruxelles, HasFactory, Notifiable;

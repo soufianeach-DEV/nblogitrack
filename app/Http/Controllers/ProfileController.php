@@ -36,11 +36,30 @@ class ProfileController extends Controller
 
         $request->user()->fill($request->safe()->except('current_password'));
 
-        if ($request->user()->isDirty('email')) {
+        $nouvelleAdresse = $request->user()->isDirty('email');
+
+        if ($nouvelleAdresse) {
             $request->user()->email_verified_at = null;
         }
 
         $request->user()->save();
+
+        // La nouvelle adresse doit etre confirmee avant tout autre ecran :
+        // le lien part tout de suite.
+        if ($nouvelleAdresse) {
+            ActivityLog::record(
+                'profile.email_changed',
+                'Adresse du compte changée : '.$ancienneAdresse.' → '.$request->user()->email,
+                $request->user(),
+                ['avant' => $ancienneAdresse, 'apres' => $request->user()->email],
+            );
+
+            try {
+                $request->user()->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         // Les factures partent au contact principal de l'entreprise. Quand
         // ce contact, c'est ce compte, son adresse et son nom suivent :

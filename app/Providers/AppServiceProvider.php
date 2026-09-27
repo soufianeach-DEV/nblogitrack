@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\MemoireRequete;
 use App\Support\Traductions;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -76,6 +77,27 @@ class AppServiceProvider extends ServiceProvider
                     ]),
                 ]);
         });
+
+        // Le lien de verification d'adresse : dans la langue du destinataire,
+        // a la charte des autres courriels, et valable trois jours. Une
+        // inscription attend la validation de l'entreprise : le lien doit
+        // survivre jusque-la.
+        VerifyEmail::createUrlUsing(fn (User $destinataire) => URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addDays(3),
+            [
+                'langue' => $destinataire->preferredLocale(),
+                'id' => $destinataire->getKey(),
+                'hash' => sha1($destinataire->getEmailForVerification()),
+            ],
+        ));
+
+        VerifyEmail::toMailUsing(fn (User $destinataire, string $lien) => (new MailMessage)
+            ->subject(Traductions::t('courriel.verif_sujet', 'Confirmez votre adresse e-mail NBLogiTrack'))
+            ->view('emails.verification-adresse', [
+                'destinataire' => $destinataire,
+                'lien' => $lien,
+            ]));
 
         // Seule une recherche (numero + code) compte : ouvrir la page ou y
         // revenir n'use pas le quota qui protege les codes contre la force
