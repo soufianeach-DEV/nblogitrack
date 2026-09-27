@@ -60,6 +60,8 @@ class JournalLisible
         'concerne' => 'Concerne',
         'frais' => 'Frais',
         'reference' => 'Référence',
+        'version' => 'Version',
+        'ip' => 'Adresse IP',
     ];
 
     public static function resume(ActivityLog $ligne): string
@@ -81,7 +83,7 @@ class JournalLisible
 
         $references = array_values(array_unique($references[0]));
 
-        return $references === [] ? $libelle : $libelle.' : '.implode(', ', $references);
+        return $references === [] ? $libelle : $libelle.': '.implode(', ', $references);
     }
 
     /**

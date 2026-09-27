@@ -1349,6 +1349,8 @@ class TranslationSeeder extends Seeder
             'prop_concerne' => ['Concerne', 'Betreft', 'Concerns'],
             'prop_frais' => ['Frais', 'Kosten', 'Fee'],
             'prop_reference' => ['Référence', 'Referentie', 'Reference'],
+            'prop_version' => ['Version', 'Versie', 'Version'],
+            'prop_ip' => ['Adresse IP', 'IP-adres', 'IP address'],
             'titre' => ['Journal d\'activité', 'Activiteitenlogboek', 'Activity log'],
             'entrees' => ['Entrées enregistrées', 'Geregistreerde vermeldingen', 'Recorded entries'],
             'aujourdhui' => ['Aujourd\'hui', 'Vandaag', 'Today'],
