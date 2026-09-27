@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /**
@@ -13,6 +14,15 @@ use Tests\TestCase;
 class PolitiqueDeSecuriteCarteTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Un fichier public/hot oublie par « npm run dev » ferait croire au
+        // serveur de developpement, qui retire la politique : on l'ignore.
+        Vite::useHotFile(storage_path('framework/testing/sans-serveur-vite'));
+    }
 
     private function politique(): array
     {
