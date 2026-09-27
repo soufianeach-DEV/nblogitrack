@@ -403,7 +403,7 @@ Les données sont traitées au sein de l'Union européenne. Font exception :
 - une livraison hors de l'Union, qui exige de transmettre les données du destinataire, sur la base des garanties prévues au chapitre V du RGPD.
 
 ## Durées de conservation
-- Factures : dix ans, conformément à l'article 60 du Code de la TVA ; autres pièces comptables : sept ans.
+- Factures et autres pièces comptables : sept ans (article 60 du Code de la TVA, modifié par la loi du 18 décembre 2025 ; article III.88 du Code de droit économique).
 - Documents de transport et lettres de voiture : cinq ans.
 - Dates de validité des permis, certificats ADR et cartes de conducteur : la durée de la relation de travail, puis les délais de prescription sociale.
 - Journaux d'activité de l'application, qui enregistrent la date, l'utilisateur, l'action et l'adresse IP : douze mois.
@@ -512,7 +512,7 @@ Gegevens worden binnen de Europese Unie verwerkt. Uitzonderingen:
 - een levering buiten de Unie, die de doorgifte van de gegevens van de geadresseerde vereist, op basis van de waarborgen van hoofdstuk V AVG.
 
 ## Bewaartermijnen
-- Facturen: tien jaar, conform artikel 60 van het Btw-wetboek; andere boekhoudkundige stukken: zeven jaar.
+- Facturen en andere boekhoudkundige stukken: zeven jaar (artikel 60 van het Btw-wetboek, gewijzigd bij de wet van 18 december 2025; artikel III.88 van het Wetboek van economisch recht).
 - Vervoersdocumenten en vrachtbrieven: vijf jaar.
 - Geldigheidsdata van rijbewijzen, ADR-certificaten en bestuurderskaarten: de duur van de arbeidsrelatie, vervolgens de sociale verjaringstermijnen.
 - Activiteitenlogboeken van de toepassing, met datum, gebruiker, actie en IP-adres: twaalf maanden.
@@ -621,7 +621,7 @@ Data is processed within the European Union, with these exceptions:
 - a delivery outside the Union, which requires sending the consignee's data, on the basis of the safeguards provided for in Chapter V GDPR.
 
 ## Retention periods
-- Invoices: ten years, under Article 60 of the Belgian VAT Code; other accounting records: seven years.
+- Invoices and other accounting records: seven years (Article 60 of the Belgian VAT Code, as amended by the Law of 18 December 2025; Article III.88 of the Code of Economic Law).
 - Transport documents and consignment notes: five years.
 - Licence, ADR certificate and driver card validity dates: the duration of the employment relationship, then the applicable social limitation periods.
 - Application activity logs, recording date, user, action and IP address: twelve months.

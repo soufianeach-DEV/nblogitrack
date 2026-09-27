@@ -9,6 +9,7 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -17,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use DatesHeureDeBruxelles, HasFactory, Notifiable;
+    use DatesHeureDeBruxelles, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * @var list<string>
@@ -56,7 +57,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     /** L'entreprise pour laquelle travaille un compte client. */
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     /** Passer et annuler des commandes. */

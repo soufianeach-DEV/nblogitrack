@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\ActivityLog;
+use App\Models\ApiKey;
 use App\Models\ClientContact;
 use App\Models\DriverAcknowledgement;
 use App\Models\Invoice;
@@ -17,7 +18,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -181,24 +184,23 @@ class ProfileController extends Controller
                 return Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.');
             }
 
-            // Dernier compte de l'entreprise : l'entreprise part avec lui, sauf
-            // si elle a deja transporte ou ete facturee. Elle garde alors ses
-            // pieces, que la loi impose de conserver.
+            // Une entreprise qui a deja transporte ou ete facturee garde ses
+            // pieces, que la loi impose de conserver (sept ans). Le
+            // depart est alors une suppression logique : le compte est
+            // anonymise et marque supprime (deleted_at), et si c'est le
+            // dernier, l'entreprise l'est aussi. Sans historique, rien ne
+            // justifie de garder quoi que ce soit : l'effacement est reel.
             $derniere = ! (clone $collegues)->exists();
-            $historique = $derniere && $user->client_id !== null && (
+            $historique = $user->client_id !== null && (
                 TransportOrder::where('client_id', $user->client_id)->exists()
                 || Invoice::where('client_id', $user->client_id)->exists()
             );
-
-            if ($historique) {
-                return Traductions::t('msg.compte_non_supprimable', 'Votre entreprise a des expéditions ou des factures, que nous devons conserver. Écrivez-nous pour clôturer le compte.');
-            }
-
             $entreprise = $derniere ? $user->client : null;
 
             ActivityLog::record(
-                'profile.deleted',
-                'Suppression du compte '.$user->email.($entreprise ? ' et de l\'entreprise '.$entreprise->company_name : ''),
+                $historique ? 'profile.unsubscribed' : 'profile.deleted',
+                ($historique ? 'Désinscription (suppression logique) du compte ' : 'Suppression du compte ')
+                    .$user->email.($entreprise ? ' et de l\'entreprise '.$entreprise->company_name : ''),
                 null,
                 ['email' => $user->email, 'entreprise_id' => $user->client_id],
             );
@@ -207,8 +209,23 @@ class ProfileController extends Controller
             // « se souvenir de moi » et reenregistrerait le compte.
             Auth::logout();
 
+            if (! $historique) {
+                $user->forceDelete();
+                $entreprise?->forceDelete();
+
+                return null;
+            }
+
+            $this->anonymiser($user);
             $user->delete();
-            $entreprise?->delete();
+
+            if ($entreprise !== null) {
+                // Les personnes de contact sont des donnees personnelles sans
+                // valeur de preuve : les factures gardent l'acheteur fige.
+                ClientContact::where('client_id', $entreprise->id)->delete();
+                ApiKey::where('client_id', $entreprise->id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
+                $entreprise->delete();
+            }
 
             return null;
         });
@@ -221,5 +238,27 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Efface l'identite d'un compte qui part sans effacer la ligne : le nom,
+     * l'adresse, le telephone et le mot de passe disparaissent ; les pieces
+     * qui citent le compte gardent un lien valide vers une personne anonyme.
+     */
+    private function anonymiser(User $user): void
+    {
+        $user->forceFill([
+            'first_name' => 'Compte',
+            'last_name' => 'supprimé',
+            'email' => 'supprime-'.$user->id.'@anonyme.invalid',
+            'phone' => null,
+            'password' => Hash::make(Str::random(40)),
+            'remember_token' => null,
+            'is_active' => false,
+        ])->save();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+        }
     }
 }

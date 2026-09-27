@@ -1429,6 +1429,7 @@ class TranslationSeeder extends Seeder
             'action_client_register_existing_email' => ['Inscription avec une adresse déjà inscrite', 'Registratie met een reeds geregistreerd adres', 'Sign-up with an already registered address'],
             'action_profile_email_changed' => ['Adresse e-mail changée', 'E-mailadres gewijzigd', 'Email address changed'],
             'action_profile_deleted' => ['Compte supprimé', 'Account verwijderd', 'Account deleted'],
+            'action_profile_unsubscribed' => ['Désinscription (suppression logique)', 'Uitschrijving (logische verwijdering)', 'Unsubscription (soft delete)'],
             'action_quote_ordered' => ['Devis transformé en commande', 'Offerte omgezet in opdracht', 'Quote converted to order'],
             'action_unavailability_created' => ['Indisponibilité ajoutée', 'Onbeschikbaarheid toegevoegd', 'Unavailability added'],
             'action_unavailability_removed' => ['Indisponibilité retirée', 'Onbeschikbaarheid verwijderd', 'Unavailability removed'],
@@ -1539,9 +1540,9 @@ class TranslationSeeder extends Seeder
             'mdp_actuel' => ['Mot de passe actuel', 'Huidig wachtwoord', 'Current password'],
             'supprimer' => ['Supprimer le compte', 'Account verwijderen', 'Delete account'],
             'supprimer_texte' => [
-                'La suppression du compte est définitive. Téléchargez au préalable les documents que vous souhaitez conserver.',
-                'Het verwijderen van het account is definitief. Download vooraf de documenten die u wilt bewaren.',
-                'Deleting the account is permanent. Download beforehand any documents you wish to keep.',
+                'Téléchargez au préalable les documents que vous souhaitez conserver. Si votre entreprise a des expéditions ou des factures, la loi nous impose de les garder : votre compte est alors désactivé et vos données personnelles sont anonymisées. Sinon, tout est effacé.',
+                'Download vooraf de documenten die u wilt bewaren. Heeft uw onderneming zendingen of facturen, dan moeten wij die wettelijk bewaren: uw account wordt dan gedeactiveerd en uw persoonsgegevens worden geanonimiseerd. Anders wordt alles gewist.',
+                'Download beforehand any documents you wish to keep. If your company has shipments or invoices, the law requires us to keep them: your account is then deactivated and your personal data anonymised. Otherwise, everything is erased.',
             ],
             'supprimer_confirme' => [
                 'Confirmez-vous la suppression de votre compte ?',

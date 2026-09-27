@@ -45,7 +45,7 @@ class ClientFactory extends Factory
     public function configure(): static
     {
         return $this->afterMaking(function (Client $client) {
-            $client->id ??= max(100000, (int) Client::max('id') + 1);
+            $client->id ??= max(100000, (int) Client::withTrashed()->max('id') + 1);
         })->afterCreating(function (Client $client) {
             User::factory()->create([
                 'role' => 'CLIENT',

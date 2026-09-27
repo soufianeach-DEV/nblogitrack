@@ -81,7 +81,7 @@ class ProcessingRecordSeeder extends Seeder
                 'personnes' => 'Personnes de contact des entreprises clientes.',
                 'donnees' => 'Raison sociale, adresse de facturation, numéro de TVA, identifiant Peppol, montants, échéances, dates de paiement.',
                 'destinataires' => 'Stripe (Stripe Payments Europe, Irlande), prestataire de paiement en ligne, pour les seules données que la transaction exige (adresse électronique, montant, référence). Point d\'accès Peppol du prestataire choisi, pour la facture électronique. Cabinet comptable. Administration fiscale.',
-                'conservation' => 'Factures : dix ans (article 60 du Code de la TVA). Autres pièces comptables : sept ans.',
+                'conservation' => 'Factures et autres pièces comptables : sept ans (article 60 du Code de la TVA, modifié par la loi du 18 décembre 2025 ; article III.88 du Code de droit économique).',
                 'mesures' => $securite,
                 'transferts' => 'Stripe appartient à un groupe établi aux États-Unis : adhésion au cadre de protection des données UE–États-Unis et clauses contractuelles types de la Commission.',
             ],

@@ -68,8 +68,8 @@ class CorrectionsAuditTest extends TestCase
 
         TransportOrder::factory()->create();
 
-        $client->users()->delete();
-        $client->delete();
+        $client->users()->forceDelete();
+        $client->forceDelete();
 
         $this->assertNull(ApiKey::find($cle->id));
         $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])
@@ -279,19 +279,20 @@ class CorrectionsAuditTest extends TestCase
         $this->assertNotNull($administrateur->fresh());
     }
 
-    public function test_un_client_qui_a_un_historique_ne_se_supprime_pas(): void
+    public function test_un_client_qui_a_un_historique_est_desinscrit_sans_perdre_ses_pieces(): void
     {
         $client = Client::factory()->create();
         TransportOrder::factory()->create(['client_id' => $client->id]);
+        $compte = $client->compte();
 
-        $this->actingAs($client->compte())
-            ->from(route('profile.edit'))
+        $this->actingAs($compte)
             ->delete(route('profile.destroy'), ['password' => 'password'])
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
+            ->assertSessionHasNoErrors();
 
-        $this->assertAuthenticated();
-        $this->assertNotNull($client->compte());
+        $this->assertGuest();
+        $this->assertSoftDeleted('users', ['id' => $compte->id]);
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
+        $this->assertSame(1, TransportOrder::where('client_id', $client->id)->count());
     }
 
     // --- Authentification --------------------------------------------------

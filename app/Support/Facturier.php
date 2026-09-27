@@ -27,7 +27,7 @@ class Facturier
 
         foreach ($this->aFacturer($periode, $clientId) as $cle => $elements) {
             [$client, $mois] = explode('|', (string) $cle);
-            $client = Client::find((int) $client);
+            $client = Client::withTrashed()->find((int) $client);
 
             if ($client === null) {
                 continue;

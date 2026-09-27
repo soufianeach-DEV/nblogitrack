@@ -55,7 +55,7 @@ export default function DeleteUserForm({ className = '' }) {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    {t('profil.supprimer_texte', 'La suppression du compte est définitive. Téléchargez au préalable les documents que vous souhaitez conserver.')}
+                    {t('profil.supprimer_texte', 'Téléchargez au préalable les documents que vous souhaitez conserver. Si votre entreprise a des expéditions ou des factures, la loi nous impose de les garder : votre compte est alors désactivé et vos données personnelles sont anonymisées. Sinon, tout est effacé.')}
                 </p>
             </header>
 

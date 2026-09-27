@@ -78,6 +78,7 @@ class ActivityLogController extends Controller
         'client.register_existing_email' => 'Inscription avec une adresse déjà inscrite',
         'profile.email_changed' => 'Adresse e-mail changée',
         'profile.deleted' => 'Compte supprimé',
+        'profile.unsubscribed' => 'Désinscription (suppression logique)',
         'quote.ordered' => 'Devis transformé en commande',
         'unavailability.created' => 'Indisponibilité ajoutée',
         'unavailability.removed' => 'Indisponibilité retirée',

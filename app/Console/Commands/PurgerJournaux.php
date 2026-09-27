@@ -77,8 +77,8 @@ class PurgerJournaux extends Command
         $vues->delete();
 
         $refusees->clone()->pluck('id')->each(function (int $id) {
-            User::where('client_id', $id)->delete();
-            Client::whereKey($id)->delete();
+            User::withTrashed()->where('client_id', $id)->forceDelete();
+            Client::withTrashed()->whereKey($id)->forceDelete();
         });
 
         $this->info("  $nombre entrée(s) effacée(s), $nombreAppels appel(s) d'API, $nombreDevis demande(s) de devis, $nombreVues ligne(s) d'audience, $nombreRefusees inscription(s) refusée(s).");

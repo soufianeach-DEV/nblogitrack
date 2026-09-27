@@ -97,7 +97,7 @@ class ApiKey extends Model
 
             // Une entreprise dont plus aucun compte n'est actif est
             // consideree comme desactivee.
-            if ($client === null || ! $client->is_validated || ! $client->users()->where('is_active', true)->exists()) {
+            if ($client === null || $client->trashed() || ! $client->is_validated || ! $client->users()->where('is_active', true)->exists()) {
                 return 'entreprise_inactive';
             }
         }
@@ -120,7 +120,7 @@ class ApiKey extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     public function auteur(): BelongsTo
