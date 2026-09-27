@@ -215,8 +215,8 @@ php artisan db:seed --class=TranslationSeeder --force   # textes de l'interface
 php artisan optimize                                     # configuration, routes, vues, événements en cache
 ```
 
-- **Fichier `.env`** : `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` exact (seul ce domaine et ses sous-domaines sont servis), `LOG_STACK=daily`, `LOG_LEVEL=warning`, `MAIL_TIMEOUT=10`, compte PostgreSQL dédié.
-- **Derrière un répartiteur de charge ou un CDN** : `TRUSTED_PROXIES` avec leurs adresses (ou `*` si elles changent), sinon HTTPS n'est pas reconnu et tous les visiteurs partagent les mêmes limites d'essais.
+- **Fichier `.env`** : `APP_ENV=production`, `APP_DEBUG=false` (jamais `true` : la page de débogage affiche la configuration et les requêtes), `APP_URL` exact en `https://` (seul ce domaine et ses sous-domaines sont servis), `SESSION_ENCRYPT=true`, `SESSION_SECURE_COOKIE` absent ou à `true`, `LOG_STACK=daily`, `LOG_LEVEL=warning`, `MAIL_TIMEOUT=10`, compte PostgreSQL dédié.
+- **Derrière un répartiteur de charge ou un CDN** : `TRUSTED_PROXIES` avec leurs adresses, sinon HTTPS n'est pas reconnu et tous les visiteurs partagent les mêmes limites d'essais. `*` seulement si le serveur n'est joignable **que** par ce répartiteur (pare-feu) : sinon n'importe qui choisit son adresse IP avec un en-tête `X-Forwarded-For` et contourne les limites.
 - **PHP** : OPcache actif (`opcache.validate_timestamps=0`, puis `php artisan optimize` et rechargement de PHP-FPM à chaque déploiement) ; `upload_max_filesize=10M` et `post_max_size=55M` (déjà dans `public/.user.ini` pour PHP-FPM) ; `max_execution_time` de 30 s suffit.
 - **Serveur web** : `public/.htaccess` compresse les réponses et met en cache un an les fichiers de `public/build`. Sous nginx, reprendre ces règles (`gzip on`, `expires 1y` sur `/build/assets/`).
 - **Facture électronique** : `PEPPOL_URL` et `PEPPOL_CLE` du point d'accès du prestataire choisi (obligatoire en B2B belge depuis 2026).

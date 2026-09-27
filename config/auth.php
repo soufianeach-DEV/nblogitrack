@@ -41,6 +41,10 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            // « Se souvenir de moi » garde la session 30 jours, et non 400
+            // (le defaut du cadriciel) : un appareil perdu ou partage ne
+            // reste pas ouvert plus d'un an.
+            'remember' => (int) env('AUTH_REMEMBER_MINUTES', 43200),
         ],
     ],
 

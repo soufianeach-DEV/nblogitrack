@@ -118,6 +118,18 @@ class AuditSecuriteTest extends TestCase
         $this->assertAuthenticatedAs($compte);
     }
 
+    public function test_se_souvenir_de_moi_dure_trente_jours(): void
+    {
+        $compte = User::factory()->create();
+
+        $reponse = $this->post(route('login'), ['email' => $compte->email, 'password' => 'password', 'remember' => true]);
+
+        $cookie = collect($reponse->headers->getCookies())->first(fn ($c) => str_starts_with($c->getName(), 'remember_web_'));
+
+        $this->assertNotNull($cookie);
+        $this->assertEqualsWithDelta(now()->addMinutes(43200)->timestamp, $cookie->getExpiresTime(), 120);
+    }
+
     public function test_un_chauffeur_sans_fiche_ne_voit_aucune_mission(): void
     {
         TransportOrder::factory()->create(['status' => 'CANCELLED', 'driver_id' => null]);
