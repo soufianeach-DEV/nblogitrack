@@ -44,6 +44,10 @@ final class Referencement
                 Traductions::t('referencement.connexion_titre', 'Connexion à l\'espace client'),
                 Traductions::t('referencement.connexion_description', 'Accédez à votre espace client NBLogiTrack : commandes de transport, suivi des expéditions et factures.'),
             ],
+            'Tracking/Show' => [
+                Traductions::t('referencement.suivi_titre', 'Suivre un envoi'),
+                Traductions::t('referencement.suivi_description', 'Suivez votre expédition en temps réel avec son numéro de suivi et son code : étapes, position du camion et heure de livraison prévue.'),
+            ],
             'Pages/Show' => [
                 (string) ($props['page']['titre'] ?? $marque),
                 self::extrait((string) ($props['page']['corps'] ?? '')),
@@ -69,11 +73,15 @@ final class Referencement
     /** Premier paragraphe d'une page en Markdown, sans les titres. */
     private static function extrait(string $markdown): string
     {
-        foreach (preg_split('/\R{2,}/', $markdown) as $bloc) {
-            $bloc = trim($bloc);
-            if ($bloc !== '' && ! str_starts_with($bloc, '#')) {
-                return trim(preg_replace('/\s+/', ' ', strip_tags(str_replace(['**', '*', '- '], '', $bloc))));
+        // Ligne a ligne : un titre suivi de son paragraphe sans ligne vide
+        // (« ## Titre\nTexte ») laissait la description vide.
+        foreach (preg_split('/\R/', $markdown) as $ligne) {
+            $ligne = trim($ligne);
+            if ($ligne === '' || preg_match('/^(#|\||-{3,}|>|!\[)/', $ligne)) {
+                continue;
             }
+
+            return trim(preg_replace('/\s+/', ' ', strip_tags(str_replace(['**', '*', '- '], '', $ligne))));
         }
 
         return '';

@@ -655,7 +655,7 @@ function SuiviVisiteur({ order, searched }) {
                     </div>
                 </header>
 
-                <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+                <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
                     <h1 className="text-2xl font-bold text-marine">{t('suivi.envoi_titre', 'Suivi d\'envoi')}</h1>
                     <p className="mb-6 mt-1 text-slate-600">
                         {t('suivi.entrez', 'Entrez votre numéro de suivi et le code reçu par e-mail.')}
@@ -666,6 +666,8 @@ function SuiviVisiteur({ order, searched }) {
                             value={data.tracking_number}
                             onChange={(e) => setData('tracking_number', e.target.value)}
                             placeholder={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
+                            aria-label={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
+                            autoComplete="off"
                             className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine"
                             required
                         />
@@ -673,6 +675,8 @@ function SuiviVisiteur({ order, searched }) {
                             value={data.code}
                             onChange={(e) => setData('code', e.target.value)}
                             placeholder={t('suivi.code', 'Code')}
+                            aria-label={t('suivi.code', 'Code')}
+                            autoComplete="off"
                             className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine sm:w-48"
                             required
                         />
@@ -730,7 +734,7 @@ function SuiviVisiteur({ order, searched }) {
                             {t('suivi.introuvable_code', 'Aucun envoi trouvé. Vérifiez le numéro de suivi et le code.')}
                         </div>
                     )}
-                </div>
+                </main>
 
                 <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-600">
                     {t('suivi.pied', 'NBLogiTrack Belgium — suivi d\'expédition')}

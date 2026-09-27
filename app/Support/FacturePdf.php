@@ -23,6 +23,10 @@ class FacturePdf
             'qr' => self::qr($facture),
         ])
             ->setPaper('a4')
+            // Seuls les caracteres utilises des polices sont integres : le
+            // PDF passait de 1,4 Mo a quelques dizaines de Ko, en piece
+            // jointe de chaque facture envoyee.
+            ->setOption('isFontSubsettingEnabled', true)
             ->output();
     }
 

@@ -34,6 +34,11 @@ class DevisCompletTest extends TestCase
         // Aucun registre reel n'est interroge : un appel non simule echoue,
         // comme un registre en panne.
         Http::preventStrayRequests();
+
+        // Un mercredi : « dans une semaine » tombait un dimanche quand la
+        // suite tournait le dimanche, et l'enlevement reporte au lundi ne
+        // laissait plus aucune formule livrer a temps.
+        $this->travelTo('2026-09-23 10:00');
     }
 
     /** @return array<string, mixed> */

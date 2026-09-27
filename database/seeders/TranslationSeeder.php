@@ -1140,6 +1140,8 @@ class TranslationSeeder extends Seeder
         ],
 
         'referencement' => [
+            'suivi_titre' => ['Suivre un envoi', 'Zending volgen', 'Track a shipment'],
+            'suivi_description' => ['Suivez votre expédition en temps réel avec son numéro de suivi et son code : étapes, position du camion et heure de livraison prévue.', 'Volg uw zending in realtime met het volgnummer en de code: stappen, positie van de vrachtwagen en verwacht leveringsuur.', 'Track your shipment in real time with its tracking number and code: stages, truck position and expected delivery time.'],
             'accueil_titre' => ['Transport B2B en Belgique et en Europe', 'B2B-transport in België en Europa', 'B2B transport in Belgium and Europe'],
             'accueil_description' => ['Transport de marchandises pour les entreprises : enlèvement en Belgique et dans 21 pays européens, prix en ligne, suivi en temps réel et facturation Peppol.', 'Goederenvervoer voor bedrijven: ophaling in België en 21 Europese landen, prijzen online, realtime tracking en Peppol-facturatie.', 'Freight transport for businesses: collection in Belgium and 21 European countries, online prices, real-time tracking and Peppol invoicing.'],
             'defaut_titre' => ['Espace client', 'Klantenzone', 'Customer area'],
