@@ -243,6 +243,34 @@ php artisan optimize                                     # configuration, routes
 - **Serveur web** : `public/.htaccess` compresse les réponses et met en cache un an les fichiers de `public/build`. Sous nginx, reprendre ces règles (`gzip on`, `expires 1y` sur `/build/assets/`).
 - **Facture électronique** : `PEPPOL_URL` et `PEPPOL_CLE` du point d'accès du prestataire choisi (obligatoire en B2B belge depuis 2026).
 
+### Déploiement en ligne (Render et Supabase)
+
+L'application se déploie telle quelle avec le `Dockerfile` du dépôt : l'image compile l'interface, installe PHP 8.4 et ses extensions, puis, à chaque démarrage, joue les migrations, met la configuration en cache, lance l'ordonnanceur chaque minute et sert le site par Apache. `render.yaml` décrit le service.
+
+1. **Base de données (Supabase)** : créez un projet dans la région Europe, puis relevez dans *Connect › Session pooler* l'hôte (`aws-0-eu-central-1.pooler.supabase.com`), l'utilisateur (`postgres.<référence du projet>`) et le mot de passe. Le pooler de session passe en IPv4, ce que Render exige.
+2. **Clé de l'application** : `php artisan key:generate --show` sur votre poste ; gardez la valeur `base64:…`.
+3. **Service (Render)** : *New › Blueprint*, choisissez ce dépôt : Render lit `render.yaml`. Saisissez les valeurs demandées : `APP_KEY`, `APP_URL` (l'adresse que Render attribue, en `https://`), `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, l'accès SMTP de Brevo et les clés Stripe de test.
+4. **Premier déploiement** : Render construit l'image (quelques minutes) ; les migrations créent les tables et le dictionnaire des traductions.
+5. **Jeu de démonstration** : le jeu de données refuse de s'exécuter en production. Lancez-le depuis votre poste vers Supabase, en surchargeant la connexion pour la seule session PowerShell :
+
+   ```powershell
+   $env:DB_HOST = "aws-0-eu-central-1.pooler.supabase.com"
+   $env:DB_PORT = "5432"
+   $env:DB_DATABASE = "postgres"
+   $env:DB_USERNAME = "postgres.<référence du projet>"
+   $env:DB_PASSWORD = Read-Host "Mot de passe Supabase"
+   $env:DB_SSLMODE = "require"
+   php artisan optimize:clear
+   php artisan migrate:fresh --seed --force
+   php artisan geo:import-postal-codes
+   Remove-Item Env:DB_HOST, Env:DB_PORT, Env:DB_DATABASE, Env:DB_USERNAME, Env:DB_PASSWORD, Env:DB_SSLMODE
+   ```
+
+   Les variables disparaissent à la fermeture de PowerShell : votre base locale n'est pas touchée.
+6. **Stripe** : déclarez le webhook `https://<adresse Render>/stripe/webhook` (voir *Paiement en ligne*) et copiez son secret dans `STRIPE_WEBHOOK_SECRET`.
+
+L'offre gratuite de Render met le service en veille après quinze minutes sans visite : le premier chargement prend alors une minute. L'offre Starter reste éveillée. Supabase gratuit met le projet en pause après une semaine sans activité : ouvrez le site avant une démonstration.
+
 ### Sauvegardes
 
 - **Base de données** : `pg_dump -Fc` chaque nuit, gardé 30 jours hors du serveur, et archivage continu des WAL si une perte de quelques heures n'est pas acceptable.
