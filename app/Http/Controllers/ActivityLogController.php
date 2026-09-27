@@ -69,6 +69,15 @@ class ActivityLogController extends Controller
         'api_key.created' => 'Clé d\'API créée',
         'api_key.revoked' => 'Clé d\'API révoquée',
         'processing_record.updated' => 'Registre RGPD modifié',
+        'auth.email_verified' => 'Adresse e-mail confirmée',
+        'auth.password_changed' => 'Mot de passe changé',
+        'auth.password_reset' => 'Mot de passe choisi par lien',
+        'client.register_existing_email' => 'Inscription avec une adresse déjà inscrite',
+        'profile.email_changed' => 'Adresse e-mail changée',
+        'profile.deleted' => 'Compte supprimé',
+        'quote.ordered' => 'Devis transformé en commande',
+        'unavailability.created' => 'Indisponibilité ajoutée',
+        'unavailability.removed' => 'Indisponibilité retirée',
     ];
 
     public function index(Request $request): Response

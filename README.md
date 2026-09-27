@@ -253,6 +253,8 @@ php artisan optimize                                     # configuration, routes
 
 Le jeu de données ne s'exécute qu'en environnement `local` ou `testing` : lancé ailleurs, il refuse de vider les tables.
 
+Chaque table métier y porte au moins cent lignes cohérentes entre elles : 270 comptes, 148 entreprises, 110 chauffeurs et 110 véhicules, 309 commandes, 120 demandes de devis (dont 30 transformées en commande), 165 suppléments, 158 factures et 167 paiements (acomptes compris, quelques factures laissées en retard), 271 congés et passages au garage, 434 positions de suivi, 400 appels d'API journalisés et près de 2 000 entrées au journal d'activité. Les tables de référence (grilles tarifaires, pages, registre des traitements, clés d'API) gardent leur taille naturelle.
+
 | Rôle | Adresse | Mot de passe |
 |---|---|---|
 | Administrateur | `admin@nblogitrack.be` | `Nblogitrack2026@` |
