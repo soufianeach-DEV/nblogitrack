@@ -4,6 +4,7 @@ use App\Http\Middleware\AuthentifierCleApi;
 use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\IgnorerFiltresEnTableau;
 use App\Http\Middleware\MesurerAudience;
 use App\Http\Middleware\VerifierCompteActif;
 use App\Support\Audience;
@@ -31,8 +32,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // VerifierCompteActif passe en premier : inutile de traduire une
         // page et de partager un dictionnaire pour quelqu'un qu'on va
         // renvoyer a l'ecran de connexion.
+        // Les en-tetes de securite s'appliquent a toutes les reponses, API
+        // et pages d'erreur comprises : places dans le groupe web, ils
+        // manquaient sur une 404 levee avant lui (modele introuvable dans
+        // l'adresse) et sur les reponses de l'API.
+        $middleware->append(EnTetesDeSecurite::class);
+
         $middleware->web(append: [
-            EnTetesDeSecurite::class,
+            IgnorerFiltresEnTableau::class,
             VerifierCompteActif::class,
             DefinirLangue::class,
             HandleInertiaRequests::class,

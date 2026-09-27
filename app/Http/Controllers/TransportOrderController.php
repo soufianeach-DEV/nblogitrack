@@ -134,23 +134,27 @@ class TransportOrderController extends Controller
             'chauffeur' => $transportOrder->driver?->user
                 ? $transportOrder->driver->user->first_name.' '.$transportOrder->driver->user->last_name
                 : null,
-            'facture' => $transportOrder->invoiceLine?->invoice ? [
-                'id' => $transportOrder->invoiceLine->invoice->id,
-                'reference' => $transportOrder->invoiceLine->invoice->reference,
-                'etat' => $transportOrder->invoiceLine->invoice->estEnRetard()
-                    ? Traductions::t('statut.en_retard', 'En retard')
-                    : match ($transportOrder->invoiceLine->invoice->status) {
-                        'DRAFT' => Traductions::t('facture.brouillon', Invoice::STATUTS['DRAFT']),
-                        'SENT' => Traductions::t('statut.envoyee', Invoice::STATUTS['SENT']),
-                        'PAID' => Traductions::t('statut.payee', Invoice::STATUTS['PAID']),
-                        'OVERDUE' => Traductions::t('statut.en_retard', Invoice::STATUTS['OVERDUE']),
-                        'CREDITED' => Traductions::t('facture.annulee_avoir', Invoice::STATUTS['CREDITED']),
-                        default => Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status] ?? $transportOrder->invoiceLine->invoice->status,
-                    },
-                'ttc' => (float) $transportOrder->invoiceLine->invoice->amount_incl_tax,
-                'echeance' => $transportOrder->invoiceLine->invoice->due_on->format('d/m/Y'),
-                'payee_le' => $transportOrder->invoiceLine->invoice->paid_on?->format('d/m/Y'),
-            ] : null,
+            // Le resume de facture suit les droits de l'ecran Factures : un
+            // compte « commandes » d'une entreprise ne voit pas les montants
+            // factures.
+            'facture' => $transportOrder->invoiceLine?->invoice
+                && ($request->user()->isStaff() || $request->user()->voitFacturesEntreprise()) ? [
+                    'id' => $transportOrder->invoiceLine->invoice->id,
+                    'reference' => $transportOrder->invoiceLine->invoice->reference,
+                    'etat' => $transportOrder->invoiceLine->invoice->estEnRetard()
+                        ? Traductions::t('statut.en_retard', 'En retard')
+                        : match ($transportOrder->invoiceLine->invoice->status) {
+                            'DRAFT' => Traductions::t('facture.brouillon', Invoice::STATUTS['DRAFT']),
+                            'SENT' => Traductions::t('statut.envoyee', Invoice::STATUTS['SENT']),
+                            'PAID' => Traductions::t('statut.payee', Invoice::STATUTS['PAID']),
+                            'OVERDUE' => Traductions::t('statut.en_retard', Invoice::STATUTS['OVERDUE']),
+                            'CREDITED' => Traductions::t('facture.annulee_avoir', Invoice::STATUTS['CREDITED']),
+                            default => Invoice::STATUTS[$transportOrder->invoiceLine->invoice->status] ?? $transportOrder->invoiceLine->invoice->status,
+                        },
+                    'ttc' => (float) $transportOrder->invoiceLine->invoice->amount_incl_tax,
+                    'echeance' => $transportOrder->invoiceLine->invoice->due_on->format('d/m/Y'),
+                    'payee_le' => $transportOrder->invoiceLine->invoice->paid_on?->format('d/m/Y'),
+                ] : null,
             // Seul le client de l'expedition l'annule lui-meme ; le personnel
             // passe par la planification, sans indemnite.
             'annulation' => $request->user()->can('cancel', $transportOrder)
@@ -212,7 +216,7 @@ class TransportOrderController extends Controller
     }
 
     /**
-     * Chaque point transmis doit etre a moins de 30 km de sa localite, dans
+     * Chaque point transmis doit etre a moins de 15 km de sa localite, dans
      * le pays declare, et ce pays doit etre celui ecrit dans l'adresse : on
      * ne change pas de grille en mentant sur le pays.
      *
@@ -221,7 +225,9 @@ class TransportOrderController extends Controller
      */
     private function verifierLesPoints(array $data): ?array
     {
-        $ecartMax = 30;
+        // 15 km : assez pour la plus etendue des localites d'un code postal,
+        // trop peu pour rapprocher deux points et payer moins de route.
+        $ecartMax = 15;
         $paysEnlevement = $data['pickup_country'] ?? 'BE';
 
         if (! Adresse::paysCoherent($data['pickup_address'], $paysEnlevement, $paysEnlevement !== 'BE')) {
@@ -519,7 +525,7 @@ class TransportOrderController extends Controller
             return back()->withErrors([$erreur['champ'] => $erreur['message']])->withInput();
         }
 
-        // Les points transmis ont ete verifies ci-dessus (a moins de 30 km
+        // Les points transmis ont ete verifies ci-dessus (a moins de 15 km
         // de leur localite) : la distance se calcule entre eux, comme le
         // formulaire l'a fait pour afficher le prix.
         $distanceKm = Tarificateur::distanceRoutiere(

@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 /**
  * GeoNames ne publie pas les codes postaux grecs : la localite d'une
- * livraison en Grece se verifie par Photon, avec la meme regle des 30 km
+ * livraison en Grece se verifie par Photon, avec la meme regle des 15 km
  * que partout ailleurs.
  */
 class GreceSansReferentielTest extends TestCase

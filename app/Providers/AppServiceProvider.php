@@ -16,9 +16,11 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Douze caracteres au moins : la longueur protege mieux qu'une
+        // regle de composition, et le defaut de Laravel (huit) est court
+        // pour des comptes qui commandent et paient.
+        Password::defaults(fn () => Password::min(12));
+
+        // Les modeles designes par un numero : /ordres/abc repondait par une
+        // erreur 500 de PostgreSQL (entier invalide) au lieu d'une 404.
+        Route::patterns(array_fill_keys([
+            'apiKey', 'client', 'driver', 'id', 'indisponibilite', 'invoice',
+            'pageDocument', 'processingRecord', 'purchaseInvoice', 'quoteRequest',
+            'supplement', 'translation', 'transportOrder', 'user', 'utilisateur',
+        ], '[0-9]+'));
+
         // Une remise fret retour hors bornes vendrait a perte ou n'aurait
         // aucun sens : l'application refuse de demarrer.
         $remise = config('fret.retour.remise');
@@ -90,6 +105,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $r) => [
             Limit::perMinute(120)->by('cle'.strtok((string) $r->bearerToken(), '.')),
             Limit::perMinute(300)->by('ip'.$r->ip()),
+        ]);
+
+        // Chaque invitation envoie un courriel a une adresse choisie par le
+        // client : trente par jour et par entreprise, pour que le formulaire
+        // ne serve pas a arroser des inconnus depuis notre domaine.
+        RateLimiter::for('invitation', fn (Request $r) => [
+            Limit::perMinute(10)->by('u'.$r->user()->id),
+            Limit::perDay(30)->by('e'.$r->user()->client_id),
         ]);
 
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));

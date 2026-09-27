@@ -80,7 +80,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::middleware('can:manage-company')->group(function () {
             Route::get('/entreprise/utilisateurs', [CompanyUserController::class, 'index'])->name('company.users.index');
             Route::post('/entreprise/utilisateurs', [CompanyUserController::class, 'store'])
-                ->middleware('throttle:10,1,invitation')
+                ->middleware('throttle:invitation')
                 ->name('company.users.store');
             Route::patch('/entreprise/utilisateurs/{utilisateur}', [CompanyUserController::class, 'update'])
                 ->whereNumber('utilisateur')

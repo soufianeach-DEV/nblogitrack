@@ -70,7 +70,7 @@ class RegisteredUserController extends Controller
     {
         return Inertia::render('Auth/Register', [
             'secteurs' => Secteurs::groupes(app()->getLocale()),
-            'fonctions' => $this->referentiel('client_contacts', 'position', self::FONCTIONS_METIER, 'fonction'),
+            'fonctions' => $this->referentiel(self::FONCTIONS_METIER, 'fonction'),
         ]);
     }
 
@@ -78,15 +78,16 @@ class RegisteredUserController extends Controller
      * @param  array<int, string>  $metier
      * @return array<int, string>
      */
-    private function referentiel(string $table, string $colonne, array $metier, string $vocabulaire): array
+    private function referentiel(array $metier, string $vocabulaire): array
     {
-        $enBase = DB::table($table)->whereNotNull($colonne)->distinct()->pluck($colonne)->all();
-
+        // Seule la liste de reference est proposee : la page est publique,
+        // et les fonctions saisies librement par les autres entreprises
+        // (parfois un nom ou un numero) n'ont pas a y paraitre.
         // Les valeurs sont rangees en francais : la liste est montree
         // dans la langue de l'interface.
         $valeurs = array_unique(array_map(
             fn (string $valeur) => (string) Traductions::vocabulaire($vocabulaire, $valeur),
-            array_merge($metier, $enBase),
+            $metier,
         ));
 
         collator_sort(collator_create(app()->getLocale()), $valeurs);

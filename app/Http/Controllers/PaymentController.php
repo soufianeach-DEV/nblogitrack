@@ -19,7 +19,9 @@ class PaymentController extends Controller
 {
     public function payer(Request $request, Invoice $invoice): BaseResponse
     {
-        $this->autoriserPaiement($request, $invoice);
+        // Seule l'entreprise facturee paie sa facture : le personnel ne
+        // cree pas de session de paiement a sa place.
+        abort_unless($request->user()->can('pay', $invoice), 404);
 
         if (! $invoice->estAPayer() || $invoice->solde() <= 0) {
             return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));

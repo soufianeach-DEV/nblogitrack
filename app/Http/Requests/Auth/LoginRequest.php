@@ -42,6 +42,7 @@ class LoginRequest extends FormRequest
             'password' => $this->input('password'),
         ], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->cleDuCompte(), 900);
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -51,6 +52,7 @@ class LoginRequest extends FormRequest
         $this->ensureAccountIsUsable();
 
         RateLimiter::clear($this->throttleKey());
+        RateLimiter::clear($this->cleDuCompte());
     }
 
     /**
@@ -92,13 +94,22 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        // Cinq essais par adresse IP, et quinze par compte toutes adresses
+        // confondues sur un quart d'heure : changer d'adresse ne suffit plus
+        // pour deviner le mot de passe d'un compte.
+        $cle = match (true) {
+            RateLimiter::tooManyAttempts($this->throttleKey(), 5) => $this->throttleKey(),
+            RateLimiter::tooManyAttempts($this->cleDuCompte(), 15) => $this->cleDuCompte(),
+            default => null,
+        };
+
+        if ($cle === null) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = RateLimiter::availableIn($cle);
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
@@ -111,5 +122,10 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    private function cleDuCompte(): string
+    {
+        return 'compte|'.Str::transliterate(Str::lower(trim((string) $this->string('email'))));
     }
 }

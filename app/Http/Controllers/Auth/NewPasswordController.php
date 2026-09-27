@@ -64,6 +64,12 @@ class NewPasswordController extends Controller
             return redirect()->route('login')->with('status', __($status));
         }
 
+        // Une adresse sans compte recoit le meme message qu'un lien perime :
+        // le formulaire ne sert plus a tester quelles adresses sont inscrites.
+        if ($status === Password::INVALID_USER) {
+            $status = Password::INVALID_TOKEN;
+        }
+
         throw ValidationException::withMessages([
             'email' => [trans($status)],
         ]);

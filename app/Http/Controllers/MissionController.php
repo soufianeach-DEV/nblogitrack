@@ -38,18 +38,23 @@ class MissionController extends Controller
 
         $relations = ['client:id,company_name', 'vehicle:registration,brand,model,vehicle_type'];
 
+        // Un compte chauffeur sans fiche n'a aucune mission : sans ce garde,
+        // where('driver_id', null) devenait « driver_id IS NULL » et lui
+        // montrait les ordres de tous les clients qui n'ont pas de chauffeur.
+        $idChauffeur = $chauffeur->driver?->id ?? 0;
+
         // Les missions a faire d'abord, dans l'ordre du chargement ; puis
         // l'historique, du plus recent au plus ancien, limite aux trente
         // dernieres.
         $aFaire = TransportOrder::with($relations)
-            ->where('driver_id', $chauffeur->driver?->id)
+            ->where('driver_id', $idChauffeur)
             ->whereIn('status', ['IN_PROGRESS', 'ASSIGNED'])
             ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END")
             ->orderBy('pickup_date')
             ->get();
 
         $terminees = TransportOrder::with($relations)
-            ->where('driver_id', $chauffeur->driver?->id)
+            ->where('driver_id', $idChauffeur)
             ->whereIn('status', ['DELIVERED', 'CANCELLED'])
             ->orderByRaw('COALESCE(delivered_at, cancelled_at, updated_at) DESC')
             ->limit(30)
