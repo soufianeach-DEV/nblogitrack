@@ -41,7 +41,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 
 | Domaine | Description | État |
 |---|---|---|
-| **Comptes & rôles** | Inscription, connexion, autorisations par rôle (Breeze + Gate) | ✅ alpha |
+| **Comptes & rôles** | Inscription, connexion, autorisations par rôle (Breeze + Gate). Adresse e-mail confirmée par lien avant l'accès aux écrans (le profil reste ouvert pour corriger une adresse mal saisie) ; mots de passe de 12 à 72 caractères ; essais limités par adresse IP et par compte, sans qu'un inconnu puisse bloquer le titulaire depuis ses adresses habituelles ; réponses identiques, y compris en durée, qu'une adresse ait un compte ou non ; « se souvenir de moi » limité à 30 jours | ✅ alpha |
 | **Vérification des entreprises** | Contrôle du numéro de taxe sur la valeur ajoutée (TVA) auprès du service européen VIES, lecture des registres belge et français, identifiant sur le réseau Peppol des 27 pays | ✅ alpha |
 | **Validation des inscriptions** | Examen par l'administrateur, e-mails d'activation et de refus motivé | ✅ alpha |
 | **Création de commande** | Saisie guidée de l'adresse en entonnoir (pays, ville, code postal, rue, numéro : chaque niveau limite le suivant ; un numéro que la cartographie ne connaît pas est accepté et localisé à la rue), distance routière réelle, estimation du prix en temps réel calculée par le serveur : Éco ≤ Standard ≤ Express, et le groupage ne coûte jamais plus qu'un camion dédié. Pour les marchandises souvent soumises à l'ADR, le client déclare explicitement si son envoi l'est ; une commande qu'aucun camion de la flotte ne peut prendre (poids, volume, équipement ADR et hayon réunis) est signalée dès la saisie, sans prix affiché, et refusée à l'enregistrement comme par l'API ; le volume se saisit. Les livraisons vers la Grèce, dont GeoNames ne publie pas les codes postaux, voient leur localité vérifiée en ligne (Photon) | ✅ alpha |
@@ -63,7 +63,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit par clé, dépôt idempotent ; documentation dans [docs/API.md](docs/API.md) | ✅ beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ beta |
-| **Tests et intégration continue** | 368 tests sur PostgreSQL, exécutés à chaque proposition de fusion | ✅ beta |
+| **Tests et intégration continue** | 563 tests sur PostgreSQL, exécutés à chaque proposition de fusion, avec `composer audit` et `npm audit` : une faille publiée dans une dépendance fait échouer la CI. Actions GitHub épinglées par empreinte, jeton en lecture seule, mises à jour proposées par Dependabot | ✅ beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
 ---
@@ -101,7 +101,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Paiement | Stripe |
 | Facturation électronique | UBL Peppol BIS 3.0 — norme européenne EN 16931 (fichier généré ; transmission par point d'accès à raccorder) |
 | Tests | PHPUnit sur PostgreSQL |
-| Intégration continue | GitHub Actions — style, tests et compilation |
+| Intégration continue | GitHub Actions — style, audit des dépendances, compilation et tests |
 
 ---
 
@@ -256,7 +256,7 @@ php artisan test
 vendor/bin/pint
 ```
 
-Trois cent soixante-huit tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le paiement en ligne, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), le contrôle de chaque affectation (permis, ADR, groupage, chevauchements, indisponibilités, recontrôle à la prise en charge), les enlèvements hors de Belgique (trajets, calendriers, premier enlèvement à l'heure, fuseaux) et le fret retour (tarif, plancher national, fenêtre, capacité, planification), la demande de devis complète (champs conditionnels, pièces jointes, registres de TVA, transformation en commande), les livraisons vers la Grèce, l'annulation par le client, la traduction complète de l'application, la politique de sécurité du contenu, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
+Cinq cent soixante-trois tests couvrent l'authentification, le cloisonnement entre rôles, le calcul du prix au serveur et la cohérence des formules entre elles, l'interface de programmation, la facturation (acheteur figé, TVA, avoirs, paiements partiels, suppléments) et son envoi par courriel, le paiement en ligne, le cycle de vie d'une mission de l'affectation à la livraison (transitions atomiques, réaffectation en route, preuve de livraison), le contrôle de chaque affectation (permis, ADR, groupage, chevauchements, indisponibilités, recontrôle à la prise en charge), les enlèvements hors de Belgique (trajets, calendriers, premier enlèvement à l'heure, fuseaux) et le fret retour (tarif, plancher national, fenêtre, capacité, planification), la demande de devis complète (champs conditionnels, pièces jointes, registres de TVA, transformation en commande), les livraisons vers la Grèce, l'annulation par le client, la traduction complète de l'application, la politique de sécurité du contenu, l'acceptation des conditions à l'inscription et chacun des constats de l'audit de sécurité. Le style du code PHP suit la convention Laravel, vérifiée par Pint.
 
 L'intégration continue exécute les deux à chaque proposition de fusion, avec un service PostgreSQL 16 et la compilation du front.
 
