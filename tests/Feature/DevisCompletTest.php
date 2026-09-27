@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\GrillesDeDemonstration;
 use Tests\TestCase;
@@ -439,5 +440,17 @@ class DevisCompletTest extends TestCase
             ->assertJsonPath('adresse.code_postal', '1309')
             ->assertJsonPath('adresse.ville', 'SOFIA')
             ->assertJsonPath('adresse.pays', 'BG');
+    }
+
+    public function test_les_pieces_jointes_anonymes_ont_un_plafond_quotidien(): void
+    {
+        Storage::fake('local');
+        RateLimiter::increment('devis-octets|127.0.0.1', 86400, 50 * 1024 * 1024 - 1024);
+
+        $this->post(route('devis.store'), $this->demande([
+            'attachments' => [UploadedFile::fake()->create('bon.pdf', 200, 'application/pdf')],
+        ]))->assertSessionHasErrors('attachments');
+
+        $this->assertSame(0, QuoteRequest::count());
     }
 }

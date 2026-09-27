@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -332,6 +333,23 @@ class QuoteController extends Controller
             'attachments.*.max' => Traductions::t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
             'attachments.*.mimes' => Traductions::t('msg.devis_piece_format', 'Pièces jointes acceptées : PDF, images, tableurs et documents Word.'),
         ]);
+
+        // Le formulaire est public : sans plafond, un robot remplissait le
+        // disque de pieces jointes gardees deux ans. 50 Mo par jour et par
+        // adresse, 1 Go par jour pour tous les visiteurs.
+        $octets = collect($data['attachments'] ?? [])->sum(fn (UploadedFile $f) => $f->getSize());
+
+        if ($octets > 0) {
+            $parAdresse = 'devis-octets|'.$request->ip();
+
+            if (RateLimiter::attempts($parAdresse) + $octets > 50 * 1024 * 1024
+                || RateLimiter::attempts('devis-octets|tous') + $octets > 1024 * 1024 * 1024) {
+                return back()->withErrors(['attachments' => Traductions::t('msg.devis_pieces_plafond', 'Trop de pièces jointes reçues aujourd\'hui. Envoyez votre demande sans pièce jointe : nous vous les demanderons par e-mail.')])->withInput();
+            }
+
+            RateLimiter::increment($parAdresse, 86400, $octets);
+            RateLimiter::increment('devis-octets|tous', 86400, $octets);
+        }
 
         $data['goods_type'] = Traductions::vocabulaireEnFrancais('marchandise', trim($data['goods_type']));
 
