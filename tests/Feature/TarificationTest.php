@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -145,5 +146,59 @@ class TarificationTest extends TestCase
 
         $this->assertGreaterThan(1, $ordre->estimated_cost);
         $this->assertGreaterThan(1, $ordre->distance_km);
+    }
+
+    public function test_la_meme_commande_renvoyee_aussitot_n_est_pas_dupliquee(): void
+    {
+        $client = Client::factory()->create();
+        $grille = $this->grilleBelge();
+
+        foreach (range(1, 2) as $envoi) {
+            $this->actingAs($client->compte())
+                ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id]));
+        }
+
+        $this->assertSame(1, TransportOrder::where('client_id', $client->id)->count());
+    }
+
+    public function test_une_reference_de_chargement_deja_commandee_est_refusee(): void
+    {
+        $client = Client::factory()->create();
+        $grille = $this->grilleBelge();
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id, 'loading_reference' => 'REF-1']))
+            ->assertSessionHasNoErrors();
+
+        $this->travel(5)->minutes();
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id, 'loading_reference' => 'REF-1', 'weight' => 900]))
+            ->assertSessionHasErrors('loading_reference');
+    }
+
+    public function test_une_commande_deja_en_cours_d_envoi_est_refusee(): void
+    {
+        $client = Client::factory()->create();
+        $grille = $this->grilleBelge();
+        $verrou = Cache::lock('commande.'.$client->compte()->id, 30);
+        $verrou->get();
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id]))
+            ->assertSessionHasErrors('tariff_grid_id');
+
+        $verrou->release();
+        $this->assertSame(0, TransportOrder::count());
+    }
+
+    public function test_des_instructions_trop_longues_sont_refusees(): void
+    {
+        $client = Client::factory()->create();
+        $grille = $this->grilleBelge();
+
+        $this->actingAs($client->compte())
+            ->post(route('transport-orders.store'), $this->commande(['tariff_grid_id' => $grille->id, 'special_instructions' => str_repeat('a', 501)]))
+            ->assertSessionHasErrors('special_instructions');
     }
 }

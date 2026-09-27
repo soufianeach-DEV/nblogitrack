@@ -68,6 +68,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::get('/transport-orders/create', [TransportOrderController::class, 'create'])
             ->name('transport-orders.create');
         Route::post('/transport-orders', [TransportOrderController::class, 'store'])
+            ->middleware('throttle:20,1,commande')
             ->name('transport-orders.store');
         Route::post('/transport-orders/estimation', [TransportOrderController::class, 'estimation'])
             ->middleware('throttle:60,1,estimation')

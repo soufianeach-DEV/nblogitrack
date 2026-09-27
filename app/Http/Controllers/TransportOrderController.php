@@ -26,6 +26,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -419,6 +420,25 @@ class TransportOrderController extends Controller
     {
         abort_unless($request->user()->can('create', TransportOrder::class), 403);
 
+        // Un double clic ou deux onglets envoyaient la meme commande en
+        // parallele, et chacune etait enregistree : un seul envoi a la fois
+        // par compte.
+        $verrou = Cache::lock('commande.'.$request->user()->id, 30);
+
+        if (! $verrou->get()) {
+            return back()->withErrors(['tariff_grid_id' => Traductions::t('msg.commande_en_cours', 'Votre commande est déjà en cours d\'envoi : patientez quelques secondes.')]);
+        }
+
+        try {
+            return $this->enregistrer($request);
+        } finally {
+            $verrou->release();
+        }
+    }
+
+    private function enregistrer(Request $request): RedirectResponse
+    {
+
         $data = $request->validate([
             'pickup_address' => 'required|string|max:255',
             'pickup_country' => 'nullable|string|size:2',
@@ -437,7 +457,7 @@ class TransportOrderController extends Controller
             'pickup_date' => 'nullable|date|after_or_equal:now',
             'requested_delivery_date' => 'nullable|date|after_or_equal:today',
             'tariff_grid_id' => ['required', Rule::exists('tariff_grids', 'id')->where('is_active', true)],
-            'special_instructions' => 'nullable|string',
+            'special_instructions' => 'nullable|string|max:500',
             'shipper_name' => ['nullable', 'string', 'max:150', Rule::requiredIf(fn () => strtoupper((string) $request->input('pickup_country', 'BE')) !== 'BE')],
             'shipper_phone' => ['nullable', 'string', 'max:30', Rule::requiredIf(fn () => strtoupper((string) $request->input('pickup_country', 'BE')) !== 'BE')],
             'loading_reference' => 'nullable|string|max:60',
@@ -463,6 +483,25 @@ class TransportOrderController extends Controller
 
         $data['pickup_country'] = strtoupper($data['pickup_country'] ?? 'BE');
         $data['delivery_country'] = strtoupper($data['delivery_country']);
+
+        // La meme commande renvoyee juste apres la premiere (retour arriere,
+        // second clic une fois la page revenue) : c'est un doublon.
+        $doublon = TransportOrder::where('client_id', $request->user()->client_id)
+            ->where('status', '!=', 'CANCELLED')
+            ->where(fn ($q) => ! empty($data['loading_reference'])
+                ? $q->where('loading_reference', $data['loading_reference'])
+                : $q->where('created_at', '>=', now()->subMinutes(2))
+                    ->where('pickup_address', $data['pickup_address'])
+                    ->where('delivery_address', $data['delivery_address'])
+                    ->where('weight', $data['weight']))
+            ->value('tracking_number');
+
+        if ($doublon !== null) {
+            return back()->withErrors([
+                empty($data['loading_reference']) ? 'tariff_grid_id' : 'loading_reference' => Traductions::t('msg.commande_doublon', 'Cette commande est déjà enregistrée sous le numéro :numero.', ['numero' => $doublon]),
+            ])->withInput();
+        }
+
         $trajet = new Trajet($data['pickup_country'], $data['delivery_country']);
 
         if ($refus = self::refusDuTrajet($trajet, $data['pickup_address'])) {

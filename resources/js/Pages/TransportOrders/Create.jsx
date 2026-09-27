@@ -308,7 +308,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                                 <InputLabel htmlFor="loading_reference">{t('commande.reference_chargement', 'Référence de chargement')}</InputLabel>
                                 <TextInput id="loading_reference" value={data.loading_reference} maxLength={60} onChange={(e) => setData('loading_reference', e.target.value)} className="mt-1 block w-full" />
                             </div>
-                            <InputError message={(soumis && manque.expediteur) || errors.shipper_name || errors.shipper_phone} className="sm:col-span-3" />
+                            <InputError message={(soumis && manque.expediteur) || errors.shipper_name || errors.shipper_phone || errors.loading_reference} className="sm:col-span-3" />
                         </fieldset>
                     )}
                     <div className="sm:col-span-2">
@@ -456,7 +456,8 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
 
                 <div>
                     <InputLabel htmlFor="special_instructions" value={t('commande.instructions', 'Instructions particulières')} />
-                    <textarea id="special_instructions" value={data.special_instructions} onChange={(e) => setData('special_instructions', e.target.value)} rows="3" placeholder={t('commande.instructions_ex', 'ex. Livraison sur rendez-vous, hayon nécessaire, sonner au quai B…')} className={selectCls} />
+                    <textarea id="special_instructions" maxLength={500} value={data.special_instructions} onChange={(e) => setData('special_instructions', e.target.value)} rows="3" placeholder={t('commande.instructions_ex', 'ex. Livraison sur rendez-vous, hayon nécessaire, sonner au quai B…')} className={selectCls} />
+                    <InputError message={errors.special_instructions} className="mt-2" />
                 </div>
 
                 <PrimaryButton disabled={processing}>{t('commande.creer', 'Créer l\'expédition')}</PrimaryButton>
