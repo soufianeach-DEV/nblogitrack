@@ -97,7 +97,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Cartographie | Leaflet et MapLibre GL (fond vectoriel) |
 | Base de données | PostgreSQL 16 |
 | Authentification | Laravel Breeze (session) |
-| Messagerie (développement) | Mailpit |
+| Messagerie | Mailpit en développement, Brevo (SMTP) en production |
 | Paiement | Stripe |
 | Facturation électronique | UBL Peppol BIS 3.0 — norme européenne EN 16931 (fichier généré ; transmission par point d'accès à raccorder) |
 | Tests | PHPUnit sur PostgreSQL |
@@ -166,6 +166,28 @@ mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
 
 L'application répond sur `http://127.0.0.1:8000`, la boîte de réception de développement sur `http://localhost:8025`.
 
+### Envoi réel des courriels (Brevo)
+
+En développement, Mailpit intercepte tout. Pour que les courriels partent vraiment (confirmation d'adresse, mot de passe, activation, factures), l'application passe par le relais SMTP de Brevo, sans paquet à installer :
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=null
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=identifiant-smtp-brevo
+MAIL_PASSWORD=cle-smtp-brevo
+MAIL_FROM_ADDRESS="noreply@votre-domaine.be"
+MAIL_FROM_NAME="NBLogiTrack"
+MAIL_TIMEOUT=10
+```
+
+1. **Identifiant et clé** : dans Brevo, *Paramètres › SMTP & API › SMTP*. C'est une clé SMTP, pas une clé d'API ; elle ne va que dans le fichier `.env`, jamais dans le dépôt.
+2. **Domaine d'envoi** : dans *Expéditeurs & domaines*, faites authentifier le domaine de `MAIL_FROM_ADDRESS` (entrées DNS DKIM et DMARC fournies par Brevo). Sans cela, les courriels arrivent en indésirables ou sont refusés.
+3. **Vérification** : `php artisan optimize:clear`, puis « Mot de passe oublié » sur votre propre compte.
+
+L'offre gratuite de Brevo envoie 300 courriels par jour, assez pour une démonstration. La facturation mensuelle envoie un courriel par client : au-delà de 300 clients, passez à une offre payante.
+
 ### Paiement en ligne (Stripe)
 
 Le client règle une facture, ou son solde après un paiement partiel, par Stripe Checkout : carte, Bancontact et les autres moyens activés dans le tableau de bord Stripe. La page de paiement s'affiche dans sa langue.
@@ -215,7 +237,7 @@ php artisan db:seed --class=TranslationSeeder --force   # textes de l'interface
 php artisan optimize                                     # configuration, routes, vues, événements en cache
 ```
 
-- **Fichier `.env`** : `APP_ENV=production`, `APP_DEBUG=false` (jamais `true` : la page de débogage affiche la configuration et les requêtes), `APP_URL` exact en `https://` (seul ce domaine et ses sous-domaines sont servis), `SESSION_ENCRYPT=true`, `SESSION_SECURE_COOKIE` absent ou à `true`, `LOG_STACK=daily`, `LOG_LEVEL=warning`, `MAIL_TIMEOUT=10`, compte PostgreSQL dédié.
+- **Fichier `.env`** : `APP_ENV=production`, `APP_DEBUG=false` (jamais `true` : la page de débogage affiche la configuration et les requêtes), `APP_URL` exact en `https://` (seul ce domaine et ses sous-domaines sont servis), `SESSION_ENCRYPT=true`, `SESSION_SECURE_COOKIE` absent ou à `true`, `LOG_STACK=daily`, `LOG_LEVEL=warning`, relais SMTP (Brevo, voir plus haut) avec `MAIL_TIMEOUT=10`, compte PostgreSQL dédié.
 - **Derrière un répartiteur de charge ou un CDN** : `TRUSTED_PROXIES` avec leurs adresses, sinon HTTPS n'est pas reconnu et tous les visiteurs partagent les mêmes limites d'essais. `*` seulement si le serveur n'est joignable **que** par ce répartiteur (pare-feu) : sinon n'importe qui choisit son adresse IP avec un en-tête `X-Forwarded-For` et contourne les limites.
 - **PHP** : OPcache actif (`opcache.validate_timestamps=0`, puis `php artisan optimize` et rechargement de PHP-FPM à chaque déploiement) ; `upload_max_filesize=10M` et `post_max_size=55M` (déjà dans `public/.user.ini` pour PHP-FPM) ; `max_execution_time` de 30 s suffit.
 - **Serveur web** : `public/.htaccess` compresse les réponses et met en cache un an les fichiers de `public/build`. Sous nginx, reprendre ces règles (`gzip on`, `expires 1y` sur `/build/assets/`).
