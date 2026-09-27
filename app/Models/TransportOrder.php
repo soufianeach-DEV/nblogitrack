@@ -151,7 +151,7 @@ class TransportOrder extends Model
         'pickup_lat', 'pickup_lng', 'delivery_lat', 'delivery_lng',
         'cancelled_at', 'cancelled_by', 'cancellation_fee',
         'pickup_country', 'delivery_country', 'pricing_basis', 'backhaul_order_id', 'approche_km',
-        'shipper_name', 'shipper_phone', 'loading_reference',
+        'shipper_name', 'shipper_phone', 'loading_reference', 'idempotency_key',
     ];
 
     protected function casts(): array

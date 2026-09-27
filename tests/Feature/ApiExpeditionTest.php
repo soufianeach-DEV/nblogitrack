@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OrdreCree;
 use App\Models\ApiKey;
 use App\Models\Client;
 use App\Models\TariffGrid;
@@ -12,6 +13,7 @@ use Database\Seeders\TranslationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ApiExpeditionTest extends TestCase
@@ -267,5 +269,162 @@ class ApiExpeditionTest extends TestCase
 
         $this->getJson('/api/v1/expeditions/INCONNU', ['Authorization' => 'Bearer '.$jeton, 'Accept-Language' => 'en-GB,en;q=0.9'])
             ->assertNotFound()->assertJsonPath('message', 'Shipment not found.');
+    }
+
+    private function enlevement(): string
+    {
+        return JoursFeries::prochainJourOuvrable(now()->addDays(2))->toDateString();
+    }
+
+    public function test_une_erreur_repond_en_json_meme_sans_en_tete_accept(): void
+    {
+        [$cle, $jeton] = $this->cle(Client::factory()->create()->id);
+
+        $this->post('/api/v1/expeditions', [], ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(422)
+            ->assertJsonStructure(['message', 'errors' => ['enlevement']]);
+    }
+
+    public function test_une_adresse_d_api_inconnue_repond_404_en_json(): void
+    {
+        $this->get('/api/v1/inexistant')
+            ->assertNotFound()
+            ->assertHeader('Content-Type', 'application/json');
+    }
+
+    public function test_un_refus_d_authentification_annonce_le_schema_bearer(): void
+    {
+        $this->getJson('/api/v1/expeditions')
+            ->assertUnauthorized()
+            ->assertHeader('WWW-Authenticate', 'Bearer realm="api"');
+    }
+
+    public function test_une_formule_nommee_trop_lente_est_refusee(): void
+    {
+        TariffGrid::factory()->create();
+        TariffGrid::factory()->express()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+        $jour = $this->enlevement();
+
+        $this->postJson('/api/v1/expeditions', $this->corps([
+            'formule' => 'STANDARD',
+            'date_enlevement' => $jour,
+            'date_livraison' => now()->parse($jour)->addDay()->toDateString(),
+        ]), ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(422)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'STANDARD'));
+
+        $this->assertSame(0, TransportOrder::count());
+    }
+
+    public function test_un_delai_court_rend_l_ordre_urgent(): void
+    {
+        TariffGrid::factory()->express()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+        $jour = $this->enlevement();
+
+        $this->postJson('/api/v1/expeditions', $this->corps([
+            'date_enlevement' => $jour,
+            'date_livraison' => now()->parse($jour)->addDay()->toDateString(),
+        ]), ['Authorization' => 'Bearer '.$jeton])->assertCreated();
+
+        $this->assertSame('URGENT', TransportOrder::where('client_id', $entreprise->id)->value('priority'));
+    }
+
+    public function test_un_envoi_rejoue_avec_la_meme_cle_d_idempotence_ne_cree_qu_un_ordre(): void
+    {
+        TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+        $entetes = ['Authorization' => 'Bearer '.$jeton, 'Idempotency-Key' => 'envoi-42'];
+
+        $premier = $this->postJson('/api/v1/expeditions', $this->corps(), $entetes)->assertCreated();
+        $second = $this->postJson('/api/v1/expeditions', $this->corps(), $entetes)
+            ->assertCreated()
+            ->assertHeader('Idempotent-Replayed', 'true');
+
+        $this->assertSame($premier->json('data.numero'), $second->json('data.numero'));
+        $this->assertSame(1, TransportOrder::count());
+    }
+
+    public function test_une_reference_de_chargement_deja_deposee_est_refusee(): void
+    {
+        TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+        $corps = $this->corps(['reference_chargement' => 'CH-001']);
+
+        $numero = $this->postJson('/api/v1/expeditions', $corps, ['Authorization' => 'Bearer '.$jeton])
+            ->assertCreated()->json('data.numero');
+
+        $this->postJson('/api/v1/expeditions', $corps, ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(409)
+            ->assertJsonPath('numero', $numero);
+
+        $this->assertSame(1, TransportOrder::count());
+    }
+
+    public function test_le_partenaire_recoit_le_code_et_le_lien_de_suivi(): void
+    {
+        Mail::fake();
+        TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create();
+        $compte = User::factory()->create(['client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
+        [$cle, $jeton] = $this->cle($entreprise->id);
+
+        $reponse = $this->postJson('/api/v1/expeditions', $this->corps(), ['Authorization' => 'Bearer '.$jeton])
+            ->assertCreated();
+
+        $ordre = TransportOrder::where('client_id', $entreprise->id)->firstOrFail();
+
+        $reponse->assertJsonPath('data.code_suivi', $ordre->tracking_code)
+            ->assertHeader('Location', route('api.expeditions.show', $ordre->tracking_number));
+        $this->assertStringContainsString('code='.$ordre->tracking_code, $reponse->json('data.suivi_url'));
+
+        Mail::assertSent(OrdreCree::class, fn ($m) => $m->hasTo($compte->email));
+    }
+
+    public function test_un_code_pays_en_minuscules_est_accepte(): void
+    {
+        TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+
+        $this->postJson('/api/v1/expeditions', $this->corps(['pays_livraison' => 'be', 'hayon' => null]),
+            ['Authorization' => 'Bearer '.$jeton])->assertCreated();
+    }
+
+    public function test_le_pays_de_l_adresse_de_livraison_doit_suivre_pays_livraison(): void
+    {
+        TariffGrid::factory()->create();
+        TariffGrid::factory()->zone('FR', 'France')->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+
+        $this->postJson('/api/v1/expeditions', $this->corps([
+            'livraison' => 'Rue de Rivoli 10, 75001 Paris, France',
+            'pays_livraison' => 'BE',
+        ]), ['Authorization' => 'Bearer '.$jeton])
+            ->assertStatus(422)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'pays_livraison'));
+
+        $this->assertSame(0, TransportOrder::count());
+    }
+
+    public function test_un_enlevement_belge_se_prevoit_a_l_ouverture_du_quai(): void
+    {
+        TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create();
+        [$cle, $jeton] = $this->cle($entreprise->id);
+
+        $this->postJson('/api/v1/expeditions', $this->corps(), ['Authorization' => 'Bearer '.$jeton])
+            ->assertCreated();
+
+        $heure = TransportOrder::where('client_id', $entreprise->id)->firstOrFail()
+            ->pickup_date->setTimezone('Europe/Brussels')->format('H:i');
+
+        $this->assertSame(config('fret.chrono.quai.0', '07:00'), $heure);
     }
 }

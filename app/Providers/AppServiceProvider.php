@@ -83,6 +83,15 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(120)->by('tous'),
         ]);
 
+        // API : la limite suit la cle, pas l'adresse IP. Deux partenaires
+        // derriere le meme proxy ne se genent plus, et un meme partenaire ne
+        // la contourne pas en changeant d'adresse. La limite par adresse,
+        // plus large, borne celui qui inventerait des cles a la volee.
+        RateLimiter::for('api', fn (Request $r) => [
+            Limit::perMinute(120)->by('cle'.strtok((string) $r->bearerToken(), '.')),
+            Limit::perMinute(300)->by('ip'.$r->ip()),
+        ]);
+
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));
 
         Gate::define('view-all-orders', fn (User $user) => $user->isStaff());

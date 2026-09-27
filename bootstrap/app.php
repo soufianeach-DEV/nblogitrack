@@ -99,6 +99,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustHosts();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // L'API repond toujours en JSON, meme a un appelant qui n'envoie
+        // pas Accept: application/json : une erreur de validation ou une
+        // limite de debit depassee repondait par une redirection HTML.
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api', 'api/*') || $request->expectsJson(),
+        );
+
         // Une adresse inconnue (/nl/inexistant, /en/p/nope) echoue avant
         // que la langue soit fixee : la page d'erreur sortait en francais.
         // On la lit dans le premier segment de l'adresse.
@@ -145,7 +152,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // L'utilisateur reste sur sa page, ses champs intacts, avec un
         // message qui dit combien de temps attendre.
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
-            if ($e->getStatusCode() !== 429 || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
+            if ($e->getStatusCode() !== 429 || $request->is('api', 'api/*') || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
                 return null;
             }
 

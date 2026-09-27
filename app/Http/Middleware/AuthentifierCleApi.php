@@ -9,6 +9,7 @@ use App\Support\Traductions;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthentifierCleApi
@@ -46,10 +47,12 @@ class AuthentifierCleApi
 
         $reponse = $next($request);
 
-        $cle->forceFill([
+        // Increment fait par la base : deux appels simultanes ne se
+        // perdent plus l'un l'autre.
+        ApiKey::whereKey($cle->id)->update([
             'last_used_at' => now(),
-            'requests_count' => $cle->requests_count + 1,
-        ])->save();
+            'requests_count' => DB::raw('requests_count + 1'),
+        ]);
 
         $this->journaliser($request, $cle, $reponse->getStatusCode(), null, $depart);
 
@@ -60,10 +63,15 @@ class AuthentifierCleApi
     {
         $this->journaliser($request, $cle, $code, $motif, $depart);
 
-        return response()->json([
+        $reponse = response()->json([
             'message' => ApiRequest::MOTIFS[$motif] ?? 'Accès refusé.',
             'motif' => $motif,
         ], $code);
+
+        // RFC 9110 : un 401 dit quel schema d'authentification presenter.
+        return $code === 401
+            ? $reponse->header('WWW-Authenticate', 'Bearer realm="api"')
+            : $reponse;
     }
 
     private function journaliser(Request $request, ?ApiKey $cle, int $statut, ?string $motif, float $depart): void

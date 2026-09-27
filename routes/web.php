@@ -284,7 +284,9 @@ Route::get('/', fn () => redirect('/'.app()->getLocale()));
 Route::fallback(function (Request $requete) {
     $chemin = trim($requete->path(), '/');
 
-    abort_if(Traductions::estServie(explode('/', $chemin)[0]), 404);
+    // Une adresse d'API inconnue n'a pas de version traduite : elle
+    // repond 404 (en JSON) au lieu de rediriger vers le site.
+    abort_if(Traductions::estServie(explode('/', $chemin)[0]) || explode('/', $chemin)[0] === 'api', 404);
 
     return redirect('/'.app()->getLocale().'/'.$chemin.
         ($requete->getQueryString() ? '?'.$requete->getQueryString() : ''));
