@@ -119,7 +119,7 @@ class FactureUbl
 
         $x->startElement('cbc:EndpointID');
         $x->writeAttribute('schemeID', $scheme);
-        $x->text($identifiant);
+        $x->text(self::propre($identifiant));
         $x->endElement();
 
         $x->startElement('cac:PartyName');
@@ -290,8 +290,18 @@ class FactureUbl
     private static function texte(XMLWriter $x, string $balise, string $valeur): void
     {
         $x->startElement($balise);
-        $x->text($valeur);
+        $x->text(self::propre($valeur));
         $x->endElement();
+    }
+
+    /**
+     * Les caracteres interdits en XML 1.0 (controles invisibles colles dans
+     * un nom ou une adresse) rendaient toute la facture illisible et la
+     * faisaient refuser par Peppol.
+     */
+    private static function propre(string $valeur): string
+    {
+        return (string) preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $valeur);
     }
 
     private static function montant(XMLWriter $x, string $balise, float $valeur): void

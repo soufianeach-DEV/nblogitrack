@@ -130,41 +130,60 @@ class ProfileController extends Controller
         // pleine mission. Les supprimer d'ici contournait ces gardes.
         abort_unless($user->role === 'CLIENT', 403);
 
-        $collegues = User::where('client_id', $user->client_id)->where('id', '!=', $user->id);
+        // Les comptes de l'entreprise sont verrouilles le temps de la
+        // verification : deux administrateurs qui partaient en meme temps
+        // passaient chacun le controle et laissaient l'entreprise sans
+        // administrateur.
+        $refus = DB::transaction(function () use ($user) {
+            if ($user->client_id !== null) {
+                User::where('client_id', $user->client_id)->lockForUpdate()->get();
+            }
 
-        // L'entreprise ne se retrouve pas sans administrateur : il faut en
-        // designer un autre avant de partir.
-        if ($user->company_role === 'ADMIN'
-            && (clone $collegues)->exists()
-            && ! (clone $collegues)->where('company_role', 'ADMIN')->where('is_active', true)->exists()) {
-            return back()->withErrors([
-                'password' => Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.'),
-            ]);
-        }
+            $collegues = User::where('client_id', $user->client_id)->where('id', '!=', $user->id);
 
-        // Dernier compte de l'entreprise : l'entreprise part avec lui, sauf
-        // si elle a deja transporte ou ete facturee. Elle garde alors ses
-        // pieces, que la loi impose de conserver.
-        $derniere = ! (clone $collegues)->exists();
-        $historique = $derniere && $user->client_id !== null && (
-            TransportOrder::where('client_id', $user->client_id)->exists()
-            || Invoice::where('client_id', $user->client_id)->exists()
-        );
+            // L'entreprise ne se retrouve pas sans administrateur : il faut en
+            // designer un autre avant de partir.
+            if ($user->company_role === 'ADMIN'
+                && (clone $collegues)->exists()
+                && ! (clone $collegues)->where('company_role', 'ADMIN')->where('is_active', true)->exists()) {
+                return Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.');
+            }
 
-        if ($historique) {
-            return back()->withErrors([
-                'password' => Traductions::t('msg.compte_non_supprimable', 'Votre entreprise a des expéditions ou des factures, que nous devons conserver. Écrivez-nous pour clôturer le compte.'),
-            ]);
-        }
+            // Dernier compte de l'entreprise : l'entreprise part avec lui, sauf
+            // si elle a deja transporte ou ete facturee. Elle garde alors ses
+            // pieces, que la loi impose de conserver.
+            $derniere = ! (clone $collegues)->exists();
+            $historique = $derniere && $user->client_id !== null && (
+                TransportOrder::where('client_id', $user->client_id)->exists()
+                || Invoice::where('client_id', $user->client_id)->exists()
+            );
 
-        $entreprise = $derniere ? $user->client : null;
+            if ($historique) {
+                return Traductions::t('msg.compte_non_supprimable', 'Votre entreprise a des expéditions ou des factures, que nous devons conserver. Écrivez-nous pour clôturer le compte.');
+            }
 
-        Auth::logout();
+            $entreprise = $derniere ? $user->client : null;
 
-        DB::transaction(function () use ($user, $entreprise) {
+            ActivityLog::record(
+                'profile.deleted',
+                'Suppression du compte '.$user->email.($entreprise ? ' et de l\'entreprise '.$entreprise->company_name : ''),
+                null,
+                ['email' => $user->email, 'entreprise_id' => $user->client_id],
+            );
+
+            // Deconnexion avant la suppression : elle renouvelle le jeton
+            // « se souvenir de moi » et reenregistrerait le compte.
+            Auth::logout();
+
             $user->delete();
             $entreprise?->delete();
+
+            return null;
         });
+
+        if ($refus !== null) {
+            return back()->withErrors(['password' => $refus]);
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

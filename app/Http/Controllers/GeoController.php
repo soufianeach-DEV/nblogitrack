@@ -28,8 +28,10 @@ class GeoController extends Controller
             ->selectRaw('city AS ville, MIN(region) AS region, AVG(lat) AS lat, AVG(lng) AS lng, COUNT(DISTINCT code) AS nb_codes, MIN(code) AS code')
             ->where('country_code', strtoupper($data['pays']))
             ->where(function ($requete) use ($noms) {
+                // % et _ sont echappes : « %% » listait toutes les villes du
+                // pays et « _%_%_ » forcait des parcours couteux de la table.
                 foreach ($noms as $nom) {
-                    $requete->orWhere('city', 'ilike', $nom.'%');
+                    $requete->orWhere('city', 'ilike', addcslashes($nom, '\\%_').'%');
                 }
             })
             ->groupBy('city')
@@ -59,7 +61,7 @@ class GeoController extends Controller
         $codes = DB::table('postal_codes')
             ->selectRaw('code, MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
             ->where('country_code', strtoupper($data['pays']))
-            ->where('city', 'ilike', $data['ville'])
+            ->where('city', 'ilike', addcslashes($data['ville'], '\\%_'))
             ->groupBy('code')
             ->orderBy('code')
             ->limit(60)

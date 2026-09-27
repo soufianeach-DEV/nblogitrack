@@ -80,10 +80,8 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->middleware('throttle:60,1,recherche')
             ->name('recherche.suggestions');
         Route::get('/transport-orders/{transportOrder}', [TransportOrderController::class, 'show'])
-            ->whereNumber('transportOrder')
             ->name('transport-orders.show');
         Route::patch('/transport-orders/{transportOrder}/annulation', [TransportOrderController::class, 'annuler'])
-            ->whereNumber('transportOrder')
             ->middleware('throttle:10,1,annulation')
             ->name('transport-orders.cancel');
 
@@ -93,16 +91,13 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
                 ->middleware('throttle:invitation')
                 ->name('company.users.store');
             Route::patch('/entreprise/utilisateurs/{utilisateur}', [CompanyUserController::class, 'update'])
-                ->whereNumber('utilisateur')
                 ->name('company.users.update');
         });
 
         Route::middleware(['can:plan-orders', 'throttle:30,1,supplement'])->group(function () {
             Route::post('/transport-orders/{transportOrder}/supplements', [OrderChargeController::class, 'store'])
-                ->whereNumber('transportOrder')
                 ->name('transport-orders.charges.store');
             Route::delete('/transport-orders/{transportOrder}/supplements/{supplement}', [OrderChargeController::class, 'destroy'])
-                ->whereNumber(['transportOrder', 'supplement'])
                 ->name('transport-orders.charges.destroy');
         });
 
@@ -119,7 +114,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         Route::middleware('can:handle-quotes')->group(function () {
             Route::get('/demandes-de-devis', [QuoteController::class, 'index'])->name('quotes.index');
             Route::patch('/demandes-de-devis/{quoteRequest}/statut', [QuoteController::class, 'updateStatus'])->name('quotes.status');
-            Route::get('/demandes-de-devis/{quoteRequest}/pieces/{rang}', [QuoteController::class, 'piece'])->whereNumber('rang')->name('quotes.piece');
+            Route::get('/demandes-de-devis/{quoteRequest}/pieces/{rang}', [QuoteController::class, 'piece'])->where('rang', '[0-9]{1,2}')->name('quotes.piece');
             Route::post('/demandes-de-devis/{quoteRequest}/commande', [QuoteController::class, 'commander'])->name('quotes.order');
             // Droit a l'effacement d'un demandeur : reserve a l'administrateur.
             Route::delete('/demandes-de-devis/{quoteRequest}', [QuoteController::class, 'destroy'])->middleware('can:view-logs')->name('quotes.destroy');
@@ -138,31 +133,24 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
 
         Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/factures/{invoice}', [InvoiceController::class, 'show'])
-            ->whereNumber('invoice')
             ->name('invoices.show');
         Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])
             ->middleware('can:control-payments')
             ->name('invoices.paid');
         Route::post('/factures/{invoice}/avoir', [InvoiceController::class, 'avoir'])
-            ->whereNumber('invoice')
             ->middleware(['can:control-payments', 'throttle:10,1,avoir'])
             ->name('invoices.credit');
         Route::post('/factures/{invoice}/envoi', [InvoiceController::class, 'envoyer'])
-            ->whereNumber('invoice')
             ->middleware(['can:control-payments', 'throttle:10,1,envoi-facture'])
             ->name('invoices.send');
         Route::get('/factures/{invoice}/pdf', [InvoiceController::class, 'pdf'])
-            ->whereNumber('invoice')
             ->name('invoices.pdf');
         Route::get('/factures/{invoice}/ubl', [InvoiceController::class, 'ubl'])
-            ->whereNumber('invoice')
             ->name('invoices.ubl');
 
         Route::post('/factures/{invoice}/payer', [PaymentController::class, 'payer'])
-            ->whereNumber('invoice')
             ->name('payments.payer');
         Route::get('/factures/{invoice}/paiement/retour', [PaymentController::class, 'retour'])
-            ->whereNumber('invoice')
             ->name('payments.retour');
 
         Route::middleware('can:control-payments')->group(function () {
@@ -281,7 +269,6 @@ Route::get('/verification-tva', [VatController::class, 'verifier'])
     ->name('vat.verify');
 
 Route::get('/documents/{pageDocument}', [PagePubliqueController::class, 'document'])
-    ->whereNumber('pageDocument')
     ->name('pages.documents.show');
 
 Route::get('/robots.txt', [PlanDuSiteController::class, 'robots'])->name('robots');

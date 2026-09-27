@@ -36,15 +36,20 @@ class AppServiceProvider extends ServiceProvider
         // Douze caracteres au moins : la longueur protege mieux qu'une
         // regle de composition, et le defaut de Laravel (huit) est court
         // pour des comptes qui commandent et paient.
-        Password::defaults(fn () => Password::min(12));
+        // 72 caracteres au plus : bcrypt ignore ce qui suit le 72e octet, si bien que
+        // deux mots de passe plus longs, differents apres le 72e octet,
+        // ouvraient le meme compte.
+        Password::defaults(fn () => Password::min(12)->max(72));
 
         // Les modeles designes par un numero : /ordres/abc repondait par une
-        // erreur 500 de PostgreSQL (entier invalide) au lieu d'une 404.
+        // erreur 500 de PostgreSQL (entier invalide) au lieu d'une 404, et un
+        // nombre de vingt chiffres depassait le type bigint. Dix-huit
+        // chiffres au plus, sans zero en tete.
         Route::patterns(array_fill_keys([
             'apiKey', 'client', 'driver', 'id', 'indisponibilite', 'invoice',
             'pageDocument', 'processingRecord', 'purchaseInvoice', 'quoteRequest',
             'supplement', 'translation', 'transportOrder', 'user', 'utilisateur',
-        ], '[0-9]+'));
+        ], '[1-9][0-9]{0,17}'));
 
         // Une remise fret retour hors bornes vendrait a perte ou n'aurait
         // aucun sens : l'application refuse de demarrer.

@@ -114,6 +114,13 @@ class TransportOrderController extends Controller
         // medical et motif de sortie compris, jusque dans la page du client.
         $transportOrder->makeHidden('driver');
 
+        // Colonnes d'exploitation que la fiche n'affiche pas : un client n'a
+        // pas a lire le numero interne de la commande qui porte son fret
+        // retour, ni qui a annule, ni la cle d'idempotence de l'API.
+        if (! $request->user()->isStaff()) {
+            $transportOrder->makeHidden(['pricing_basis', 'backhaul_order_id', 'approche_km', 'driver_id', 'cancelled_by', 'idempotency_key']);
+        }
+
         $transportOrder->setAttribute('formule', $transportOrder->formule());
         $transportOrder->setAttribute('delai_promis', $transportOrder->delaiPromis());
 

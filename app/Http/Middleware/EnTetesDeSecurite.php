@@ -30,6 +30,13 @@ class EnTetesDeSecurite
             $reponse->headers->set($nom, $valeur);
         }
 
+        // Une page ou un fichier servi a un compte connecte (factures, export
+        // des donnees) ne reste pas dans le cache du navigateur : sur un
+        // poste partage, il se relisait apres la deconnexion.
+        if (auth()->check() && ! $request->is('build/*')) {
+            $reponse->headers->set('Cache-Control', 'no-store, private');
+        }
+
         return $reponse;
     }
 

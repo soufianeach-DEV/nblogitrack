@@ -6,6 +6,7 @@ use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IgnorerFiltresEnTableau;
 use App\Http\Middleware\MesurerAudience;
+use App\Http\Middleware\RetirerCaracteresDeControle;
 use App\Http\Middleware\VerifierCompteActif;
 use App\Support\Audience;
 use App\Support\Traductions;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // manquaient sur une 404 levee avant lui (modele introuvable dans
         // l'adresse) et sur les reponses de l'API.
         $middleware->append(EnTetesDeSecurite::class);
+        $middleware->append(RetirerCaracteresDeControle::class);
 
         $middleware->web(append: [
             IgnorerFiltresEnTableau::class,

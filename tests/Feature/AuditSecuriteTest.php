@@ -8,8 +8,10 @@ use App\Models\Page;
 use App\Models\PageDocument;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\FactureUbl;
 use App\Support\Facturier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -229,5 +231,98 @@ class AuditSecuriteTest extends TestCase
 
         $this->get(route('register'))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('fonctions', fn ($f) => ! collect($f)->contains('Jean Dupont 0470 12 34 56')));
+    }
+
+    public function test_un_identifiant_de_vingt_chiffres_repond_404(): void
+    {
+        $this->followingRedirects()->get('/documents/99999999999999999999')->assertNotFound();
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->get('/fr/transport-orders/99999999999999999999')->assertNotFound();
+    }
+
+    public function test_une_page_connectee_ne_reste_pas_dans_le_cache_du_navigateur(): void
+    {
+        $reponse = $this->actingAs(User::factory()->administrateur()->create())->get(route('dashboard'));
+
+        $this->assertStringContainsString('no-store', (string) $reponse->headers->get('Cache-Control'));
+    }
+
+    public function test_un_autre_site_ne_change_pas_la_langue_du_compte(): void
+    {
+        $compte = User::factory()->create(['locale' => 'fr']);
+
+        $this->actingAs($compte)->get('/langue/nl', ['Sec-Fetch-Site' => 'cross-site']);
+        $this->assertSame('fr', $compte->fresh()->locale);
+
+        $this->actingAs($compte)->get('/langue/nl', ['Sec-Fetch-Site' => 'same-origin']);
+        $this->assertSame('nl', $compte->fresh()->locale);
+    }
+
+    public function test_la_fiche_commande_du_client_ne_porte_pas_les_champs_internes(): void
+    {
+        $client = Client::factory()->create();
+        $ordre = TransportOrder::factory()->create(['client_id' => $client->id, 'idempotency_key' => 'cle-secrete']);
+
+        $this->actingAs($client->compte())
+            ->get(route('transport-orders.show', $ordre))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->missing('order.idempotency_key')
+                ->missing('order.backhaul_order_id')
+                ->missing('order.cancelled_by'));
+    }
+
+    public function test_la_recherche_de_villes_ne_prend_pas_les_jokers(): void
+    {
+        DB::table('postal_codes')->insert([
+            ['country_code' => 'BE', 'code' => '1000', 'city' => 'Bruxelles', 'lat' => 50.85, 'lng' => 4.35],
+            ['country_code' => 'BE', 'code' => '4000', 'city' => 'Liège', 'lat' => 50.63, 'lng' => 5.57],
+        ]);
+
+        $this->getJson('/geo/villes?pays=BE&q=%25%25')->assertOk()->assertJsonCount(0);
+        $this->getJson('/geo/villes?pays=BE&q=Bru')->assertOk()->assertJsonCount(1);
+    }
+
+    public function test_les_caracteres_de_controle_sont_retires_des_saisies_et_du_xml(): void
+    {
+        $compte = User::factory()->create();
+
+        $this->actingAs($compte)->patch(route('profile.update'), [
+            'first_name' => "Jean\x0B\x01", 'last_name' => 'Dupont', 'email' => $compte->email,
+        ]);
+        $this->assertSame('Jean', $compte->fresh()->first_name);
+
+        $client = Client::factory()->create();
+        TransportOrder::factory()->livree()->create([
+            'client_id' => $client->id,
+            'actual_delivery_date' => now()->subMonth()->startOfMonth()->addDays(3)->toDateString(),
+        ]);
+        $facture = app(Facturier::class)->facturer()->first();
+        $facture->forceFill(['buyer_name' => "ACME\x0B\x01 SA"])->save();
+
+        $document = new \DOMDocument;
+        $this->assertTrue($document->loadXML(FactureUbl::pour($facture->load('lines'))));
+    }
+
+    public function test_un_mot_de_passe_de_plus_de_72_caracteres_est_refuse(): void
+    {
+        $compte = User::factory()->create();
+        $long = str_repeat('a', 73);
+
+        $this->actingAs($compte)
+            ->put(route('password.update'), [
+                'current_password' => 'password', 'password' => $long, 'password_confirmation' => $long,
+            ])
+            ->assertSessionHasErrors('password');
+    }
+
+    public function test_changer_son_mot_de_passe_est_journalise(): void
+    {
+        $compte = User::factory()->create();
+
+        $this->actingAs($compte)->put(route('password.update'), [
+            'current_password' => 'password', 'password' => 'un-nouveau-mot-de-passe', 'password_confirmation' => 'un-nouveau-mot-de-passe',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('activity_logs', ['action' => 'auth.password_changed']);
     }
 }

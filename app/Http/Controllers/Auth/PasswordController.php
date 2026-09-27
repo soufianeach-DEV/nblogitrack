@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,12 @@ class PasswordController extends Controller
                 ->where('id', '!=', $request->session()->getId())
                 ->delete();
         }
+
+        ActivityLog::record(
+            'auth.password_changed',
+            'Mot de passe changé par '.$request->user()->email,
+            $request->user(),
+        );
 
         return back();
     }

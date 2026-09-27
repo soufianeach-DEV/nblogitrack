@@ -42,7 +42,6 @@ Route::middleware('guest')->group(function () {
 // Le lien du courriel se suit sans etre connecte : sa signature suffit.
 Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
     ->middleware(['signed', 'throttle:6,1,verification'])
-    ->whereNumber('id')
     ->name('verification.verify');
 
 Route::middleware('auth')->group(function () {

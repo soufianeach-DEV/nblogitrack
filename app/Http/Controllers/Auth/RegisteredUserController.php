@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\VatController;
+use App\Mail\AdresseDejaInscrite;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientContact;
@@ -20,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -170,7 +172,7 @@ class RegisteredUserController extends Controller
             'last_name' => 'required|string|max:100',
             'position' => 'nullable|string|max:100',
             'phone' => 'required|string|max:20',
-            'email' => 'required|string|email|max:150|unique:'.User::class,
+            'email' => 'required|string|email|max:150',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
@@ -209,6 +211,27 @@ class RegisteredUserController extends Controller
 
         if ($message = $this->situationInterdite($data['vat_number'])) {
             return back()->withInput()->withErrors(['vat_number' => $message]);
+        }
+
+        // Une adresse deja inscrite recoit la meme reponse qu'une inscription
+        // reussie : le formulaire ne sert plus a tester quelles adresses ont
+        // un compte. Le titulaire est prevenu par courriel.
+        if ($existant = User::where('email', $data['email'])->first()) {
+            ActivityLog::record(
+                'client.register_existing_email',
+                'Inscription tentée avec une adresse déjà inscrite : '.$existant->email,
+                $existant,
+                ['entreprise' => $data['company_name']],
+                $existant->id,
+            );
+
+            try {
+                Mail::to($existant->email)->send(new AdresseDejaInscrite($existant));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            return $this->inscriptionEnregistree();
         }
 
         $user = DB::transaction(function () use ($data, $identifiants) {
@@ -269,6 +292,11 @@ class RegisteredUserController extends Controller
             $user->id,
         );
 
+        return $this->inscriptionEnregistree();
+    }
+
+    private function inscriptionEnregistree(): RedirectResponse
+    {
         return redirect()->route('login')->with('status', Traductions::t(
             'msg.inscription_enregistree',
             'Votre demande est enregistrée. Un administrateur doit valider votre entreprise avant votre première connexion : vous recevrez un e-mail dès l\'activation.',

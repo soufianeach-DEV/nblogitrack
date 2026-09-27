@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\AdresseDejaInscrite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -134,5 +136,21 @@ class RegistrationTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertNotNull(User::where('email', 'contact@transports-essai.be')->first());
+    }
+
+    public function test_une_adresse_deja_inscrite_recoit_la_meme_reponse_et_son_titulaire_est_prevenu(): void
+    {
+        Mail::fake();
+        $this->registreRepond();
+        $titulaire = User::factory()->create(['email' => 'contact@transports-essai.be']);
+
+        $this->post(route('register'), $this->formulaire())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status');
+
+        $this->assertSame(1, User::where('email', 'contact@transports-essai.be')->count());
+        $this->assertNull($titulaire->fresh()->client_id);
+        Mail::assertSent(AdresseDejaInscrite::class, fn ($m) => $m->hasTo($titulaire->email));
     }
 }
