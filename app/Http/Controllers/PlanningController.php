@@ -349,7 +349,7 @@ class PlanningController extends Controller
 
         $data = $request->validate([
             'vehicle_registration' => 'required|exists:vehicles,registration',
-            'driver_id' => 'required|exists:drivers,id',
+            'driver_id' => 'required|integer|exists:drivers,id',
             'motif' => $reaffectation ? 'required|string|min:5|max:200' : 'nullable',
         ], [
             'motif.required' => Traductions::t('msg.planif_motif_reaffectation', 'Indiquez le motif du changement d\'affectation.'),

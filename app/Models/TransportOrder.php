@@ -19,6 +19,9 @@ use Illuminate\Support\Str;
 
 class TransportOrder extends Model
 {
+    /** Colonnes d'exploitation qu'un client n'a pas a recevoir. */
+    public const COLONNES_INTERNES = ['pricing_basis', 'backhaul_order_id', 'approche_km', 'driver_id', 'cancelled_by', 'idempotency_key'];
+
     use DatesHeureDeBruxelles;
     use HasFactory;
 

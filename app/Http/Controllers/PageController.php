@@ -187,7 +187,10 @@ class PageController extends Controller
     private function valider(Request $request, ?Page $page = null): array
     {
         return $request->validate([
-            'slug' => 'required|string|max:80|regex:/^[a-z0-9\-]+$/|unique:pages,slug'
+            // Des mots separes par des tirets : « - » seul donnait une
+            // adresse vide, et la page placee au pied du site le faisait
+            // tomber en entier.
+            'slug' => 'required|string|max:80|regex:/^[a-z0-9]+(-[a-z0-9]+)*$/|unique:pages,slug'
                 .($page ? ','.$page->id : ''),
             'titre_fr' => 'required|string|max:150',
             'titre_nl' => 'nullable|string|max:150',

@@ -45,7 +45,7 @@ class EnvoyerNoteAuxConducteurs implements ShouldQueue
             'Note d\'information adressée à '.($conducteurs->count() - count($echecs)).' conducteur(s)',
             $this->page,
             array_filter([
-                'version' => $this->page->updated_at?->toIso8601String(),
+                'version' => $this->page->version()?->toIso8601String(),
                 'echecs' => $echecs,
             ]),
         );

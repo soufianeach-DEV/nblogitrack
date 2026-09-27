@@ -80,7 +80,16 @@ class TransportOrderController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $orders->getCollection()->each->append('en_attente_de_paiement');
+        // La ligne de facture ne sert qu'au badge « en attente de paiement » :
+        // elle ne part pas avec la liste, ni, pour un client, les colonnes
+        // d'exploitation.
+        $orders->getCollection()->each(function (TransportOrder $ordre) use ($request) {
+            $ordre->append('en_attente_de_paiement')->makeHidden('invoiceLine');
+
+            if (! $request->user()->isStaff()) {
+                $ordre->makeHidden(TransportOrder::COLONNES_INTERNES);
+            }
+        });
 
         return Inertia::render('TransportOrders/Index', [
             'orders' => $orders,
@@ -118,8 +127,13 @@ class TransportOrderController extends Controller
         // pas a lire le numero interne de la commande qui porte son fret
         // retour, ni qui a annule, ni la cle d'idempotence de l'API.
         if (! $request->user()->isStaff()) {
-            $transportOrder->makeHidden(['pricing_basis', 'backhaul_order_id', 'approche_km', 'driver_id', 'cancelled_by', 'idempotency_key']);
+            $transportOrder->makeHidden(TransportOrder::COLONNES_INTERNES);
         }
+
+        // La facture est resumee plus bas, selon les droits : chargee avec
+        // l'ordre, elle en portait le montant jusque chez un compte
+        // « commandes », qui ne doit pas le voir.
+        $transportOrder->makeHidden('invoiceLine');
 
         $transportOrder->setAttribute('formule', $transportOrder->formule());
         $transportOrder->setAttribute('delai_promis', $transportOrder->delaiPromis());

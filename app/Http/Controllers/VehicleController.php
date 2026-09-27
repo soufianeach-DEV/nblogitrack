@@ -181,7 +181,7 @@ class VehicleController extends Controller
         // Le formulaire montre le releve au kilometre pres : renvoyer la
         // valeur affichee (458 099 pour 458 099,64) ne fait pas reculer le
         // compteur.
-        if ($donnees['mileage'] !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
+        if (($donnees['mileage'] ?? null) !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
             return back()->withErrors([
                 // Arrondi, le message annoncait 175 662 la ou le controle et
                 // le champ retiennent 175 661 : on tronque comme eux.
@@ -193,7 +193,7 @@ class VehicleController extends Controller
 
         // Le releve renvoye tel qu'affiche ne remplace pas la valeur exacte ;
         // un champ vide garde le releve actuel (il faisait une erreur 500).
-        if ($donnees['mileage'] === null || (float) $donnees['mileage'] === floor((float) $vehicle->mileage)) {
+        if (($donnees['mileage'] ?? null) === null || (float) $donnees['mileage'] === floor((float) $vehicle->mileage)) {
             unset($donnees['mileage']);
         }
 

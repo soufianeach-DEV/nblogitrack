@@ -78,8 +78,8 @@ class MissionController extends Controller
             'note' => $note === null ? null : [
                 'titre' => $note->titre($langue),
                 'corps' => $note->corps($langue),
-                'version' => $note->updated_at?->toIso8601String(),
-                'mise_a_jour' => $note->updated_at?->format('d/m/Y'),
+                'version' => $note->version()?->toIso8601String(),
+                'mise_a_jour' => $note->version()?->format('d/m/Y'),
                 'a_accuser' => $aInformer,
             ],
         ]);
@@ -212,7 +212,7 @@ class MissionController extends Controller
         }
 
         DriverAcknowledgement::firstOrCreate(
-            ['user_id' => $request->user()->id, 'version' => $note->updated_at],
+            ['user_id' => $request->user()->id, 'version' => $note->version()],
             ['acknowledged_at' => now(), 'ip_address' => $request->ip()],
         );
 
@@ -220,7 +220,7 @@ class MissionController extends Controller
             'driver.notice_acknowledged',
             'Prise de connaissance de la note d\'information par '.$request->user()->email,
             $note,
-            ['version' => $note->updated_at?->toIso8601String()],
+            ['version' => $note->version()?->toIso8601String()],
         );
 
         return back()->with('success', Traductions::t('msg.note_accusee', 'Prise de connaissance enregistrée.'));
@@ -283,6 +283,13 @@ class MissionController extends Controller
         $precision = isset($donnees['precision_m']) ? (int) $donnees['precision_m'] : null;
 
         if (! ShipmentPosition::utilisable($lat, $lng, $precision)) {
+            return;
+        }
+
+        // La note promet qu'aucune position n'est relevee avant que le
+        // chauffeur en ait pris connaissance. Le statut change quand meme :
+        // seul le point n'est pas garde.
+        if (! DriverAcknowledgement::aJour($chauffeur)) {
             return;
         }
 

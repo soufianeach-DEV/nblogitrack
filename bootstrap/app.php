@@ -167,7 +167,22 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
 
-            return back()->with('error', Traductions::t('msg.trop_de_demandes', 'Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', [
+            // Retour a la page precedente, sauf si c'est l'adresse bloquee
+            // elle-meme (lien du courriel de suivi ouvert apres trop
+            // d'essais) : le retour la redemandait, et la redirection
+            // tournait en boucle. On repart alors de la meme page sans ses
+            // parametres.
+            $precedente = url()->previous();
+            $memeAdresse = strtok($precedente, '?') === $request->url();
+            $cible = $request->isMethod('GET') && ($memeAdresse || $precedente === url('/'))
+                ? $request->url()
+                : $precedente;
+
+            if ($request->isMethod('GET') && $cible === $request->fullUrl()) {
+                return null;
+            }
+
+            return redirect()->to($cible)->with('error', Traductions::t('msg.trop_de_demandes', 'Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', [
                 'secondes' => max(1, $secondes),
             ]));
         });
@@ -180,6 +195,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return back()->with('error', Traductions::t('msg.acces_refuse', 'Vous n\'avez pas accès à cet écran.'));
+            // Ouvert directement (lien, retour apres connexion), l'ecran
+            // refuse est aussi la page precedente : y revenir bouclait.
+            $precedente = url()->previous();
+            $cible = $request->isMethod('GET') && strtok($precedente, '?') === $request->url() ? route('dashboard') : $precedente;
+
+            if ($request->isMethod('GET') && $cible === $request->fullUrl()) {
+                return null;
+            }
+
+            return redirect()->to($cible)->with('error', Traductions::t('msg.acces_refuse', 'Vous n\'avez pas accès à cet écran.'));
         });
     })->create();

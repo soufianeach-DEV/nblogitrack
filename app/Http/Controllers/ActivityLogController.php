@@ -41,6 +41,7 @@ class ActivityLogController extends Controller
         'mission.started' => 'Enlèvement confirmé',
         'mission.delivered' => 'Livraison confirmée',
         'invoices.generated' => 'Émission des factures',
+        'invoices.drafts_sent' => 'Envoi des factures en brouillon',
         'invoice.sent' => 'Facture envoyée',
         'invoice.send_failed' => 'Échec d\'envoi de facture',
         'invoice.paid' => 'Facture payée',

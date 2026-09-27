@@ -120,6 +120,19 @@ class Facturier
         return DB::transaction(function () use ($client, $mois, $elements, $emissionImposee) {
             $periode = Carbon::createFromFormat('Y-m-d', $mois.'-01')->startOfMonth();
             $emission = $emissionImposee?->copy()->startOfDay() ?? $periode->copy()->addMonth()->startOfMonth();
+
+            // La numerotation suit l'ordre des dates : un mois oublie,
+            // facture apres coup, ne prend pas une date anterieure a la
+            // derniere facture deja emise. Sans cela, FAC-2026-0063 etait
+            // datee avant FAC-2026-0062. Le verrou tient jusqu'a la fin de la
+            // transaction, pour que deux emissions ne lisent pas la meme
+            // derniere date.
+            DB::select('select pg_advisory_xact_lock(?)', [crc32('factures-dates')]);
+            $derniere = Invoice::where('reference', 'like', 'FAC-%')->max('issued_on');
+
+            if ($derniere !== null && $emission->lt(Carbon::parse($derniere)->startOfDay())) {
+                $emission = Carbon::parse($derniere)->startOfDay();
+            }
             $regime = RegimeTva::pour($client);
 
             $horsTva = round((float) $elements->sum('montant'), 2);

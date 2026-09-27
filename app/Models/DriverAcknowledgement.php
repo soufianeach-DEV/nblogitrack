@@ -36,7 +36,7 @@ class DriverAcknowledgement extends Model
         }
 
         return self::where('user_id', $utilisateur)
-            ->where('version', $note->updated_at)
+            ->where('version', $note->version())
             ->exists();
     }
 

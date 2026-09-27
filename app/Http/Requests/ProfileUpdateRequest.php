@@ -9,6 +9,13 @@ use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
+    // Une adresse tapee avec des majuscules etait refusee (regle
+    // « lowercase ») : elle est rangee en minuscules, comme partout.
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['email' => mb_strtolower(trim((string) $this->input('email')))]);
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

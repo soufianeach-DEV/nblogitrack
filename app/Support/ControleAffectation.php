@@ -297,10 +297,14 @@ final class ControleAffectation
         // Le meme binome peut charger plusieurs envois le meme jour
         // (groupage), mais pas partir sur une autre mission pendant qu'il
         // roule encore : le deuxieme jour d'un Bruxelles-Lyon, il n'est pas
-        // a Namur.
+        // a Namur. Le groupage se juge sur le jour d'enlevement de l'ordre,
+        // pas sur le debut de la periode : un chauffeur qui charge la veille
+        // commence sa periode aujourd'hui, et les autres envois du lendemain
+        // passaient pour « un autre jour ».
+        $jour = ($ordre->pickup_date ?? $debut)->toDateString();
         $autresJours = TransportOrder::where('driver_id', $chauffeur->id)
             ->where('vehicle_registration', $vehicule->registration)
-            ->where(fn ($q) => $q->whereNull('pickup_date')->orWhereDate('pickup_date', '!=', $debut->toDateString()));
+            ->where(fn ($q) => $q->whereNull('pickup_date')->orWhereDate('pickup_date', '!=', $jour));
 
         if ($autre = self::missionsSurLaPeriode($autresJours, $debut, $fin, $ordre->id)->first()) {
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_binome_en_route_par', 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission (:mission).', ['mission' => $autre->tracking_number])];

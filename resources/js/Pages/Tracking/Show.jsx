@@ -3,6 +3,7 @@ import BoutonRetour from '@/Components/BoutonRetour';
 import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
+import MessagesFlash from '@/Components/MessagesFlash';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
@@ -630,7 +631,13 @@ function SuiviVisiteur({ order, searched }) {
     const t = useTraduction();
     const adresse = useAdresse();
     const locale = useLocale();
-    const { data, setData, get, processing } = useForm({ tracking_number: '', code: '' });
+    // Le lien du courriel porte le numero et le code : les champs les
+    // reprennent au lieu de rester vides au-dessus du resultat.
+    const parametres = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const { data, setData, get, processing } = useForm({
+        tracking_number: parametres?.get('tracking_number') ?? '',
+        code: parametres?.get('code') ?? '',
+    });
 
     const chercher = (e) => {
         e.preventDefault();
@@ -660,6 +667,8 @@ function SuiviVisiteur({ order, searched }) {
                     <p className="mb-6 mt-1 text-slate-600">
                         {t('suivi.entrez', 'Entrez votre numéro de suivi et le code reçu par e-mail.')}
                     </p>
+
+                    <MessagesFlash />
 
                     <form onSubmit={chercher} className="flex flex-col gap-3 sm:flex-row">
                         <input
@@ -721,9 +730,15 @@ function SuiviVisiteur({ order, searched }) {
                                 <dl className="space-y-3 text-sm">
                                     <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{adresse(order.pickup_address)}</dd></div>
                                     <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{adresse(order.delivery_address)}</dd></div>
-                                    <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date
-                                        ? new Date(order.requested_delivery_date).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                        : '—'}</dd></div>
+                                    {order.status === 'DELIVERED' && order.delivered_at ? (
+                                        <div><dt className="text-slate-600">{t('suivi.livre_le', 'Livré le')}</dt><dd className="font-medium text-marine">
+                                            {new Date(order.delivered_at).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </dd></div>
+                                    ) : (
+                                        <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date
+                                            ? new Date(order.requested_delivery_date).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                            : '—'}</dd></div>
+                                    )}
                                 </dl>
                             </div>
                         </div>

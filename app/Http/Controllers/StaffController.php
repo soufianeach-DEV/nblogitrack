@@ -103,6 +103,10 @@ class StaffController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // En minuscules, comme a l'inscription : sinon un doublon passait
+        // l'unicite et le compte ne pouvait jamais se connecter.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $donnees = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',

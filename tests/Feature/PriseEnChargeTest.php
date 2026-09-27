@@ -99,6 +99,26 @@ class PriseEnChargeTest extends TestCase
         $this->assertSame('DELIVERED', $ordre->refresh()->status);
     }
 
+    public function test_le_chauffeur_charge_la_veille_un_groupage_du_lendemain(): void
+    {
+        $chauffeur = $this->chauffeur();
+        $camion = $this->camion();
+        $commun = [
+            'driver_id' => $chauffeur->id,
+            'vehicle_registration' => $camion->registration,
+            'weight' => 1000,
+            'distance_km' => 80,
+        ];
+        $premier = TransportOrder::factory()->affectee()->create($commun + ['pickup_date' => now()->addDay()->setTime(9, 0)]);
+        TransportOrder::factory()->affectee()->create($commun + ['pickup_date' => now()->addDay()->setTime(11, 0)]);
+
+        $this->actingAs($chauffeur->user)
+            ->patch(route('missions.status', $premier), ['statut' => 'IN_PROGRESS'])
+            ->assertSessionHas('success');
+
+        $this->assertSame('IN_PROGRESS', $premier->refresh()->status);
+    }
+
     public function test_une_mission_non_enlevee_ne_se_livre_pas(): void
     {
         $chauffeur = $this->chauffeur();

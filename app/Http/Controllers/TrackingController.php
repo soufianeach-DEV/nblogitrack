@@ -34,8 +34,8 @@ class TrackingController extends Controller
                 ->where('tracking_number', strtoupper(trim((string) $request->query('tracking_number'))))
                 ->where('tracking_code', strtoupper(trim((string) $request->query('code'))))
                 ->first([
-                    'id', 'client_id', 'tracking_number', 'status',
-                    'pickup_address', 'delivery_address', 'requested_delivery_date',
+                    'client_id', 'tracking_number', 'status',
+                    'pickup_address', 'delivery_address', 'requested_delivery_date', 'delivered_at',
                 ])
             : null;
 
@@ -74,6 +74,10 @@ class TrackingController extends Controller
         // par le tableau « chauffeur », qui choisit ses champs. Sa fiche
         // complete ne doit pas voyager avec l'ordre.
         $ordre?->makeHidden('driver');
+
+        if (! $utilisateur->isStaff()) {
+            $ordre?->makeHidden(TransportOrder::COLONNES_INTERNES);
+        }
 
         return Inertia::render('Tracking/Show', [
             'searched' => $numero !== '',

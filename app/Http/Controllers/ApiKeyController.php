@@ -77,7 +77,7 @@ class ApiKeyController extends Controller
             'nom' => 'required|string|max:80',
             // Une cle interne lit tout mais ne depose rien : sans entreprise
             // a qui rattacher l'expedition, l'ecriture echouait a chaque appel.
-            'client_id' => ['nullable', 'exists:clients,id', Rule::requiredIf(fn () => in_array('ecriture', (array) $request->input('permissions'), true))],
+            'client_id' => ['nullable', 'integer', 'exists:clients,id', Rule::requiredIf(fn () => in_array('ecriture', (array) $request->input('permissions'), true))],
             'permissions' => 'required|array|min:1',
             'permissions.*' => Rule::in(array_keys(ApiKey::PERMISSIONS)),
             'ips' => 'nullable|string|max:500',

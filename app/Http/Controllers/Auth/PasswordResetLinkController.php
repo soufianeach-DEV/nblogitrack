@@ -22,6 +22,10 @@ class PasswordResetLinkController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Les adresses sont rangees en minuscules : « Jean@Exemple.be »
+        // ne trouvait aucun compte et aucun lien ne partait.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $request->validate([
             'email' => 'required|email',
         ]);

@@ -19,6 +19,7 @@ use Closure;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -115,6 +116,11 @@ class RegisteredUserController extends Controller
             ->exists();
     }
 
+    private static function reservation(string $tva): string
+    {
+        return 'inscription.tva.'.sha1($tva);
+    }
+
     private function situationInterdite(string $tva): ?string
     {
         $verification = app(VatController::class)->verifier(
@@ -128,7 +134,11 @@ class RegisteredUserController extends Controller
             return Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.');
         }
 
-        if ($statut !== 'valide') {
+        // Un numero britannique sans acces au registre HMRC n'est controle
+        // que sur son format : l'inscription passe, et l'administrateur la
+        // valide a la main comme toutes les autres. Seul un registre
+        // injoignable empeche de conclure.
+        if (! in_array($statut, ['valide', 'non_verifie'], true)) {
             return Traductions::t('msg.tva_registre_injoignable', 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.');
         }
 
@@ -205,7 +215,10 @@ class RegisteredUserController extends Controller
         $identifiants = IdentifiantEntreprise::analyser($data['vat_number']);
         $data['vat_number'] = $identifiants['tva'] ?? strtoupper($data['vat_number']);
 
-        if (Client::where('vat_number', $data['vat_number'])->exists()) {
+        // Un numero tente avec une adresse deja inscrite est reserve un jour,
+        // comme s'il avait servi : sans cela, le reessayer avec une autre
+        // adresse revelait si la premiere avait un compte.
+        if (Client::where('vat_number', $data['vat_number'])->exists() || Cache::has(self::reservation($data['vat_number']))) {
             return back()->withInput()->withErrors(['vat_number' => Traductions::t('msg.tva_deja_enregistree', 'Ce numéro de TVA est déjà enregistré.')]);
         }
 
@@ -217,6 +230,11 @@ class RegisteredUserController extends Controller
         // reussie : le formulaire ne sert plus a tester quelles adresses ont
         // un compte. Le titulaire est prevenu par courriel.
         if ($existant = User::where('email', $data['email'])->first()) {
+            // Meme travail qu'une vraie inscription : le temps de reponse ne
+            // trahit pas l'adresse.
+            Hash::make($data['password']);
+            Cache::put(self::reservation($data['vat_number']), true, now()->addDay());
+
             ActivityLog::record(
                 'client.register_existing_email',
                 'Inscription tentée avec une adresse déjà inscrite : '.$existant->email,
@@ -225,11 +243,15 @@ class RegisteredUserController extends Controller
                 $existant->id,
             );
 
-            try {
-                Mail::to($existant->email)->send(new AdresseDejaInscrite($existant));
-            } catch (\Throwable $e) {
-                report($e);
-            }
+            // Envoye apres la reponse, comme le courriel de verification d'une
+            // vraie inscription.
+            defer(function () use ($existant) {
+                try {
+                    Mail::to($existant->email)->send(new AdresseDejaInscrite($existant));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
 
             return $this->inscriptionEnregistree();
         }
@@ -281,7 +303,7 @@ class RegisteredUserController extends Controller
             return $user;
         });
 
-        event(new Registered($user));
+        defer(fn () => event(new Registered($user)));
         Audience::noterEvenement($request, 'inscription');
 
         ActivityLog::record(

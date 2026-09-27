@@ -35,6 +35,12 @@ Schedule::command('factures:generer')
     ->onFailure($signaler('factures:generer'))
     ->onOneServer();
 
+Schedule::command('factures:envoyer-brouillons')
+    ->dailyAt('04:15')
+    ->withoutOverlapping()
+    ->onFailure($signaler('factures:envoyer-brouillons'))
+    ->onOneServer();
+
 Schedule::command('chauffeurs:cloturer-departs')
     ->dailyAt('00:15')
     ->withoutOverlapping()

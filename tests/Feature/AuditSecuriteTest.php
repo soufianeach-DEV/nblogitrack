@@ -167,7 +167,18 @@ class AuditSecuriteTest extends TestCase
 
         $this->actingAs($commandes)
             ->get(route('transport-orders.show', $ordre))
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('facture', null));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('facture', null)
+                ->missing('order.invoice_line')
+                ->missing('order.driver_id')
+                ->missing('order.pricing_basis'));
+
+        $this->actingAs($commandes)
+            ->get(route('transport-orders.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->missing('orders.data.0.invoice_line')
+                ->missing('orders.data.0.driver_id')
+                ->where('orders.data.0.en_attente_de_paiement', true));
 
         $this->actingAs($client->compte())
             ->get(route('transport-orders.show', $ordre))

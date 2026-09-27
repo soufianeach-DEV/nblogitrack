@@ -949,7 +949,12 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                                     {t('devis.colis_total', 'Total déclaré : :poids kg · :volume m³', { poids: nombre(poidsColis), volume: nombre(volumeColis, 2) })}
                                 </p>
                             )}
-                            <details className="mt-3 rounded-lg bg-surface/60 px-3 py-2" open={Boolean(data.weight || data.volume)}>
+                            {/* Le poids total se refusait sans message : l'erreur
+                                restait dans le bloc replie ci-dessous. */}
+                            {! data.weight && poidsColis > 44000 && (
+                                <InputError message={t('devis.poids_trop_lourd', 'Au-delà de 44 000 kg, le chargement dépasse un seul camion : répartissez-le sur plusieurs demandes ou contactez-nous.')} className="mt-1" />
+                            )}
+                            <details className="mt-3 rounded-lg bg-surface/60 px-3 py-2" open={Boolean(data.weight || data.volume || errors.weight || errors.volume)}>
                                 <summary className="cursor-pointer text-sm font-semibold text-marine">{t('devis.sans_detail', 'Pas le détail des colis ? Indiquez seulement le poids et le volume')}</summary>
                                 <div className="mt-3 grid gap-5 sm:grid-cols-2">
                                     {champ('weight', t('devis.poids_total', 'Poids total (kg)'), { type: 'number', min: 0, exemple: poidsColis > 0 ? nombre(poidsColis) : '0', aide: t('devis.poids_aide', 'Laissé vide : la somme des colis.') })}

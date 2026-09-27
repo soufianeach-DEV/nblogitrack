@@ -153,4 +153,31 @@ class RegistrationTest extends TestCase
         $this->assertNull($titulaire->fresh()->client_id);
         Mail::assertSent(AdresseDejaInscrite::class, fn ($m) => $m->hasTo($titulaire->email));
     }
+
+    public function test_le_numero_tente_avec_une_adresse_inscrite_ne_revele_pas_le_compte(): void
+    {
+        Mail::fake();
+        $this->registreRepond();
+        User::factory()->create(['email' => 'contact@transports-essai.be']);
+
+        $this->post(route('register'), $this->formulaire())->assertSessionHasNoErrors();
+
+        // Meme numero, autre adresse : la reponse est celle d'un numero deja
+        // pris, comme si la premiere inscription avait abouti.
+        $this->post(route('register'), $this->formulaire(['email' => 'autre@transports-essai.be']))
+            ->assertSessionHasErrors('vat_number');
+    }
+
+    public function test_une_societe_britannique_s_inscrit_sans_acces_au_registre_hmrc(): void
+    {
+        Mail::fake();
+
+        $this->post(route('register'), $this->formulaire([
+            'vat_number' => 'GB123456789',
+            'country' => 'Royaume-Uni',
+            'email' => 'contact@transport-uk.example',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('clients', ['vat_number' => 'GB123456789', 'is_validated' => false]);
+    }
 }

@@ -1352,6 +1352,7 @@ class TranslationSeeder extends Seeder
             'action_mission_started' => ['Enlèvement confirmé', 'Ophaling bevestigd', 'Pickup confirmed'],
             'action_mission_delivered' => ['Livraison confirmée', 'Levering bevestigd', 'Delivery confirmed'],
             'action_invoices_generated' => ['Émission des factures', 'Uitgifte van facturen', 'Invoices issued'],
+            'action_invoices_drafts_sent' => ['Envoi des factures en brouillon', 'Verzending van conceptfacturen', 'Draft invoices sent'],
             'action_invoice_sent' => ['Facture envoyée', 'Factuur verstuurd', 'Invoice sent'],
             'action_invoice_send_failed' => ['Échec d\'envoi de facture', 'Verzending van factuur mislukt', 'Invoice sending failed'],
             'action_invoice_paid' => ['Facture payée', 'Factuur betaald', 'Invoice paid'],
@@ -1896,6 +1897,11 @@ class TranslationSeeder extends Seeder
             'colis_quantite' => ['Nombre', 'Aantal', 'Quantity'],
             'colis_rouleau' => ['Rouleau', 'Rol', 'Roll'],
             'colis_titre' => ['Colis et palettes', 'Colli en pallets', 'Parcels and pallets'],
+            'poids_trop_lourd' => [
+                'Au-delà de 44 000 kg, le chargement dépasse un seul camion : répartissez-le sur plusieurs demandes ou contactez-nous.',
+                'Boven 44 000 kg past de lading niet in één vrachtwagen: verdeel ze over meerdere aanvragen of neem contact met ons op.',
+                'Above 44,000 kg the load exceeds a single truck: split it over several requests or contact us.',
+            ],
             'colis_total' => ['Total déclaré : :poids kg · :volume m³', 'Totaal opgegeven: :poids kg · :volume m³', 'Declared total: :poids kg · :volume m³'],
             'colis_type' => ['Type', 'Type', 'Type'],
             'colis_vrac' => ['Vrac', 'Bulk', 'Bulk'],
@@ -2213,6 +2219,7 @@ class TranslationSeeder extends Seeder
             'depart' => ['Départ', 'Vertrek', 'Departure'],
             'destination' => ['Destination', 'Bestemming', 'Destination'],
             'livraison_prevue' => ['Livraison prévue', 'Verwachte levering', 'Expected delivery'],
+            'livre_le' => ['Livré le', 'Geleverd op', 'Delivered on'],
             'introuvable_code' => [
                 'Aucun envoi trouvé. Vérifiez le numéro de suivi et le code.',
                 'Geen zending gevonden. Controleer het volgnummer en de code.',

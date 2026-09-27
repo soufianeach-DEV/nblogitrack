@@ -65,11 +65,15 @@ class HandleInertiaRequests extends Middleware
             'pages_pied' => fn () => Cache::remember(
                 'pages.pied.'.app()->getLocale(),
                 Traductions::DUREE_CACHE,
+                // Une adresse relative : le lien suit l'hote qui sert la page,
+                // pas APP_URL. Une page sans adresse utilisable est ecartee
+                // au lieu de faire tomber tout le site.
                 fn () => Page::where('publiee', true)->where('au_pied', true)
+                    ->where('slug', '<>', '')
                     ->orderBy('rang')->orderBy('slug')->get()
                     ->map(fn (Page $p) => [
                         'libelle' => $p->titre(app()->getLocale()),
-                        'href' => route('pages.show', $p->slug),
+                        'href' => route('pages.show', $p->slug, false),
                     ])->all(),
             ),
         ];

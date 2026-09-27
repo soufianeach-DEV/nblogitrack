@@ -49,9 +49,19 @@ class Localite
             return Geocodeur::localite($ville, $pays, $lat, $lng);
         }
 
+        // Le nom saisi d'abord, puis son equivalent local : « Gand » est
+        // dans la table des codes postaux sous son nom francais, « Gent »
+        // aussi selon la source. Chercher seulement « Gent » refusait une
+        // ville que la liste de suggestions venait de proposer.
         // « % » ou « _ » ne sont pas des localites : sans echappement, une
         // adresse « 1000 % » trouvait la premiere ville du pays.
-        $motif = addcslashes(self::locale($ville), '\\%_');
+        $noms = array_values(array_unique([trim($ville), self::locale($ville)]));
+        $motifs = array_map(fn (string $nom) => addcslashes($nom, '\\%_'), $noms);
+        $filtre = function ($requete) use ($motifs) {
+            foreach ($motifs as $motif) {
+                $requete->orWhere('city', 'ilike', $motif);
+            }
+        };
 
         // Avec un point, la ligne la plus proche : deux Saint-Denis, deux
         // Neustadt, ne se confondent plus au centre de leur moyenne.
@@ -59,7 +69,7 @@ class Localite
             return DB::table('postal_codes')
                 ->selectRaw('city AS ville, lat, lng, region')
                 ->where('country_code', $pays)
-                ->where('city', 'ilike', $motif)
+                ->where($filtre)
                 ->orderByRaw('power(lat - ?, 2) + power((lng - ?) * cos(radians(?)), 2)', [$lat, $lng, $lat])
                 ->first();
         }
@@ -67,8 +77,9 @@ class Localite
         return DB::table('postal_codes')
             ->selectRaw('MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng, MIN(region) AS region')
             ->where('country_code', $pays)
-            ->where('city', 'ilike', $motif)
+            ->where($filtre)
             ->groupBy('city')
+            ->orderByRaw('CASE WHEN MIN(city) ILIKE ? THEN 0 ELSE 1 END', [$motifs[0]])
             ->first();
     }
 

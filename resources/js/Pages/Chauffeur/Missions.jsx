@@ -94,6 +94,18 @@ function BoutonAvancement({ mission }) {
     const [receptionnaire, setReceptionnaire] = useState('');
     const [reserves, setReserves] = useState('');
     const livraison = mission.action.statut === 'DELIVERED';
+    const bloc = useRef(null);
+    const champ = useRef(null);
+
+    // Le formulaire de livraison s'ouvre au-dessus du bouton, qui cesse
+    // d'etre colle au bas de l'ecran : sur un telephone, le bouton partait
+    // sous le bord. On amene le formulaire et le bouton a l'ecran.
+    useEffect(() => {
+        if (arme && livraison) {
+            bloc.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+            champ.current?.focus({ preventScroll: true });
+        }
+    }, [arme, livraison]);
 
     const envoyer = async () => {
         if (! arme) {
@@ -125,12 +137,13 @@ function BoutonAvancement({ mission }) {
     return (
         // Le formulaire de livraison, ouvert, ne recouvre pas la fiche :
         // il n'est plus colle au bas de l'ecran.
-        <div className={arme && livraison ? 'mt-4' : 'sticky bottom-20 mt-4 lg:bottom-0'}>
+        <div ref={bloc} className={arme && livraison ? 'mt-4 scroll-mb-24 lg:scroll-mb-4' : 'sticky bottom-20 mt-4 lg:bottom-0'}>
             {arme && livraison && (
                 <div className="mb-3 space-y-2 rounded-xl bg-white p-3 shadow-lg">
                     <label className="block text-sm font-medium text-marine">
                         {t('mission.receptionnaire', 'Réceptionné par')}
                         <input
+                            ref={champ}
                             type="text"
                             value={receptionnaire}
                             onChange={(e) => setReceptionnaire(e.target.value)}
@@ -185,13 +198,34 @@ function BoutonAvancement({ mission }) {
 function NoteInformation({ note, ouverte, onFermer }) {
     const t = useTraduction();
     const [envoi, setEnvoi] = useState(false);
+    const fenetre = useRef(null);
+    const visible = Boolean(note && (note.a_accuser || ouverte));
 
-    if (! note || (! note.a_accuser && ! ouverte)) return null;
+    // Une vraie fenetre modale du navigateur : le reste de la page devient
+    // inerte, la touche Tab ne peut plus atteindre les boutons de derriere
+    // (on validait une livraison sans avoir pris connaissance de la note).
+    useEffect(() => {
+        const d = fenetre.current;
+        if (! d) return;
+        if (visible && ! d.open) d.showModal();
+        if (! visible && d.open) d.close();
+    }, [visible]);
+
+    if (! visible) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-marine-deep/60 p-4 sm:items-center">
-            <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-7">
-                <h2 className="text-xl font-bold text-marine">{note.titre}</h2>
+        <dialog
+            ref={fenetre}
+            aria-labelledby="note-titre"
+            onCancel={(e) => {
+                // Echap ne ferme que la relecture, pas la prise de connaissance.
+                e.preventDefault();
+                if (! note.a_accuser) onFermer();
+            }}
+            className="m-auto w-full max-w-2xl rounded-2xl bg-transparent p-4 backdrop:bg-marine-deep/60"
+        >
+            <div className="max-h-[85vh] w-full overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-7">
+                <h2 id="note-titre" className="text-xl font-bold text-marine">{note.titre}</h2>
                 <p className="mt-1 text-xs text-slate-600">
                     {t('note.version', 'Version du :date', { date: note.mise_a_jour })}
                 </p>
@@ -231,7 +265,7 @@ function NoteInformation({ note, ouverte, onFermer }) {
                 </button>
                 )}
             </div>
-        </div>
+        </dialog>
     );
 }
 

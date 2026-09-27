@@ -19,7 +19,7 @@ class ProcessingRecordController extends Controller
         $note = DriverAcknowledgement::note();
         $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->count();
 
-        $informes = $note === null ? 0 : DriverAcknowledgement::where('version', $note->updated_at)
+        $informes = $note === null ? 0 : DriverAcknowledgement::where('version', $note->version())
             ->whereHas('utilisateur', fn ($q) => $q->where('role', 'DRIVER')->where('is_active', true))
             ->count();
 
@@ -49,7 +49,7 @@ class ProcessingRecordController extends Controller
             ],
             'information' => [
                 'note_existe' => $note !== null,
-                'version' => $note?->updated_at?->format('d/m/Y'),
+                'version' => $note?->version()?->format('d/m/Y'),
                 'conducteurs' => $conducteurs,
                 'informes' => $informes,
             ],

@@ -20,6 +20,16 @@ class GenererFactures extends Command
 
     public function handle(Facturier $facturier): int
     {
+        // Un mois mal tape (2026-13, 26-08) faisait une erreur brute ; un
+        // mois en cours ou a venir ne se facture pas.
+        $mois = $this->option('mois');
+
+        if ($mois !== null && (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mois) || $mois >= now()->format('Y-m'))) {
+            $this->error('  --mois attend un mois termine, au format AAAA-MM (ex. '.now()->subMonth()->format('Y-m').').');
+
+            return self::INVALID;
+        }
+
         $periode = match (true) {
             $this->option('tout') => null,
             $this->option('mois') !== null => Carbon::createFromFormat('Y-m-d', $this->option('mois').'-01'),
