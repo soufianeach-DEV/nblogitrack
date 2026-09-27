@@ -38,9 +38,21 @@ class IndisponibiliteController extends Controller
     {
         $indisponibilite->delete();
 
-        ActivityLog::record('unavailability.removed', 'Indisponibilité supprimée : '.$indisponibilite->resume(), $indisponibilite->driver ?? $indisponibilite->vehicle);
+        ActivityLog::record('unavailability.removed', 'Indisponibilité supprimée ('.self::concerne($indisponibilite).') : '.$indisponibilite->resume(), $indisponibilite->driver ?? $indisponibilite->vehicle, ['concerne' => self::concerne($indisponibilite)]);
 
         return back()->with('success', Traductions::t('msg.indispo_supprimee', 'Indisponibilité supprimée.'));
+    }
+
+    /** Le chauffeur (par son nom) ou le camion (par sa plaque) concerne. */
+    private static function concerne(Indisponibilite $periode): string
+    {
+        if ($periode->driver) {
+            $nom = trim(($periode->driver->user?->first_name ?? '').' '.($periode->driver->user?->last_name ?? ''));
+
+            return 'chauffeur '.($nom !== '' ? $nom : '#'.$periode->driver->id);
+        }
+
+        return 'véhicule '.($periode->vehicle?->registration ?? '—');
     }
 
     /**
@@ -51,12 +63,15 @@ class IndisponibiliteController extends Controller
     {
         return $request->validate([
             'du' => 'required|date|after_or_equal:today',
-            'au' => 'required|date|after_or_equal:du',
+            // Borne haute : une fin tapee « 9999 » immobilisait le camion
+            // pour toujours.
+            'au' => 'required|date|after_or_equal:du|before_or_equal:'.today()->addYears(2)->toDateString(),
             'motif' => 'required|in:'.implode(',', $motifs),
             'commentaire' => 'nullable|string|max:200',
         ], [
             'du.after_or_equal' => Traductions::t('msg.indispo_passee', 'Une indisponibilité ne commence pas dans le passé.'),
             'au.after_or_equal' => Traductions::t('msg.indispo_fin_avant_debut', 'La fin ne peut pas précéder le début.'),
+            'au.before_or_equal' => Traductions::t('msg.indispo_trop_longue', 'Une indisponibilité se termine au plus tard dans deux ans.'),
         ]);
     }
 
@@ -66,7 +81,7 @@ class IndisponibiliteController extends Controller
      */
     private function enregistre(Indisponibilite $periode, $missions): RedirectResponse
     {
-        ActivityLog::record('unavailability.created', 'Indisponibilité enregistrée : '.$periode->resume(), $periode->driver ?? $periode->vehicle);
+        ActivityLog::record('unavailability.created', 'Indisponibilité enregistrée ('.self::concerne($periode).') : '.$periode->resume(), $periode->driver ?? $periode->vehicle, ['concerne' => self::concerne($periode)]);
 
         $reponse = back()->with('success', Traductions::t('msg.indispo_enregistree', 'Indisponibilité enregistrée : :periode.', ['periode' => $periode->resume()]));
         $aReaffecter = ControleAffectation::missionsNonConformes($missions);

@@ -233,6 +233,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                         type="number"
                                         min="1"
                                         max="44000"
+                                        step="any"
                                         value={poids}
                                         onChange={(e) => setPoids(e.target.value)}
                                         className="w-full rounded-lg border-slate-300 py-2.5 pr-12 text-sm shadow-sm focus:border-marine focus:ring-marine"

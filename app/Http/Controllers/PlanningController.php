@@ -81,6 +81,15 @@ class PlanningController extends Controller
 
         $duJour = fn ($requete) => $requete->whereDate('pickup_date', $jour);
 
+        // L'alerte « enlevements sous trois jours sans vehicule » du tableau
+        // de bord renvoie ici : meme critere, meme nombre (elle ouvrait
+        // toute la liste des ordres en attente).
+        $imminent = $request->query('imminent') === '1';
+        $critereImminent = fn ($requete) => $requete->whereNull('vehicle_registration')
+            ->whereNotNull('pickup_date')
+            ->where('pickup_date', '>=', today())
+            ->where('pickup_date', '<=', now()->addDays(3));
+
         $q = trim((string) $request->query('q', ''));
 
         $recherche = fn ($requete) => $requete->where(fn ($w) => $w
@@ -111,6 +120,7 @@ class PlanningController extends Controller
             ->when($priorite, fn ($q) => $q->where('priority', $priorite))
             ->when($contrainte, $filtreContrainte)
             ->when($jour, $duJour)
+            ->when($imminent, $critereImminent)
             ->when($q !== '', $recherche)
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'NORMAL' THEN 3 ELSE 4 END")
             ->orderBy('pickup_date')
@@ -268,6 +278,7 @@ class PlanningController extends Controller
                 ->groupBy('status')
                 ->pluck('total', 'status'),
             'jour' => $jour,
+            'imminent' => $imminent,
             'q' => $q,
             'suggestions' => $this->suggestions($q, $statut),
         ]);
@@ -461,21 +472,35 @@ class PlanningController extends Controller
             ]));
         }
 
+        // Un ordre en retard part aujourd'hui : le report est annonce au
+        // planificateur et garde au journal, comme pour une reaffectation.
+        $enlevement = $transportOrder->pickup_date?->format('Y-m-d H:i');
+        $reportee = $enlevement !== $avant['enlevement'];
+
         ActivityLog::record(
             'order.assigned',
-            'Affectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration,
+            'Affectation de l\'ordre '.$transportOrder->tracking_number.' au véhicule '.$vehicle->registration
+                .($reportee ? ' (enlèvement du '.($avant['enlevement'] ?? '—').' reporté au '.$enlevement.')' : ''),
             $transportOrder,
             [
                 'vehicule' => $vehicle->registration.' '.$vehicle->brand.' '.$vehicle->model,
+                'chauffeur' => trim(($driver->user?->first_name ?? '').' '.($driver->user?->last_name ?? '')),
                 'chauffeur_id' => $driver->id,
                 'statut' => 'PENDING → ASSIGNED',
+                ...($reportee ? ['ancien_enlevement' => $avant['enlevement'], 'enlevement' => $enlevement] : []),
             ],
         );
 
-        return back()->with('success', Traductions::t('msg.planif_ordre_affecte', 'Ordre :numero affecté au véhicule :vehicule.', [
-            'numero' => $transportOrder->tracking_number,
-            'vehicule' => $vehicle->registration,
-        ]));
+        return back()->with('success', $reportee
+            ? Traductions::t('msg.planif_ordre_affecte_reporte', 'Ordre :numero affecté au véhicule :vehicule. L\'enlèvement prévu était passé : il est reporté au :date.', [
+                'numero' => $transportOrder->tracking_number,
+                'vehicule' => $vehicle->registration,
+                'date' => $transportOrder->pickup_date->format('d/m/Y H:i'),
+            ])
+            : Traductions::t('msg.planif_ordre_affecte', 'Ordre :numero affecté au véhicule :vehicule.', [
+                'numero' => $transportOrder->tracking_number,
+                'vehicule' => $vehicle->registration,
+            ]));
     }
 
     public function suiviDirect(TransportOrder $transportOrder): RedirectResponse

@@ -19,6 +19,13 @@ class AuthentifierCleApi
         $depart = microtime(true);
         $jeton = $request->bearerToken();
 
+        // Les refus partent avant que la cle soit connue : ils suivent deja
+        // la langue demandee (Accept-Language). Ils sortaient en francais.
+        $demandee = trim((string) $request->header('Accept-Language')) !== ''
+            ? $request->getPreferredLanguage(array_keys(Translation::LANGUES))
+            : null;
+        app()->setLocale(Traductions::estServie($demandee) ? $demandee : 'fr');
+
         if ($jeton === null || $jeton === '') {
             return $this->refuser($request, null, 'jeton_absent', 401, $depart);
         }
@@ -39,10 +46,7 @@ class AuthentifierCleApi
 
         // Langue des messages : celle demandee par l'integrateur
         // (Accept-Language), sinon celle du compte de l'entreprise.
-        $langue = $request->getPreferredLanguage(array_keys(Translation::LANGUES));
-        $langue = trim((string) $request->header('Accept-Language')) !== '' && $langue !== null
-            ? $langue
-            : ($cle->client?->compte()?->locale ?? 'fr');
+        $langue = $demandee ?? ($cle->client?->compte()?->locale ?? 'fr');
         app()->setLocale(Traductions::estServie($langue) ? $langue : 'fr');
 
         $reponse = $next($request);
@@ -64,7 +68,7 @@ class AuthentifierCleApi
         $this->journaliser($request, $cle, $code, $motif, $depart);
 
         $reponse = response()->json([
-            'message' => ApiRequest::MOTIFS[$motif] ?? 'Accès refusé.',
+            'message' => Traductions::t('api_motif.'.$motif, ApiRequest::MOTIFS[$motif] ?? 'Accès refusé.'),
             'motif' => $motif,
         ], $code);
 

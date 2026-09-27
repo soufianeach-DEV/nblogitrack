@@ -99,13 +99,13 @@ class PurchaseInvoiceController extends Controller
             // Un mois qui n'a pas encore commence n'a rien pu consommer :
             // une periode 2027-03 est une faute de frappe, qui fausserait
             // le suivi du parc et la declaration de TVA.
-            'period_start' => 'required|date|before_or_equal:today',
+            'period_start' => 'required|date|after_or_equal:2000-01-01|before_or_equal:today',
             'period_end' => 'required|date|after_or_equal:period_start',
-            'issued_on' => 'required|date|before_or_equal:today',
+            'issued_on' => 'required|date|after_or_equal:2000-01-01|before_or_equal:today',
             'due_on' => 'required|date|after_or_equal:issued_on',
             'liters' => 'nullable|numeric|min:0|max:99999',
             'taxed_km' => 'nullable|numeric|min:0|max:999999',
-            'amount_excl_tax' => 'required|numeric|min:0|max:9999999',
+            'amount_excl_tax' => 'required|numeric|min:0.01|max:9999999',
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
@@ -113,10 +113,17 @@ class PurchaseInvoiceController extends Controller
             'issued_on.before_or_equal' => Traductions::t('msg.achat_date_future', 'Une facture d\'achat ne peut pas être datée dans le futur.'),
             'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
             'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
+            // Une date en 1900 creait une ligne « janvier 1900 » dans la
+            // synthese de TVA ; un montant nul n'est pas une facture.
+            'period_start.after_or_equal' => Traductions::t('msg.achat_date_ancienne', 'Cette date est trop ancienne : vérifiez l\'année.'),
+            'issued_on.after_or_equal' => Traductions::t('msg.achat_date_ancienne', 'Cette date est trop ancienne : vérifiez l\'année.'),
+            'amount_excl_tax.min' => Traductions::t('msg.achat_montant_nul', 'Le montant hors TVA doit être supérieur à zéro.'),
         ]);
 
-        $existe = PurchaseInvoice::where('supplier_name', $donnees['supplier_name'])
-            ->where('reference', $donnees['reference'])
+        // « Shell » et « SHELL », « FAC-12 » et « fac-12 » : la meme facture.
+        // Encodee deux fois, sa TVA etait deduite deux fois.
+        $existe = PurchaseInvoice::whereRaw('lower(trim(supplier_name)) = ?', [mb_strtolower(trim($donnees['supplier_name']))])
+            ->whereRaw('lower(trim(reference)) = ?', [mb_strtolower(trim($donnees['reference']))])
             ->exists();
 
         if ($existe) {

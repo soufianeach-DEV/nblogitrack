@@ -279,7 +279,9 @@ class QuoteController extends Controller
 
             // Marchandise
             'goods_type' => 'required|string|max:100',
-            'weight' => 'nullable|integer|min:0|max:44000',
+            // 1 500,5 kg est un poids valable : il etait refuse (« doit etre
+            // un nombre entier »). Il est range arrondi au kilo superieur.
+            'weight' => 'nullable|numeric|min:0|max:44000',
             'volume' => 'nullable|string|max:60',
             'vehicle_type' => 'required|in:'.implode(',', self::CHOIX['vehicules']),
             'insurance_value' => 'required|in:'.implode(',', self::CHOIX['assurances']),
@@ -330,7 +332,9 @@ class QuoteController extends Controller
             'temperature_max.required' => Traductions::t('msg.devis_temperature_requise', 'Indiquez la plage de température à respecter.'),
             'temperature_max.gte' => Traductions::t('msg.devis_temperature_ordre', 'La température maximale ne peut pas être inférieure à la minimale.'),
             'attachments.*.uploaded' => Traductions::t('msg.devis_piece_non_recue', 'Une pièce jointe n\'a pas pu être reçue : elle dépasse la taille acceptée par le serveur.'),
-            'attachments.*.max' => Traductions::t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
+            'attachments.*.max' => Traductions::t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait :max Mo au plus.', [
+                'max' => intdiv(min(10 * 1048576, self::octets((string) ini_get('upload_max_filesize'))), 1048576),
+            ]),
             'attachments.*.mimes' => Traductions::t('msg.devis_piece_format', 'Pièces jointes acceptées : PDF, images, tableurs et documents Word.'),
         ]);
 
@@ -372,6 +376,10 @@ class QuoteController extends Controller
             && empty($c['hauteur']) && empty($c['poids_unitaire'])
         )));
         $data['packages'] = $colis === [] ? null : $colis;
+        if (isset($data['weight']) && $data['weight'] !== null) {
+            $data['weight'] = (int) ceil((float) $data['weight']);
+        }
+
         $data['weight'] ??= ($poids = QuoteRequest::poidsDesColis($colis)) === null ? null : (int) round($poids);
 
         if ($data['weight'] !== null && $data['weight'] > 44000) {

@@ -8,11 +8,14 @@ import { useState } from 'react';
  * l'en-tete et « Se connecter » etaient caches sans rien pour les
  * remplacer : un client qui revenait ne trouvait plus la connexion.
  */
-export default function MenuVitrineMobile({ ancres = '/#' }) {
+export default function MenuVitrineMobile({ ancres = null }) {
     const t = useTraduction();
     const { auth } = usePage().props;
     const [ouvert, setOuvert] = useState(false);
 
+    // Par defaut, les ancres de l'accueil dans la langue de la page : « /# »
+    // ramenait un visiteur neerlandais sur l'accueil francais.
+    const prefixe = ancres ?? `${route('accueil')}#`;
     const lien = 'block rounded-lg px-3 py-2.5 text-[15px] font-semibold text-marine transition hover:bg-surface';
 
     return (
@@ -29,9 +32,9 @@ export default function MenuVitrineMobile({ ancres = '/#' }) {
 
             {ouvert && (
                 <nav className="absolute inset-x-0 top-full z-40 border-b border-slate-200 bg-white px-4 py-3 shadow-lg">
-                    <a href={`${ancres}services`} onClick={() => setOuvert(false)} className={lien}>{t('nav.services', 'Services')}</a>
+                    <a href={`${prefixe}services`} onClick={() => setOuvert(false)} className={lien}>{t('nav.services', 'Services')}</a>
                     <Link href={route('tarifs.index')} className={lien}>{t('nav.tarifs', 'Tarifs')}</Link>
-                    <a href={`${ancres}apropos`} onClick={() => setOuvert(false)} className={lien}>{t('nav.a_propos', 'À propos')}</a>
+                    <a href={`${prefixe}apropos`} onClick={() => setOuvert(false)} className={lien}>{t('nav.a_propos', 'À propos')}</a>
                     <Link href={route('tracking.show')} className={lien}>{t('nav.suivi', 'Suivre un envoi')}</Link>
                     {auth?.user ? (
                         <Link href={route('dashboard')} className={lien}>{t('accueil.mon_espace', 'Mon espace')}</Link>

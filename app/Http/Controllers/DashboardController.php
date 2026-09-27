@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\JournalLisible;
 use App\Support\JoursFeries;
 use App\Support\Traductions;
 use Closure;
@@ -227,7 +228,7 @@ class DashboardController extends Controller
                 'niveau' => 'attention',
                 'titre' => self::phrase($imminent, 'alerte.imminent_un', ':n enlèvement sous trois jours sans véhicule', 'alerte.imminent_n', ':n enlèvements sous trois jours sans véhicule'),
                 'detail' => Traductions::t('alerte.imminent_detail', 'À affecter avant la date d\'enlèvement prévue.'),
-                'lien' => route('planning.index', ['status' => 'PENDING']),
+                'lien' => route('planning.index', ['status' => 'PENDING', 'imminent' => 1]),
             ];
         }
 
@@ -525,7 +526,7 @@ class DashboardController extends Controller
 
         return $lignes->map(fn (ActivityLog $ligne) => [
             'action' => $ligne->action,
-            'description' => $ligne->description,
+            'description' => JournalLisible::resume($ligne),
             'auteur' => $auteurs[$ligne->user_id] ?? null
                 ? $auteurs[$ligne->user_id]->first_name.' '.$auteurs[$ligne->user_id]->last_name
                 : Traductions::t('msg.auteur_systeme', 'Système'),

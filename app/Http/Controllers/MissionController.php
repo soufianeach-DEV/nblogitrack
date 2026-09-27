@@ -16,7 +16,6 @@ use App\Support\TransitionRefusee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -96,7 +95,10 @@ class MissionController extends Controller
 
         if ($transportOrder->status === 'CANCELLED') {
             return redirect()->route('missions.index', ['mission' => $transportOrder->tracking_number])
-                ->with('error', Traductions::t('msg.mission_annulee', 'Cette mission a été annulée : ne chargez pas la marchandise.'));
+                ->with('error', $transportOrder->picked_up_at !== null
+                    // Deja chargee : la consigne « ne chargez pas » n'a plus de sens.
+                    ? Traductions::t('msg.mission_annulee_en_route', 'Cette mission a été annulée pendant le trajet : ne livrez pas, appelez le planificateur pour savoir où déposer la marchandise.')
+                    : Traductions::t('msg.mission_annulee', 'Cette mission a été annulée : ne chargez pas la marchandise.'));
         }
 
         $donnees = $request->validate([
@@ -194,7 +196,7 @@ class MissionController extends Controller
             [
                 'ancien_statut' => $attendu,
                 'nouveau_statut' => $vise,
-                'chauffeur' => Auth::id(),
+                'chauffeur' => trim($request->user()->first_name.' '.$request->user()->last_name),
             ],
         );
 
@@ -260,6 +262,10 @@ class MissionController extends Controller
             ->latest('recorded_at')->first();
 
         if ($dernier !== null && $dernier->recorded_at->diffInSeconds(now()) < self::CADENCE_SECONDES) {
+            return response()->json(['suivi' => true, 'retenu' => false]);
+        }
+
+        if (! ShipmentPosition::vraisemblable($dernier, $lat, $lng)) {
             return response()->json(['suivi' => true, 'retenu' => false]);
         }
 

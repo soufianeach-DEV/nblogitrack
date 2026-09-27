@@ -8,6 +8,7 @@ use App\Http\Middleware\IgnorerFiltresEnTableau;
 use App\Http\Middleware\MesurerAudience;
 use App\Http\Middleware\RetirerCaracteresDeControle;
 use App\Http\Middleware\VerifierCompteActif;
+use App\Models\Translation;
 use App\Support\Audience;
 use App\Support\Traductions;
 use Illuminate\Foundation\Application;
@@ -154,6 +155,25 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()
                 ->route('login')
                 ->with('status', Traductions::t('msg.session_expiree', 'Votre session a expiré. Reconnectez-vous pour continuer.'));
+        });
+
+        // API : la limite de debit repond en JSON, dans la langue demandee.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 429 || ! $request->is('api', 'api/*')) {
+                return null;
+            }
+
+            $langue = $request->getPreferredLanguage(array_keys(Translation::LANGUES));
+
+            if (trim((string) $request->header('Accept-Language')) !== '' && Traductions::estServie($langue)) {
+                app()->setLocale($langue);
+            }
+
+            $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return response()->json([
+                'message' => Traductions::t('api.trop_de_requetes', 'Trop de requêtes. Réessayez dans :secondes secondes.', ['secondes' => max(1, $secondes)]),
+            ], 429, $e->getHeaders());
         });
 
         // Une limite de debit depassee repondait par une fenetre brute

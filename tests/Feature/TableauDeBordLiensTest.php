@@ -215,7 +215,7 @@ class TableauDeBordLiensTest extends TestCase
         $this->assertNotNull($adr);
         $this->assertStringStartsWith('1 ', $adr['titre']);
 
-        $this->assertNotNull($this->alerte($tableau, '/planification?status=PENDING'));
+        $this->assertNotNull($this->alerte($tableau, '/planification?status=PENDING&imminent=1'));
 
         $liste = $this->props($planificateur, route('planning.index', ['contrainte' => 'adr']));
         $this->assertSame(1, $liste['orders']['total']);

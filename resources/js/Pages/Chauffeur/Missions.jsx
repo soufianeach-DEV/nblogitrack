@@ -269,19 +269,23 @@ function NoteInformation({ note, ouverte, onFermer }) {
     );
 }
 
-function SuiviDirect({ mission }) {
+function SuiviDirect({ missions }) {
     const t = useTraduction();
     const locale = useLocale();
     const [dernier, setDernier] = useState(null);
     const [refuse, setRefuse] = useState(false);
     const actif = useRef(true);
 
-    const partage = mission.suivi_direct && mission.statut === 'IN_PROGRESS';
+    // En groupage, le meme camion porte plusieurs missions suivies : le
+    // point part pour chacune (seule la premiere le recevait).
+    const ids = missions.map((m) => m.id).join(',');
+    const partage = missions.length > 0;
 
     useEffect(() => {
         if (! partage) return undefined;
 
         actif.current = true;
+        const arretees = new Set();
 
         const envoyer = async () => {
             const point = await positionActuelle();
@@ -296,28 +300,36 @@ function SuiviDirect({ mission }) {
 
             setRefuse(false);
 
-            try {
-                const reponse = await fetch(route('missions.position', mission.id), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-XSRF-TOKEN': decodeURIComponent(
-                            document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
-                        ),
-                    },
-                    body: JSON.stringify(point),
-                });
+            for (const id of ids.split(',').map(Number)) {
+                if (arretees.has(id)) continue;
 
-                const resultat = await reponse.json();
+                try {
+                    const reponse = await fetch(route('missions.position', id), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-XSRF-TOKEN': decodeURIComponent(
+                                document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
+                            ),
+                        },
+                        body: JSON.stringify(point),
+                    });
 
-                if (resultat.suivi === false) {
-                    actif.current = false;
-                } else if (resultat.retenu) {
-                    setDernier(new Date());
+                    const resultat = await reponse.json();
+
+                    if (resultat.suivi === false) {
+                        arretees.add(id);
+                    } else if (resultat.retenu) {
+                        setDernier(new Date());
+                    }
+                } catch {
+                    // Reseau coupe : le prochain envoi reessaie.
                 }
-            } catch {
+            }
 
+            if (arretees.size === ids.split(',').length) {
+                actif.current = false;
             }
         };
 
@@ -328,7 +340,7 @@ function SuiviDirect({ mission }) {
             actif.current = false;
             clearInterval(minuteur);
         };
-    }, [partage, mission.id]);
+    }, [partage, ids]);
 
     if (! partage) return null;
 
@@ -337,7 +349,7 @@ function SuiviDirect({ mission }) {
             <p className={`font-semibold ${refuse ? 'text-status-incident' : 'text-brand-blue'}`}>
                 {refuse
                     ? t('suivi_direct.refuse', 'Position non partagée')
-                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission') + ' · ' + mission.numero}
+                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission') + ' · ' + missions.map((m) => m.numero).join(', ')}
             </p>
             <p className="mt-0.5 text-slate-600">
                 {refuse
@@ -521,7 +533,7 @@ export default function Missions({ missions = [], mission = null, introuvable = 
     }, []);
 
     const [noteOuverte, setNoteOuverte] = useState(false);
-    const enPartage = missions.find((m) => m.statut === 'IN_PROGRESS' && m.suivi_direct);
+    const enPartage = missions.filter((m) => m.statut === 'IN_PROGRESS' && m.suivi_direct);
 
     return (
         <ChauffeurLayout>
@@ -531,7 +543,7 @@ export default function Missions({ missions = [], mission = null, introuvable = 
 
             {/* Le partage de position tourne tant que l'ecran des missions
                 est ouvert, sur la liste comme sur une fiche. */}
-            {enPartage && <SuiviDirect mission={enPartage} />}
+            {enPartage.length > 0 && <SuiviDirect missions={enPartage} />}
 
             <div className="lg:flex lg:gap-4">
                 <div className={`lg:w-[360px] lg:shrink-0 ${mission ? 'hidden lg:block' : ''}`}>

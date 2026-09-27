@@ -24,10 +24,16 @@
                         @yield('code')
                     </h1>
 
-                    <div class="ml-4 text-lg dark:text-gray-300 text-gray-700 uppercase tracking-wider">
+                    <div class="ml-4 text-lg dark:text-gray-300 text-gray-700 tracking-wider">
                         @yield('message')
                     </div>
                 </div>
+
+                {{-- Une page d'erreur sans aucun lien laissait le visiteur
+                     sans issue. --}}
+                <p class="mt-8 px-4 text-sm">
+                    <a href="{{ url(app()->getLocale()) }}" class="underline text-gray-700 dark:text-gray-300">NBLogiTrack — {{ __('Back to home') }}</a>
+                </p>
             </div>
         </div>
     </body>

@@ -123,6 +123,9 @@ class StaffController extends Controller
             'license_number.unique' => Traductions::t('msg.permis_deja_enregistre', 'Ce numéro de permis est déjà enregistré.'),
             'license_expiry.after' => Traductions::t('msg.permis_expire', 'Un permis déjà expiré ne permet pas de créer le compte.'),
             'required_if' => Traductions::t('msg.champ_requis_chauffeur', 'Ce champ est obligatoire pour un chauffeur.'),
+            // Sans message propre, la regle citait « hired on » et « today ».
+            'hired_on.before_or_equal' => Traductions::t('msg.entree_future', 'La date d\'entrée en service ne peut pas être dans le futur.'),
+            'role.required' => Traductions::t('msg.role_requis', 'Choisissez le rôle du compte.'),
         ]);
 
         $utilisateur = DB::transaction(function () use ($donnees) {

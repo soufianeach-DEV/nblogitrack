@@ -145,12 +145,9 @@ export default function Index({ logs, actions, filtres, stats }) {
                                 </td>
                                 <td className="px-5 py-3 text-slate-600">
                                     {log.description}
-                                    {log.properties && (
+                                    {log.details?.length > 0 && (
                                         <span className="mt-1 block text-xs text-slate-600">
-                                            {Object.entries(log.properties)
-                                                .filter(([, valeur]) => valeur !== null && valeur !== '')
-                                                .map(([cle, valeur]) => `${cle} : ${typeof valeur === 'object' ? JSON.stringify(valeur) : valeur}`)
-                                                .join(' · ')}
+                                            {log.details.join(' · ')}
                                         </span>
                                     )}
                                 </td>

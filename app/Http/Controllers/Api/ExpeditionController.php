@@ -120,6 +120,10 @@ class ExpeditionController extends Controller
             'expediteur' => 'nullable|string|max:150',
             'telephone_expediteur' => 'nullable|string|max:30',
             'reference_chargement' => 'nullable|string|max:60',
+        ], [
+            // La regle citait « today » tel quel, dans toutes les langues.
+            'date_enlevement.after_or_equal' => Traductions::t('api.date_enlevement_passee', 'La date d\'enlèvement ne peut pas être dans le passé.'),
+            'date_livraison.after_or_equal' => Traductions::t('api.date_livraison_avant', 'La date de livraison ne peut pas précéder la date d\'enlèvement.'),
         ]);
 
         // Une reference de chargement designe un seul envoi : la deposer une

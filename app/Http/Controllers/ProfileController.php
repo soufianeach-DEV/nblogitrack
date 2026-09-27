@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\ActivityLog;
 use App\Models\ClientContact;
+use App\Models\DriverAcknowledgement;
 use App\Models\Invoice;
+use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Traductions;
@@ -108,6 +110,36 @@ class ProfileController extends Controller
                     ->get(['reference', 'type', 'issued_on', 'due_on', 'amount_excl_tax', 'vat_amount', 'amount_incl_tax', 'status', 'paid_on'])
                     ->toArray();
             }
+        }
+
+        // Un chauffeur a aussi sa fiche (permis, visite medicale), les
+        // positions relevees pendant ses missions, ses prises de
+        // connaissance de la note et ses missions : l'export ne donnait que
+        // son compte (article 15 du RGPD).
+        if ($fiche = $user->driver) {
+            $donnees['fiche_chauffeur'] = $fiche->only([
+                'employment_status', 'hired_on', 'birth_date', 'retirement_planned_on',
+                'license_number', 'license_type', 'license_expiry', 'cpc_expiry', 'tacho_card_expiry',
+                'adr_certified', 'adr_expiry', 'medical_exam_date', 'left_on', 'departure_reason',
+            ]);
+            $donnees['missions'] = TransportOrder::where('driver_id', $fiche->id)->orderBy('id')
+                ->get(['tracking_number', 'status', 'pickup_address', 'delivery_address', 'pickup_date', 'picked_up_at', 'delivered_at', 'received_by', 'delivery_reserves'])
+                ->toArray();
+            $donnees['indisponibilites'] = $fiche->indisponibilites()->orderBy('du')->get(['du', 'au', 'motif', 'commentaire'])->toArray();
+        }
+
+        $positions = ShipmentPosition::where('driver_id', $user->id)->orderBy('recorded_at')
+            ->get(['transport_order_id', 'type', 'evenement', 'lat', 'lng', 'precision_m', 'recorded_at']);
+
+        if ($positions->isNotEmpty()) {
+            $donnees['positions'] = $positions->toArray();
+        }
+
+        $accuses = DriverAcknowledgement::where('user_id', $user->id)->orderBy('acknowledged_at')
+            ->get(['version', 'acknowledged_at', 'ip_address']);
+
+        if ($accuses->isNotEmpty()) {
+            $donnees['prises_de_connaissance'] = $accuses->toArray();
         }
 
         ActivityLog::record('profile.exported', 'Export des données du compte '.$user->email, $user);

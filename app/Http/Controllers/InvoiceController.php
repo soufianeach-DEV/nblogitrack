@@ -61,7 +61,7 @@ class InvoiceController extends Controller
                 'du' => round((float) $aPayer()->sum('amount_incl_tax')
                     - (float) Payment::whereIn('invoice_id', $aPayer()->select('id'))->sum('amount'), 2),
                 'paye' => (float) $perimetre()->where('type', Invoice::FACTURE)->where('status', 'PAID')->sum('amount_incl_tax'),
-                'en_retard' => $aPayer()->where('due_on', '<', now())->count(),
+                'en_retard' => $aPayer()->where('due_on', '<', today()->toDateString())->count(),
             ],
             'colonnePaiement' => $estClient && $aPayer()->exists(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
@@ -164,10 +164,15 @@ class InvoiceController extends Controller
 
         return $destinataire === null
             ? back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'))
-            : back()->with('success', Traductions::t('msg.facture_envoyee', 'Facture :reference envoyée à :destinataire.', [
-                'reference' => $invoice->reference,
-                'destinataire' => $destinataire,
-            ]));
+            : back()->with('success', $invoice->estAvoir()
+                ? Traductions::t('msg.avoir_envoye', 'Avoir :reference envoyé à :destinataire.', [
+                    'reference' => $invoice->reference,
+                    'destinataire' => $destinataire,
+                ])
+                : Traductions::t('msg.facture_envoyee', 'Facture :reference envoyée à :destinataire.', [
+                    'reference' => $invoice->reference,
+                    'destinataire' => $destinataire,
+                ]));
     }
 
     public function markPaid(Request $request, Invoice $invoice): RedirectResponse

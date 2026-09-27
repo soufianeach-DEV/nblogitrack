@@ -47,7 +47,11 @@ class OrderWorkflow
         self::appliquer($ordre, $etat, [
             'vehicle_registration' => $camion->registration,
             'driver_id' => $chauffeur->id,
-            'assigned_at' => now(),
+            // La premiere affectation reste la date affichee au suivi : une
+            // reaffectation en route (transbordement) l'ecrasait, et
+            // l'affectation passait apres l'enlevement. Le changement est
+            // garde au journal.
+            'assigned_at' => $ordre->assigned_at ?? now(),
             ...($enlevement !== null && $etat === OrderStatus::ASSIGNED ? ['pickup_date' => $enlevement] : []),
         ]);
     }

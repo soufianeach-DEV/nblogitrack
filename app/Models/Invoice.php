@@ -106,6 +106,7 @@ class Invoice extends Model
 
     public function estEnRetard(): bool
     {
-        return $this->estAPayer() && $this->due_on->isPast();
+        // Le jour de l'echeance, la facture est encore dans les temps.
+        return $this->estAPayer() && $this->due_on->lt(today());
     }
 }

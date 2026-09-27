@@ -281,6 +281,16 @@ Route::get('/', fn () => redirect('/'.app()->getLocale()));
 Route::fallback(function (Request $requete) {
     $chemin = trim($requete->path(), '/');
 
+    // « /FR/tarifs » ou « /Nl » : la langue tapee en majuscules est reconnue
+    // (elle devenait « /fr/FR », une page introuvable).
+    $segments = explode('/', $chemin);
+
+    if (Traductions::estServie(mb_strtolower($segments[0])) && $segments[0] !== mb_strtolower($segments[0])) {
+        $segments[0] = mb_strtolower($segments[0]);
+
+        return redirect('/'.implode('/', $segments).($requete->getQueryString() ? '?'.$requete->getQueryString() : ''));
+    }
+
     // Une adresse d'API inconnue n'a pas de version traduite : elle
     // repond 404 (en JSON) au lieu de rediriger vers le site.
     abort_if(Traductions::estServie(explode('/', $chemin)[0]) || explode('/', $chemin)[0] === 'api', 404);

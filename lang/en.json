@@ -9,5 +9,7 @@
     "Too Many Requests": "Too many requests",
     "Unauthorized": "Unauthorized",
     "(and :count more error)": "(and :count more error)",
-    "(and :count more errors)": "(and :count more errors)"
+    "(and :count more errors)": "(and :count more errors)",
+    "Invalid signature.": "This link is no longer valid: it has expired or been altered. Request a new one from the sign-in screen.",
+    "Back to home": "Back to home"
 }

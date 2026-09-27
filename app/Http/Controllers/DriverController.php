@@ -156,16 +156,30 @@ class DriverController extends Controller
             'cpc_expiry' => 'nullable|date',
             'tacho_card_expiry' => 'nullable|date',
             'employment_status' => 'required|in:'.implode(',', array_keys(Driver::STATUTS)),
-            'hired_on' => 'nullable|date|before_or_equal:today',
-            'birth_date' => 'nullable|date|before:today',
-            'retirement_planned_on' => 'nullable|date',
-            'left_on' => 'nullable|date',
+            // Des dates qui se contredisent (depart avant l'entree, entree
+            // avant la naissance, chauffeur de six ans) etaient enregistrees.
+            'hired_on' => 'nullable|date|before_or_equal:today|after_or_equal:1950-01-01',
+            'birth_date' => 'nullable|date|after_or_equal:1930-01-01|before_or_equal:'.today()->subYears(18)->toDateString(),
+            'retirement_planned_on' => 'nullable|date|after_or_equal:hired_on',
+            'left_on' => 'nullable|date|after_or_equal:hired_on',
             'departure_reason' => 'nullable|in:'.implode(',', array_keys(Driver::MOTIFS_SORTIE)),
         ], [
             'medical_exam_date.before_or_equal' => Traductions::t('msg.visite_future', 'La visite médicale ne peut pas être postérieure à aujourd\'hui.'),
             'hired_on.before_or_equal' => Traductions::t('msg.entree_future', 'La date d\'entrée en service ne peut pas être dans le futur.'),
-            'birth_date.before' => Traductions::t('msg.naissance_future', 'La date de naissance doit être dans le passé.'),
+            'birth_date.before_or_equal' => Traductions::t('msg.naissance_majeur', 'Un chauffeur a au moins 18 ans : vérifiez la date de naissance.'),
+            'birth_date.after_or_equal' => Traductions::t('msg.naissance_ancienne', 'Cette date de naissance est trop ancienne : vérifiez l\'année.'),
+            'hired_on.after_or_equal' => Traductions::t('msg.entree_ancienne', 'Cette date d\'entrée est trop ancienne : vérifiez l\'année.'),
+            'retirement_planned_on.after_or_equal' => Traductions::t('msg.retraite_avant_entree', 'La retraite prévue ne peut pas précéder l\'entrée en service.'),
+            'left_on.after_or_equal' => Traductions::t('msg.depart_avant_entree', 'Le départ ne peut pas précéder l\'entrée en service.'),
         ]);
+
+        // L'entree en service suit les 18 ans du chauffeur.
+        if (! empty($donnees['hired_on']) && ! empty($donnees['birth_date'])
+            && \Illuminate\Support\Carbon::parse($donnees['hired_on'])->lt(\Illuminate\Support\Carbon::parse($donnees['birth_date'])->addYears(18))) {
+            return back()->withErrors([
+                'hired_on' => Traductions::t('msg.entree_avant_majorite', 'L\'entrée en service ne peut pas précéder les 18 ans du chauffeur.'),
+            ]);
+        }
 
         if (! empty($donnees['left_on']) && empty($donnees['departure_reason'])) {
             return back()->withErrors([

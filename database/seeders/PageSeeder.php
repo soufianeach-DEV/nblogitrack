@@ -665,7 +665,7 @@ La loi n'exige un consentement que pour ce qui n'est pas indispensable au servic
 ## Les témoins déposés
 - nblogitrack_session — maintient la session d'une page à l'autre ; expire après cent vingt minutes d'inactivité.
 - XSRF-TOKEN — protège les formulaires contre les requêtes forgées depuis un autre site ; même durée que la session.
-- remember_web — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de quatre cents jours.
+- remember_web — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de trente jours.
 - temoins_choix — enregistre le choix exprimé dans le bandeau (« essentiels » ou « audience ») ; conservé cent quatre-vingts jours.
 
 ## La mesure d'audience, avec votre accord
@@ -700,7 +700,7 @@ De wet vereist enkel toestemming voor wat niet onmisbaar is voor de gevraagde di
 ## De geplaatste cookies
 - nblogitrack_session — houdt de sessie in stand van pagina tot pagina; vervalt na honderdtwintig minuten inactiviteit.
 - XSRF-TOKEN — beschermt de formulieren tegen vervalste verzoeken vanaf een andere website; zelfde duur als de sessie.
-- remember_web — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na vierhonderd dagen.
+- remember_web — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na dertig dagen.
 - temoins_choix — registreert de keuze die in de banner werd gemaakt (« essentiels » of « audience »); honderdtachtig dagen bewaard.
 
 ## Publieksmeting, met uw toestemming
@@ -735,7 +735,7 @@ The law requires consent only for what is not essential to the requested service
 ## Cookies placed
 - nblogitrack_session — keeps the session alive from page to page; expires after one hundred and twenty minutes of inactivity.
 - XSRF-TOKEN — protects forms against requests forged from another website; same lifetime as the session.
-- remember_web — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after four hundred days.
+- remember_web — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after thirty days.
 - temoins_choix — records the choice made in the banner (« essentiels » or « audience »); kept for one hundred and eighty days.
 
 ## Audience measurement, with your consent

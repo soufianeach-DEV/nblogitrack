@@ -128,6 +128,7 @@ class VehicleController extends Controller
             'mileage' => 'nullable|numeric|min:0|max:9999999',
             'permis_requis' => 'sometimes|nullable|in:'.implode(',', Vehicle::PERMIS),
             'adr_equipe' => 'sometimes|boolean',
+            'corriger_kilometrage' => 'sometimes|boolean',
         ], [
             'inspection_date.before_or_equal' => Traductions::t('msg.controle_futur', 'Un contrôle technique ne peut pas être daté dans le futur.'),
             'inspection_valid_until.after_or_equal' => Traductions::t('msg.validite_avant_controle', 'La validité ne peut pas précéder le passage au contrôle.'),
@@ -181,7 +182,15 @@ class VehicleController extends Controller
         // Le formulaire montre le releve au kilometre pres : renvoyer la
         // valeur affichee (458 099 pour 458 099,64) ne fait pas reculer le
         // compteur.
-        if (($donnees['mileage'] ?? null) !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
+        $correction = $request->boolean('corriger_kilometrage') && $request->user()->isAdmin();
+        unset($donnees['corriger_kilometrage']);
+
+        if ($correction && ($donnees['mileage'] ?? null) !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
+            ActivityLog::record('vehicle.mileage_corrected', 'Relevé kilométrique de '.$vehicle->registration.' corrigé', $vehicle, [
+                'ancien' => (float) $vehicle->mileage,
+                'nouveau' => (float) $donnees['mileage'],
+            ]);
+        } elseif (($donnees['mileage'] ?? null) !== null && (float) $donnees['mileage'] < floor((float) $vehicle->mileage)) {
             return back()->withErrors([
                 // Arrondi, le message annoncait 175 662 la ou le controle et
                 // le champ retiennent 175 661 : on tronque comme eux.

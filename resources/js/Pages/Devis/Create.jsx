@@ -952,7 +952,7 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                             {/* Le poids total se refusait sans message : l'erreur
                                 restait dans le bloc replie ci-dessous. */}
                             {! data.weight && poidsColis > 44000 && (
-                                <InputError message={t('devis.poids_trop_lourd', 'Au-delà de 44 000 kg, le chargement dépasse un seul camion : répartissez-le sur plusieurs demandes ou contactez-nous.')} className="mt-1" />
+                                <InputError message={t('msg.devis_trop_lourd', 'Le poids total des colis dépasse 44 t, la limite d\'un camion : répartissez l\'envoi en plusieurs demandes.')} className="mt-1" />
                             )}
                             <details className="mt-3 rounded-lg bg-surface/60 px-3 py-2" open={Boolean(data.weight || data.volume || errors.weight || errors.volume)}>
                                 <summary className="cursor-pointer text-sm font-semibold text-marine">{t('devis.sans_detail', 'Pas le détail des colis ? Indiquez seulement le poids et le volume')}</summary>
@@ -1072,7 +1072,7 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                                     const gardes = legers.slice(0, 5);
                                     const total = gardes.reduce((somme, f) => somme + f.size, 0);
                                     const message = [
-                                        fichiers.length > legers.length && t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait 10 Mo au plus.'),
+                                        fichiers.length > legers.length && t('msg.devis_piece_trop_lourde', 'Chaque pièce jointe fait :max Mo au plus.', { max: Math.floor(MAX_PIECE / 1048576) }),
                                         legers.length > 5 && t('devis.pieces_cinq', 'Cinq fichiers au plus : seuls les cinq premiers sont gardés.'),
                                         total > MAX_ENVOI && t('devis.pieces_total', 'Les pièces jointes dépassent :max Mo au total : retirez-en une.', { max: Math.floor(MAX_ENVOI / 1048576) }),
                                     ].filter(Boolean).join(' ');
@@ -1081,7 +1081,7 @@ export default function Create({ choix, listes, equivalences = {}, limites = {} 
                                 }}
                                 className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-surface file:px-4 file:py-2 file:text-sm file:font-semibold file:text-marine"
                             />
-                            <p className="mt-1 text-xs text-slate-500">{t('devis.pieces_aide', 'Bon de commande, fiche de données de sécurité, plan d\'accès… 5 fichiers, 10 Mo chacun au plus.')}</p>
+                            <p className="mt-1 text-xs text-slate-500">{t('devis.pieces_aide', 'Bon de commande, fiche de données de sécurité, plan d\'accès… 5 fichiers, :max Mo chacun au plus.', { max: Math.floor(MAX_PIECE / 1048576) })}</p>
                             <InputError message={manques.attachments ?? Object.entries(errors).find(([cle]) => cle.startsWith('attachments'))?.[1]} className="mt-1" />
                         </div>
 

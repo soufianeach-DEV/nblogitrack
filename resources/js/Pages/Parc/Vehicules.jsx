@@ -22,6 +22,7 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
         mileage: vehicule.kilometrage,
         permis_requis: vehicule.permis_fiche ?? '',
         adr_equipe: vehicule.adr_equipe,
+        corriger_kilometrage: false,
     });
 
     const passageControle = (valeur) => {
@@ -152,6 +153,20 @@ function Fiche({ vehicule, peutModifier, onFermer }) {
                                 className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                             />
                             {errors.mileage && <p className="mt-1 text-xs text-status-incident">{errors.mileage}</p>}
+                            {/* Une faute de frappe (un zero de trop) bloquait le
+                                compteur pour de bon : l'administrateur peut
+                                la corriger, et la correction est journalisee. */}
+                            {errors.mileage && (
+                                <label className="mt-2 flex items-center gap-2 text-xs text-slate-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.corriger_kilometrage}
+                                        onChange={(e) => setData('corriger_kilometrage', e.target.checked)}
+                                        className="rounded border-slate-300 text-marine focus:ring-marine"
+                                    />
+                                    {t('parc.corriger_kilometrage', 'Corriger une erreur de saisie du relevé précédent')}
+                                </label>
+                            )}
                         </div>
                     </div>
                 )}

@@ -194,9 +194,12 @@
             </p>
         @endif
 
+        {{-- Un avoir ne se paie pas : ni echeance ni interets de retard. --}}
+        @unless ($facture->estAvoir())
         <p class="mention">
             {{ $t::t('pdf.conditions_echeance', 'Payable au plus tard le :date, sans escompte. À défaut de paiement à l\'échéance, sont dus de plein droit un intérêt de retard au taux de la loi du 2 août 2002 et une indemnité forfaitaire de 40 € pour frais de recouvrement (article 9 des conditions générales).', ['date' => $facture->due_on?->format('d/m/Y')]) }}
         </p>
+        @endunless
     </div>
 
     <div class="pied">

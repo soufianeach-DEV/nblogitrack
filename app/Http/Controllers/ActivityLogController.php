@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Support\JournalLisible;
 use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,6 +60,7 @@ class ActivityLogController extends Controller
         'driver.notice_sent' => 'Note aux conducteurs envoyée',
         'driver.notice_acknowledged' => 'Prise de connaissance de la note',
         'vehicle.updated' => 'Véhicule modifié',
+        'vehicle.mileage_corrected' => 'Kilométrage corrigé',
         'page.created' => 'Page créée',
         'page.updated' => 'Page modifiée',
         'page.published' => 'Page publiée',
@@ -127,7 +129,11 @@ class ActivityLogController extends Controller
         }
 
         return Inertia::render('ActivityLogs/Index', [
-            'logs' => $query->paginate(30)->withQueryString(),
+            'logs' => tap($query->paginate(30)->withQueryString(), fn ($page) => $page->getCollection()->transform(fn (ActivityLog $ligne) => [
+                ...$ligne->toArray(),
+                'description' => JournalLisible::resume($ligne),
+                'details' => JournalLisible::details($ligne->properties),
+            ])),
             'actions' => collect(self::ACTIONS)
                 ->map(fn (string $libelle, string $action) => Traductions::t('journal.action_'.str_replace('.', '_', $action), $libelle))
                 ->all(),

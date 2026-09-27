@@ -360,6 +360,7 @@ export default function Index({
     priorite = null, priorites = [],
     contrainte = null, contraintes = [],
     jour = null,
+    imminent = false,
     q = '', suggestions = [],
 }) {
     const t = useTraduction();
@@ -425,6 +426,23 @@ export default function Index({
                     </button>
                 )}
             </div>
+
+            {imminent && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-marine py-1 pl-3 pr-1.5 text-sm font-medium text-white">
+                        {t('planif.filtre_imminent', 'Enlèvement sous trois jours, sans véhicule')}
+                        <Link
+                            href={route('planning.index', { status: statut, priorite, contrainte, jour: jour || undefined, q: champs || undefined })}
+                            preserveScroll
+                            aria-label={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            title={t('planif.retirer_filtre', 'Retirer ce filtre')}
+                            className="flex h-5 w-5 items-center justify-center rounded-full leading-none text-white/80 transition hover:bg-white/20 hover:text-white"
+                        >
+                            ×
+                        </Link>
+                    </span>
+                </div>
+            )}
 
             {jour && (
                 <div className="mb-4 flex flex-wrap items-center gap-2">

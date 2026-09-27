@@ -9,5 +9,7 @@
     "Unauthorized": "Niet gemachtigd",
     "This action is unauthorized.": "U hebt geen toegang tot deze actie.",
     "(and :count more error)": "(en nog :count fout)",
-    "(and :count more errors)": "(en nog :count fouten)"
+    "(and :count more errors)": "(en nog :count fouten)",
+    "Invalid signature.": "Deze link is niet meer geldig: hij is verlopen of gewijzigd. Vraag een nieuwe aan via het aanmeldscherm.",
+    "Back to home": "Terug naar de startpagina"
 }

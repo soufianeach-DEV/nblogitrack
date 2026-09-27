@@ -300,7 +300,11 @@ export default function Show({ order, chauffeur, facture = null, annulation = nu
                         {ligne(t('suivi.depart', 'Départ'), adresse(order.pickup_address))}
                         {ligne(t('suivi.destination', 'Destination'), adresse(order.delivery_address))}
                         {ligne(t('suivi.distance_routiere', 'Distance routière'), nombre(order.distance_km, 'km'))}
-                        {ligne(t('ordres.chargement', 'Chargement'), date(order.pickup_date, true))}
+                        {/* Une fois la marchandise chargee, la date reelle : un
+                            chargement fait la veille s'affichait apres la livraison. */}
+                        {order.picked_up_at
+                            ? ligne(t('ordres.chargement_effectif', 'Chargement effectif'), date(order.picked_up_at, true))
+                            : ligne(t('ordres.chargement', 'Chargement'), date(order.pickup_date, true))}
                         {order.shipper_name && ligne(t('commande.expediteur', 'Expéditeur au lieu de chargement'), order.shipper_name + (order.shipper_phone ? ' · ' + order.shipper_phone : ''))}
                         {order.loading_reference && ligne(t('commande.reference_chargement', 'Référence de chargement'), order.loading_reference)}
                     </dl>

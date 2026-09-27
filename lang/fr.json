@@ -9,5 +9,7 @@
     "Unauthorized": "Non autorisé",
     "This action is unauthorized.": "Vous n'avez pas accès à cette action.",
     "(and :count more error)": "(et :count autre erreur)",
-    "(and :count more errors)": "(et :count autres erreurs)"
+    "(and :count more errors)": "(et :count autres erreurs)",
+    "Invalid signature.": "Ce lien n'est plus valable : il a expiré ou il a été modifié. Demandez-en un nouveau depuis l'écran de connexion.",
+    "Back to home": "Retour à l'accueil"
 }
