@@ -8,6 +8,7 @@ use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\Osrm;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -225,26 +226,18 @@ class TrackingController extends Controller
      */
     private function routeRoutiere(float $latDepart, float $lngDepart, float $latArrivee, float $lngArrivee): array
     {
-        try {
-            $reponse = Http::connectTimeout(3)->timeout(10)->get(
-                "https://router.project-osrm.org/route/v1/driving/{$lngDepart},{$latDepart};{$lngArrivee},{$latArrivee}",
-                ['overview' => 'full', 'geometries' => 'geojson'],
-            );
+        $route = Osrm::route($latDepart, $lngDepart, $latArrivee, $lngArrivee, trace: true);
 
-            $route = $reponse->ok() ? $reponse->json('routes.0') : null;
-
-            if (isset($route['geometry']['coordinates'])) {
-                return [
-                    'geometrie' => array_map(
-                        fn (array $point) => [round($point[1], 5), round($point[0], 5)],
-                        $route['geometry']['coordinates'],
-                    ),
-                    'distance_km' => (int) round($route['distance'] / 1000),
-                    'duree_min' => (int) round($route['duration'] / 60),
-                    'direct' => false,
-                ];
-            }
-        } catch (\Throwable $e) {
+        if ($route !== null) {
+            return [
+                'geometrie' => array_map(
+                    fn (array $point) => [round($point[1], 5), round($point[0], 5)],
+                    $route['geometry']['coordinates'],
+                ),
+                'distance_km' => (int) round($route['distance'] / 1000),
+                'duree_min' => (int) round(($route['duration'] ?? 0) / 60),
+                'direct' => false,
+            ];
         }
 
         return [

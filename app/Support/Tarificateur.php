@@ -6,7 +6,6 @@ use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 class Tarificateur
 {
@@ -200,19 +199,9 @@ class Tarificateur
 
     private static function osrm(float $lat1, float $lng1, float $lat2, float $lng2): ?float
     {
-        try {
-            $reponse = Http::timeout(5)->get(
-                "https://router.project-osrm.org/route/v1/driving/{$lng1},{$lat1};{$lng2},{$lat2}",
-                ['overview' => 'false'],
-            );
+        $route = Osrm::route($lat1, $lng1, $lat2, $lng2, delai: 5);
 
-            if ($reponse->ok() && isset($reponse->json()['routes'][0]['distance'])) {
-                return $reponse->json()['routes'][0]['distance'] / 1000;
-            }
-        } catch (\Throwable $e) {
-        }
-
-        return null;
+        return $route !== null ? $route['distance'] / 1000 : null;
     }
 
     public static function distanceVol(float $lat1, float $lng1, float $lat2, float $lng2): float

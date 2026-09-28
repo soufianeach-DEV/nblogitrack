@@ -68,4 +68,13 @@ return [
         'api_base' => env('STRIPE_API_BASE'),
     ],
 
+    // Itineraires routiers : essayes dans l'ordre, le second prend le
+    // relais quand le serveur de demonstration d'OSRM est sature.
+    'osrm' => [
+        'serveurs' => array_filter(explode(',', (string) env(
+            'OSRM_SERVEURS',
+            'https://router.project-osrm.org,https://routing.openstreetmap.de/routed-car',
+        ))),
+    ],
+
 ];
