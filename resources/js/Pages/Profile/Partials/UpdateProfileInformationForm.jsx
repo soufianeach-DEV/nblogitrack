@@ -1,3 +1,4 @@
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -94,9 +95,8 @@ export default function UpdateProfileInformation({
                     <div>
                         <InputLabel htmlFor="current_password_email" value={t('profil.mdp_actuel', 'Mot de passe actuel')} />
 
-                        <TextInput
+                        <ChampMotDePasse
                             id="current_password_email"
-                            type="password"
                             className="mt-1 block w-full"
                             value={data.current_password}
                             onChange={(e) => setData('current_password', e.target.value)}

@@ -1,9 +1,9 @@
 import DangerButton from '@/Components/DangerButton';
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
 import { useTraduction } from '@/traduire';
 import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -80,16 +80,16 @@ export default function DeleteUserForm({ className = '' }) {
                             className="sr-only"
                         />
 
-                        <TextInput
+                        <ChampMotDePasse
                             id="password_suppression"
-                            type="password"
                             name="password"
                             ref={passwordInput}
                             value={data.password}
                             onChange={(e) =>
                                 setData('password', e.target.value)
                             }
-                            className="mt-1 block w-3/4"
+                            className="block w-full"
+                            classeConteneur="mt-1 w-3/4"
                             isFocused
                             placeholder={t('compte.mot_de_passe', 'Mot de passe')}
                         />

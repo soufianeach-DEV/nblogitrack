@@ -1,7 +1,7 @@
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import { useTraduction } from '@/traduire';
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
@@ -65,14 +65,13 @@ export default function UpdatePasswordForm({ className = '' }) {
                         value={t('profil.mdp_actuel', 'Mot de passe actuel')}
                     />
 
-                    <TextInput
+                    <ChampMotDePasse
                         id="current_password"
                         ref={currentPasswordInput}
                         value={data.current_password}
                         onChange={(e) =>
                             setData('current_password', e.target.value)
                         }
-                        type="password"
                         className="mt-1 block w-full"
                         autoComplete="current-password"
                     />
@@ -86,12 +85,11 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div>
                     <InputLabel htmlFor="password" value={t('auth.nouveau_mdp', 'Nouveau mot de passe')} />
 
-                    <TextInput
+                    <ChampMotDePasse
                         id="password"
                         ref={passwordInput}
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
-                        type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                     />
@@ -105,13 +103,12 @@ export default function UpdatePasswordForm({ className = '' }) {
                         value={t('auth.confirmation_mdp', 'Confirmation du mot de passe')}
                     />
 
-                    <TextInput
+                    <ChampMotDePasse
                         id="password_confirmation"
                         value={data.password_confirmation}
                         onChange={(e) =>
                             setData('password_confirmation', e.target.value)
                         }
-                        type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                     />
