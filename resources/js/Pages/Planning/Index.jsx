@@ -383,8 +383,11 @@ export default function Index({
                 contrainte,
                 jour: jour || undefined,
                 q: valeur || undefined,
+                // L'ordre cherche peut etre dans un autre onglet : le
+                // serveur ouvre alors celui ou il se trouve.
+                suivre: valeur ? 1 : undefined,
             }, {
-                only: ['orders', 'priorites', 'contraintes', 'compteurs', 'suggestions', 'q'],
+                only: ['orders', 'priorites', 'contraintes', 'compteurs', 'suggestions', 'q', 'statut'],
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,

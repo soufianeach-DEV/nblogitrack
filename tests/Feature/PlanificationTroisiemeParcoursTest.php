@@ -52,6 +52,26 @@ class PlanificationTroisiemeParcoursTest extends TestCase
         ]);
     }
 
+    public function test_la_recherche_ouvre_l_onglet_ou_se_trouve_l_ordre(): void
+    {
+        $ordre = TransportOrder::factory()->enRoute()->create();
+        $planificateur = User::factory()->planificateur()->create();
+
+        // Pendant la saisie : l'onglet « En cours » s'ouvre.
+        $this->actingAs($planificateur)
+            ->get(route('planning.index', ['status' => 'PENDING', 'q' => $ordre->tracking_number, 'suivre' => 1]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('statut', 'IN_PROGRESS')
+                ->where('orders.data.0.tracking_number', $ordre->tracking_number));
+
+        // Un clic sur l'onglet « En attente » reste respecte.
+        $this->actingAs($planificateur)
+            ->get(route('planning.index', ['status' => 'PENDING', 'q' => $ordre->tracking_number]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('statut', 'PENDING')
+                ->has('orders.data', 0));
+    }
+
     public function test_affecter_un_ordre_livre_est_refuse_par_un_message_visible(): void
     {
         $ordre = TransportOrder::factory()->livree()->create(['weight' => 1000]);

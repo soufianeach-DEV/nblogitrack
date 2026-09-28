@@ -100,6 +100,23 @@ class PlanningController extends Controller
             ->orWhereContient('delivery_address', (string) $q)
             ->orWhereHas('client', fn ($c) => $c->whereContient('company_name', (string) $q)));
 
+        // Pendant la saisie, un ordre cherche dans le mauvais onglet ouvre
+        // celui ou il se trouve : « En attente » restait vide alors que
+        // l'ordre etait « En cours ». Un clic sur un onglet reste respecte.
+        if ($q !== '' && $request->boolean('suivre')) {
+            $trouves = TransportOrder::query();
+            $recherche($trouves);
+            if ($jour) {
+                $duJour($trouves);
+            }
+            $trouves = $trouves->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+
+            if ((int) ($trouves[$statut] ?? 0) === 0) {
+                $statut = collect(array_keys(self::TRANSITIONS))
+                    ->first(fn (string $s) => (int) ($trouves[$s] ?? 0) > 0) ?? $statut;
+            }
+        }
+
         // Les indisponibilites a venir sont chargees une fois : le grisage
         // de chaque mission les consulte sans requete supplementaire.
         $aVenir = fn ($q) => $q->where('au', '>=', today()->toDateString());
