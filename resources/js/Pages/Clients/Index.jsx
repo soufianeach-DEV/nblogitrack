@@ -169,6 +169,11 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                 <div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <h2 className="text-lg font-bold text-marine">{client.company_name}</h2>
+                                        {etatClient === 'attente' && client.inscrit_le && (
+                                            <span className="rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-700">
+                                                {t('entreprises.demande_recue', 'Demande reçue le')} {dateCourte(client.inscrit_le)}
+                                            </span>
+                                        )}
                                         {etatClient !== 'attente' && (
                                             <span
                                                 className={

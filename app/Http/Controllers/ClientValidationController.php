@@ -6,6 +6,7 @@ use App\Mail\CompteActive;
 use App\Mail\InscriptionRefusee;
 use App\Models\ActivityLog;
 use App\Models\Client;
+use App\Models\User;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
@@ -58,7 +59,21 @@ class ClientValidationController extends Controller
         }
 
         return Inertia::render('Clients/Index', [
-            'clients' => $query->orderBy('company_name')->paginate(10)->withQueryString(),
+            // La demande la plus recente d'abord : celle qu'on vient de
+            // recevoir ne se perd plus au milieu de l'ordre alphabetique.
+            // La table des entreprises ne date pas ses lignes : la demande
+            // date de la creation du premier compte, fait a l'inscription.
+            // Les validees suivent la date de leur validation.
+            'clients' => $query
+                ->select('clients.*')
+                ->addSelect(['inscrit_le' => User::withTrashed()
+                    ->selectRaw('min(created_at)')
+                    ->whereColumn('users.client_id', 'clients.id')])
+                ->withCasts(['inscrit_le' => 'datetime'])
+                ->orderByRaw(($etat === 'validees' ? 'validated_at' : 'inscrit_le').' desc nulls last')
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->withQueryString(),
             'etat' => $etat,
             'filtres' => $filtres,
             'suggestions' => [

@@ -820,6 +820,7 @@ class TranslationSeeder extends Seeder
             'validee' => ['Validée', 'Goedgekeurd', 'Approved'],
             'refusee' => ['Refusée', 'Geweigerd', 'Rejected'],
             'le' => ['le', 'op', 'on'],
+            'demande_recue' => ['Demande reçue le', 'Aanvraag ontvangen op', 'Request received on'],
             'filtre' => [
                 'Entreprise, numéro de TVA, Peppol ou localité',
                 'Onderneming, btw-nummer, Peppol of gemeente',
