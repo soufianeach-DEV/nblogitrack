@@ -398,11 +398,21 @@ function Fiche({ mission, onRetour }) {
 
                 <ol className="mt-4 space-y-4">
                     <li className="flex gap-3">
-                        <span className="mt-1 flex h-3 w-3 shrink-0 rounded-full border-2 border-marine bg-white" />
+                        <span
+                            className={`mt-1 flex h-3 w-3 shrink-0 rounded-full border-2 ${
+                                mission.enleve_le ? 'border-status-delivered bg-status-delivered' : 'border-marine bg-white'
+                            }`}
+                        />
                         <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                {t('commun.enlevement', 'enlèvement')}{mission.enlevement_iso && ' • ' + quand(mission.enlevement_iso, locale)}
-                            </p>
+                            {mission.enleve_le ? (
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-status-delivered">
+                                    {t('mission.enleve_le', 'enlevé le')} {quand(mission.enleve_le, locale, { toujoursDate: true })}
+                                </p>
+                            ) : (
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                    {t('commun.enlevement', 'enlèvement')}{mission.enlevement_iso && ' • ' + quand(mission.enlevement_iso, locale)}
+                                </p>
+                            )}
                             <p className="font-bold leading-snug text-marine">{mission.adresse_enlevement}</p>
                         </div>
                     </li>

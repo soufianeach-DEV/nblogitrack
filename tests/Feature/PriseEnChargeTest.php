@@ -82,7 +82,8 @@ class PriseEnChargeTest extends TestCase
         $this->actingAs($chauffeur->user)
             ->get(route('missions.index', ['mission' => $ordre->tracking_number]))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('mission.action.statut', 'IN_PROGRESS'));
+                ->where('mission.action.statut', 'IN_PROGRESS')
+                ->where('mission.enleve_le', null));
 
         $this->actingAs($chauffeur->user)
             ->patch(route('missions.status', $ordre), ['statut' => 'IN_PROGRESS'])
@@ -91,6 +92,12 @@ class PriseEnChargeTest extends TestCase
         $ordre->refresh();
         $this->assertSame('IN_PROGRESS', $ordre->status);
         $this->assertNotNull($ordre->picked_up_at);
+
+        // La fiche montre alors l'heure reelle de l'enlevement.
+        $this->actingAs($chauffeur->user)
+            ->get(route('missions.index', ['mission' => $ordre->tracking_number]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('mission.enleve_le', $ordre->picked_up_at->toIso8601String()));
 
         $this->actingAs($chauffeur->user)
             ->patch(route('missions.status', $ordre), ['statut' => 'DELIVERED'])

@@ -342,6 +342,9 @@ class MissionController extends Controller
     {
         return array_merge($this->carte($ordre), [
             'adresse_enlevement' => $ordre->pickup_address,
+            // Une fois la prise en charge confirmee, la fiche montre l'heure
+            // reelle de l'enlevement plutot que celle qui etait prevue.
+            'enleve_le' => $ordre->picked_up_at?->toIso8601String(),
             // Chargement a l'etranger chez un tiers : qui appeler sur place.
             'expediteur' => $ordre->shipper_name,
             'telephone_expediteur' => $ordre->shipper_phone,

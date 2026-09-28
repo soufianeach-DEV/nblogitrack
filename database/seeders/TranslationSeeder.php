@@ -1293,6 +1293,7 @@ class TranslationSeeder extends Seeder
                 'Confirm pickup',
             ],
             'confirmer_livraison' => ['Confirmer la livraison', 'Levering bevestigen', 'Confirm delivery'],
+            'enleve_le' => ['enlevé le', 'opgehaald op', 'picked up on'],
             'non_affecte' => ['Non affecté', 'Niet toegewezen', 'Not assigned'],
             'livree_le' => ['Livrée le', 'Geleverd op', 'Delivered on'],
             'pas_affectee' => [
