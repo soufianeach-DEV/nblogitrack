@@ -62,8 +62,10 @@ services:
         value: smtp
       - key: MAIL_HOST
         value: smtp-relay.brevo.com
+      # L'offre gratuite de Render bloque les ports SMTP 25, 465 et 587 en
+      # sortie ; Brevo accepte aussi le port 2525.
       - key: MAIL_PORT
-        value: "587"
+        value: "2525"
       - key: MAIL_USERNAME
         sync: false
       - key: MAIL_PASSWORD

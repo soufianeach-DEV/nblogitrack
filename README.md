@@ -250,7 +250,7 @@ L'application se déploie telle quelle avec le `Dockerfile` du dépôt : l'image
 
 1. **Base de données (Supabase)** : créez un projet dans la région Europe, puis relevez dans *Connect › Session pooler* l'hôte (`aws-0-eu-central-1.pooler.supabase.com`), l'utilisateur (`postgres.<référence du projet>`) et le mot de passe. Le pooler de session passe en IPv4, ce que Render exige.
 2. **Clé de l'application** : `php artisan key:generate --show` sur votre poste ; gardez la valeur `base64:…`.
-3. **Service (Render)** : *New › Blueprint*, choisissez ce dépôt : Render lit `render.yaml`. Saisissez les valeurs demandées : `APP_KEY`, `APP_URL` (l'adresse que Render attribue, en `https://`), `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, l'accès SMTP de Brevo et les clés Stripe de test.
+3. **Service (Render)** : *New › Blueprint*, choisissez ce dépôt : Render lit `render.yaml`. Saisissez les valeurs demandées : `APP_KEY`, `APP_URL` (l'adresse que Render attribue, en `https://`), `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, l'accès SMTP de Brevo et les clés Stripe de test. Le plan utilise le port SMTP 2525 : l'offre gratuite de Render bloque les ports 25, 465 et 587 en sortie, et Brevo accepte aussi le 2525.
 4. **Premier déploiement** : Render construit l'image (quelques minutes) ; les migrations créent les tables et le dictionnaire des traductions.
 5. **Jeu de démonstration** : le jeu de données refuse de s'exécuter en production. Lancez-le depuis votre poste vers Supabase, en surchargeant la connexion pour la seule session PowerShell :
 
