@@ -33,9 +33,35 @@ class VerifyEmailController extends Controller
             return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
         }
 
-        return redirect()->route('login')->with('status', Traductions::t(
+        return redirect()->route('login')->with('status', $this->message($user));
+    }
+
+    /**
+     * Le message dit ce qui reste a faire : une entreprise qui vient de
+     * s'inscrire attend encore la validation, et « vous pouvez vous
+     * connecter » l'envoyait sur un refus a l'ecran de connexion.
+     */
+    private function message(User $user): string
+    {
+        $client = $user->isClient() ? $user->client : null;
+
+        if ($client !== null && ! $client->is_validated && $client->rejection_reason === null) {
+            return Traductions::t(
+                'msg.adresse_confirmee_attente',
+                'Votre adresse e-mail est confirmée. Votre entreprise doit encore être validée par un administrateur : vous recevrez un e-mail dès son activation, puis vous pourrez vous connecter.',
+            );
+        }
+
+        if ($user->is_active && ($client === null || $client->is_validated)) {
+            return Traductions::t(
+                'msg.adresse_confirmee_connexion',
+                'Votre adresse e-mail est confirmée. Vous pouvez vous connecter.',
+            );
+        }
+
+        return Traductions::t(
             'msg.adresse_confirmee',
             'Votre adresse e-mail est confirmée. Vous pouvez vous connecter dès que votre compte est actif.',
-        ));
+        );
     }
 }

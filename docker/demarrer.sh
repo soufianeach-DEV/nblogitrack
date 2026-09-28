@@ -4,8 +4,11 @@ set -e
 
 artisan() { runuser -u www-data -- php /var/www/html/artisan "$@"; }
 
-# Les migrations synchronisent aussi le dictionnaire des traductions.
+# Les migrations synchronisent le dictionnaire des traductions, mais
+# seulement quand l'une d'elles tourne : un deploiement sans migration
+# laissait les nouveaux textes en francais dans les autres langues.
 artisan migrate --force --no-interaction
+artisan traductions:synchroniser
 artisan optimize
 
 # L'ordonnanceur tourne chaque minute dans le conteneur : factures du mois,

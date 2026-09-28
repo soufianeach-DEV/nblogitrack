@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -65,6 +66,38 @@ class EmailVerificationTest extends TestCase
         $this->get($lien)->assertRedirect(route('login'));
 
         $this->assertTrue($utilisateur->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_une_entreprise_en_attente_apprend_qu_elle_doit_etre_validee(): void
+    {
+        $client = Client::factory()->enAttente()->create();
+        $utilisateur = $client->compte();
+        $utilisateur->update(['email_verified_at' => null]);
+
+        $lien = URL::temporarySignedRoute('verification.verify', now()->addDays(3), [
+            'id' => $utilisateur->id,
+            'hash' => sha1($utilisateur->email),
+        ]);
+
+        $this->get($lien)
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status', fn (string $message) => str_contains($message, 'validée par un administrateur'));
+    }
+
+    public function test_un_compte_actif_peut_se_connecter_apres_confirmation(): void
+    {
+        $client = Client::factory()->create();
+        $utilisateur = $client->compte();
+        $utilisateur->update(['email_verified_at' => null]);
+
+        $lien = URL::temporarySignedRoute('verification.verify', now()->addDays(3), [
+            'id' => $utilisateur->id,
+            'hash' => sha1($utilisateur->email),
+        ]);
+
+        $this->get($lien)
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status', 'Votre adresse e-mail est confirmée. Vous pouvez vous connecter.');
     }
 
     public function test_une_adresse_non_confirmee_ne_passe_que_par_le_profil(): void
