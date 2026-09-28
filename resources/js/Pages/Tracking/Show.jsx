@@ -22,6 +22,32 @@ const PRIORITES = {
     HIGH: { cle: 'suivi.prioritaire', libelle: 'Prioritaire', classe: 'bg-action/15 text-action-dark' },
 };
 
+// Met en forme le numero de suivi pendant la saisie : « trk2026003 »
+// devient « TRK-2026-003 ». Le tiret final ne s'ajoute qu'en tapant, pas
+// en effacant : sinon il reviendrait a chaque retour arriere.
+export function formaterNumeroSuivi(saisie, precedent = '') {
+    const brut = saisie.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (! 'TRK'.startsWith(brut.slice(0, 3))) {
+        return saisie.toUpperCase();
+    }
+
+    const annee = brut.slice(3, 7);
+    const numero = brut.slice(7);
+    const enTapant = saisie.length > precedent.length;
+    let resultat = brut.slice(0, 3);
+
+    if (brut.length > 3 || (brut.length === 3 && enTapant)) {
+        resultat += '-' + annee;
+    }
+
+    if (numero !== '' || (annee.length === 4 && enTapant)) {
+        resultat += '-' + numero;
+    }
+
+    return resultat;
+}
+
 const ETAPES_PUBLIQUES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
     { cle: 'ASSIGNED', libelle: ['statut.affecte', 'Affecté'], detail: ['suivi.detail_affectee', 'Camion et chauffeur réservés.'] },
@@ -674,7 +700,7 @@ function SuiviVisiteur({ order, searched }) {
                     <form onSubmit={chercher} className="flex flex-col gap-3 sm:flex-row">
                         <input
                             value={data.tracking_number}
-                            onChange={(e) => setData('tracking_number', e.target.value)}
+                            onChange={(e) => setData('tracking_number', formaterNumeroSuivi(e.target.value, data.tracking_number))}
                             placeholder={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
                             aria-label={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
                             autoComplete="off"
