@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Mail\OrdreAffecte;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
@@ -20,6 +21,7 @@ use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -491,6 +493,8 @@ class PlanningController extends Controller
             ],
         );
 
+        $this->prevenirLeClient($transportOrder);
+
         return back()->with('success', $reportee
             ? Traductions::t('msg.planif_ordre_affecte_reporte', 'Ordre :numero affecté au véhicule :vehicule. L\'enlèvement prévu était passé : il est reporté au :date.', [
                 'numero' => $transportOrder->tracking_number,
@@ -501,6 +505,44 @@ class PlanningController extends Controller
                 'numero' => $transportOrder->tracking_number,
                 'vehicule' => $vehicle->registration,
             ]));
+    }
+
+    /**
+     * Le client apprend que son expedition est prise en charge. Le courriel
+     * va au compte qui l'a commandee dans l'application, s'il est encore
+     * actif dans l'entreprise ; a defaut (commande par l'API ou a partir
+     * d'un devis), aux comptes qui passent les commandes de l'entreprise.
+     * Un courriel qui ne part pas n'annule pas l'affectation : il reste au
+     * journal.
+     */
+    private function prevenirLeClient(TransportOrder $ordre): void
+    {
+        $commanditaire = ActivityLog::where('subject_type', 'TransportOrder')
+            ->where('subject_id', (string) $ordre->id)
+            ->where('action', 'order.created')
+            ->oldest('id')
+            ->first()?->user;
+
+        $destinataires = $commanditaire?->is_active && $commanditaire->client_id === $ordre->client_id
+            ? collect([$commanditaire])
+            : ($ordre->client?->commanditaires() ?? collect());
+
+        $ordre = $ordre->fresh();
+
+        foreach ($destinataires as $destinataire) {
+            try {
+                Mail::to($destinataire->email)->send(new OrdreAffecte($ordre, $destinataire));
+            } catch (\Throwable $e) {
+                report($e);
+
+                ActivityLog::record(
+                    'order.assigned_mail_failed',
+                    'Avis d\'affectation non envoyé pour l\'ordre '.$ordre->tracking_number,
+                    $ordre,
+                    ['destinataire' => $destinataire->email],
+                );
+            }
+        }
     }
 
     public function suiviDirect(TransportOrder $transportOrder): RedirectResponse

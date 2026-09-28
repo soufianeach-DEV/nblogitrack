@@ -19,6 +19,7 @@ class ActivityLogController extends Controller
         'invoice.peppol_failed' => 'Échec de transmission Peppol',
         'order.created' => 'Création d\'ordre',
         'order.assigned' => 'Affectation',
+        'order.assigned_mail_failed' => 'Échec de l\'avis d\'affectation',
         'order.status_changed' => 'Changement de statut',
         'auth.login' => 'Connexion',
         'auth.logout' => 'Déconnexion',
