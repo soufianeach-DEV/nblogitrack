@@ -1,3 +1,4 @@
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -47,9 +48,8 @@ export default function ResetPassword({ token, email }) {
                 <div className="mt-4">
                     <InputLabel htmlFor="password" value={t('compte.mot_de_passe', 'Mot de passe')} />
 
-                    <TextInput
+                    <ChampMotDePasse
                         id="password"
-                        type="password"
                         name="password"
                         value={data.password}
                         className="mt-1 block w-full"
@@ -67,8 +67,7 @@ export default function ResetPassword({ token, email }) {
                         value={t('auth.confirmation_mdp', 'Confirmation du mot de passe')}
                     />
 
-                    <TextInput
-                        type="password"
+                    <ChampMotDePasse
                         id="password_confirmation"
                         name="password_confirmation"
                         value={data.password_confirmation}
