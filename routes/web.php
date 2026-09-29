@@ -261,6 +261,10 @@ Route::middleware('throttle:120,1,geo')->group(function () {
     Route::get('/geo/codes-postaux', [GeoController::class, 'codesPostaux'])->name('geo.codes-postaux');
 });
 
+Route::get('/geo/rues', [GeoController::class, 'rues'])
+    ->middleware('throttle:geo-numeros')
+    ->name('geo.rues');
+
 Route::get('/geo/numeros', [GeoController::class, 'numeros'])
     ->middleware('throttle:geo-numeros')
     ->name('geo.numeros');

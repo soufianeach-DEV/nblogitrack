@@ -108,6 +108,74 @@ class GeoController extends Controller
         return response()->json($codes);
     }
 
+    /**
+     * Les rues autour du centre d'une localite ou d'un code postal, chargees
+     * une fois des que l'adresse en est la : la saisie de la rue se filtre
+     * ensuite dans le navigateur, des la premiere lettre et sans attendre
+     * un service en ligne a chaque touche.
+     */
+    public function rues(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        // Centre arrondi a 0,01° : les codes voisins partagent le cache.
+        $lat = round((float) $data['lat'], 2);
+        $lng = round((float) $data['lng'], 2);
+        $cle = "rues:{$lat}:{$lng}";
+
+        $rues = Cache::get($cle);
+
+        if ($rues === null) {
+            $requete = '[out:json][timeout:15];'
+                .'way["highway"~"^(residential|living_street|pedestrian|primary|secondary|tertiary|unclassified|service|trunk)$"]["name"](around:3000,'.$lat.','.$lng.');'
+                .'out tags center qt;';
+
+            $rues = $this->overpass($requete, 15, fn (array $elements) => $this->ruesDe($elements, $lat, $lng));
+
+            // Serveurs satures : rien de retenu, la saisie passe par la
+            // recherche en ligne.
+            if ($rues === null) {
+                return response()->json([]);
+            }
+
+            Cache::put($cle, $rues, $rues === [] ? now()->addHours(6) : now()->addDays(30));
+        }
+
+        return response()->json($rues);
+    }
+
+    /**
+     * Un nom, un point : le troncon le plus proche du centre.
+     *
+     * @return array<int, array{nom: string, lat: float, lng: float}>
+     */
+    private function ruesDe(array $elements, float $lat, float $lng): array
+    {
+        $rues = [];
+
+        foreach ($elements as $e) {
+            $nom = trim((string) ($e['tags']['name'] ?? ''));
+            $c = $e['center'] ?? null;
+            if ($nom === '' || ! isset($c['lat'], $c['lon'])) {
+                continue;
+            }
+
+            $distance = ($c['lat'] - $lat) ** 2 + (($c['lon'] - $lng) * cos(deg2rad($lat))) ** 2;
+            $cle = mb_strtolower($nom);
+
+            if (! isset($rues[$cle]) || $distance < $rues[$cle]['d']) {
+                $rues[$cle] = ['nom' => $nom, 'lat' => round((float) $c['lat'], 6), 'lng' => round((float) $c['lon'], 6), 'd' => $distance];
+            }
+        }
+
+        usort($rues, fn ($a, $b) => $a['d'] <=> $b['d']);
+
+        return array_map(fn ($r) => ['nom' => $r['nom'], 'lat' => $r['lat'], 'lng' => $r['lng']], array_slice($rues, 0, 3000));
+    }
+
     public function numeros(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -167,23 +235,34 @@ class GeoController extends Controller
             .'way["addr:housenumber"]["addr:street"~"'.$motif.'",i](around:2000,'.$lat.','.$lng.');'
             .');out tags center 400;';
 
+        return $this->overpass($requete, 6, fn (array $elements) => $this->numerosDe($elements));
+    }
+
+    /**
+     * Le premier serveur Overpass qui repond ; null si aucun ne repond a
+     * temps.
+     *
+     * @param  callable(array): array  $extraire
+     */
+    private function overpass(string $requete, int $delai, callable $extraire): ?array
+    {
         $boucle = new CurlMultiHandler(['select_timeout' => 0.05]);
         $promesses = array_map(fn (string $hote) => Http::setHandler($boucle)->async()
-            ->timeout(6)->connectTimeout(2)
+            ->timeout($delai)->connectTimeout(2)
             ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
             ->asForm()->post("https://{$hote}/api/interpreter", ['data' => $requete])
             ->buildPromise()
-            ->then(function ($reponse) {
+            ->then(function ($reponse) use ($extraire) {
                 $elements = $reponse instanceof Response && $reponse->ok() ? $reponse->json('elements') : null;
                 if (! is_array($elements)) {
                     throw new \RuntimeException('Overpass indisponible');
                 }
 
-                return $this->numerosDe($elements);
+                return $extraire($elements);
             }), self::OVERPASS);
 
         $premier = PromiseUtils::any($promesses);
-        $limite = microtime(true) + 9;
+        $limite = microtime(true) + $delai + 3;
 
         PromiseUtils::queue()->run();
         while (Is::pending($premier) && microtime(true) < $limite) {

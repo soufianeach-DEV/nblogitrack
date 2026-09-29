@@ -102,6 +102,12 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
     const [rueLibre, setRueLibre] = useState(false);
     const [aucunNum, setAucunNum] = useState(false);
     const timer = useRef(null);
+    // Rues autour de la localite ou du code postal choisi, chargees une
+    // fois : la saisie s'y filtre des la premiere lettre, sans attendre.
+    const ruesLocales = useRef([]);
+    // Numero de la derniere recherche de rue : une reponse lente d'une
+    // saisie plus ancienne n'ecrase pas la liste en cours.
+    const rechercheRue = useRef(0);
 
     const selectCls = 'block w-full rounded-md border-gray-300 shadow-sm focus:border-marine focus:ring-marine';
     const sousLabel = 'mb-1 block text-xs font-medium text-slate-600';
@@ -394,6 +400,35 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         publier(code !== cp ? { cp: code, rue: '', numero: '', coords: null } : { cp: code });
     };
 
+    useEffect(() => {
+        ruesLocales.current = [];
+        if (! villeCoords) return undefined;
+        let actif = true;
+        fetch(`/geo/rues?lat=${villeCoords.lat}&lng=${villeCoords.lng}`)
+            .then((r) => (r.ok ? r.json() : []))
+            .then((liste) => { if (actif && Array.isArray(liste)) ruesLocales.current = liste; })
+            .catch(() => {});
+        return () => { actif = false; };
+    }, [villeCoords]);
+
+    // Les rues chargees dont le nom contient la saisie : celles dont un mot
+    // commence par elle d'abord, puis les plus proches du centre.
+    const ruesProches = (saisie) => {
+        const cherche = sansAccents(saisie.trim());
+        if (! cherche) return [];
+        const trouvees = [];
+        ruesLocales.current.forEach((r, rang) => {
+            const nom = sansAccents(r.nom);
+            const position = nom.indexOf(cherche);
+            if (position < 0) return;
+            const debutDeMot = position === 0 || /[\s'’-]/.test(nom[position - 1]);
+            trouvees.push({ r, cle: (debutDeMot ? 0 : 1) * 100000 + rang });
+        });
+        return trouvees
+            .sort((a, b) => a.cle - b.cle)
+            .map(({ r }) => ({ properties: { name: r.nom }, geometry: { coordinates: [r.lng, r.lat] } }));
+    };
+
     const chercherRues = (brut) => {
         const v = brut.toLowerCase();
         setRue(v);
@@ -405,7 +440,14 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
         resetNumero();
         publier({ rue: v, coords: null, numero: '' });
         clearTimeout(timer.current);
-        if (v.length < 2) { setSuggRues([]); return; }
+        const numero = ++rechercheRue.current;
+        const locales = ruesProches(v);
+        if (locales.length > 0) {
+            setSuggRues(locales.slice(0, 8));
+        }
+        // Assez de rues trouvees sur place : pas de recherche en ligne.
+        if (locales.length >= 8) return;
+        if (v.length < 2) { if (locales.length === 0) setSuggRues([]); return; }
         timer.current = setTimeout(async () => {
             try {
                 const centre = villeCoords ? `&lat=${villeCoords.lat}&lon=${villeCoords.lng}` : '';
@@ -468,12 +510,19 @@ export default function AdresseAutocompletion({ label, onChange, onSelect, error
                             return kmEntre(villeCoords.lat, villeCoords.lng, flat, flng) <= 3;
                         });
                 }
+                if (numero !== rechercheRue.current) return;
+                // Les rues trouvees sur place d'abord, puis celles du service
+                // en ligne qu'elles ne contiennent pas deja.
+                const noms = new Set(locales.map((f) => sansAccents(f.properties.name)));
+                res = [...locales, ...res.filter((f) => ! noms.has(sansAccents(f.properties.name || '')))];
                 setSuggRues(res.slice(0, 8));
                 setAucuneRue(res.length === 0);
             } catch {
-                // Service de rues injoignable : la rue se saisit telle quelle.
-                setSuggRues([]);
-                setAucuneRue(true);
+                if (numero !== rechercheRue.current) return;
+                // Service de rues injoignable : la rue se saisit telle quelle,
+                // ou se choisit parmi les rues trouvees sur place.
+                setSuggRues(locales.slice(0, 8));
+                setAucuneRue(locales.length === 0);
             }
         }, 150);
     };
