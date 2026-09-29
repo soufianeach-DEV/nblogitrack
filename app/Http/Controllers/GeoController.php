@@ -15,6 +15,31 @@ use Illuminate\Support\Facades\Http;
 
 class GeoController extends Controller
 {
+    /**
+     * Villes dont le nom couvre plusieurs communes, chacune avec son code :
+     * « Bruxelles » designe les dix-neuf communes de la Region (1000 a
+     * 1299), mais seul 1000 porte ce nom dans GeoNames (1050 est Ixelles).
+     */
+    private const AGGLOMERATIONS = [
+        'BE' => [
+            [['bruxelles', 'brussel', 'brussels', 'brüssel', 'bruxelles-capitale'], ['1000', '1299']],
+        ],
+    ];
+
+    /** @return array{0: string, 1: string}|null la plage de codes */
+    private static function agglomeration(string $pays, string $ville): ?array
+    {
+        $ville = mb_strtolower(trim($ville));
+
+        foreach (self::AGGLOMERATIONS[strtoupper($pays)] ?? [] as [$noms, $plage]) {
+            if (in_array($ville, $noms, true)) {
+                return $plage;
+            }
+        }
+
+        return null;
+    }
+
     public function villes(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -43,7 +68,9 @@ class GeoController extends Controller
                 'region' => $v->region,
                 'lat' => (float) $v->lat,
                 'lng' => (float) $v->lng,
-                'code' => (int) $v->nb_codes === 1 ? $v->code : null,
+                // Un seul code : il se remplit tout seul. Pas pour une
+                // agglomeration, dont les communes ont chacune le leur.
+                'code' => (int) $v->nb_codes === 1 && self::agglomeration($data['pays'], $v->ville) === null ? $v->code : null,
             ]);
 
         return response()->json($villes);
@@ -58,10 +85,15 @@ class GeoController extends Controller
             'lng' => 'required|numeric|between:-180,180',
         ]);
 
+        $pays = strtoupper($data['pays']);
+        $agglomeration = self::agglomeration($pays, $data['ville']);
+
         $codes = DB::table('postal_codes')
             ->selectRaw('code, MIN(city) AS ville, AVG(lat) AS lat, AVG(lng) AS lng')
-            ->where('country_code', strtoupper($data['pays']))
-            ->where('city', 'ilike', addcslashes($data['ville'], '\\%_'))
+            ->where('country_code', $pays)
+            ->where(fn ($requete) => $agglomeration === null
+                ? $requete->where('city', 'ilike', addcslashes($data['ville'], '\\%_'))
+                : $requete->whereBetween('code', $agglomeration))
             ->groupBy('code')
             ->orderBy('code')
             ->limit(60)
