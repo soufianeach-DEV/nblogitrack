@@ -12,7 +12,8 @@ use ZipArchive;
 class ImportPostalCodes extends Command
 {
     protected $signature = 'geo:import-postal-codes
-        {--si-absents : N\'importe que si aucun import complet n\'a eu lieu (demarrage du serveur)}';
+        {--si-absents : N\'importe que si aucun import complet n\'a eu lieu (demarrage du serveur)}
+        {--sans-listes-completes : Liste habituelle pour GB et NL (base hebergee gratuite, 500 Mo)}';
 
     // Pose en fin d'import complet, et un par pays (MARQUEUR.BE) des qu'un
     // pays est fait. Ils vivent dans le cache en base : un rechargement de
@@ -86,7 +87,11 @@ class ImportPostalCodes extends Command
             $this->line("Téléchargement {$pays}…");
 
             // La liste complete d'abord ; illisible ou vide, la liste habituelle.
-            $fichiers = in_array($pays, self::COMPLETS, true) ? ["{$pays}_full.csv.zip", "{$pays}.zip"] : ["{$pays}.zip"];
+            // Les listes completes (1,7 million de lignes pour le Royaume-Uni)
+            // prennent des dizaines de minutes et plusieurs centaines de Mo :
+            // une base gratuite s'en passe.
+            $complete = in_array($pays, self::COMPLETS, true) && ! $this->option('sans-listes-completes');
+            $fichiers = $complete ? ["{$pays}_full.csv.zip", "{$pays}.zip"] : ["{$pays}.zip"];
             $inseres = 0;
             $statut = null;
 
@@ -198,6 +203,11 @@ class ImportPostalCodes extends Command
                 DB::table('postal_codes')->insert($lot);
                 $inseres += count($lot);
                 $lot = [];
+
+                // Une longue liste donne signe de vie.
+                if ($inseres % 50000 === 0) {
+                    $this->line("  {$pays} : {$inseres}…");
+                }
             }
         }
 

@@ -19,6 +19,6 @@ artisan optimize
 # chaque rechargement de la base (quelques minutes ; le site repond deja,
 # les adresses se completent en ligne en attendant). Sa progression, pays
 # par pays, s'affiche dans les journaux du serveur.
-( artisan geo:import-postal-codes --si-absents --no-ansi 2>&1 || true ) &
+( artisan geo:import-postal-codes --si-absents --sans-listes-completes --no-ansi 2>&1 || true ) &
 
 exec apache2-foreground

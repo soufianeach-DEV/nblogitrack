@@ -115,4 +115,14 @@ class ImportCodesPostauxTest extends TestCase
 
         $this->assertNull(Cache::get(ImportPostalCodes::MARQUEUR));
     }
+
+    public function test_sans_listes_completes_la_liste_habituelle_suffit(): void
+    {
+        $this->fauxGeoNames();
+
+        $this->artisan('geo:import-postal-codes --sans-listes-completes')->assertSuccessful();
+
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), '_full'));
+        $this->assertSame(1, DB::table('postal_codes')->where('country_code', 'GB')->count());
+    }
 }
