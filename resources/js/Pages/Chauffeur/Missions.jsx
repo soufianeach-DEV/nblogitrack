@@ -92,8 +92,14 @@ function BoutonAvancement({ mission }) {
     const [processing, setProcessing] = useState(false);
     const [localisation, setLocalisation] = useState(false);
     const [receptionnaire, setReceptionnaire] = useState('');
-    const [reserves, setReserves] = useState('');
     const livraison = mission.action.statut === 'DELIVERED';
+    // Marchandise signalee endommagee : la livraison se fait avec reserves,
+    // deja remplies avec ce que le chauffeur a decrit.
+    const dommages = (mission.incidents ?? []).filter((incident) => incident.type === 'DOMMAGE');
+    const [reserves, setReserves] = useState(() => dommages
+        .map((incident) => `${incident.libelle}${incident.commentaire ? ' : ' + incident.commentaire : ''}`)
+        .join('\n')
+        .slice(0, 1000));
     const bloc = useRef(null);
     const champ = useRef(null);
 
@@ -140,6 +146,11 @@ function BoutonAvancement({ mission }) {
         <div ref={bloc} className={arme && livraison ? 'mt-4 scroll-mb-24 lg:scroll-mb-4' : 'sticky bottom-20 mt-4 lg:bottom-0'}>
             {arme && livraison && (
                 <div className="mb-3 space-y-2 rounded-xl bg-white p-3 shadow-lg">
+                    {dommages.length > 0 && (
+                        <p className="rounded-lg bg-status-incident/10 px-3 py-2 text-sm font-semibold text-status-incident" role="alert">
+                            {t('incident.livraison_reserves', 'Marchandise endommagée : livraison avec réserves. Faites-les constater par le réceptionnaire.')}
+                        </p>
+                    )}
                     <label className="block text-sm font-medium text-marine">
                         {t('mission.receptionnaire', 'Réceptionné par')}
                         <input
@@ -466,6 +477,62 @@ function SignalerIncident({ mission }) {
     );
 }
 
+// Accident ou panne : la mission attend. Le chauffeur reprend la route une
+// fois le camion repare, ou demande un autre vehicule au planificateur.
+function SuiteIncident({ mission }) {
+    const t = useTraduction();
+    const [envoi, setEnvoi] = useState(null);
+    const immobilisation = mission.immobilisation;
+    const accident = immobilisation.type === 'ACCIDENT';
+
+    const decider = (decision) => {
+        setEnvoi(decision);
+        router.post(route('missions.incident.suite', mission.id), { decision }, {
+            preserveScroll: true,
+            onFinish: () => setEnvoi(null),
+        });
+    };
+
+    return (
+        <div className="sticky bottom-20 mt-4 space-y-2 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-lg lg:bottom-0">
+            <p className="text-sm font-bold text-status-incident">
+                {t('incident.immobilise', 'Camion immobilisé')} · {immobilisation.libelle}
+            </p>
+            {immobilisation.vehicule_demande ? (
+                <p className="rounded-lg bg-action/15 px-3 py-2 text-sm text-marine" role="status">
+                    {t('incident.vehicule_attente', 'Autre véhicule demandé : le planificateur vous en affecte un. Restez joignable.')}
+                </p>
+            ) : (
+                <p className="text-sm text-slate-600">
+                    {t('incident.que_faire', 'La mission reprendra quand le camion sera réparé ou remplacé.')}
+                </p>
+            )}
+            <button
+                type="button"
+                onClick={() => decider('reprendre')}
+                disabled={envoi !== null}
+                className="w-full rounded-xl bg-status-delivered px-4 py-4 text-base font-bold text-white shadow transition hover:bg-green-800 disabled:opacity-60"
+            >
+                {envoi === 'reprendre' ? t('action.enregistrement', 'Enregistrement…') : (accident
+                    ? t('incident.reprendre_accident', 'Reprendre la route — camion en état de rouler')
+                    : t('incident.reprendre', 'Reprendre la route — panne réparée'))}
+            </button>
+            {! immobilisation.vehicule_demande && (
+                <button
+                    type="button"
+                    onClick={() => decider('vehicule')}
+                    disabled={envoi !== null}
+                    className="w-full rounded-xl border border-status-incident px-4 py-3 text-sm font-bold text-status-incident transition hover:bg-status-incident/5 disabled:opacity-60"
+                >
+                    {envoi === 'vehicule' ? t('action.enregistrement', 'Enregistrement…') : (accident
+                        ? t('incident.autre_vehicule_accident', 'Demander un autre véhicule — camion hors d\'usage')
+                        : t('incident.autre_vehicule', 'Demander un autre véhicule — panne irréparable'))}
+                </button>
+            )}
+        </div>
+    );
+}
+
 function Fiche({ mission, onRetour }) {
     const t = useTraduction();
     const v = useVocabulaire();
@@ -625,7 +692,9 @@ function Fiche({ mission, onRetour }) {
 
             {['ASSIGNED', 'IN_PROGRESS'].includes(mission.statut) && <SignalerIncident key={mission.id} mission={mission} />}
 
-            {mission.action && <BoutonAvancement mission={mission} />}
+            {mission.action && (mission.immobilisation
+                ? <SuiteIncident mission={mission} />
+                : <BoutonAvancement mission={mission} />)}
         </div>
     );
 }

@@ -137,6 +137,13 @@ class MissionController extends Controller
             return back()->with('error', Traductions::t('msg.mission_etat_change', 'Cette mission n\'est plus dans l\'état attendu, actualisez la page.'));
         }
 
+        // Camion immobilise par un accident ou une panne : ni chargement ni
+        // livraison tant que le chauffeur n'a pas repris la route ou qu'un
+        // autre camion n'est pas affecte.
+        if (Incidents::immobilisation($transportOrder) !== null) {
+            return back()->with('error', Traductions::t('msg.mission_immobilisee', 'Le camion est immobilisé : touchez « Reprendre la route » une fois réparé, ou demandez un autre véhicule.'));
+        }
+
         // L'enlevement ne se confirme pas plusieurs jours a l'avance : le
         // client verrait sa marchandise « en route » alors qu'elle attend
         // encore sur son quai. La veille reste permise, pour un chargement
@@ -348,6 +355,47 @@ class MissionController extends Controller
         return back()->with('success', Traductions::t('msg.incident_signale', 'Incident signalé : le planificateur est prévenu. En cas de blessé, appelez d\'abord le 112.'));
     }
 
+    /**
+     * Apres un accident ou une panne : le chauffeur reprend la route (camion
+     * repare) ou demande un autre vehicule (panne irreparable), que le
+     * planificateur lui affecte.
+     */
+    public function suiteIncident(Request $request, TransportOrder $transportOrder): RedirectResponse
+    {
+        if ($transportOrder->driver_id === null || $transportOrder->driver_id !== $request->user()->driver?->id) {
+            return redirect()->route('missions.index')->with('error', Traductions::t('msg.mission_retiree', 'Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.'));
+        }
+
+        $donnees = $request->validate(['decision' => 'required|in:reprendre,vehicule']);
+        $immobilisation = Incidents::immobilisation($transportOrder);
+
+        if ($immobilisation === null) {
+            return back()->with('error', Traductions::t('msg.mission_pas_immobilisee', 'Le camion n\'est plus immobilisé : la mission peut continuer.'));
+        }
+
+        if ($donnees['decision'] === 'reprendre') {
+            ActivityLog::record(
+                Incidents::REPRISE,
+                'Reprise de la route après incident sur l\'ordre '.$transportOrder->tracking_number,
+                $transportOrder,
+                ['type' => $immobilisation['type'], 'camion' => $transportOrder->vehicle_registration],
+            );
+
+            return back()->with('success', Traductions::t('msg.route_reprise', 'Reprise enregistrée : la mission continue.'));
+        }
+
+        if (! $immobilisation['vehicule_demande']) {
+            ActivityLog::record(
+                Incidents::VEHICULE_DEMANDE,
+                'Autre véhicule demandé par le chauffeur pour l\'ordre '.$transportOrder->tracking_number,
+                $transportOrder,
+                ['type' => $immobilisation['type'], 'camion' => $transportOrder->vehicle_registration],
+            );
+        }
+
+        return back()->with('success', Traductions::t('msg.vehicule_demande', 'Demande envoyée : le planificateur vous affecte un autre véhicule. Restez joignable.'));
+    }
+
     private function poserJalon(TransportOrder $ordre, string $statut, array $donnees, int $chauffeur): void
     {
         $lat = isset($donnees['lat']) ? (float) $donnees['lat'] : null;
@@ -419,6 +467,7 @@ class MissionController extends Controller
             'adresse_livraison' => $ordre->delivery_address,
             'livree_le' => $ordre->delivered_at?->toIso8601String() ?? $ordre->actual_delivery_date?->toDateString(),
             'incidents' => Incidents::pour([$ordre->id])->get((string) $ordre->id, collect())->all(),
+            'immobilisation' => Incidents::immobilisation($ordre),
             'receptionnaire' => $ordre->received_by,
             'reserves' => $ordre->delivery_reserves,
             'poids' => $ordre->weight,

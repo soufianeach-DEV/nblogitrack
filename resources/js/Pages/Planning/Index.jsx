@@ -653,6 +653,15 @@ export default function Index({
                                                     </li>
                                                 ))}
                                             </ul>
+                                            {ordre.immobilisation?.vehicule_demande ? (
+                                                <p className="mt-2 rounded-md bg-status-incident px-2 py-1 text-xs font-bold text-white">
+                                                    {t('planif.vehicule_demande', 'Le chauffeur demande un autre véhicule : son camion ne peut pas repartir. Réaffectez la mission à un autre camion.')}
+                                                </p>
+                                            ) : ordre.immobilisation ? (
+                                                <p className="mt-1 text-xs font-semibold">
+                                                    {t('planif.camion_immobilise', 'Camion immobilisé : le chauffeur n\'a pas encore repris la route.')}
+                                                </p>
+                                            ) : null}
                                             {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
                                                 <p className="mt-1 text-xs text-marine">
                                                     {t('planif.incident_aide', 'Appelez le chauffeur. Si le camion ne peut pas repartir, réaffectez la mission à un autre camion ou chauffeur.')}

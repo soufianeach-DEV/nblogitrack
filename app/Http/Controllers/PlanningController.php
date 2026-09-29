@@ -232,10 +232,11 @@ class PlanningController extends Controller
         // Les incidents signales par les chauffeurs, en une requete pour la
         // page : la carte de la mission les affiche en rouge.
         $incidents = Incidents::pour($orders->getCollection()->pluck('id'));
-        $orders->getCollection()->each(fn (TransportOrder $o) => $o->setAttribute(
-            'incidents',
-            $incidents->get((string) $o->id, collect())->all(),
-        ));
+        $immobilisations = Incidents::immobilisations($orders->getCollection());
+        $orders->getCollection()->each(fn (TransportOrder $o) => $o
+            ->setAttribute('incidents', $incidents->get((string) $o->id, collect())->all())
+            // Camion immobilise, et le chauffeur a-t-il demande un autre vehicule.
+            ->setAttribute('immobilisation', $immobilisations->get((string) $o->id)));
 
         $parPriorite = TransportOrder::where('status', $statut)
             ->when($contrainte, $filtreContrainte)

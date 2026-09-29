@@ -499,6 +499,7 @@ class TrackingController extends Controller
             ],
             'order.unassigned' => [$proprietes['camion'] ?? null, $proprietes['motif'] ?? null],
             'order.incident' => [Incidents::libelle($proprietes['type'] ?? null), $proprietes['commentaire'] ?? null],
+            'order.incident_resolved', 'order.vehicle_requested' => [Incidents::libelle($proprietes['type'] ?? null), $proprietes['camion'] ?? null],
             'order.status_changed' => [isset($proprietes['avant'], $proprietes['apres'])
                 ? $statut($proprietes['avant']).' → '.$statut($proprietes['apres'])
                 : null],

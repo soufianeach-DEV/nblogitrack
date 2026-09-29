@@ -21,6 +21,8 @@ class ActivityLogController extends Controller
         'order.assigned' => 'Affectation',
         'order.assigned_mail_failed' => 'Échec de l\'avis d\'affectation',
         'order.incident' => 'Incident signalé par le chauffeur',
+        'order.incident_resolved' => 'Reprise de la route après incident',
+        'order.vehicle_requested' => 'Autre véhicule demandé par le chauffeur',
         'order.status_changed' => 'Changement de statut',
         'auth.login' => 'Connexion',
         'auth.logout' => 'Déconnexion',
