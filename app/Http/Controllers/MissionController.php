@@ -378,6 +378,10 @@ class MissionController extends Controller
             return back()->with('error', Traductions::t('msg.mission_pas_immobilisee', 'Le camion n\'est plus immobilisé : la mission peut continuer.'));
         }
 
+        if ($immobilisation['decision_planificateur']) {
+            return back()->with('error', Traductions::t('msg.decision_planificateur', 'Marchandise endommagée et camion immobilisé : ne repartez pas. Le planificateur vous donne la suite à donner.'));
+        }
+
         if ($donnees['decision'] === 'reprendre') {
             ActivityLog::record(
                 Incidents::REPRISE,

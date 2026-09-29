@@ -106,6 +106,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::post('/planification/{transportOrder}/affectation', [PlanningController::class, 'assign'])->name('planning.assign');
             Route::patch('/planification/{transportOrder}/statut', [PlanningController::class, 'updateStatus'])->name('planning.status');
             Route::post('/planification/{transportOrder}/desaffectation', [PlanningController::class, 'desaffecter'])->name('planning.desaffecter');
+            Route::post('/planification/{transportOrder}/reprise', [PlanningController::class, 'autoriserReprise'])->name('planning.reprise');
 
             Route::patch('/planification/{transportOrder}/suivi', [PlanningController::class, 'suiviDirect'])
                 ->name('planning.tracking');

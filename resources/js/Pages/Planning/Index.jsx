@@ -656,7 +656,20 @@ export default function Index({
                                                     </li>
                                                 ))}
                                             </ul>
-                                            {ordre.immobilisation?.vehicule_demande ? (
+                                            {ordre.immobilisation?.decision_planificateur ? (
+                                                <div className="mt-2 rounded-md bg-status-incident px-3 py-2 text-xs text-white">
+                                                    <p className="font-bold">{t('planif.decision_requise', 'Décision requise : marchandise endommagée et camion immobilisé.')}</p>
+                                                    <p className="mt-1">{t('planif.decision_aide', 'Voyez avec le client : annulez le transport, réaffectez un autre camion (livraison avec réserves ou retour), ou autorisez la reprise avec ce camion.')}</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => window.confirm(t('planif.confirmer_reprise', 'Autoriser le chauffeur à repartir avec ce camion ?'))
+                                                            && router.post(route('planning.reprise', ordre.id), {}, { preserveScroll: true })}
+                                                        className="mt-2 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-status-incident transition hover:bg-slate-100"
+                                                    >
+                                                        {t('planif.autoriser_reprise', 'Autoriser la reprise')}
+                                                    </button>
+                                                </div>
+                                            ) : ordre.immobilisation?.vehicule_demande ? (
                                                 <p className="mt-2 rounded-md bg-status-incident px-2 py-1 text-xs font-bold text-white">
                                                     {t('planif.vehicule_demande', 'Le chauffeur demande un autre véhicule : son camion ne peut pas repartir. Réaffectez la mission à un autre camion.')}
                                                 </p>

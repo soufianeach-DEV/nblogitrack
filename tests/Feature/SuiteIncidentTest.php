@@ -7,6 +7,7 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Incidents;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia;
@@ -63,10 +64,10 @@ class SuiteIncidentTest extends TestCase
         ]);
     }
 
-    private function signaler(string $type)
+    private function signaler(string $type, bool $endommagee = false)
     {
         return $this->actingAs($this->chauffeur->user)
-            ->post(route('missions.incident', $this->ordre), ['type' => $type, 'marchandise_endommagee' => false, 'commentaire' => 'Panne moteur']);
+            ->post(route('missions.incident', $this->ordre), ['type' => $type, 'marchandise_endommagee' => $endommagee, 'commentaire' => 'Panne moteur']);
     }
 
     private function livrer()
@@ -170,5 +171,46 @@ class SuiteIncidentTest extends TestCase
 
         $this->assertSame('1-XYZ-999', $this->ordre->fresh()->vehicle_registration);
         $this->livrer()->assertSessionHas('success');
+    }
+
+    public function test_camion_et_marchandise_endommages_le_planificateur_decide(): void
+    {
+        $this->signaler('ACCIDENT', endommagee: true);
+
+        // Le chauffeur ne decide plus : ni reprise, ni autre vehicule.
+        $this->decider('reprendre')->assertSessionHas('error');
+        $this->decider('vehicule')->assertSessionHas('error');
+        $this->assertSame(0, ActivityLog::whereIn('action', ['order.incident_resolved', 'order.vehicle_requested'])->count());
+        $this->livrer()->assertSessionHas('error');
+
+        $planificateur = User::factory()->planificateur()->create();
+        $this->actingAs($planificateur)
+            ->get(route('planning.index', ['status' => 'IN_PROGRESS']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('orders.data.0.immobilisation.decision_planificateur', true));
+
+        $this->actingAs($planificateur)->post(route('planning.reprise', $this->ordre))->assertSessionHas('success');
+        $this->assertSame('planificateur', ActivityLog::where('action', 'order.incident_resolved')->sole()->properties['par']);
+
+        $this->livrer()->assertSessionHas('success');
+    }
+
+    public function test_le_planificateur_peut_annuler_le_transport(): void
+    {
+        $this->signaler('PANNE', endommagee: true);
+
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->patch(route('planning.status', $this->ordre), ['status' => 'CANCELLED'])
+            ->assertSessionHas('success');
+
+        $this->assertSame('CANCELLED', $this->ordre->fresh()->status);
+        $this->assertNull(Incidents::immobilisation($this->ordre->fresh()));
+    }
+
+    public function test_un_chauffeur_ne_peut_pas_autoriser_la_reprise(): void
+    {
+        $this->signaler('PANNE', endommagee: true);
+
+        $this->actingAs($this->chauffeur->user)->post(route('planning.reprise', $this->ordre))->assertForbidden();
     }
 }

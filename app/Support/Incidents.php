@@ -73,7 +73,7 @@ class Incidents
      * panne, sauf si le chauffeur a repris la route depuis ou si l'ordre a
      * change de camion. Null quand rien ne bloque la mission.
      *
-     * @return array{type: string, libelle: string, commentaire: ?string, le: string, vehicule_demande: bool}|null
+     * @return array{decision_planificateur: bool, type: string, libelle: string, commentaire: ?string, le: string, vehicule_demande: bool}|null
      */
     public static function immobilisation(TransportOrder $ordre): ?array
     {
@@ -118,7 +118,14 @@ class Incidents
                     return null;
                 }
 
+                // Marchandise endommagee en plus du camion : ni reprise ni autre
+                // vehicule a l'initiative du chauffeur, le planificateur
+                // decide avec le client (annuler, envoyer un camion, reprendre).
+                $decision = $lignes->contains(fn (ActivityLog $l) => $l->action === self::ACTION
+                    && (($l->properties['type'] ?? null) === 'DOMMAGE' || ($l->properties['marchandise_endommagee'] ?? false)));
+
                 return [
+                    'decision_planificateur' => $decision,
                     'type' => $incident->properties['type'],
                     'libelle' => self::libelle($incident->properties['type']),
                     'commentaire' => $incident->properties['commentaire'] ?? null,

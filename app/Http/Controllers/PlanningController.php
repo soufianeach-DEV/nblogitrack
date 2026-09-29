@@ -633,6 +633,30 @@ class PlanningController extends Controller
         return back()->with('success', Traductions::t('msg.planif_statut_mis_a_jour', 'Ordre :numero : statut mis à jour.', ['numero' => $transportOrder->tracking_number]));
     }
 
+    /**
+     * Camion immobilise et marchandise endommagee : le planificateur,
+     * d'accord avec le client, laisse la mission repartir avec le meme
+     * camion. Les autres suites passent par l'annulation ou la
+     * reaffectation.
+     */
+    public function autoriserReprise(TransportOrder $transportOrder): RedirectResponse
+    {
+        $immobilisation = Incidents::immobilisation($transportOrder);
+
+        if ($immobilisation === null) {
+            return back()->with('error', Traductions::t('msg.mission_pas_immobilisee', 'Le camion n\'est plus immobilisé : la mission peut continuer.'));
+        }
+
+        ActivityLog::record(
+            Incidents::REPRISE,
+            'Reprise autorisée par le planificateur pour l\'ordre '.$transportOrder->tracking_number,
+            $transportOrder,
+            ['type' => $immobilisation['type'], 'camion' => $transportOrder->vehicle_registration, 'par' => 'planificateur'],
+        );
+
+        return back()->with('success', Traductions::t('msg.reprise_autorisee', 'Reprise autorisée : le chauffeur peut continuer la mission.'));
+    }
+
     public function desaffecter(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
         $donnees = $request->validate([

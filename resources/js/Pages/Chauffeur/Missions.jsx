@@ -527,6 +527,21 @@ function SuiteIncident({ mission }) {
         });
     };
 
+    // Marchandise endommagee en plus : le chauffeur ne decide pas de la
+    // suite, il attend les consignes du planificateur.
+    if (immobilisation.decision_planificateur) {
+        return (
+            <div className="sticky bottom-20 mt-4 space-y-2 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-lg lg:bottom-0" role="alert">
+                <p className="text-sm font-bold text-status-incident">
+                    {t('incident.immobilise', 'Camion immobilisé')} · {immobilisation.libelle}
+                </p>
+                <p className="text-sm text-marine">
+                    {t('incident.attendre_consignes', 'Marchandise endommagée et camion immobilisé : ne repartez pas. Le planificateur vous donne la suite à donner.')}
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="sticky bottom-20 mt-4 space-y-2 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-lg lg:bottom-0">
             <p className="text-sm font-bold text-status-incident">
