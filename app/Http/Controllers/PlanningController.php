@@ -9,6 +9,7 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\AvisLivraison;
 use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
 use App\Support\Formats;
@@ -629,6 +630,10 @@ class PlanningController extends Controller
             $transportOrder,
             ['avant' => $ancien, 'apres' => $data['status']],
         );
+
+        if ($data['status'] === 'DELIVERED') {
+            AvisLivraison::envoyer($transportOrder);
+        }
 
         return back()->with('success', Traductions::t('msg.planif_statut_mis_a_jour', 'Ordre :numero : statut mis à jour.', ['numero' => $transportOrder->tracking_number]));
     }

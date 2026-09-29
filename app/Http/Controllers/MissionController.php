@@ -12,6 +12,7 @@ use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\AvisLivraison;
 use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
 use App\Support\Incidents;
@@ -213,6 +214,10 @@ class MissionController extends Controller
                 'chauffeur' => trim($request->user()->first_name.' '.$request->user()->last_name),
             ],
         );
+
+        if ($vise === 'DELIVERED') {
+            AvisLivraison::envoyer($transportOrder);
+        }
 
         return back()->with('success', $vise === 'DELIVERED'
             ? Traductions::t('msg.mission_livree', 'Livraison enregistrée.')
