@@ -116,4 +116,21 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Domaines bloques (jeu de demonstration)
+    |--------------------------------------------------------------------------
+    |
+    | Les adresses du jeu de demonstration sont inventees : un courriel qui
+    | leur est adresse revient en erreur et abime la reputation du compte
+    | d'envoi. Il est retenu et seulement note au journal. Un « * » remplace
+    | une partie du nom (client*.be). MAIL_DOMAINES_BLOQUES vide : tout part.
+    |
+    */
+
+    'domaines_bloques' => array_values(array_filter(array_map('trim', explode(',', (string) env(
+        'MAIL_DOMAINES_BLOQUES',
+        'contact.be,nblogitrack.be,nblogitrack-test.eu,client*.be,bedrijf.be,societe.be,company.be,company.com,entreprise.be,exemple-devis.be,example.com,example.org,example.net',
+    ))))),
+
 ];

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Listeners\JournaliserAuthentification;
+use App\Listeners\RetenirCourrielsDeDemonstration;
 use App\Models\User;
 use App\Support\MemoireRequete;
 use App\Support\Traductions;
@@ -12,6 +13,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
@@ -33,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Les adresses inventees du jeu de demonstration ne recoivent rien :
+        // leurs retours en erreur feraient suspendre le compte d'envoi.
+        Event::listen(MessageSending::class, RetenirCourrielsDeDemonstration::class);
+
         // Douze caracteres au moins : la longueur protege mieux qu'une
         // regle de composition, et le defaut de Laravel (huit) est court
         // pour des comptes qui commandent et paient.
