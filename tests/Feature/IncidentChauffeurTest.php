@@ -46,6 +46,7 @@ class IncidentChauffeurTest extends TestCase
         $this->actingAs($chauffeur->user)
             ->post(route('missions.incident', $ordre), [
                 'type' => 'ACCIDENT',
+                'marchandise_endommagee' => false,
                 'commentaire' => 'Accrochage sur l\'E40, camion immobilisé',
             ])
             ->assertSessionHasNoErrors()
@@ -93,7 +94,7 @@ class IncidentChauffeurTest extends TestCase
         $ordre = TransportOrder::factory()->enRoute()->create(['driver_id' => $this->chauffeur()->id]);
 
         $this->actingAs($this->chauffeur()->user)
-            ->post(route('missions.incident', $ordre), ['type' => 'PANNE', 'commentaire' => 'Pneu crevé'])
+            ->post(route('missions.incident', $ordre), ['type' => 'PANNE', 'marchandise_endommagee' => false, 'commentaire' => 'Pneu crevé'])
             ->assertRedirect(route('missions.index'));
 
         $this->assertDatabaseMissing('activity_logs', ['action' => 'order.incident']);
@@ -106,7 +107,7 @@ class IncidentChauffeurTest extends TestCase
         $ordre = TransportOrder::factory()->livree()->create(['driver_id' => $chauffeur->id]);
 
         $this->actingAs($chauffeur->user)
-            ->post(route('missions.incident', $ordre), ['type' => 'PANNE', 'commentaire' => 'Pneu crevé'])
+            ->post(route('missions.incident', $ordre), ['type' => 'PANNE', 'marchandise_endommagee' => false, 'commentaire' => 'Pneu crevé'])
             ->assertSessionHas('error');
 
         $this->assertDatabaseMissing('activity_logs', ['action' => 'order.incident']);
@@ -129,5 +130,31 @@ class IncidentChauffeurTest extends TestCase
 
         $this->assertStringContainsString($ordre->tracking_number, $html);
         $this->assertStringContainsString('Un incident est survenu pendant le transport', $html);
+    }
+
+    public function test_accident_ou_panne_demande_si_la_marchandise_est_endommagee(): void
+    {
+        Mail::fake();
+        $chauffeur = $this->chauffeur();
+        $ordre = TransportOrder::factory()->enRoute()->create(['driver_id' => $chauffeur->id]);
+
+        $this->actingAs($chauffeur->user)
+            ->post(route('missions.incident', $ordre), ['type' => 'ACCIDENT', 'commentaire' => 'Accrochage'])
+            ->assertSessionHasErrors('marchandise_endommagee');
+        $this->assertSame(0, ActivityLog::where('action', 'order.incident')->count());
+
+        $this->actingAs($chauffeur->user)
+            ->post(route('missions.incident', $ordre), ['type' => 'ACCIDENT', 'marchandise_endommagee' => true, 'commentaire' => 'Accrochage, palette renversée'])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($chauffeur->user)
+            ->post(route('missions.incident', $ordre), ['type' => 'DOMMAGE', 'commentaire' => 'Carton écrasé'])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($chauffeur->user)
+            ->get(route('missions.index', ['mission' => $ordre->tracking_number]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('mission.incidents.0.marchandise_endommagee', true)
+                ->where('mission.incidents.1.marchandise_endommagee', true));
     }
 }

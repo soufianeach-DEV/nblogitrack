@@ -66,7 +66,7 @@ class SuiteIncidentTest extends TestCase
     private function signaler(string $type)
     {
         return $this->actingAs($this->chauffeur->user)
-            ->post(route('missions.incident', $this->ordre), ['type' => $type, 'commentaire' => 'Panne moteur']);
+            ->post(route('missions.incident', $this->ordre), ['type' => $type, 'marchandise_endommagee' => false, 'commentaire' => 'Panne moteur']);
     }
 
     private function livrer()

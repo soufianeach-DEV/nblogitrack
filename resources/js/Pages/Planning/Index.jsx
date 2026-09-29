@@ -648,6 +648,9 @@ export default function Index({
                                                 {ordre.incidents.map((incident) => (
                                                     <li key={incident.le}>
                                                         <span className="font-semibold">{incident.libelle}</span>
+                                                        {incident.type !== 'DOMMAGE' && incident.marchandise_endommagee && (
+                                                            <span className="font-semibold">{' · '}{t('incident.avec_dommage', 'marchandise endommagée')}</span>
+                                                        )}
                                                         {' · '}{incident.horodatage}
                                                         {incident.commentaire && <span className="text-marine"> — {incident.commentaire}</span>}
                                                     </li>

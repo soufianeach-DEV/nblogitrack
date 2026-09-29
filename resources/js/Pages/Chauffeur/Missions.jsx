@@ -95,9 +95,9 @@ function BoutonAvancement({ mission }) {
     const livraison = mission.action.statut === 'DELIVERED';
     // Marchandise signalee endommagee : la livraison se fait avec reserves,
     // deja remplies avec ce que le chauffeur a decrit.
-    const dommages = (mission.incidents ?? []).filter((incident) => incident.type === 'DOMMAGE');
+    const dommages = (mission.incidents ?? []).filter((incident) => incident.marchandise_endommagee);
     const [reserves, setReserves] = useState(() => dommages
-        .map((incident) => `${incident.libelle}${incident.commentaire ? ' : ' + incident.commentaire : ''}`)
+        .map((incident) => `${incident.type === 'DOMMAGE' ? incident.libelle : incident.libelle + ', ' + t('incident.avec_dommage', 'marchandise endommagée')}${incident.commentaire ? ' : ' + incident.commentaire : ''}`)
         .join('\n')
         .slice(0, 1000));
     const bloc = useRef(null);
@@ -385,6 +385,9 @@ function SignalerIncident({ mission }) {
     const t = useTraduction();
     const [ouvert, setOuvert] = useState(false);
     const [type, setType] = useState('ACCIDENT');
+    // Accident ou panne : la question se pose a chaque fois, sans reponse
+    // par defaut.
+    const [endommagee, setEndommagee] = useState(null);
     const [commentaire, setCommentaire] = useState('');
     const [envoi, setEnvoi] = useState(false);
     const [erreurs, setErreurs] = useState({});
@@ -396,11 +399,17 @@ function SignalerIncident({ mission }) {
         // La position accompagne le signalement, elle ne le bloque pas.
         const point = await positionActuelle();
 
-        router.post(route('missions.incident', mission.id), { type, commentaire, ...(point ?? {}) }, {
+        router.post(route('missions.incident', mission.id), {
+            type,
+            commentaire,
+            ...(type !== 'DOMMAGE' && endommagee !== null ? { marchandise_endommagee: endommagee } : {}),
+            ...(point ?? {}),
+        }, {
             preserveScroll: true,
             onSuccess: () => {
                 setOuvert(false);
                 setCommentaire('');
+                setEndommagee(null);
                 setErreurs({});
             },
             onError: (e) => setErreurs(e),
@@ -441,6 +450,31 @@ function SignalerIncident({ mission }) {
                     </button>
                 ))}
             </div>
+
+            {type !== 'DOMMAGE' && (
+                <div>
+                    <p className="text-sm font-medium text-marine">{t('incident.marchandise_question', 'La marchandise est-elle endommagée ?')}</p>
+                    <div className="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('incident.marchandise_question', 'La marchandise est-elle endommagée ?')}>
+                        {[[true, 'ordres.oui', 'Oui'], [false, 'ordres.non', 'Non']].map(([valeur, cle, libelle]) => (
+                            <button
+                                key={cle}
+                                type="button"
+                                role="radio"
+                                aria-checked={endommagee === valeur}
+                                onClick={() => setEndommagee(valeur)}
+                                className={`rounded-lg px-2 py-2 text-sm font-semibold transition ${
+                                    endommagee === valeur
+                                        ? (valeur ? 'bg-status-incident text-white' : 'bg-marine text-white')
+                                        : 'bg-slate-100 text-marine hover:bg-slate-200'
+                                }`}
+                            >
+                                {t(cle, libelle)}
+                            </button>
+                        ))}
+                    </div>
+                    {erreurs.marchandise_endommagee && <p className="mt-1 text-xs text-status-incident">{erreurs.marchandise_endommagee}</p>}
+                </div>
+            )}
 
             <label className="block text-sm font-medium text-marine">
                 {t('incident.description', 'Que s\'est-il passé ?')}
@@ -669,6 +703,9 @@ function Fiche({ mission, onRetour }) {
                             {mission.incidents.map((incident) => (
                                 <li key={incident.le}>
                                     <span className="font-semibold">{incident.libelle}</span>
+                                    {incident.type !== 'DOMMAGE' && incident.marchandise_endommagee && (
+                                        <span className="font-semibold">{' · '}{t('incident.avec_dommage', 'marchandise endommagée')}</span>
+                                    )}
                                     {' · '}{quand(incident.le, locale, { toujoursDate: true })}
                                     {incident.commentaire && <span className="block text-marine">{incident.commentaire}</span>}
                                 </li>

@@ -61,6 +61,8 @@ class Incidents
                 'type' => $ligne->properties['type'] ?? null,
                 'libelle' => self::libelle($ligne->properties['type'] ?? null),
                 'commentaire' => $ligne->properties['commentaire'] ?? null,
+                'marchandise_endommagee' => ($ligne->properties['type'] ?? null) === 'DOMMAGE'
+                    || (bool) ($ligne->properties['marchandise_endommagee'] ?? false),
                 'le' => $ligne->created_at->toIso8601String(),
                 'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
             ])->values());

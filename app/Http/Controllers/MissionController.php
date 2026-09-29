@@ -314,6 +314,9 @@ class MissionController extends Controller
 
         $donnees = $request->validate([
             'type' => ['required', Rule::in(Incidents::TYPES)],
+            // Accident ou panne : la marchandise a-t-elle souffert ? Le
+            // planificateur et la livraison (reserves) en dependent.
+            'marchandise_endommagee' => 'required_unless:type,DOMMAGE|nullable|boolean',
             'commentaire' => 'required|string|min:3|max:500',
             'lat' => 'nullable|numeric|between:-90,90',
             'lng' => 'nullable|numeric|between:-180,180',
@@ -321,6 +324,7 @@ class MissionController extends Controller
         ], [
             'commentaire.required' => Traductions::t('msg.incident_commentaire', 'Décrivez en quelques mots ce qui s\'est passé.'),
             'commentaire.min' => Traductions::t('msg.incident_commentaire', 'Décrivez en quelques mots ce qui s\'est passé.'),
+            'marchandise_endommagee.required_unless' => Traductions::t('msg.incident_marchandise', 'Indiquez si la marchandise est endommagée.'),
         ]);
 
         // Meme regle que les jalons : pas de position gardee sans la note
@@ -336,6 +340,7 @@ class MissionController extends Controller
             $transportOrder,
             array_filter([
                 'type' => $donnees['type'],
+                'marchandise_endommagee' => $donnees['type'] === 'DOMMAGE' || (bool) ($donnees['marchandise_endommagee'] ?? false),
                 'commentaire' => trim($donnees['commentaire']),
                 'statut' => $transportOrder->status,
                 'camion' => $transportOrder->vehicle_registration,
