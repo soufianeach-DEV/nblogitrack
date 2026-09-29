@@ -41,7 +41,7 @@ class CourrielsDemonstrationTest extends TestCase
     {
         $this->envoyer(['julie.vanacker19@client19.be']);
         $this->envoyer(['tom.gerard13@contact.be']);
-        $this->envoyer(['admin@nblogitrack.be']);
+        $this->envoyer(['test@nblogitrack-test.eu']);
 
         $this->assertCount(0, $this->envoyes());
     }
@@ -82,5 +82,12 @@ class CourrielsDemonstrationTest extends TestCase
         $this->assertTrue(RetenirCourrielsDeDemonstration::bloquee('A@CONTACT.BE', $motifs));
         $this->assertFalse(RetenirCourrielsDeDemonstration::bloquee('a@moncontact.be', $motifs));
         $this->assertFalse(RetenirCourrielsDeDemonstration::bloquee('a@gmail.com', $motifs));
+    }
+
+    public function test_le_domaine_de_l_entreprise_recoit_ses_courriels(): void
+    {
+        $this->envoyer(['client@nblogitrack.be']);
+
+        $this->assertCount(1, $this->envoyes());
     }
 }

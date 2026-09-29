@@ -187,7 +187,7 @@ MAIL_TIMEOUT=10
 2. **Domaine d'envoi** : dans *Expéditeurs & domaines*, faites authentifier le domaine de `MAIL_FROM_ADDRESS` (entrées DNS DKIM et DMARC fournies par Brevo). Sans cela, les courriels arrivent en indésirables ou sont refusés.
 3. **Vérification** : `php artisan optimize:clear`, puis « Mot de passe oublié » sur votre propre compte.
 
-Les adresses inventées du jeu de démonstration (`contact.be`, `client*.be`, `nblogitrack.be`…) ne reçoivent rien : leurs courriels sont retenus et notés au journal, pour que leurs retours en erreur ne fassent pas suspendre le compte Brevo. La liste se règle par `MAIL_DOMAINES_BLOQUES` ; vide, tout part. L'offre gratuite de Brevo envoie 300 courriels par jour, assez pour une démonstration. La facturation mensuelle envoie un courriel par client : au-delà de 300 clients, passez à une offre payante.
+Les adresses inventées du jeu de démonstration (`contact.be`, `client*.be`, `nblogitrack-test.eu`…) ne reçoivent rien : leurs courriels sont retenus et notés au journal, pour que leurs retours en erreur ne fassent pas suspendre le compte Brevo. La liste se règle par `MAIL_DOMAINES_BLOQUES` ; vide, tout part. Le domaine `nblogitrack.be`, lui, est enregistré : une redirection « toutes adresses » (catch-all) envoie les courriels de `admin@`, `client@`, des chauffeurs, etc. vers une vraie boîte, si bien qu'aucun ne revient en erreur. L'offre gratuite de Brevo envoie 300 courriels par jour, assez pour une démonstration. La facturation mensuelle envoie un courriel par client : au-delà de 300 clients, passez à une offre payante.
 
 ### Paiement en ligne (Stripe)
 

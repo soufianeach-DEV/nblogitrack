@@ -125,12 +125,15 @@ return [
     | leur est adresse revient en erreur et abime la reputation du compte
     | d'envoi. Il est retenu et seulement note au journal. Un « * » remplace
     | une partie du nom (client*.be). MAIL_DOMAINES_BLOQUES vide : tout part.
+    | nblogitrack.be n'y figure pas : le domaine est enregistre et ses
+    | adresses (admin@, client@, chauffeurs…) sont redirigees vers une vraie
+    | boite.
     |
     */
 
     'domaines_bloques' => array_values(array_filter(array_map('trim', explode(',', (string) env(
         'MAIL_DOMAINES_BLOQUES',
-        'contact.be,nblogitrack.be,nblogitrack-test.eu,client*.be,bedrijf.be,societe.be,company.be,company.com,entreprise.be,exemple-devis.be,example.com,example.org,example.net',
+        'contact.be,nblogitrack-test.eu,client*.be,bedrijf.be,societe.be,company.be,company.com,entreprise.be,exemple-devis.be,example.com,example.org,example.net',
     ))))),
 
 ];
