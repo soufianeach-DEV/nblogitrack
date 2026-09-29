@@ -9,9 +9,11 @@ use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
 use App\Support\Formats;
 use App\Support\FretRetour;
+use App\Support\Incidents;
 use App\Support\MemoireRequete;
 use App\Support\OrderWorkflow;
 use App\Support\TempsDeConduite;
@@ -226,6 +228,14 @@ class PlanningController extends Controller
 
                 return $o;
             });
+
+        // Les incidents signales par les chauffeurs, en une requete pour la
+        // page : la carte de la mission les affiche en rouge.
+        $incidents = Incidents::pour($orders->getCollection()->pluck('id'));
+        $orders->getCollection()->each(fn (TransportOrder $o) => $o->setAttribute(
+            'incidents',
+            $incidents->get((string) $o->id, collect())->all(),
+        ));
 
         $parPriorite = TransportOrder::where('status', $statut)
             ->when($contrainte, $filtreContrainte)
@@ -534,16 +544,7 @@ class PlanningController extends Controller
      */
     private function prevenirLeClient(TransportOrder $ordre): void
     {
-        $commanditaire = ActivityLog::where('subject_type', 'TransportOrder')
-            ->where('subject_id', (string) $ordre->id)
-            ->where('action', 'order.created')
-            ->oldest('id')
-            ->first()?->user;
-
-        $destinataires = $commanditaire?->is_active && $commanditaire->client_id === $ordre->client_id
-            ? collect([$commanditaire])
-            : ($ordre->client?->commanditaires() ?? collect());
-
+        $destinataires = ClientsAPrevenir::pour($ordre);
         $ordre = $ordre->fresh();
 
         foreach ($destinataires as $destinataire) {

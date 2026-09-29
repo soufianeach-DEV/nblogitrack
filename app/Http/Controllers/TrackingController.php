@@ -8,6 +8,7 @@ use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\Incidents;
 use App\Support\Osrm;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
@@ -497,6 +498,7 @@ class TrackingController extends Controller
                 $proprietes['motif'] ?? null,
             ],
             'order.unassigned' => [$proprietes['camion'] ?? null, $proprietes['motif'] ?? null],
+            'order.incident' => [Incidents::libelle($proprietes['type'] ?? null), $proprietes['commentaire'] ?? null],
             'order.status_changed' => [isset($proprietes['avant'], $proprietes['apres'])
                 ? $statut($proprietes['avant']).' → '.$statut($proprietes['apres'])
                 : null],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\IncidentExpedition;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\DriverAcknowledgement;
@@ -9,7 +10,9 @@ use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
+use App\Support\Incidents;
 use App\Support\OrderWorkflow;
 use App\Support\Traductions;
 use App\Support\TransitionRefusee;
@@ -17,6 +20,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -282,6 +287,67 @@ class MissionController extends Controller
         return response()->json(['suivi' => true, 'retenu' => true]);
     }
 
+    /**
+     * Le chauffeur signale un accident, une panne ou une marchandise
+     * endommagee. L'incident est garde au journal de l'ordre, avec sa
+     * position si la note d'information est acceptee ; le planificateur le
+     * voit sur la planification et le suivi, et le client est prevenu d'un
+     * retard possible. La mission ne change pas d'etat : c'est au
+     * planificateur de decider (reaffectation, transbordement).
+     */
+    public function incident(Request $request, TransportOrder $transportOrder): RedirectResponse
+    {
+        if ($transportOrder->driver_id === null || $transportOrder->driver_id !== $request->user()->driver?->id) {
+            return redirect()->route('missions.index')->with('error', Traductions::t('msg.mission_retiree', 'Cette mission ne vous est plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.'));
+        }
+
+        if (! in_array($transportOrder->status, ['ASSIGNED', 'IN_PROGRESS'], true)) {
+            return back()->with('error', Traductions::t('msg.incident_hors_mission', 'Un incident se signale sur une mission à venir ou en cours.'));
+        }
+
+        $donnees = $request->validate([
+            'type' => ['required', Rule::in(Incidents::TYPES)],
+            'commentaire' => 'required|string|min:3|max:500',
+            'lat' => 'nullable|numeric|between:-90,90',
+            'lng' => 'nullable|numeric|between:-180,180',
+            'precision_m' => 'nullable|integer|min:0|max:100000',
+        ], [
+            'commentaire.required' => Traductions::t('msg.incident_commentaire', 'Décrivez en quelques mots ce qui s\'est passé.'),
+            'commentaire.min' => Traductions::t('msg.incident_commentaire', 'Décrivez en quelques mots ce qui s\'est passé.'),
+        ]);
+
+        // Meme regle que les jalons : pas de position gardee sans la note
+        // d'information acceptee, ni une position trop imprecise.
+        $lat = isset($donnees['lat']) ? (float) $donnees['lat'] : null;
+        $lng = isset($donnees['lng']) ? (float) $donnees['lng'] : null;
+        $precision = isset($donnees['precision_m']) ? (int) $donnees['precision_m'] : null;
+        $position = ShipmentPosition::utilisable($lat, $lng, $precision) && DriverAcknowledgement::aJour($request->user()->id);
+
+        ActivityLog::record(
+            Incidents::ACTION,
+            'Incident signalé ('.$donnees['type'].') sur l\'ordre '.$transportOrder->tracking_number,
+            $transportOrder,
+            array_filter([
+                'type' => $donnees['type'],
+                'commentaire' => trim($donnees['commentaire']),
+                'statut' => $transportOrder->status,
+                'camion' => $transportOrder->vehicle_registration,
+                'lat' => $position ? $lat : null,
+                'lng' => $position ? $lng : null,
+            ], fn ($valeur) => $valeur !== null),
+        );
+
+        foreach (ClientsAPrevenir::pour($transportOrder) as $destinataire) {
+            try {
+                Mail::to($destinataire->email)->send(new IncidentExpedition($transportOrder, $destinataire));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return back()->with('success', Traductions::t('msg.incident_signale', 'Incident signalé : le planificateur est prévenu. En cas de blessé, appelez d\'abord le 112.'));
+    }
+
     private function poserJalon(TransportOrder $ordre, string $statut, array $donnees, int $chauffeur): void
     {
         $lat = isset($donnees['lat']) ? (float) $donnees['lat'] : null;
@@ -352,6 +418,7 @@ class MissionController extends Controller
             'pays_enlevement' => $ordre->pickup_country !== 'BE' ? $ordre->pickup_country : null,
             'adresse_livraison' => $ordre->delivery_address,
             'livree_le' => $ordre->delivered_at?->toIso8601String() ?? $ordre->actual_delivery_date?->toDateString(),
+            'incidents' => Incidents::pour([$ordre->id])->get((string) $ordre->id, collect())->all(),
             'receptionnaire' => $ordre->received_by,
             'reserves' => $ordre->delivery_reserves,
             'poids' => $ordre->weight,

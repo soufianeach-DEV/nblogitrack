@@ -641,6 +641,25 @@ export default function Index({
                                             {t('planif.en_route_depuis', 'En route depuis le :date : la livraison n\'a pas été enregistrée. Tant qu\'elle ne l\'est pas, ce camion et ce chauffeur restent occupés.', { date: ordre.en_route_depuis })}
                                         </p>
                                     )}
+                                    {(ordre.incidents ?? []).length > 0 && (
+                                        <div className="basis-full rounded-lg border border-status-incident/40 bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">
+                                            <p className="font-semibold">{t('planif.incident_signale', 'Incident signalé par le chauffeur')}</p>
+                                            <ul className="mt-1 space-y-0.5">
+                                                {ordre.incidents.map((incident) => (
+                                                    <li key={incident.le}>
+                                                        <span className="font-semibold">{incident.libelle}</span>
+                                                        {' · '}{incident.horodatage}
+                                                        {incident.commentaire && <span className="text-marine"> — {incident.commentaire}</span>}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            {['ASSIGNED', 'IN_PROGRESS'].includes(ordre.status) && (
+                                                <p className="mt-1 text-xs text-marine">
+                                                    {t('planif.incident_aide', 'Appelez le chauffeur. Si le camion ne peut pas repartir, réaffectez la mission à un autre camion ou chauffeur.')}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     {(ordre.alertes ?? []).length > 0 && (
                                         <div className="basis-full rounded-lg bg-status-incident/10 px-3 py-2 text-status-incident" role="alert">
                                             <p className="font-semibold">{t('planif.non_conforme', 'Affectation non conforme : réaffectez cette mission.')}</p>

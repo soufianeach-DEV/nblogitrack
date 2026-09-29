@@ -20,6 +20,7 @@ class ActivityLogController extends Controller
         'order.created' => 'Création d\'ordre',
         'order.assigned' => 'Affectation',
         'order.assigned_mail_failed' => 'Échec de l\'avis d\'affectation',
+        'order.incident' => 'Incident signalé par le chauffeur',
         'order.status_changed' => 'Changement de statut',
         'auth.login' => 'Connexion',
         'auth.logout' => 'Déconnexion',

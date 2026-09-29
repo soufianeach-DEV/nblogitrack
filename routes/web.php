@@ -129,6 +129,10 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
                 ->name('missions.position');
 
             Route::post('/missions/note', [MissionController::class, 'accuser'])->name('missions.notice');
+
+            Route::post('/missions/{transportOrder}/incident', [MissionController::class, 'incident'])
+                ->middleware('throttle:10,1,incidents')
+                ->name('missions.incident');
         });
 
         Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');

@@ -364,6 +364,108 @@ function SuiviDirect({ missions }) {
     );
 }
 
+const TYPES_INCIDENT = [
+    ['ACCIDENT', 'incident.accident', 'Accident'],
+    ['PANNE', 'incident.panne', 'Panne'],
+    ['DOMMAGE', 'incident.dommage', 'Marchandise endommagée'],
+];
+
+function SignalerIncident({ mission }) {
+    const t = useTraduction();
+    const [ouvert, setOuvert] = useState(false);
+    const [type, setType] = useState('ACCIDENT');
+    const [commentaire, setCommentaire] = useState('');
+    const [envoi, setEnvoi] = useState(false);
+    const [erreurs, setErreurs] = useState({});
+
+    const envoyer = async (e) => {
+        e.preventDefault();
+        setEnvoi(true);
+
+        // La position accompagne le signalement, elle ne le bloque pas.
+        const point = await positionActuelle();
+
+        router.post(route('missions.incident', mission.id), { type, commentaire, ...(point ?? {}) }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setOuvert(false);
+                setCommentaire('');
+                setErreurs({});
+            },
+            onError: (e) => setErreurs(e),
+            onFinish: () => setEnvoi(false),
+        });
+    };
+
+    if (! ouvert) {
+        return (
+            <button
+                type="button"
+                onClick={() => setOuvert(true)}
+                className="mt-3 w-full rounded-xl border border-status-incident px-4 py-3 text-sm font-semibold text-status-incident transition hover:bg-status-incident/5"
+            >
+                {t('incident.signaler', 'Signaler un incident')}
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={envoyer} className="mt-3 space-y-3 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-sm">
+            <p className="text-sm font-bold text-status-incident">{t('incident.signaler', 'Signaler un incident')}</p>
+            <p className="text-xs text-slate-600">{t('incident.urgence', 'En cas de blessé, appelez d\'abord le 112.')}</p>
+
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('incident.type', 'Type d\'incident')}>
+                {TYPES_INCIDENT.map(([valeur, cle, libelle]) => (
+                    <button
+                        key={valeur}
+                        type="button"
+                        role="radio"
+                        aria-checked={type === valeur}
+                        onClick={() => setType(valeur)}
+                        className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                            type === valeur ? 'bg-status-incident text-white' : 'bg-slate-100 text-marine hover:bg-slate-200'
+                        }`}
+                    >
+                        {t(cle, libelle)}
+                    </button>
+                ))}
+            </div>
+
+            <label className="block text-sm font-medium text-marine">
+                {t('incident.description', 'Que s\'est-il passé ?')}
+                <textarea
+                    value={commentaire}
+                    onChange={(e) => setCommentaire(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    required
+                    placeholder={t('incident.description_aide', 'Ex. : accrochage sur l\'E40, camion immobilisé ; 3 cartons écrasés…')}
+                    className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                />
+            </label>
+            {erreurs.commentaire && <p className="text-xs text-status-incident">{erreurs.commentaire}</p>}
+            {erreurs.type && <p className="text-xs text-status-incident">{erreurs.type}</p>}
+
+            <div className="flex gap-2">
+                <button
+                    type="submit"
+                    disabled={envoi}
+                    className="flex-1 rounded-xl bg-status-incident px-4 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                >
+                    {envoi ? t('action.enregistrement', 'Enregistrement…') : t('incident.envoyer', 'Envoyer le signalement')}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setOuvert(false)}
+                    className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:text-marine"
+                >
+                    {t('action.annuler', 'Annuler')}
+                </button>
+            </div>
+        </form>
+    );
+}
+
 function Fiche({ mission, onRetour }) {
     const t = useTraduction();
     const v = useVocabulaire();
@@ -493,6 +595,21 @@ function Fiche({ mission, onRetour }) {
                     </div>
                 </div>
 
+                {(mission.incidents ?? []).length > 0 && (
+                    <div className="mt-4 rounded-lg bg-status-incident/10 px-3 py-2 text-sm text-status-incident">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide">{t('incident.signales', 'Incidents signalés')}</p>
+                        <ul className="mt-1 space-y-1">
+                            {mission.incidents.map((incident) => (
+                                <li key={incident.le}>
+                                    <span className="font-semibold">{incident.libelle}</span>
+                                    {' · '}{quand(incident.le, locale, { toujoursDate: true })}
+                                    {incident.commentaire && <span className="block text-marine">{incident.commentaire}</span>}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {mission.livree_le && (
                     <div className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm text-status-delivered">
                         <p className="font-semibold">{t('mission.livree_le', 'Livrée le')} {quand(mission.livree_le, locale, { toujoursDate: true })}</p>
@@ -505,6 +622,8 @@ function Fiche({ mission, onRetour }) {
                     </div>
                 )}
             </div>
+
+            {['ASSIGNED', 'IN_PROGRESS'].includes(mission.statut) && <SignalerIncident key={mission.id} mission={mission} />}
 
             {mission.action && <BoutonAvancement mission={mission} />}
         </div>
