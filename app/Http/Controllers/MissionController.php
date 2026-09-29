@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AlerteIncident;
 use App\Mail\IncidentExpedition;
 use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\ClientsAPrevenir;
@@ -348,6 +350,33 @@ class MissionController extends Controller
                 'lng' => $position ? $lng : null,
             ], fn ($valeur) => $valeur !== null),
         );
+
+        // Accident ou panne : l'administration et la planification recoivent
+        // le detail. Un seul envoi par langue, les autres en copie cachee :
+        // une meme boite ne recoit pas dix fois le meme courriel.
+        if (in_array($donnees['type'], Incidents::BLOQUANTS, true)) {
+            $detail = [
+                'type' => $donnees['type'],
+                'commentaire' => trim($donnees['commentaire']),
+                'marchandise_endommagee' => (bool) ($donnees['marchandise_endommagee'] ?? false),
+                'lat' => $position ? $lat : null,
+                'lng' => $position ? $lng : null,
+            ];
+
+            User::whereIn('role', ['ADMIN', 'PLANNER'])
+                ->where('is_active', true)
+                ->get(['id', 'email', 'locale'])
+                ->groupBy(fn (User $u) => $u->locale ?: 'fr')
+                ->each(function ($groupe, string $langue) use ($transportOrder, $request, $detail) {
+                    try {
+                        Mail::to($groupe->first()->email)
+                            ->bcc($groupe->slice(1)->pluck('email')->all())
+                            ->send(new AlerteIncident($transportOrder, $request->user(), $detail, $langue));
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
+                });
+        }
 
         foreach (ClientsAPrevenir::pour($transportOrder) as $destinataire) {
             try {

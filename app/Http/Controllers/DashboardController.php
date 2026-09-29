@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Formats;
+use App\Support\Incidents;
 use App\Support\JournalLisible;
 use App\Support\JoursFeries;
 use App\Support\Traductions;
@@ -19,6 +20,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -200,6 +202,30 @@ class DashboardController extends Controller
             }
 
             return $alertes;
+        }
+
+        // Camions immobilises par un accident ou une panne, en tete : une
+        // mission bloquee, parfois une decision a prendre avec le client.
+        $candidats = TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+            ->whereIn(DB::raw('CAST(id AS VARCHAR)'), ActivityLog::where('subject_type', 'TransportOrder')
+                ->where('action', Incidents::ACTION)
+                ->select('subject_id'))
+            ->get(['id', 'status', 'vehicle_registration', 'tracking_number']);
+        $immobilises = Incidents::immobilisations($candidats);
+
+        if ($immobilises->isNotEmpty()) {
+            $seul = $immobilises->count() === 1 ? $candidats->firstWhere('id', (int) $immobilises->keys()->first()) : null;
+
+            $alertes[] = [
+                'niveau' => 'grave',
+                'titre' => self::phrase($immobilises->count(), 'alerte.immobilise_un', ':n camion immobilisé après un incident', 'alerte.immobilise_n', ':n camions immobilisés après un incident'),
+                'detail' => $immobilises->contains(fn ($i) => $i['decision_planificateur'])
+                    ? Traductions::t('alerte.immobilise_decision', 'Marchandise endommagée : une décision est attendue de la planification.')
+                    : Traductions::t('alerte.immobilise_detail', 'Accident ou panne signalé par le chauffeur : la mission est bloquée.'),
+                'lien' => $seul
+                    ? route('planning.index', ['q' => $seul->tracking_number, 'suivre' => 1])
+                    : route('planning.index', ['status' => 'IN_PROGRESS']),
+            ];
         }
 
         $adr = TransportOrder::where('is_hazardous', true)
