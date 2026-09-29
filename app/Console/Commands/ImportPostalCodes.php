@@ -4,13 +4,22 @@ namespace App\Console\Commands;
 
 use App\Support\Geocodeur;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use ZipArchive;
 
 class ImportPostalCodes extends Command
 {
-    protected $signature = 'geo:import-postal-codes';
+    protected $signature = 'geo:import-postal-codes
+        {--si-absents : N\'importe que si aucun import complet n\'a eu lieu (demarrage du serveur)}';
+
+    // Pose en fin d'import complet, et un par pays (MARQUEUR.BE) des qu'un
+    // pays est fait. Ils vivent dans le cache en base : un rechargement de
+    // la base (migrate:fresh) les efface avec les codes. Un import coupe
+    // (serveur mis en veille) reprend au demarrage suivant la ou il
+    // s'etait arrete.
+    public const MARQUEUR = 'codes_postaux.importes';
 
     protected $description = 'Importe les codes postaux européens depuis GeoNames (licence CC-BY)';
 
@@ -24,11 +33,56 @@ class ImportPostalCodes extends Command
 
     public function handle(): int
     {
-        DB::table('postal_codes')->truncate();
+        if (! $this->option('si-absents')) {
+            return $this->toutImporter();
+        }
+
+        if (Cache::get(self::MARQUEUR) && DB::table('postal_codes')->exists()) {
+            $this->line('Codes postaux deja importes.');
+
+            return self::SUCCESS;
+        }
+
+        // Lors d'un deploiement, l'ancien et le nouveau conteneur demarrent
+        // parfois ensemble : un seul importe. Le verrou d'un conteneur
+        // arrete en plein import expire vite.
+        $verrou = Cache::lock('codes_postaux.import', 15 * 60);
+
+        if (! $verrou->get()) {
+            $this->line('Import deja en cours.');
+
+            return self::SUCCESS;
+        }
+
+        try {
+            return $this->toutImporter(reprendre: true);
+        } finally {
+            $verrou->release();
+        }
+    }
+
+    private function toutImporter(bool $reprendre = false): int
+    {
+        Cache::forget(self::MARQUEUR);
+
+        if (! $reprendre) {
+            Cache::deleteMultiple(array_map(fn ($pays) => self::MARQUEUR.'.'.$pays, self::PAYS));
+            DB::table('postal_codes')->truncate();
+        }
 
         $total = 0;
+        $complet = true;
 
         foreach (self::PAYS as $pays) {
+            // Pays deja fait : ses codes sont la, ou GeoNames ne le publie pas.
+            $fait = Cache::get(self::MARQUEUR.'.'.$pays);
+            if ($reprendre && $fait !== null && ($fait === 0 || DB::table('postal_codes')->where('country_code', $pays)->exists())) {
+                continue;
+            }
+
+            // Les lignes d'un pays a moitie importe partent avant de recommencer.
+            DB::table('postal_codes')->where('country_code', $pays)->delete();
+
             $this->line("Téléchargement {$pays}…");
 
             // La liste complete d'abord ; illisible ou vide, la liste habituelle.
@@ -47,18 +101,27 @@ class ImportPostalCodes extends Command
             if ($inseres === 0) {
                 if ($statut === 404 && Geocodeur::couvre($pays)) {
                     $this->line("  {$pays} : GeoNames ne publie pas ce pays ; ses localités se vérifient en ligne (Photon).");
+                    Cache::forever(self::MARQUEUR.'.'.$pays, 0);
                 } else {
-                    $this->warn("  {$pays} : rien d'importé (HTTP {$statut}).");
+                    $this->warn("  {$pays} : rien d'importé".($statut !== null ? " (HTTP {$statut})" : '').'.');
+                    $complet = false;
                 }
 
                 continue;
             }
 
             $total += $inseres;
+            Cache::forever(self::MARQUEUR.'.'.$pays, $inseres);
             $this->info("  {$pays} : {$inseres} codes importés.");
         }
 
         $this->info("Terminé : {$total} codes postaux importés.");
+
+        // Un pays en echec (GeoNames injoignable) : le prochain demarrage
+        // reessaie ce pays.
+        if ($complet) {
+            Cache::forever(self::MARQUEUR, true);
+        }
 
         return self::SUCCESS;
     }
@@ -70,14 +133,25 @@ class ImportPostalCodes extends Command
      */
     private function importer(string $pays, string $fichier): array
     {
-        $reponse = Http::timeout(600)->get("https://download.geonames.org/export/zip/{$fichier}");
+        // Archive ecrite sur disque et texte lu ligne a ligne : la liste
+        // complete du Royaume-Uni (1,7 million de lignes) tiendrait mal en
+        // memoire sur un petit serveur.
+        $zipPath = storage_path("app/geonames_{$pays}.zip");
+        try {
+            $reponse = Http::timeout(600)->sink($zipPath)->get("https://download.geonames.org/export/zip/{$fichier}");
+        } catch (\Throwable $e) {
+            // Reseau coupe : ce pays est retente au prochain passage.
+            @unlink($zipPath);
+            $this->warn("  {$pays} : {$e->getMessage()}");
 
-        if (! $reponse->ok()) {
-            return [0, $reponse->status()];
+            return [0, null];
         }
 
-        $zipPath = storage_path("app/geonames_{$pays}.zip");
-        file_put_contents($zipPath, $reponse->body());
+        if (! $reponse->ok()) {
+            @unlink($zipPath);
+
+            return [0, $reponse->status()];
+        }
 
         $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
@@ -87,25 +161,26 @@ class ImportPostalCodes extends Command
         }
 
         // Le fichier texte de l'archive (PAYS.txt ou PAYS_full.txt).
-        $contenu = false;
-        for ($i = 0; $i < $zip->numFiles && $contenu === false; $i++) {
+        $flux = false;
+        for ($i = 0; $i < $zip->numFiles && $flux === false; $i++) {
             $nom = (string) $zip->getNameIndex($i);
             if (str_starts_with($nom, $pays) && str_ends_with($nom, '.txt')) {
-                $contenu = $zip->getFromIndex($i);
+                $flux = $zip->getStream($nom);
             }
         }
-        $zip->close();
-        @unlink($zipPath);
 
-        if ($contenu === false) {
+        if ($flux === false) {
+            $zip->close();
+            @unlink($zipPath);
+
             return [0, $reponse->status()];
         }
 
         $lot = [];
         $inseres = 0;
 
-        foreach (explode("\n", $contenu) as $ligne) {
-            $champs = explode("\t", rtrim($ligne, "\r"));
+        while (($ligne = fgets($flux)) !== false) {
+            $champs = explode("\t", rtrim($ligne, "\r\n"));
             if (count($champs) < 11 || $champs[1] === '' || $champs[2] === '' || $champs[9] === '' || $champs[10] === '') {
                 continue;
             }
@@ -130,6 +205,10 @@ class ImportPostalCodes extends Command
             DB::table('postal_codes')->insert($lot);
             $inseres += count($lot);
         }
+
+        fclose($flux);
+        $zip->close();
+        @unlink($zipPath);
 
         return [$inseres, $reponse->status()];
     }

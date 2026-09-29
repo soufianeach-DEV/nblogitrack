@@ -15,4 +15,9 @@ artisan optimize
 # purges RGPD, file d'attente des courriels (voir routes/console.php).
 ( while true; do artisan schedule:run --no-interaction > /dev/null 2>&1 || true; sleep 60; done ) &
 
+# Codes postaux : importes en arriere-plan au premier demarrage et apres
+# chaque rechargement de la base (quelques minutes ; le site repond deja,
+# les adresses se completent en ligne en attendant).
+( artisan geo:import-postal-codes --si-absents > /dev/null 2>&1 || true ) &
+
 exec apache2-foreground

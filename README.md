@@ -263,11 +263,12 @@ L'application se déploie telle quelle avec le `Dockerfile` du dépôt : l'image
    $env:DB_SSLMODE = "require"
    php artisan optimize:clear
    php artisan migrate:fresh --seed --force
-   php artisan geo:import-postal-codes
    Remove-Item Env:DB_HOST, Env:DB_PORT, Env:DB_DATABASE, Env:DB_USERNAME, Env:DB_PASSWORD, Env:DB_SSLMODE
    ```
 
    Les variables disparaissent à la fermeture de PowerShell : votre base locale n'est pas touchée.
+
+   Les codes postaux se réimportent seuls au démarrage suivant du serveur Render, en arrière-plan (quelques minutes ; un import coupé par la mise en veille reprend là où il s'était arrêté).
 6. **Stripe** : déclarez le webhook `https://<adresse Render>/stripe/webhook` (voir *Paiement en ligne*) et copiez son secret dans `STRIPE_WEBHOOK_SECRET`.
 
 L'offre gratuite de Render met le service en veille après quinze minutes sans visite : le premier chargement prend alors une minute. L'offre Starter reste éveillée. Supabase gratuit met le projet en pause après une semaine sans activité : ouvrez le site avant une démonstration.
