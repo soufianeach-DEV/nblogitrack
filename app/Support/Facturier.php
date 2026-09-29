@@ -21,11 +21,11 @@ class Facturier
      *                                 apres avoir : aujourd'hui, pour garder
      *                                 la numerotation chronologique)
      */
-    public function facturer(?Carbon $periode = null, ?int $clientId = null, ?Carbon $emission = null): Collection
+    public function facturer(?Carbon $periode = null, ?int $clientId = null, ?Carbon $emission = null, bool $moisEnCours = false): Collection
     {
         $emises = collect();
 
-        foreach ($this->aFacturer($periode, $clientId) as $cle => $elements) {
+        foreach ($this->aFacturer($periode, $clientId, $moisEnCours) as $cle => $elements) {
             [$client, $mois] = explode('|', (string) $cle);
             $client = Client::withTrashed()->find((int) $client);
 
@@ -48,14 +48,15 @@ class Facturier
      *
      * @return Collection<string, Collection<int, array{date: Carbon, client_id: int, kind: string, transport_order_id: ?int, order_charge_id: ?int, description: string, montant: float}>>
      */
-    public function aFacturer(?Carbon $periode = null, ?int $clientId = null): Collection
+    public function aFacturer(?Carbon $periode = null, ?int $clientId = null, bool $moisEnCours = false): Collection
     {
         // Le mois en cours n'est jamais facture, meme avec --tout ou
         // --mois. Sa facture porterait une date d'emission future et
         // resterait en brouillon : ni payable, ni comptee dans la TVA, et
         // ses expeditions, deja rattachees a une ligne, ne seraient plus
-        // jamais reprises.
-        $limite = now()->startOfMonth();
+        // jamais reprises. Seule exception : « Facturer maintenant », qui
+        // emet a la date du jour (voir InvoiceController::facturerMaintenant).
+        $limite = $moisEnCours ? now()->addSecond() : now()->startOfMonth();
         $bornes = $periode === null ? null : [
             $periode->copy()->startOfMonth(),
             $periode->copy()->endOfMonth()->endOfDay(),

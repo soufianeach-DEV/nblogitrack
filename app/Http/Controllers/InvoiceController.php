@@ -11,6 +11,7 @@ use App\Support\Encaissement;
 use App\Support\EnvoiFacture;
 use App\Support\FacturePdf;
 use App\Support\FactureUbl;
+use App\Support\Facturier;
 use App\Support\Formats;
 use App\Support\LigneFacture;
 use App\Support\PaiementStripe;
@@ -65,7 +66,45 @@ class InvoiceController extends Controller
             ],
             'colonnePaiement' => $estClient && $aPayer()->exists(),
             'peutGererAchats' => $utilisateur->can('control-payments'),
+            // Livraisons et supplements pas encore factures, mois en cours
+            // compris : ce que « Facturer maintenant » emettrait.
+            'aFacturer' => $utilisateur->can('control-payments')
+                ? app(Facturier::class)->aFacturer(null, null, true)->sum(fn ($lot) => $lot->count())
+                : 0,
         ]);
+    }
+
+    /**
+     * Emet et envoie tout de suite les factures de tout ce qui a ete livre,
+     * mois en cours compris, a la date du jour. Sert a la demonstration :
+     * en temps normal, la facture mensuelle part le 1er du mois.
+     */
+    public function facturerMaintenant(Facturier $facturier): RedirectResponse
+    {
+        $emises = $facturier->facturer(null, null, today(), true);
+
+        if ($emises->isEmpty()) {
+            return back()->with('error', Traductions::t('msg.rien_a_facturer', 'Rien à facturer : toutes les livraisons sont déjà facturées.'));
+        }
+
+        $echecs = 0;
+
+        foreach ($emises as $facture) {
+            if ($facture->status === 'SENT' && EnvoiFacture::envoyer($facture) === null) {
+                $echecs++;
+            }
+        }
+
+        ActivityLog::record(
+            'invoices.generated',
+            $emises->count().' facture(s) émise(s) à la demande',
+            null,
+            ['factures' => $emises->pluck('reference')->all(), 'a_la_demande' => true],
+        );
+
+        return back()->with($echecs > 0 ? 'error' : 'success', $echecs > 0
+            ? Traductions::t('msg.factures_envoi_partiel', ':n facture(s) émise(s), mais :echecs courriel(s) non envoyé(s) : renvoyez-les depuis l\'écran de la facture.', ['n' => $emises->count(), 'echecs' => $echecs])
+            : Traductions::t('msg.factures_emises', ':n facture(s) émise(s) et envoyée(s) aux clients.', ['n' => $emises->count()]));
     }
 
     public function show(Request $request, Invoice $invoice): Response

@@ -140,6 +140,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
         });
 
         Route::get('/factures', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::post('/factures/facturer-maintenant', [InvoiceController::class, 'facturerMaintenant'])
+            ->middleware(['can:control-payments', 'throttle:5,1,facturer'])
+            ->name('invoices.now');
         Route::get('/factures/{invoice}', [InvoiceController::class, 'show'])
             ->name('invoices.show');
         Route::patch('/factures/{invoice}/paiement', [InvoiceController::class, 'markPaid'])

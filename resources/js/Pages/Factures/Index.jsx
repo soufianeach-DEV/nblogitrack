@@ -14,7 +14,7 @@ const ETATS = {
 
 const AVOIR = { cle: 'facture.avoir', libelle: 'Avoir', classe: 'bg-action/20 text-marine' };
 
-export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false }) {
+export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false, aFacturer = 0 }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const locale = useLocale();
@@ -28,16 +28,42 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
         router.get(route('invoices.show', facture.id));
     };
 
+    const [facturation, setFacturation] = useState(false);
+    const facturerMaintenant = () => {
+        if (! window.confirm(t('facture.confirmer_maintenant', 'Émettre maintenant les factures de toutes les livraisons non facturées, mois en cours compris, et les envoyer aux clients ?'))) return;
+        setFacturation(true);
+        router.post(route('invoices.now'), {}, { preserveScroll: true, onFinish: () => setFacturation(false) });
+    };
+
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <h1 className="text-2xl font-bold text-marine">{t('nav.facturation', 'Facturation')}</h1>
-                    <p className="text-sm text-slate-600">
-                        {canPlan
-                            ? t('facture.toutes', 'Toutes les factures émises.')
-                            : t('facture.les_votres', 'Vos factures et leur état de paiement.')}
-                    </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-marine">{t('nav.facturation', 'Facturation')}</h1>
+                        <p className="text-sm text-slate-600">
+                            {canPlan
+                                ? t('facture.toutes', 'Toutes les factures émises.')
+                                : t('facture.les_votres', 'Vos factures et leur état de paiement.')}
+                        </p>
+                    </div>
+                    {peutGererAchats && (
+                        <div className="text-right">
+                            <button
+                                type="button"
+                                disabled={aFacturer === 0 || facturation}
+                                onClick={facturerMaintenant}
+                                className="rounded-lg bg-action px-4 py-2 text-sm font-bold text-marine-deep shadow-sm transition hover:bg-action-dark disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {facturation ? t('action.enregistrement', 'Enregistrement…') : t('facture.facturer_maintenant', 'Facturer maintenant')}
+                            </button>
+                            <p className="mt-1 text-xs text-slate-600">
+                                {aFacturer === 0
+                                    ? t('facture.rien_a_facturer', 'Toutes les livraisons sont facturées.')
+                                    : t('facture.a_facturer', ':n livraison(s) ou supplément(s) à facturer', { n: aFacturer })}
+                            </p>
+                        </div>
+                    )}
                 </div>
             }
         >
