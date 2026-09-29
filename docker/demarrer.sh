@@ -17,7 +17,8 @@ artisan optimize
 
 # Codes postaux : importes en arriere-plan au premier demarrage et apres
 # chaque rechargement de la base (quelques minutes ; le site repond deja,
-# les adresses se completent en ligne en attendant).
-( artisan geo:import-postal-codes --si-absents > /dev/null 2>&1 || true ) &
+# les adresses se completent en ligne en attendant). Sa progression, pays
+# par pays, s'affiche dans les journaux du serveur.
+( artisan geo:import-postal-codes --si-absents --no-ansi 2>&1 || true ) &
 
 exec apache2-foreground
