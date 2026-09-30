@@ -7,7 +7,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'NBLogiTrack';
 
 // Les routes de Ziggy sont ecrites dans la page HTML au premier chargement,
 // avec la langue de ce moment-la. Une navigation Inertia ne recharge pas
