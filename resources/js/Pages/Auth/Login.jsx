@@ -33,7 +33,7 @@ export default function Login({ status, canResetPassword }) {
             </div>
 
             <h1 className="text-2xl font-bold text-marine">{t('compte.bon_retour', 'Bon retour parmi nous')}</h1>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 {t('auth.identifiants', 'Veuillez entrer vos identifiants pour accéder à votre tableau de bord.')}
             </p>
 
@@ -41,7 +41,7 @@ export default function Login({ status, canResetPassword }) {
                 <div className="mt-4 text-sm font-medium text-status-delivered">{status}</div>
             )}
 
-            <form onSubmit={submit} className="mt-6">
+            <form onSubmit={submit} className="mt-8">
                 <div>
                     <InputLabel htmlFor="email" value={t('compte.email', 'E-mail professionnel')} />
                     <TextInput
@@ -58,7 +58,7 @@ export default function Login({ status, canResetPassword }) {
                     <InputError message={errors.email} className="mt-2" />
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-5">
                     <div className="flex items-center justify-between">
                         <InputLabel htmlFor="password" value={t('compte.mot_de_passe', 'Mot de passe')} />
                         {canResetPassword && (
@@ -78,7 +78,7 @@ export default function Login({ status, canResetPassword }) {
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <label className="mt-4 flex items-center">
+                <label className="mt-5 flex items-center">
                     <Checkbox
                         name="remember"
                         checked={data.remember}
@@ -87,12 +87,12 @@ export default function Login({ status, canResetPassword }) {
                     <span className="ms-2 text-sm text-slate-600">{t('compte.se_souvenir', 'Se souvenir de moi')}</span>
                 </label>
 
-                <PrimaryButton className="mt-6 w-full" disabled={processing}>
+                <PrimaryButton className="mt-8 w-full" disabled={processing}>
                     {t('nav.connexion', 'Se connecter')}
                 </PrimaryButton>
             </form>
 
-            <div className="mt-8 flex justify-between text-xs text-slate-600">
+            <div className="mt-10 flex justify-between text-xs text-slate-600">
                 <span>{t('commun.copyright', '© :annee NBLogiTrack SRL', { annee: new Date().getFullYear() })}</span>
                 {/* Des liens, et un retour a l'accueil, absent sur mobile. */}
                 <span className="flex gap-3">
