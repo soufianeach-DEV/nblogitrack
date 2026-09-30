@@ -18,7 +18,9 @@ class NoteInformation extends Mailable
         public Page $note,
         public User $destinataire,
         public string $langue,
-    ) {}
+    ) {
+        $this->locale($langue);
+    }
 
     public function envelope(): Envelope
     {
@@ -34,7 +36,7 @@ class NoteInformation extends Mailable
             with: [
                 'titre' => $this->note->titre($this->langue),
                 'corps' => $this->note->corps($this->langue),
-                'version' => $this->note->updated_at?->format('d/m/Y'),
+                'version' => $this->note->version()?->format('d/m/Y'),
             ],
         );
     }

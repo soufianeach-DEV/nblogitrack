@@ -35,6 +35,17 @@ function blocs(corps) {
     return sortie;
 }
 
+// Les adresses ecrites dans le texte deviennent des liens : un document
+// « telechargeable par les visiteurs » cite dans une page restait en texte
+// brut. Seules les adresses web et celles des documents sont reconnues.
+const ADRESSE = /(https?:\/\/[^\s<>"]+[^\s<>".,;:!?)]|\/documents\/\d+)/g;
+
+function avecLiens(texte) {
+    return texte.split(ADRESSE).map((morceau, i) => (i % 2 === 1
+        ? <a key={i} href={morceau} className="break-all font-medium text-brand-blue underline hover:text-marine" rel="noopener">{morceau}</a>
+        : morceau));
+}
+
 export default function Show({ page }) {
     const t = useTraduction();
     const { auth, pages_pied: pagesPied = [] } = usePage().props;
@@ -88,12 +99,12 @@ export default function Show({ page }) {
                             if (bloc.type === 'liste') {
                                 return (
                                     <ul key={i} className="mb-4 ml-5 list-disc space-y-1.5 marker:text-slate-400">
-                                        {bloc.elements.map((e, j) => <li key={j}>{e}</li>)}
+                                        {bloc.elements.map((e, j) => <li key={j}>{avecLiens(e)}</li>)}
                                     </ul>
                                 );
                             }
 
-                            return <p key={i} className="mb-4">{bloc.texte}</p>;
+                            return <p key={i} className="mb-4">{avecLiens(bloc.texte)}</p>;
                         })}
                     </div>
 

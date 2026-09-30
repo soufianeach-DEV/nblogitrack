@@ -19,6 +19,14 @@ class DefinirLangue
 
         $langue = Traductions::estServie($langue) ? $langue : 'fr';
 
+        // La langue d'une page affichee est retenue pour les appels sans
+        // prefixe de la meme visite (verification du numero de TVA) : un
+        // visiteur arrive directement sur /nl/devis recevait les reponses
+        // du registre en francais.
+        if ($request->route('langue') !== null && $request->hasSession() && $request->session()->get('langue') !== $langue) {
+            $request->session()->put('langue', $langue);
+        }
+
         App::setLocale($langue);
 
         URL::defaults(['langue' => $langue]);

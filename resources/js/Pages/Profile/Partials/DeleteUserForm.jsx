@@ -1,9 +1,9 @@
 import DangerButton from '@/Components/DangerButton';
+import ChampMotDePasse from '@/Components/ChampMotDePasse';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
-import TextInput from '@/Components/TextInput';
 import { useTraduction } from '@/traduire';
 import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -55,7 +55,7 @@ export default function DeleteUserForm({ className = '' }) {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    {t('profil.supprimer_texte', 'La suppression du compte est définitive. Téléchargez au préalable les documents que vous souhaitez conserver.')}
+                    {t('profil.supprimer_texte', 'Téléchargez au préalable les documents que vous souhaitez conserver. Si votre entreprise a des expéditions ou des factures, la loi nous impose de les garder : votre compte est alors désactivé et vos données personnelles sont anonymisées. Sinon, tout est effacé.')}
                 </p>
             </header>
 
@@ -75,21 +75,21 @@ export default function DeleteUserForm({ className = '' }) {
 
                     <div className="mt-6">
                         <InputLabel
-                            htmlFor="password"
+                            htmlFor="password_suppression"
                             value={t('compte.mot_de_passe', 'Mot de passe')}
                             className="sr-only"
                         />
 
-                        <TextInput
-                            id="password"
-                            type="password"
+                        <ChampMotDePasse
+                            id="password_suppression"
                             name="password"
                             ref={passwordInput}
                             value={data.password}
                             onChange={(e) =>
                                 setData('password', e.target.value)
                             }
-                            className="mt-1 block w-3/4"
+                            className="block w-full"
+                            classeConteneur="mt-1 w-3/4"
                             isFocused
                             placeholder={t('compte.mot_de_passe', 'Mot de passe')}
                         />

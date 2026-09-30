@@ -1,12 +1,30 @@
 import Icone from '@/Components/Icone';
+import ListeRecherche from '@/Components/ListeRecherche';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
+// Pays sans codes postaux (la Grece) : le serveur n'a pas de liste de
+// localites, Photon propose les siennes, que le serveur sait verifier.
+const villesPhoton = async (q, pays) => {
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=fr&limit=10&layer=city&layer=district&layer=locality`);
+
+    if (! r.ok) return [];
+
+    const { features = [] } = await r.json();
+
+    return features
+        .filter((f) => f.properties?.name && (f.properties.countrycode || '').toUpperCase() === pays)
+        .map((f) => ({ ville: f.properties.name, region: f.properties.state || null, code: null }));
+};
+
+function ChoixVille({ id, pays, enLigne = false, valeur, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [minuteur, setMinuteur] = useState(null);
+    // Une reponse qui arrive apres que le champ a perdu le focus ne doit
+    // pas rouvrir la liste par-dessus le reste du formulaire.
+    const actif = useRef(false);
 
     const saisir = (texte) => {
         onChange(texte);
@@ -18,11 +36,19 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
             return;
         }
 
-        setMinuteur(setTimeout(() => {
-            fetch(route('geo.villes', { pays, q: texte.trim() }), { headers: { Accept: 'application/json' } })
+        setMinuteur(setTimeout(async () => {
+            const q = texte.trim();
+            let villes = await fetch(route('geo.villes', { pays, q }), { headers: { Accept: 'application/json' } })
                 .then((r) => (r.ok ? r.json() : []))
-                .then((villes) => setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []))
-                .catch(() => setSuggestions([]));
+                .catch(() => []);
+
+            if (enLigne && (! Array.isArray(villes) || villes.length === 0)) {
+                villes = await villesPhoton(q, pays).catch(() => []);
+            }
+
+            if (actif.current) {
+                setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []);
+            }
         }, 200));
     };
 
@@ -32,15 +58,20 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
                 id={id}
                 value={valeur}
                 onChange={(e) => saisir(e.target.value)}
-                onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+                onFocus={() => { actif.current = true; }}
+                onBlur={() => {
+                    actif.current = false;
+                    clearTimeout(minuteur);
+                    setTimeout(() => setSuggestions([]), 150);
+                }}
                 placeholder={placeholder}
                 autoComplete="off"
                 className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
             />
             {suggestions.length > 0 && (
                 <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {suggestions.map((ville) => (
-                        <li key={ville.ville + ville.code}>
+                    {suggestions.map((ville, i) => (
+                        <li key={`${i}-${ville.ville}-${ville.code ?? ''}`}>
                             <button
                                 type="button"
                                 onMouseDown={(e) => e.preventDefault()}
@@ -58,13 +89,27 @@ function ChoixVille({ id, pays, valeur, onChange, placeholder }) {
     );
 }
 
-export default function Index({ destinations = [], formules = [] }) {
+const NOM_FORMULE = {
+    'Éco': ['commande.offre_eco', 'Éco'],
+    Standard: ['commande.offre_standard', 'Standard'],
+    Express: ['commande.offre_express', 'Express'],
+};
+
+export default function Index({ destinations = [], departs = [], formules = [], remiseFretRetour = 0 }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [depart, setDepart] = useState('');
     const [destination, setDestination] = useState('');
     const [pays, setPays] = useState('BE');
+    // Un enlevement hors de Belgique livre en Belgique : les trajets entre
+    // deux pays etrangers se traitent sur devis.
+    const [paysDepart, setPaysDepart] = useState('BE');
+    const changerDepart = (code) => {
+        setPaysDepart(code);
+        setDepart('');
+        if (code !== 'BE') { setPays('BE'); setDestination(''); }
+    };
     const [poids, setPoids] = useState('500');
     const [adr, setAdr] = useState(false);
     const [resultat, setResultat] = useState(null);
@@ -87,13 +132,22 @@ export default function Index({ destinations = [], formules = [] }) {
                         document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
                     ),
                 },
-                body: JSON.stringify({ depart, destination, pays, poids, adr }),
+                body: JSON.stringify({ depart, pays_depart: paysDepart, destination, pays, poids, adr }),
             });
 
-            const donnees = await reponse.json();
+            const donnees = await reponse.json().catch(() => ({}));
 
             if (! reponse.ok) {
-                setErreur(donnees.erreur ?? t('tarifs.erreur_simulation', 'La simulation a échoué. Vérifiez les localités saisies.'));
+                // Chaque cause a son message : la limite d'essais ou une
+                // valeur refusee passaient pour une localite mal saisie.
+                const premiere = donnees.errors ? Object.values(donnees.errors)[0]?.[0] : null;
+                setErreur(
+                    reponse.status === 429
+                        ? t('tarifs.trop_de_simulations', 'Trop de simulations en peu de temps. Réessayez dans une minute.')
+                        : reponse.status === 419
+                            ? t('msg.session_expiree_courte', 'Votre session a expiré, reconnectez-vous.')
+                            : donnees.erreur ?? premiere ?? t('tarifs.erreur_simulation', 'La simulation a échoué. Vérifiez les localités saisies.'),
+                );
                 setResultat(null);
             } else {
                 setResultat(donnees);
@@ -107,31 +161,46 @@ export default function Index({ destinations = [], formules = [] }) {
 
     return (
         <VitrineLayout>
-            <Head title={t('nav.tarifs', 'Tarifs')} />
+            <Head title={t('referencement.tarifs_titre', 'Tarifs de transport et simulateur de prix')} />
 
             <section className="bg-marine py-16 text-white">
                 <div className="mx-auto max-w-4xl px-4 text-center">
                     <h1 className="text-3xl font-bold sm:text-4xl">{t('tarifs.calculez', 'Calculez votre tarif')}</h1>
-                    <p className="mx-auto mt-3 max-w-2xl text-slate-300">
-                        {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Départ de Belgique vers :n destinations européennes.', { n: destinations.length })}
+                    <p className="entree mx-auto mt-3 max-w-2xl text-slate-300" style={{ animationDelay: '120ms' }}>
+                        {t('tarifs.intro', 'Un prix indicatif en quelques secondes, sans compte et sans engagement. Enlèvement ou livraison en Belgique, :n pays européens desservis.', { n: destinations.filter((d) => d.code !== 'BE').length })}
                     </p>
                 </div>
             </section>
 
             <section className="bg-surface py-12">
+                <h2 className="sr-only">{t('referencement.tarifs_titre', 'Tarifs de transport et simulateur de prix')}</h2>
                 <div className="mx-auto max-w-4xl px-4">
-                    <form onSubmit={simuler} className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
+                    <form onSubmit={simuler} className="entree rounded-2xl bg-white p-6 shadow-sm sm:p-8" style={{ animationDelay: '200ms' }}>
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
+                                <label htmlFor="pays_depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    {t('tarifs.pays_enlevement', 'Pays d\'enlèvement')}
+                                </label>
+                                <ListeRecherche
+                                    id="pays_depart"
+                                    value={paysDepart}
+                                    onChange={(code) => code && changerDepart(code)}
+                                    options={departs.map((d) => ({ valeur: d.code, libelle: d.nom }))}
+                                    className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                                />
+                            </div>
+
+                            <div>
                                 <label htmlFor="depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    {t('tarifs.enlevement_be', 'Enlèvement en Belgique')}
+                                    {t('tarifs.localite_enlevement', 'Localité d\'enlèvement')}
                                 </label>
                                 <ChoixVille
                                     id="depart"
-                                    pays="BE"
+                                    pays={paysDepart}
+                                    enLigne={departs.find((d) => d.code === paysDepart)?.en_ligne === true}
                                     valeur={depart}
                                     onChange={setDepart}
-                                    placeholder={t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…')}
+                                    placeholder={paysDepart === 'BE' ? t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…') : t('tarifs.taper', 'Commencez à taper…')}
                                 />
                             </div>
 
@@ -139,16 +208,14 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <label htmlFor="pays" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     {t('tarifs.pays_destination', 'Pays de destination')}
                                 </label>
-                                <select
+                                <ListeRecherche
                                     id="pays"
                                     value={pays}
-                                    onChange={(e) => { setPays(e.target.value); setDestination(''); }}
+                                    disabled={paysDepart !== 'BE'}
+                                    onChange={(code) => { if (code) { setPays(code); setDestination(''); } }}
+                                    options={destinations.map((d) => ({ valeur: d.code, libelle: d.nom }))}
                                     className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                                >
-                                    {destinations.map((d) => (
-                                        <option key={d.code} value={d.code}>{d.nom}</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
 
                             <div>
@@ -158,6 +225,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 <ChoixVille
                                     id="destination"
                                     pays={pays}
+                                    enLigne={destinations.find((d) => d.code === pays)?.en_ligne === true}
                                     valeur={destination}
                                     onChange={setDestination}
                                     placeholder={t('tarifs.taper', 'Commencez à taper…')}
@@ -174,6 +242,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                         type="number"
                                         min="1"
                                         max="44000"
+                                        step="any"
                                         value={poids}
                                         onChange={(e) => setPoids(e.target.value)}
                                         className="w-full rounded-lg border-slate-300 py-2.5 pr-12 text-sm shadow-sm focus:border-marine focus:ring-marine"
@@ -212,11 +281,11 @@ export default function Index({ destinations = [], formules = [] }) {
                     </form>
 
                     {resultat && (
-                        <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
+                        <div className="entree mt-6 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
                             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-100 pb-4">
                                 <h2 className="text-lg font-bold text-marine">
                                     {resultat.depart} <span className="text-slate-600">→</span> {resultat.arrivee}
-                                    <span className="ml-2 text-sm font-normal text-slate-600">{resultat.pays}</span>
+                                    <span className="ml-2 text-sm font-normal text-slate-600">{resultat.trajet ?? resultat.pays}</span>
                                 </h2>
                                 <p className="text-sm text-slate-600">
                                     {resultat.distance.toLocaleString(locale)} {t('tarifs.par_route', 'km par la route')} ·{' '}
@@ -229,7 +298,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                 {resultat.formules.map((f) => (
                                     <div key={f.formule} className="rounded-xl border border-slate-200 p-5 text-center">
                                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                            {f.formule}
+                                            {NOM_FORMULE[f.formule] ? t(...NOM_FORMULE[f.formule]) : f.formule}
                                         </p>
                                         <p className="mt-2 text-2xl font-bold text-marine">{euros(f.prix)}</p>
                                         <p className="mt-1 text-sm text-slate-600">
@@ -241,6 +310,12 @@ export default function Index({ destinations = [], formules = [] }) {
                                     </div>
                                 ))}
                             </div>
+
+                            {resultat.fret_retour_possible && (
+                                <p className="mt-5 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm text-status-delivered">
+                                    {t('tarifs.note_fret_retour', 'Import vers la Belgique : si l\'un de nos camions revient de la région à votre date, un tarif fret retour (jusqu\'à :remise % de remise) s\'applique à la commande.', { remise: remiseFretRetour })}
+                                </p>
+                            )}
 
                             <p className="mt-5 text-xs text-slate-600">
                                 {t('tarifs.indicatif', 'Prix hors TVA, à titre indicatif. Le tarif définitif tient compte de l\'adresse exacte, de la date d\'enlèvement et des contraintes de chargement.')}
@@ -270,7 +345,7 @@ export default function Index({ destinations = [], formules = [] }) {
                                     <Icone nom="camion" className="h-5 w-5" />
                                 </span>
                                 <p className="text-sm text-slate-600">
-                                    <span className="block font-semibold text-marine">{formule}</span>
+                                    <span className="block font-semibold text-marine">{NOM_FORMULE[formule] ? t(...NOM_FORMULE[formule]) : formule}</span>
                                     {formule === 'Express'
                                         ? t('tarifs.express_texte', 'Un véhicule pour vous seul, au plus court.')
                                         : formule === 'Standard'

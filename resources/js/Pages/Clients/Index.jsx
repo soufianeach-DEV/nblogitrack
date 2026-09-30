@@ -1,4 +1,6 @@
 import Modal from '@/Components/Modal';
+import ListeRecherche from '@/Components/ListeRecherche';
+import ChampRecherche from '@/Components/ChampRecherche';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, usePays, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
@@ -12,7 +14,6 @@ const ONGLETS = {
 };
 
 export default function Index({ clients, etat, filtres, suggestions, compteurs }) {
-    const flash = usePage().props.flash ?? {};
     const t = useTraduction();
     const v = useVocabulaire();
     const p = usePays();
@@ -90,11 +91,6 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('entreprises.titre', 'Entreprises inscrites')}</h1>}>
             <Head title={t('entreprises.titre', 'Entreprises inscrites')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(ONGLETS).map(([cle, etiquette]) => (
@@ -116,42 +112,36 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
             <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                        <input
-                            list="liste-entreprises"
+                        <ChampRecherche
                             value={champs.q}
-                            onChange={(e) => filtrer('q', e.target.value)}
+                            onChange={(valeur) => filtrer('q', valeur)}
+                            suggestions={champs.q.trim().length >= 2 ? suggestions.entreprises : []}
+                            local
                             placeholder={t('entreprises.filtre', 'Entreprise, numéro de TVA, Peppol ou localité')}
                             className={champCls}
                         />
-                        <datalist id="liste-entreprises">
-                            {suggestions.entreprises.map((nom) => <option key={nom} value={nom} />)}
-                        </datalist>
                     </div>
 
                     <div>
-                        <input
-                            list="liste-pays"
+                        <ListeRecherche
                             value={champs.pays}
-                            onChange={(e) => filtrer('pays', e.target.value)}
-                            placeholder={t('auth.pays', 'Pays')}
+                            onChange={(valeur) => filtrer('pays', valeur)}
+                            vide={t('entreprises.tous_pays', 'Tous les pays')}
+                            aria-label={t('auth.pays', 'Pays')}
+                            options={suggestions.pays.map((nom) => ({ valeur: nom, libelle: p(nom) }))}
                             className={champCls}
                         />
-                        <datalist id="liste-pays">
-                            {suggestions.pays.map((p) => <option key={p} value={p} />)}
-                        </datalist>
                     </div>
 
                     <div>
-                        <input
-                            list="liste-secteurs"
+                        <ListeRecherche
                             value={champs.secteur}
-                            onChange={(e) => filtrer('secteur', e.target.value)}
-                            placeholder={t('auth.secteur', 'Secteur d\'activité')}
+                            onChange={(valeur) => filtrer('secteur', valeur)}
+                            vide={t('entreprises.tous_secteurs', 'Tous les secteurs')}
+                            aria-label={t('auth.secteur', 'Secteur d\'activité')}
+                            options={suggestions.secteurs.map((nom) => ({ valeur: nom, libelle: v('secteur', nom) }))}
                             className={champCls}
                         />
-                        <datalist id="liste-secteurs">
-                            {suggestions.secteurs.map((s) => <option key={s} value={s} />)}
-                        </datalist>
                     </div>
                 </div>
 
@@ -179,6 +169,11 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                 <div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <h2 className="text-lg font-bold text-marine">{client.company_name}</h2>
+                                        {etatClient === 'attente' && client.inscrit_le && (
+                                            <span className="rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-700">
+                                                {t('entreprises.demande_recue', 'Demande reçue le')} {dateCourte(client.inscrit_le)}
+                                            </span>
+                                        )}
                                         {etatClient !== 'attente' && (
                                             <span
                                                 className={

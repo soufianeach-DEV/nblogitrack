@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\PurchaseInvoice;
 use App\Models\Vehicle;
+use App\Support\Suggestions;
 use App\Support\Traductions;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -26,11 +27,11 @@ class PurchaseInvoiceController extends Controller
         $requete = PurchaseInvoice::with('vehicle:registration,brand,model');
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('supplier_name', 'ilike', $terme)
-                ->orWhere('reference', 'ilike', $terme)
-                ->orWhere('vehicle_registration', 'ilike', $terme));
+                ->whereContient('supplier_name', $terme)
+                ->orWhereContient('reference', $terme)
+                ->orWhereContient('vehicle_registration', $terme));
         }
 
         if (! empty($filtres['categorie'])) {
@@ -53,7 +54,7 @@ class PurchaseInvoiceController extends Controller
                 'categorie' => Traductions::vocabulaire('achat', PurchaseInvoice::CATEGORIES[$a->category] ?? $a->category),
                 'vehicule' => $a->vehicle_registration,
                 'vehicule_detail' => trim(($a->vehicle?->brand ?? '').' '.($a->vehicle?->model ?? '')),
-                'periode' => $a->period_start->locale('fr')->isoFormat('MMMM YYYY'),
+                'periode' => $a->period_start->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
                 'echeance' => $a->due_on->format('d/m/Y'),
                 'ht' => (float) $a->amount_excl_tax,
                 'tva' => (float) $a->vat_amount,
@@ -66,6 +67,7 @@ class PurchaseInvoiceController extends Controller
             ]);
 
         return Inertia::render('Factures/Achats', [
+            'suggestions' => Suggestions::depuis(fn () => PurchaseInvoice::query(), ['supplier_name', 'reference', 'vehicle_registration'], $filtres['q'] ?? null),
             'achats' => $achats,
             'compteurs' => [
                 'total' => PurchaseInvoice::count(),
@@ -94,27 +96,39 @@ class PurchaseInvoiceController extends Controller
             'reference' => 'required|string|max:50',
             'category' => 'required|in:'.implode(',', array_keys(PurchaseInvoice::CATEGORIES)),
             'vehicle_registration' => 'required|exists:vehicles,registration',
-            'period_start' => 'required|date',
+            // Un mois qui n'a pas encore commence n'a rien pu consommer :
+            // une periode 2027-03 est une faute de frappe, qui fausserait
+            // le suivi du parc et la declaration de TVA.
+            'period_start' => 'required|date|after_or_equal:2000-01-01|before_or_equal:today',
             'period_end' => 'required|date|after_or_equal:period_start',
-            'issued_on' => 'required|date',
+            'issued_on' => 'required|date|after_or_equal:2000-01-01|before_or_equal:today',
             'due_on' => 'required|date|after_or_equal:issued_on',
             'liters' => 'nullable|numeric|min:0|max:99999',
             'taxed_km' => 'nullable|numeric|min:0|max:999999',
-            'amount_excl_tax' => 'required|numeric|min:0|max:9999999',
+            'amount_excl_tax' => 'required|numeric|min:0.01|max:9999999',
             'vat_rate' => 'required|in:0,6,12,21',
             'vat_deductible' => 'boolean',
         ], [
-            'due_on.after_or_equal' => 'L\'échéance ne peut pas précéder l\'émission.',
-            'period_end.after_or_equal' => 'La fin de période ne peut pas précéder son début.',
+            'period_start.before_or_equal' => Traductions::t('msg.achat_periode_future', 'La période facturée ne peut pas être dans le futur.'),
+            'issued_on.before_or_equal' => Traductions::t('msg.achat_date_future', 'Une facture d\'achat ne peut pas être datée dans le futur.'),
+            'due_on.after_or_equal' => Traductions::t('msg.echeance_avant_emission', 'L\'échéance ne peut pas précéder l\'émission.'),
+            'period_end.after_or_equal' => Traductions::t('msg.periode_inversee', 'La fin de période ne peut pas précéder son début.'),
+            // Une date en 1900 creait une ligne « janvier 1900 » dans la
+            // synthese de TVA ; un montant nul n'est pas une facture.
+            'period_start.after_or_equal' => Traductions::t('msg.achat_date_ancienne', 'Cette date est trop ancienne : vérifiez l\'année.'),
+            'issued_on.after_or_equal' => Traductions::t('msg.achat_date_ancienne', 'Cette date est trop ancienne : vérifiez l\'année.'),
+            'amount_excl_tax.min' => Traductions::t('msg.achat_montant_nul', 'Le montant hors TVA doit être supérieur à zéro.'),
         ]);
 
-        $existe = PurchaseInvoice::where('supplier_name', $donnees['supplier_name'])
-            ->where('reference', $donnees['reference'])
+        // « Shell » et « SHELL », « FAC-12 » et « fac-12 » : la meme facture.
+        // Encodee deux fois, sa TVA etait deduite deux fois.
+        $existe = PurchaseInvoice::whereRaw('lower(trim(supplier_name)) = ?', [mb_strtolower(trim($donnees['supplier_name']))])
+            ->whereRaw('lower(trim(reference)) = ?', [mb_strtolower(trim($donnees['reference']))])
             ->exists();
 
         if ($existe) {
             return back()->withErrors([
-                'reference' => 'Cette référence existe déjà pour ce fournisseur : la facture est probablement déjà encodée.',
+                'reference' => Traductions::t('msg.achat_doublon', 'Cette référence existe déjà pour ce fournisseur : la facture est probablement déjà encodée.'),
             ]);
         }
 
@@ -138,13 +152,13 @@ class PurchaseInvoiceController extends Controller
             ['vehicule' => $achat->vehicle_registration, 'ttc' => (float) $achat->amount_incl_tax],
         );
 
-        return back()->with('success', 'Facture fournisseur encodée.');
+        return back()->with('success', Traductions::t('msg.achat_encode', 'Facture fournisseur encodée.'));
     }
 
     public function markPaid(PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
         if ($purchaseInvoice->status !== 'TO_PAY') {
-            return back()->with('error', 'Cette facture est déjà payée.');
+            return back()->with('error', Traductions::t('msg.achat_deja_paye', 'Cette facture est déjà payée.'));
         }
 
         $purchaseInvoice->update(['status' => 'PAID', 'paid_on' => now()->toDateString()]);
@@ -155,14 +169,18 @@ class PurchaseInvoiceController extends Controller
             $purchaseInvoice,
         );
 
-        return back()->with('success', 'Facture marquée payée.');
+        return back()->with('success', Traductions::t('msg.achat_paye', 'Facture marquée payée.'));
     }
 
     public function tva(): Response
     {
         $ventes = DB::table('invoices')
             ->where('status', '!=', 'DRAFT')
-            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois, sum(amount_excl_tax) AS ht, sum(vat_amount) AS collectee")
+            // Un avoir se deduit, au mois de son emission, de la TVA
+            // collectee ; la facture qu'il annule reste comptee a son mois.
+            ->selectRaw("to_char(issued_on, 'YYYY-MM') AS mois,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -amount_excl_tax ELSE amount_excl_tax END) AS ht,
+                sum(CASE WHEN type = 'CREDIT_NOTE' THEN -vat_amount ELSE vat_amount END) AS collectee")
             ->groupBy('mois')
             ->get()
             ->keyBy('mois');
@@ -180,14 +198,17 @@ class PurchaseInvoiceController extends Controller
             ->sortDesc()
             ->values()
             ->map(function (string $mois) use ($ventes, $achats) {
-                $date = Carbon::createFromFormat('Y-m', $mois);
+                // Sans « ! », Carbon complete la date avec le jour courant :
+                // un 30 octobre, « 2026-02 » devenait le 30 fevrier, soit
+                // le 2 mars, et la ligne de fevrier s'affichait en mars.
+                $date = Carbon::createFromFormat('!Y-m', $mois);
                 $collectee = (float) ($ventes[$mois]->collectee ?? 0);
                 $deductible = (float) ($achats[$mois]->deductible ?? 0);
 
                 return [
                     'mois' => $mois,
-                    'libelle' => $date->locale('fr')->isoFormat('MMMM YYYY'),
-                    'trimestre' => 'T'.$date->quarter.' '.$date->year,
+                    'libelle' => $date->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
+                    'trimestre' => Traductions::t('msg.trimestre', 'T:n :annee', ['n' => $date->quarter, 'annee' => $date->year]),
                     'ventes_ht' => (float) ($ventes[$mois]->ht ?? 0),
                     'collectee' => $collectee,
                     'achats_ht' => (float) ($achats[$mois]->ht ?? 0),

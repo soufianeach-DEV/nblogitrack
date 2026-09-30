@@ -4,7 +4,13 @@ use App\Http\Middleware\AuthentifierCleApi;
 use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\IgnorerFiltresEnTableau;
+use App\Http\Middleware\MesurerAudience;
+use App\Http\Middleware\RetirerCaracteresDeControle;
 use App\Http\Middleware\VerifierCompteActif;
+use App\Models\Translation;
+use App\Support\Audience;
+use App\Support\Traductions;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -28,13 +34,33 @@ return Application::configure(basePath: dirname(__DIR__))
         // VerifierCompteActif passe en premier : inutile de traduire une
         // page et de partager un dictionnaire pour quelqu'un qu'on va
         // renvoyer a l'ecran de connexion.
+        // Les en-tetes de securite s'appliquent a toutes les reponses, API
+        // et pages d'erreur comprises : places dans le groupe web, ils
+        // manquaient sur une 404 levee avant lui (modele introuvable dans
+        // l'adresse) et sur les reponses de l'API.
+        $middleware->append(EnTetesDeSecurite::class);
+        $middleware->append(RetirerCaracteresDeControle::class);
+
         $middleware->web(append: [
-            EnTetesDeSecurite::class,
+            IgnorerFiltresEnTableau::class,
             VerifierCompteActif::class,
             DefinirLangue::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            MesurerAudience::class,
         ]);
+
+        // Le choix du bandeau est pose par le navigateur, en clair : le
+        // serveur le lit tel quel.
+        $middleware->encryptCookies(except: [Audience::TEMOIN]);
+
+        // Un visiteur non connecte revient a l'ecran de connexion dans la
+        // langue de l'adresse demandee (/nl/missions -> /nl/login).
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $langue = $request->segment(1);
+
+            return route('login', ['langue' => Traductions::estServie($langue) ? $langue : 'fr']);
+        });
 
         // Stripe notifie le paiement depuis ses serveurs : aucune session,
         // donc aucun jeton de formulaire a presenter. L'appel est authentifie
@@ -66,19 +92,43 @@ return Application::configure(basePath: dirname(__DIR__))
          * Faire confiance a X-Forwarded-Proto retablit aussi
          * $request->secure(), dont depend l'en-tete HSTS.
          */
-        $proxies = trim((string) env('TRUSTED_PROXIES', ''));
+        // La liste se lit a chaque requete dans config/trustedproxy.php :
+        // lue ici, avant le chargement du fichier .env, elle restait vide
+        // en production.
+        $middleware->trustProxies(
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO,
+        );
 
-        if ($proxies !== '') {
-            $middleware->trustProxies(
-                at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))),
-                headers: Request::HEADER_X_FORWARDED_FOR
-                    | Request::HEADER_X_FORWARDED_HOST
-                    | Request::HEADER_X_FORWARDED_PORT
-                    | Request::HEADER_X_FORWARDED_PROTO,
-            );
-        }
+        // Seuls le domaine de APP_URL et ses sous-domaines sont servis : un
+        // en-tete Host force ne se retrouve plus dans les liens absolus
+        // (robots.txt, plan du site, balises canoniques). Sans effet en
+        // developpement local et pendant les tests.
+        $middleware->trustHosts();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // L'API repond toujours en JSON, meme a un appelant qui n'envoie
+        // pas Accept: application/json : une erreur de validation ou une
+        // limite de debit depassee repondait par une redirection HTML.
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api', 'api/*') || $request->expectsJson(),
+        );
+
+        // Une adresse inconnue (/nl/inexistant, /en/p/nope) echoue avant
+        // que la langue soit fixee : la page d'erreur sortait en francais.
+        // On la lit dans le premier segment de l'adresse.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            $langue = $request->segment(1);
+
+            if (Traductions::estServie($langue)) {
+                app()->setLocale($langue);
+            }
+
+            return null;
+        });
+
         // Une session dure deux heures. Passe ce delai, le jeton du
         // formulaire ne correspond plus et Laravel repond « 419 PAGE
         // EXPIRED » : une page nue qui ne dit rien et ou l'utilisateur reste
@@ -98,12 +148,82 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->expectsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([
-                    'message' => 'Votre session a expiré, reconnectez-vous.',
+                    'message' => Traductions::t('msg.session_expiree_courte', 'Votre session a expiré, reconnectez-vous.'),
                 ], 419);
             }
 
             return redirect()
                 ->route('login')
-                ->with('status', 'Votre session a expiré. Reconnectez-vous pour continuer.');
+                ->with('status', Traductions::t('msg.session_expiree', 'Votre session a expiré. Reconnectez-vous pour continuer.'));
+        });
+
+        // API : la limite de debit repond en JSON, dans la langue demandee.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 429 || ! $request->is('api', 'api/*')) {
+                return null;
+            }
+
+            $langue = $request->getPreferredLanguage(array_keys(Translation::LANGUES));
+
+            if (trim((string) $request->header('Accept-Language')) !== '' && Traductions::estServie($langue)) {
+                app()->setLocale($langue);
+            }
+
+            $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            return response()->json([
+                'message' => Traductions::t('api.trop_de_requetes', 'Trop de requêtes. Réessayez dans :secondes secondes.', ['secondes' => max(1, $secondes)]),
+            ], 429, $e->getHeaders());
+        });
+
+        // Une limite de debit depassee repondait par une fenetre brute
+        // « 429 TOO MANY REQUESTS », en anglais, par-dessus le formulaire.
+        // L'utilisateur reste sur sa page, ses champs intacts, avec un
+        // message qui dit combien de temps attendre.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 429 || $request->is('api', 'api/*') || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
+                return null;
+            }
+
+            $secondes = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+
+            // Retour a la page precedente, sauf si c'est l'adresse bloquee
+            // elle-meme (lien du courriel de suivi ouvert apres trop
+            // d'essais) : le retour la redemandait, et la redirection
+            // tournait en boucle. On repart alors de la meme page sans ses
+            // parametres.
+            $precedente = url()->previous();
+            $memeAdresse = strtok($precedente, '?') === $request->url();
+            $cible = $request->isMethod('GET') && ($memeAdresse || $precedente === url('/'))
+                ? $request->url()
+                : $precedente;
+
+            if ($request->isMethod('GET') && $cible === $request->fullUrl()) {
+                return null;
+            }
+
+            return redirect()->to($cible)->with('error', Traductions::t('msg.trop_de_demandes', 'Trop de tentatives en peu de temps. Réessayez dans :secondes secondes.', [
+                'secondes' => max(1, $secondes),
+            ]));
+        });
+
+        // Un refus pendant la navigation (lien vers un ecran d'un autre
+        // role) s'ouvrait dans une fenetre d'erreur brute, en anglais. On
+        // reste sur la page, avec un message dans la langue de l'ecran.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() !== 403 || ! $request->header('X-Inertia')) {
+                return null;
+            }
+
+            // Ouvert directement (lien, retour apres connexion), l'ecran
+            // refuse est aussi la page precedente : y revenir bouclait.
+            $precedente = url()->previous();
+            $cible = $request->isMethod('GET') && strtok($precedente, '?') === $request->url() ? route('dashboard') : $precedente;
+
+            if ($request->isMethod('GET') && $cible === $request->fullUrl()) {
+                return null;
+            }
+
+            return redirect()->to($cible)->with('error', Traductions::t('msg.acces_refuse', 'Vous n\'avez pas accès à cet écran.'));
         });
     })->create();

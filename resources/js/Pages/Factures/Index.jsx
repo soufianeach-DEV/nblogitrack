@@ -2,18 +2,23 @@ import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 const ETATS = {
     DRAFT: { cle: 'facture.brouillon', libelle: 'Brouillon', classe: 'bg-slate-100 text-slate-700' },
     SENT: { cle: 'statut.envoyee', libelle: 'Envoyée', classe: 'bg-brand-blue/10 text-brand-blue' },
     PAID: { cle: 'statut.payee', libelle: 'Payée', classe: 'bg-status-delivered/10 text-status-delivered' },
     OVERDUE: { cle: 'statut.en_retard', libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
+    CREDITED: { cle: 'facture.annulee_avoir', libelle: 'Annulée par avoir', classe: 'bg-slate-100 text-slate-500 line-through' },
 };
 
-export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false }) {
+const AVOIR = { cle: 'facture.avoir', libelle: 'Avoir', classe: 'bg-action/20 text-marine' };
+
+export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false, aFacturer = 0 }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const locale = useLocale();
+    const [paiement, setPaiement] = useState(null);
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
     const ouvrir = (facture) => (e) => {
@@ -23,16 +28,42 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
         router.get(route('invoices.show', facture.id));
     };
 
+    const [facturation, setFacturation] = useState(false);
+    const facturerMaintenant = () => {
+        if (! window.confirm(t('facture.confirmer_maintenant', 'Émettre maintenant les factures de toutes les livraisons non facturées, mois en cours compris, et les envoyer aux clients ?'))) return;
+        setFacturation(true);
+        router.post(route('invoices.now'), {}, { preserveScroll: true, onFinish: () => setFacturation(false) });
+    };
+
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <h1 className="text-2xl font-bold text-marine">{t('nav.facturation', 'Facturation')}</h1>
-                    <p className="text-sm text-slate-600">
-                        {canPlan
-                            ? t('facture.toutes', 'Toutes les factures émises.')
-                            : t('facture.les_votres', 'Vos factures et leur état de paiement.')}
-                    </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-marine">{t('nav.facturation', 'Facturation')}</h1>
+                        <p className="text-sm text-slate-600">
+                            {canPlan
+                                ? t('facture.toutes', 'Toutes les factures émises.')
+                                : t('facture.les_votres', 'Vos factures et leur état de paiement.')}
+                        </p>
+                    </div>
+                    {peutGererAchats && (
+                        <div className="text-right">
+                            <button
+                                type="button"
+                                disabled={aFacturer === 0 || facturation}
+                                onClick={facturerMaintenant}
+                                className="rounded-lg bg-action px-4 py-2 text-sm font-bold text-marine-deep shadow-sm transition hover:bg-action-dark disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {facturation ? t('action.enregistrement', 'Enregistrement…') : t('facture.facturer_maintenant', 'Facturer maintenant')}
+                            </button>
+                            <p className="mt-1 text-xs text-slate-600">
+                                {aFacturer === 0
+                                    ? t('facture.rien_a_facturer', 'Toutes les livraisons sont facturées.')
+                                    : t('facture.a_facturer', ':n livraison(s) ou supplément(s) à facturer', { n: aFacturer })}
+                            </p>
+                        </div>
+                    )}
                 </div>
             }
         >
@@ -75,7 +106,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                         </thead>
                         <tbody>
                             {factures.data.map((facture) => {
-                                const etat = ETATS[facture.etat] ?? ETATS.SENT;
+                                const etat = facture.avoir ? AVOIR : (ETATS[facture.etat] ?? ETATS.SENT);
 
                                 return (
                                     <tr
@@ -112,7 +143,7 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                                     {t('facture.tva_due_client', 'TVA due par le client')}
                                                 </span>
                                             )}
-                                            {euros(facture.ttc)}
+                                            {facture.avoir ? '− ' : ''}{euros(facture.ttc)}
                                         </td>
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase ${etat.classe}`}>
@@ -125,12 +156,16 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                                                 {facture.peut_payer && (
                                                     <button
                                                         type="button"
+                                                        disabled={paiement !== null}
                                                         onClick={(e) => {
-
                                                             e.stopPropagation();
-                                                            router.post(route('payments.payer', facture.id));
+                                                            // Un seul envoi : un double clic ouvrait deux paiements.
+                                                            router.post(route('payments.payer', facture.id), {}, {
+                                                                onStart: () => setPaiement(facture.id),
+                                                                onFinish: () => setPaiement(null),
+                                                            });
                                                         }}
-                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark"
+                                                        className="rounded-lg bg-action px-3 py-1 text-xs font-bold text-marine-deep transition hover:bg-action-dark disabled:opacity-50"
                                                     >
                                                         {t('facture.payer', 'Payer')}
                                                     </button>

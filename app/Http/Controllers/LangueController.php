@@ -12,9 +12,14 @@ class LangueController extends Controller
     {
         abort_unless(Traductions::estServie($vers), 404);
 
-        if ($utilisateur = $request->user()) {
+        // La langue du compte (celle de ses courriels) ne change que depuis
+        // le site lui-meme : un lien pose sur une autre page ne la modifie
+        // plus a l'insu de l'utilisateur.
+        $depuisLeSite = in_array($request->header('Sec-Fetch-Site'), [null, 'same-origin', 'none'], true);
+
+        if (($utilisateur = $request->user()) && $depuisLeSite) {
             $utilisateur->update(['locale' => $vers]);
-        } else {
+        } elseif (! $utilisateur) {
             $request->session()->put('langue', $vers);
         }
 

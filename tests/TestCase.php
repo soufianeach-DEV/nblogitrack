@@ -49,6 +49,10 @@ abstract class TestCase extends BaseTestCase
         // parametre et un chemin ecrit en dur repondrait une redirection.
         URL::defaults(['langue' => 'fr']);
 
+        // Un seul serveur d'itineraire : les tests le simulent, et le
+        // serveur de secours ne partirait pas sur le vrai reseau.
+        config(['services.osrm.serveurs' => ['https://router.project-osrm.org']]);
+
         return parent::setUpTraits();
     }
 }

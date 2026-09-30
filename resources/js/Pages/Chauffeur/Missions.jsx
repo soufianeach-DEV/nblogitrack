@@ -7,10 +7,24 @@ import { useEffect, useRef, useState } from 'react';
 
 const STATUTS = {
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', pastille: 'bg-action/15 text-action-dark', barre: 'border-l-action' },
+    ASSIGNED: { cle: 'mission.a_venir', libelle: 'À venir', pastille: 'bg-slate-100 text-slate-700', barre: 'border-l-slate-300' },
     PENDING: { cle: 'mission.a_venir', libelle: 'À venir', pastille: 'bg-slate-100 text-slate-700', barre: 'border-l-slate-300' },
     DELIVERED: { cle: 'mission.livree', libelle: 'Livrée', pastille: 'bg-status-delivered/10 text-status-delivered', barre: 'border-l-status-delivered' },
     CANCELLED: { cle: 'mission.annulee', libelle: 'Annulée', pastille: 'bg-status-incident/10 text-status-incident', barre: 'border-l-status-incident' },
 };
+
+const memeJour = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** « 09:00 » aujourd'hui, « mar. 29/09 · 09:00 » un autre jour, dans la langue de l'ecran. */
+function quand(iso, locale, { avecHeure = true, toujoursDate = false } = {}) {
+    if (! iso) return null;
+    const d = new Date(iso);
+    const heure = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    if (avecHeure && ! toujoursDate && memeJour(d, new Date())) return heure;
+    const jour = d.toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' });
+
+    return avecHeure ? `${jour} · ${heure}` : jour;
+}
 
 function Etape({ intitule, heure, lieu }) {
     return (
@@ -26,6 +40,7 @@ function Etape({ intitule, heure, lieu }) {
 function CarteMission({ mission, active, onClick }) {
     const t = useTraduction();
     const v = useVocabulaire();
+    const locale = useLocale();
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
     return (
@@ -46,8 +61,13 @@ function CarteMission({ mission, active, onClick }) {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                    <Etape intitule={t('ordres.chargement', 'Chargement')} heure={mission.heure_enlevement} lieu={mission.enlevement} />
-                    <Etape intitule={t('commun.livraison', 'livraison')} heure={mission.date_livraison} lieu={mission.livraison} />
+                    <Etape intitule={t('commun.enlevement', 'enlèvement')} heure={quand(mission.enlevement_iso, locale)} lieu={mission.enlevement} />
+                    <Etape intitule={t('commun.livraison', 'livraison')} heure={quand(mission.date_livraison, locale, { avecHeure: false })} lieu={mission.livraison} />
+                    {mission.annulee_le && (
+                        <p className="text-xs font-semibold text-status-incident">
+                            {t('mission.annulee_le', 'Annulée le :date', { date: quand(mission.annulee_le, locale, { avecHeure: false }) })}
+                        </p>
+                    )}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
@@ -70,6 +90,28 @@ function BoutonAvancement({ mission }) {
     const t = useTraduction();
     const [arme, setArme] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [localisation, setLocalisation] = useState(false);
+    const [receptionnaire, setReceptionnaire] = useState('');
+    const livraison = mission.action.statut === 'DELIVERED';
+    // Marchandise signalee endommagee : la livraison se fait avec reserves,
+    // deja remplies avec ce que le chauffeur a decrit.
+    const dommages = (mission.incidents ?? []).filter((incident) => incident.marchandise_endommagee);
+    const [reserves, setReserves] = useState(() => dommages
+        .map((incident) => `${incident.type === 'DOMMAGE' ? incident.libelle : incident.libelle + ', ' + t('incident.avec_dommage', 'marchandise endommagée')}${incident.commentaire ? ' : ' + incident.commentaire : ''}`)
+        .join('\n')
+        .slice(0, 1000));
+    const bloc = useRef(null);
+    const champ = useRef(null);
+
+    // Le formulaire de livraison s'ouvre au-dessus du bouton, qui cesse
+    // d'etre colle au bas de l'ecran : sur un telephone, le bouton partait
+    // sous le bord. On amene le formulaire et le bouton a l'ecran.
+    useEffect(() => {
+        if (arme && livraison) {
+            bloc.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+            champ.current?.focus({ preventScroll: true });
+        }
+    }, [arme, livraison]);
 
     const envoyer = async () => {
         if (! arme) {
@@ -79,12 +121,16 @@ function BoutonAvancement({ mission }) {
         }
 
         setProcessing(true);
+        setLocalisation(true);
 
         const point = await positionActuelle();
+
+        setLocalisation(false);
 
         router.patch(route('missions.status', mission.id), {
             statut: mission.action.statut,
             ...(point ?? {}),
+            ...(livraison ? { receptionnaire, reserves } : {}),
         }, {
             preserveScroll: true,
             onFinish: () => {
@@ -95,7 +141,42 @@ function BoutonAvancement({ mission }) {
     };
 
     return (
-        <div className="sticky bottom-20 mt-4 lg:bottom-0">
+        // Le formulaire de livraison, ouvert, ne recouvre pas la fiche :
+        // il n'est plus colle au bas de l'ecran.
+        <div ref={bloc} className={arme && livraison ? 'mt-4 scroll-mb-24 lg:scroll-mb-4' : 'sticky bottom-20 mt-4 lg:bottom-0'}>
+            {arme && livraison && (
+                <div className="mb-3 space-y-2 rounded-xl bg-white p-3 shadow-lg">
+                    {dommages.length > 0 && (
+                        <p className="rounded-lg bg-status-incident/10 px-3 py-2 text-sm font-semibold text-status-incident" role="alert">
+                            {t('incident.livraison_reserves', 'Marchandise endommagée : livraison avec réserves. Faites-les constater par le réceptionnaire.')}
+                        </p>
+                    )}
+                    <label className="block text-sm font-medium text-marine">
+                        {t('mission.receptionnaire', 'Réceptionné par')}
+                        <input
+                            ref={champ}
+                            type="text"
+                            value={receptionnaire}
+                            onChange={(e) => setReceptionnaire(e.target.value)}
+                            maxLength={120}
+                            autoComplete="off"
+                            placeholder={t('mission.receptionnaire_aide', 'Nom de la personne qui reçoit la marchandise')}
+                            className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                    </label>
+                    <label className="block text-sm font-medium text-marine">
+                        {t('mission.reserves', 'Réserves (facultatif)')}
+                        <textarea
+                            value={reserves}
+                            onChange={(e) => setReserves(e.target.value)}
+                            maxLength={1000}
+                            rows={2}
+                            placeholder={t('mission.reserves_aide', 'Colis abîmé, manquant, emballage ouvert…')}
+                            className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                    </label>
+                </div>
+            )}
             <button
                 type="button"
                 onClick={envoyer}
@@ -107,7 +188,7 @@ function BoutonAvancement({ mission }) {
                 }`}
             >
                 {processing
-                    ? t('action.enregistrement', 'Enregistrement…')
+                    ? (localisation ? t('mission.localisation', 'Localisation…') : t('action.enregistrement', 'Enregistrement…'))
                     : arme
                         ? t('mission.confirmer', 'Appuyez à nouveau pour confirmer')
                         : mission.action.libelle}
@@ -125,16 +206,37 @@ function BoutonAvancement({ mission }) {
     );
 }
 
-function NoteInformation({ note }) {
+function NoteInformation({ note, ouverte, onFermer }) {
     const t = useTraduction();
     const [envoi, setEnvoi] = useState(false);
+    const fenetre = useRef(null);
+    const visible = Boolean(note && (note.a_accuser || ouverte));
 
-    if (! note) return null;
+    // Une vraie fenetre modale du navigateur : le reste de la page devient
+    // inerte, la touche Tab ne peut plus atteindre les boutons de derriere
+    // (on validait une livraison sans avoir pris connaissance de la note).
+    useEffect(() => {
+        const d = fenetre.current;
+        if (! d) return;
+        if (visible && ! d.open) d.showModal();
+        if (! visible && d.open) d.close();
+    }, [visible]);
+
+    if (! visible) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-marine-deep/60 p-4 sm:items-center">
-            <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-7">
-                <h2 className="text-xl font-bold text-marine">{note.titre}</h2>
+        <dialog
+            ref={fenetre}
+            aria-labelledby="note-titre"
+            onCancel={(e) => {
+                // Echap ne ferme que la relecture, pas la prise de connaissance.
+                e.preventDefault();
+                if (! note.a_accuser) onFermer();
+            }}
+            className="m-auto w-full max-w-2xl rounded-2xl bg-transparent p-4 backdrop:bg-marine-deep/60"
+        >
+            <div className="max-h-[85vh] w-full overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-7">
+                <h2 id="note-titre" className="text-xl font-bold text-marine">{note.titre}</h2>
                 <p className="mt-1 text-xs text-slate-600">
                     {t('note.version', 'Version du :date', { date: note.mise_a_jour })}
                 </p>
@@ -147,6 +249,15 @@ function NoteInformation({ note }) {
                     {t('note.portee', 'Cette déclaration atteste que vous avez été informé. Elle ne vous demande pas votre accord : le traitement repose sur l\'exécution de votre contrat de travail et sur l\'intérêt légitime de l\'entreprise, pas sur votre consentement.')}
                 </p>
 
+                {! note.a_accuser ? (
+                    <button
+                        type="button"
+                        onClick={onFermer}
+                        className="mt-5 w-full rounded-xl border border-marine px-6 py-3.5 text-base font-bold text-marine transition hover:bg-marine/5"
+                    >
+                        {t('mission.fermer', 'Fermer')}
+                    </button>
+                ) : (
                 <button
                     type="button"
                     disabled={envoi}
@@ -163,24 +274,29 @@ function NoteInformation({ note }) {
                         ? t('action.enregistrement', 'Enregistrement…')
                         : t('note.accuser', 'J\'ai pris connaissance')}
                 </button>
+                )}
             </div>
-        </div>
+        </dialog>
     );
 }
 
-function SuiviDirect({ mission }) {
+function SuiviDirect({ missions }) {
     const t = useTraduction();
     const locale = useLocale();
     const [dernier, setDernier] = useState(null);
     const [refuse, setRefuse] = useState(false);
     const actif = useRef(true);
 
-    const partage = mission.suivi_direct && mission.statut === 'IN_PROGRESS';
+    // En groupage, le meme camion porte plusieurs missions suivies : le
+    // point part pour chacune (seule la premiere le recevait).
+    const ids = missions.map((m) => m.id).join(',');
+    const partage = missions.length > 0;
 
     useEffect(() => {
         if (! partage) return undefined;
 
         actif.current = true;
+        const arretees = new Set();
 
         const envoyer = async () => {
             const point = await positionActuelle();
@@ -195,28 +311,36 @@ function SuiviDirect({ mission }) {
 
             setRefuse(false);
 
-            try {
-                const reponse = await fetch(route('missions.position', mission.id), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-XSRF-TOKEN': decodeURIComponent(
-                            document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
-                        ),
-                    },
-                    body: JSON.stringify(point),
-                });
+            for (const id of ids.split(',').map(Number)) {
+                if (arretees.has(id)) continue;
 
-                const resultat = await reponse.json();
+                try {
+                    const reponse = await fetch(route('missions.position', id), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-XSRF-TOKEN': decodeURIComponent(
+                                document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
+                            ),
+                        },
+                        body: JSON.stringify(point),
+                    });
 
-                if (resultat.suivi === false) {
-                    actif.current = false;
-                } else if (resultat.retenu) {
-                    setDernier(new Date());
+                    const resultat = await reponse.json();
+
+                    if (resultat.suivi === false) {
+                        arretees.add(id);
+                    } else if (resultat.retenu) {
+                        setDernier(new Date());
+                    }
+                } catch {
+                    // Reseau coupe : le prochain envoi reessaie.
                 }
-            } catch {
+            }
 
+            if (arretees.size === ids.split(',').length) {
+                actif.current = false;
             }
         };
 
@@ -227,16 +351,16 @@ function SuiviDirect({ mission }) {
             actif.current = false;
             clearInterval(minuteur);
         };
-    }, [partage, mission.id]);
+    }, [partage, ids]);
 
     if (! partage) return null;
 
     return (
-        <div className={`mt-4 rounded-lg px-3 py-2.5 text-xs ${refuse ? 'bg-status-incident/10' : 'bg-brand-blue/10'}`}>
+        <div className={`mb-4 rounded-lg px-3 py-2.5 text-xs ${refuse ? 'bg-status-incident/10' : 'bg-brand-blue/10'}`}>
             <p className={`font-semibold ${refuse ? 'text-status-incident' : 'text-brand-blue'}`}>
                 {refuse
                     ? t('suivi_direct.refuse', 'Position non partagée')
-                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission')}
+                    : t('suivi_direct.actif', 'Votre position est partagée pour cette mission') + ' · ' + missions.map((m) => m.numero).join(', ')}
             </p>
             <p className="mt-0.5 text-slate-600">
                 {refuse
@@ -251,10 +375,219 @@ function SuiviDirect({ mission }) {
     );
 }
 
+const TYPES_INCIDENT = [
+    ['ACCIDENT', 'incident.accident', 'Accident'],
+    ['PANNE', 'incident.panne', 'Panne'],
+    ['DOMMAGE', 'incident.dommage', 'Marchandise endommagée'],
+];
+
+function SignalerIncident({ mission }) {
+    const t = useTraduction();
+    const [ouvert, setOuvert] = useState(false);
+    const [type, setType] = useState('ACCIDENT');
+    // Accident ou panne : la question se pose a chaque fois, sans reponse
+    // par defaut.
+    const [endommagee, setEndommagee] = useState(null);
+    const [commentaire, setCommentaire] = useState('');
+    const [envoi, setEnvoi] = useState(false);
+    const [erreurs, setErreurs] = useState({});
+
+    const envoyer = async (e) => {
+        e.preventDefault();
+        setEnvoi(true);
+
+        // La position accompagne le signalement, elle ne le bloque pas.
+        const point = await positionActuelle();
+
+        router.post(route('missions.incident', mission.id), {
+            type,
+            commentaire,
+            ...(type !== 'DOMMAGE' && endommagee !== null ? { marchandise_endommagee: endommagee } : {}),
+            ...(point ?? {}),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setOuvert(false);
+                setCommentaire('');
+                setEndommagee(null);
+                setErreurs({});
+            },
+            onError: (e) => setErreurs(e),
+            onFinish: () => setEnvoi(false),
+        });
+    };
+
+    if (! ouvert) {
+        return (
+            <button
+                type="button"
+                onClick={() => setOuvert(true)}
+                className="mt-3 w-full rounded-xl border border-status-incident px-4 py-3 text-sm font-semibold text-status-incident transition hover:bg-status-incident/5"
+            >
+                {t('incident.signaler', 'Signaler un incident')}
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={envoyer} className="mt-3 space-y-3 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-sm">
+            <p className="text-sm font-bold text-status-incident">{t('incident.signaler', 'Signaler un incident')}</p>
+            <p className="text-xs text-slate-600">{t('incident.urgence', 'En cas de blessé, appelez d\'abord le 112.')}</p>
+
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('incident.type', 'Type d\'incident')}>
+                {TYPES_INCIDENT.map(([valeur, cle, libelle]) => (
+                    <button
+                        key={valeur}
+                        type="button"
+                        role="radio"
+                        aria-checked={type === valeur}
+                        onClick={() => setType(valeur)}
+                        className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                            type === valeur ? 'bg-status-incident text-white' : 'bg-slate-100 text-marine hover:bg-slate-200'
+                        }`}
+                    >
+                        {t(cle, libelle)}
+                    </button>
+                ))}
+            </div>
+
+            {type !== 'DOMMAGE' && (
+                <div>
+                    <p className="text-sm font-medium text-marine">{t('incident.marchandise_question', 'La marchandise est-elle endommagée ?')}</p>
+                    <div className="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('incident.marchandise_question', 'La marchandise est-elle endommagée ?')}>
+                        {[[true, 'ordres.oui', 'Oui'], [false, 'ordres.non', 'Non']].map(([valeur, cle, libelle]) => (
+                            <button
+                                key={cle}
+                                type="button"
+                                role="radio"
+                                aria-checked={endommagee === valeur}
+                                onClick={() => setEndommagee(valeur)}
+                                className={`rounded-lg px-2 py-2 text-sm font-semibold transition ${
+                                    endommagee === valeur
+                                        ? (valeur ? 'bg-status-incident text-white' : 'bg-marine text-white')
+                                        : 'bg-slate-100 text-marine hover:bg-slate-200'
+                                }`}
+                            >
+                                {t(cle, libelle)}
+                            </button>
+                        ))}
+                    </div>
+                    {erreurs.marchandise_endommagee && <p className="mt-1 text-xs text-status-incident">{erreurs.marchandise_endommagee}</p>}
+                </div>
+            )}
+
+            <label className="block text-sm font-medium text-marine">
+                {t('incident.description', 'Que s\'est-il passé ?')}
+                <textarea
+                    value={commentaire}
+                    onChange={(e) => setCommentaire(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    required
+                    placeholder={t('incident.description_aide', 'Ex. : accrochage sur l\'E40, camion immobilisé ; 3 cartons écrasés…')}
+                    className="mt-1 block w-full rounded-md border-gray-300 text-base shadow-sm focus:border-marine focus:ring-marine"
+                />
+            </label>
+            {erreurs.commentaire && <p className="text-xs text-status-incident">{erreurs.commentaire}</p>}
+            {erreurs.type && <p className="text-xs text-status-incident">{erreurs.type}</p>}
+
+            <div className="flex gap-2">
+                <button
+                    type="submit"
+                    disabled={envoi}
+                    className="flex-1 rounded-xl bg-status-incident px-4 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                >
+                    {envoi ? t('action.enregistrement', 'Enregistrement…') : t('incident.envoyer', 'Envoyer le signalement')}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setOuvert(false)}
+                    className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:text-marine"
+                >
+                    {t('action.annuler', 'Annuler')}
+                </button>
+            </div>
+        </form>
+    );
+}
+
+// Accident ou panne : la mission attend. Le chauffeur reprend la route une
+// fois le camion repare, ou demande un autre vehicule au planificateur.
+function SuiteIncident({ mission }) {
+    const t = useTraduction();
+    const [envoi, setEnvoi] = useState(null);
+    const immobilisation = mission.immobilisation;
+    const accident = immobilisation.type === 'ACCIDENT';
+
+    const decider = (decision) => {
+        setEnvoi(decision);
+        router.post(route('missions.incident.suite', mission.id), { decision }, {
+            preserveScroll: true,
+            onFinish: () => setEnvoi(null),
+        });
+    };
+
+    // Marchandise endommagee en plus : le chauffeur ne decide pas de la
+    // suite, il attend les consignes du planificateur.
+    if (immobilisation.decision_planificateur) {
+        return (
+            <div className="sticky bottom-20 mt-4 space-y-2 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-lg lg:bottom-0" role="alert">
+                <p className="text-sm font-bold text-status-incident">
+                    {t('incident.immobilise', 'Camion immobilisé')} · {immobilisation.libelle}
+                </p>
+                <p className="text-sm text-marine">
+                    {t('incident.attendre_consignes', 'Marchandise endommagée et camion immobilisé : ne repartez pas. Le planificateur vous donne la suite à donner.')}
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="sticky bottom-20 mt-4 space-y-2 rounded-2xl border border-status-incident/40 bg-white p-4 shadow-lg lg:bottom-0">
+            <p className="text-sm font-bold text-status-incident">
+                {t('incident.immobilise', 'Camion immobilisé')} · {immobilisation.libelle}
+            </p>
+            {immobilisation.vehicule_demande ? (
+                <p className="rounded-lg bg-action/15 px-3 py-2 text-sm text-marine" role="status">
+                    {t('incident.vehicule_attente', 'Autre véhicule demandé : le planificateur vous en affecte un. Restez joignable.')}
+                </p>
+            ) : (
+                <p className="text-sm text-slate-600">
+                    {t('incident.que_faire', 'La mission reprendra quand le camion sera réparé ou remplacé.')}
+                </p>
+            )}
+            <button
+                type="button"
+                onClick={() => decider('reprendre')}
+                disabled={envoi !== null}
+                className="w-full rounded-xl bg-status-delivered px-4 py-4 text-base font-bold text-white shadow transition hover:bg-green-800 disabled:opacity-60"
+            >
+                {envoi === 'reprendre' ? t('action.enregistrement', 'Enregistrement…') : (accident
+                    ? t('incident.reprendre_accident', 'Reprendre la route — camion en état de rouler')
+                    : t('incident.reprendre', 'Reprendre la route — panne réparée'))}
+            </button>
+            {! immobilisation.vehicule_demande && (
+                <button
+                    type="button"
+                    onClick={() => decider('vehicule')}
+                    disabled={envoi !== null}
+                    className="w-full rounded-xl border border-status-incident px-4 py-3 text-sm font-bold text-status-incident transition hover:bg-status-incident/5 disabled:opacity-60"
+                >
+                    {envoi === 'vehicule' ? t('action.enregistrement', 'Enregistrement…') : (accident
+                        ? t('incident.autre_vehicule_accident', 'Demander un autre véhicule — camion hors d\'usage')
+                        : t('incident.autre_vehicule', 'Demander un autre véhicule — panne irréparable'))}
+                </button>
+            )}
+        </div>
+    );
+}
+
 function Fiche({ mission, onRetour }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
+    // Espace avant les deux-points en francais seulement.
+    const deuxPoints = locale.startsWith('fr') ? ' : ' : ': ';
     const statut = STATUTS[mission.statut] ?? STATUTS.PENDING;
 
     const nombre = (valeur, unite) => valeur === null || valeur === undefined
@@ -283,11 +616,21 @@ function Fiche({ mission, onRetour }) {
 
                 <ol className="mt-4 space-y-4">
                     <li className="flex gap-3">
-                        <span className="mt-1 flex h-3 w-3 shrink-0 rounded-full border-2 border-marine bg-white" />
+                        <span
+                            className={`mt-1 flex h-3 w-3 shrink-0 rounded-full border-2 ${
+                                mission.enleve_le ? 'border-status-delivered bg-status-delivered' : 'border-marine bg-white'
+                            }`}
+                        />
                         <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                {t('commun.enlevement', 'enlèvement')}{mission.enlevement_prevu && ' • ' + mission.enlevement_prevu}
-                            </p>
+                            {mission.enleve_le ? (
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-status-delivered">
+                                    {t('mission.enleve_le', 'enlevé le')} {quand(mission.enleve_le, locale, { toujoursDate: true })}
+                                </p>
+                            ) : (
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                    {t('commun.enlevement', 'enlèvement')}{mission.enlevement_iso && ' • ' + quand(mission.enlevement_iso, locale)}
+                                </p>
+                            )}
                             <p className="font-bold leading-snug text-marine">{mission.adresse_enlevement}</p>
                         </div>
                     </li>
@@ -295,7 +638,7 @@ function Fiche({ mission, onRetour }) {
                         <span className="mt-1 h-3 w-3 shrink-0 rounded-sm bg-marine" />
                         <div>
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                                {t('commun.livraison', 'livraison')}{mission.livraison_prevue && ' • ' + mission.livraison_prevue}
+                                {t('commun.livraison', 'livraison')}{mission.date_livraison && ' • ' + quand(mission.date_livraison, locale, { avecHeure: false })}
                             </p>
                             <p className="font-bold leading-snug text-marine">{mission.adresse_livraison}</p>
                         </div>
@@ -322,6 +665,23 @@ function Fiche({ mission, onRetour }) {
                         </dl>
                     )}
                 </div>
+
+                {mission.expediteur && (
+                    <div className="mt-4 rounded-lg bg-brand-blue/10 p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-blue">
+                            {t('commande.expediteur', 'Expéditeur au lieu de chargement')}{mission.pays_enlevement ? ` (${mission.pays_enlevement})` : ''}
+                        </p>
+                        <p className="mt-0.5 text-sm text-marine">
+                            {mission.expediteur}
+                            {mission.telephone_expediteur && (
+                                <> · <a href={`tel:${mission.telephone_expediteur.replace(/[^0-9+]/g, '')}`} className="font-semibold underline">{mission.telephone_expediteur}</a></>
+                            )}
+                        </p>
+                        {mission.reference_chargement && (
+                            <p className="mt-0.5 text-sm text-marine">{t('commande.reference_chargement', 'Référence de chargement')}{deuxPoints}{mission.reference_chargement}</p>
+                        )}
+                    </div>
+                )}
 
                 {mission.consignes && (
                     <div className="mt-4 rounded-lg bg-action/10 p-3">
@@ -351,16 +711,42 @@ function Fiche({ mission, onRetour }) {
                     </div>
                 </div>
 
-                {mission.livree_le && (
-                    <p className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm font-semibold text-status-delivered">
-                        {t('mission.livree_le', 'Livrée le')} {mission.livree_le}
-                    </p>
+                {(mission.incidents ?? []).length > 0 && (
+                    <div className="mt-4 rounded-lg bg-status-incident/10 px-3 py-2 text-sm text-status-incident">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide">{t('incident.signales', 'Incidents signalés')}</p>
+                        <ul className="mt-1 space-y-1">
+                            {mission.incidents.map((incident) => (
+                                <li key={incident.le}>
+                                    <span className="font-semibold">{incident.libelle}</span>
+                                    {incident.type !== 'DOMMAGE' && incident.marchandise_endommagee && (
+                                        <span className="font-semibold">{' · '}{t('incident.avec_dommage', 'marchandise endommagée')}</span>
+                                    )}
+                                    {' · '}{quand(incident.le, locale, { toujoursDate: true })}
+                                    {incident.commentaire && <span className="block text-marine">{incident.commentaire}</span>}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
 
-                <SuiviDirect mission={mission} />
+                {mission.livree_le && (
+                    <div className="mt-4 rounded-lg bg-status-delivered/10 px-3 py-2 text-sm text-status-delivered">
+                        <p className="font-semibold">{t('mission.livree_le', 'Livrée le')} {quand(mission.livree_le, locale, { toujoursDate: true })}</p>
+                        {mission.receptionnaire && (
+                            <p className="mt-1 text-marine">{t('mission.receptionnaire', 'Réceptionné par')}{deuxPoints}{mission.receptionnaire}</p>
+                        )}
+                        {mission.reserves && (
+                            <p className="mt-1 text-marine">{t('ordres.reserves', 'Réserves à la livraison')}{deuxPoints}{mission.reserves}</p>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {mission.action && <BoutonAvancement mission={mission} />}
+            {['ASSIGNED', 'IN_PROGRESS'].includes(mission.statut) && <SignalerIncident key={mission.id} mission={mission} />}
+
+            {mission.action && (mission.immobilisation
+                ? <SuiteIncident mission={mission} />
+                : <BoutonAvancement mission={mission} />)}
         </div>
     );
 }
@@ -368,7 +754,7 @@ function Fiche({ mission, onRetour }) {
 export default function Missions({ missions = [], mission = null, introuvable = false, note = null }) {
     const t = useTraduction();
     const locale = useLocale();
-    const actives = missions.filter((m) => m.statut === 'IN_PROGRESS' || m.statut === 'PENDING').length;
+    const actives = missions.filter((m) => m.statut === 'IN_PROGRESS' || m.statut === 'ASSIGNED').length;
 
     const aujourdhui = new Date().toLocaleDateString(locale, {
         weekday: 'long',
@@ -376,24 +762,45 @@ export default function Missions({ missions = [], mission = null, introuvable = 
         month: 'long',
     });
 
+    // Le message d'une mission ne suit pas le chauffeur sur la suivante :
+    // le flash est recharge avec la fiche.
     const ouvrir = (numero) => router.get(
         route('missions.index'),
         numero ? { mission: numero } : {},
-        { preserveState: true, preserveScroll: true, only: ['mission', 'introuvable'] },
+        { preserveState: true, preserveScroll: true, only: ['mission', 'introuvable', 'flash'] },
     );
+
+    // Les changements du planificateur (suivi active, mission retiree ou
+    // reaffectee) arrivent sans recharger la page.
+    useEffect(() => {
+        const minuteur = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                router.reload({ only: ['missions', 'mission', 'note', 'introuvable'] });
+            }
+        }, 60 * 1000);
+
+        return () => clearInterval(minuteur);
+    }, []);
+
+    const [noteOuverte, setNoteOuverte] = useState(false);
+    const enPartage = missions.filter((m) => m.statut === 'IN_PROGRESS' && m.suivi_direct);
 
     return (
         <ChauffeurLayout>
             <Head title={t('mission.mes_missions', 'Mes missions')} />
 
-            <NoteInformation note={note} />
+            <NoteInformation note={note} ouverte={noteOuverte} onFermer={() => setNoteOuverte(false)} />
+
+            {/* Le partage de position tourne tant que l'ecran des missions
+                est ouvert, sur la liste comme sur une fiche. */}
+            {enPartage.length > 0 && <SuiviDirect missions={enPartage} />}
 
             <div className="lg:flex lg:gap-4">
                 <div className={`lg:w-[360px] lg:shrink-0 ${mission ? 'hidden lg:block' : ''}`}>
                     <div className="mb-4 flex items-end justify-between gap-3">
                         <div>
                             <h1 className="text-2xl font-bold text-marine">{t('mission.mes_missions', 'Mes missions')}</h1>
-                            <p className="text-sm capitalize text-slate-600">{aujourdhui}</p>
+                            <p className="text-sm text-slate-600 first-letter:uppercase">{aujourdhui}</p>
                         </div>
                         <span className="shrink-0 rounded-full bg-brand-blue/10 px-3 py-1 text-sm font-bold text-brand-blue">
                             {actives} {actives > 1 ? t('mission.actives', 'actives') : t('mission.active', 'active')}
@@ -402,7 +809,7 @@ export default function Missions({ missions = [], mission = null, introuvable = 
 
                     {introuvable && (
                         <p className="mb-3 rounded-lg bg-status-incident/10 p-3 text-sm text-status-incident">
-                            {t('mission.pas_affectee', 'Cette mission ne vous est pas affectée.')}
+                            {t('mission.plus_affectee', 'Cette mission ne vous est pas ou plus affectée : le planificateur l\'a confiée à un autre chauffeur ou remise en attente.')}
                         </p>
                     )}
 
@@ -424,6 +831,12 @@ export default function Missions({ missions = [], mission = null, introuvable = 
                                 />
                             ))}
                         </ul>
+                    )}
+
+                    {note && ! note.a_accuser && (
+                        <button type="button" onClick={() => setNoteOuverte(true)} className="mt-4 text-sm font-semibold text-brand-blue hover:text-marine">
+                            {t('mission.relire_note', 'Relire la note d\'information')}
+                        </button>
                     )}
                 </div>
 

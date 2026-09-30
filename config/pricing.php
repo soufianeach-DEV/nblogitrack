@@ -12,6 +12,10 @@ return [
 
     'margin' => 0.15,
 
+    // Express coute au moins ce supplement de plus que Standard : le
+    // service le plus rapide n'est jamais le moins cher.
+    'express_premium_min' => 0.10,
+
     'toll_per_km' => [
         'AT' => 0.40,
         'BE' => 0.15,

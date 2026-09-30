@@ -35,10 +35,46 @@ return [
         ],
     ],
 
+    // Verification des numeros de TVA britanniques (HMRC, API « Check a
+    // UK VAT number », application declaree sur developer.service.hmrc.gov.uk).
+    'hmrc' => [
+        'client_id' => env('HMRC_CLIENT_ID'),
+        'client_secret' => env('HMRC_CLIENT_SECRET'),
+        'base' => env('HMRC_API_BASE', 'https://api.service.hmrc.gov.uk'),
+    ],
+
+    // Point d'acces Peppol (prestataire agree : Billit, Unifiedpost,
+    // e-invoice.be...). Il recoit le XML UBL de chaque facture et le
+    // remet au destinataire sur le reseau Peppol. Vide : pas d'envoi Peppol,
+    // la facture part seulement par courriel.
+    'peppol' => [
+        'url' => env('PEPPOL_URL'),
+        'cle' => env('PEPPOL_CLE'),
+    ],
+
+    // Pages de l'entreprise sur les reseaux sociaux : liens du pied de page
+    // et fiche schema.org. Vides : rien n'est affiche.
+    'reseaux' => [
+        'linkedin' => env('RESEAU_LINKEDIN'),
+        'facebook' => env('RESEAU_FACEBOOK'),
+        'instagram' => env('RESEAU_INSTAGRAM'),
+    ],
+
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        // Vide en production : l'API de Stripe. Renseigne pour un emulateur.
+        'api_base' => env('STRIPE_API_BASE'),
+    ],
+
+    // Itineraires routiers : essayes dans l'ordre, le second prend le
+    // relais quand le serveur de demonstration d'OSRM est sature.
+    'osrm' => [
+        'serveurs' => array_filter(explode(',', (string) env(
+            'OSRM_SERVEURS',
+            'https://router.project-osrm.org,https://routing.openstreetmap.de/routed-car',
+        ))),
     ],
 
 ];

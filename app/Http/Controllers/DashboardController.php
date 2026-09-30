@@ -6,15 +6,21 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Driver;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\Adresse;
+use App\Support\Formats;
+use App\Support\Incidents;
+use App\Support\JournalLisible;
 use App\Support\JoursFeries;
 use App\Support\Traductions;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,15 +37,16 @@ class DashboardController extends Controller
         $query = TransportOrder::query();
 
         if (! $personnel) {
-            $query->where('client_id', $utilisateur->id);
+            $query->where('client_id', $utilisateur->client_id);
         }
 
-        $stats = [
-            'total' => (clone $query)->count(),
-            'pending' => (clone $query)->where('status', 'PENDING')->count(),
-            'in_progress' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
-            'delivered' => (clone $query)->where('status', 'DELIVERED')->count(),
-        ];
+        // Un seul passage sur la table pour les cinq compteurs.
+        $comptes = (clone $query)->selectRaw("count(*) AS total,
+            count(*) FILTER (WHERE status = 'PENDING') AS pending,
+            count(*) FILTER (WHERE status = 'ASSIGNED') AS assigned,
+            count(*) FILTER (WHERE status = 'IN_PROGRESS') AS in_progress,
+            count(*) FILTER (WHERE status = 'DELIVERED') AS delivered")->toBase()->first();
+        $stats = array_map('intval', (array) $comptes);
 
         $recent = (clone $query)
             ->with('client:id,company_name')
@@ -53,18 +60,23 @@ class DashboardController extends Controller
             'performance' => $this->performance(clone $query, $stats),
             'volume' => $this->volume(clone $query),
             'carte' => $this->carte(clone $query),
-            'carteTotal' => (clone $query)->where('status', 'IN_PROGRESS')->count(),
+            'carteTotal' => $stats['in_progress'],
             'alertes' => $this->alertes(clone $query, $personnel),
-            'facturation' => $this->facturation($utilisateur, $personnel),
+            'facturation' => $utilisateur->can('viewAny', Invoice::class) ? $this->facturation($utilisateur, $personnel) : null,
             'exploitation' => $personnel ? [
                 'entreprises_a_valider' => Client::where('is_validated', false)->whereNull('rejection_reason')->count(),
-                'chauffeurs_disponibles' => Driver::where('is_available', true)->count(),
-                'chauffeurs_total' => Driver::count(),
+                // Un chauffeur parti ou dont le compte est ferme n'est pas
+                // disponible, meme s'il l'etait au moment de son depart.
+                'chauffeurs_disponibles' => Driver::where('is_available', true)->whereNull('left_on')
+                    ->whereHas('user', fn ($u) => $u->where('is_active', true))->count(),
+                'chauffeurs_total' => Driver::whereNull('left_on')->count(),
                 'vehicules_disponibles' => Vehicle::where('is_available', true)->count(),
                 'vehicules_total' => Vehicle::count(),
             ] : null,
             'calendrier' => $utilisateur->can('plan-orders') ? $this->calendrier() : null,
-            'validations' => $personnel ? $this->validations() : null,
+            // Seul l'administrateur valide les entreprises : le planificateur
+            // voyait le widget, et chacun de ses liens menait a un refus.
+            'validations' => $utilisateur->can('validate-clients') ? $this->validations() : null,
             'conformite' => $personnel ? $this->conformite() : null,
             'journal' => $utilisateur->can('view-logs') ? $this->journal() : null,
         ]);
@@ -86,7 +98,7 @@ class DashboardController extends Controller
             ->value('jours');
 
         return [
-            'actives' => $stats['pending'] + $stats['in_progress'],
+            'actives' => $stats['pending'] + $stats['assigned'] + $stats['in_progress'],
             'annulees' => $annulees,
             'delai_moyen' => $delai === null ? null : round((float) $delai, 1),
             'taux_livraison' => $closes === 0 ? null : round($stats['delivered'] / $closes * 100, 1),
@@ -163,20 +175,17 @@ class DashboardController extends Controller
     private function alertes(Builder $query, bool $personnel): array
     {
         $alertes = [];
-        $aujourdhui = now()->toDateString();
 
-        $retard = (clone $query)
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
-            ->whereNotNull('requested_delivery_date')
-            ->where('requested_delivery_date', '<', $aujourdhui)
-            ->count();
+        $retard = (clone $query)->where(self::expeditionsEnRetard())->count();
 
         if ($retard > 0) {
             $alertes[] = [
                 'niveau' => 'grave',
-                'titre' => self::phrase($retard, 'alerte.retard_un', ':n expÃ©dition en retard', 'alerte.retard_n', ':n expÃ©ditions en retard'),
-                'detail' => Traductions::t('alerte.retard_detail', 'La date de livraison souhaitÃ©e est dÃ©passÃ©e et la marchandise n\'est pas arrivÃ©e.'),
-                'lien' => route('transport-orders.index'),
+                'titre' => self::phrase($retard, 'alerte.retard_un', ':n expédition en retard', 'alerte.retard_n', ':n expéditions en retard'),
+                'detail' => Traductions::t('alerte.retard_detail', 'La date de livraison souhaitée est dépassée et la marchandise n\'est pas arrivée.'),
+                // La liste filtree montre les memes expeditions que le
+                // nombre annonce, pour le client comme pour le personnel.
+                'lien' => route('transport-orders.index', ['retard' => 1]),
             ];
         }
 
@@ -186,41 +195,66 @@ class DashboardController extends Controller
             if ($attente > 0) {
                 $alertes[] = [
                     'niveau' => 'info',
-                    'titre' => self::phrase($attente, 'alerte.attente_un', ':n expÃ©dition en attente d\'affectation', 'alerte.attente_n', ':n expÃ©ditions en attente d\'affectation'),
-                    'detail' => Traductions::t('alerte.attente_detail', 'Un vÃ©hicule leur sera affectÃ© par la planification.'),
-                    'lien' => route('transport-orders.index'),
+                    'titre' => self::phrase($attente, 'alerte.attente_un', ':n expédition en attente d\'affectation', 'alerte.attente_n', ':n expéditions en attente d\'affectation'),
+                    'detail' => Traductions::t('alerte.attente_detail', 'Un véhicule leur sera affecté par la planification.'),
+                    'lien' => route('transport-orders.index', ['status' => 'PENDING']),
                 ];
             }
 
             return $alertes;
         }
 
+        // Camions immobilises par un accident ou une panne, en tete : une
+        // mission bloquee, parfois une decision a prendre avec le client.
+        $candidats = TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+            ->whereIn(DB::raw('CAST(id AS VARCHAR)'), ActivityLog::where('subject_type', 'TransportOrder')
+                ->where('action', Incidents::ACTION)
+                ->select('subject_id'))
+            ->get(['id', 'status', 'vehicle_registration', 'tracking_number']);
+        $immobilises = Incidents::immobilisations($candidats);
+
+        if ($immobilises->isNotEmpty()) {
+            $seul = $immobilises->count() === 1 ? $candidats->firstWhere('id', (int) $immobilises->keys()->first()) : null;
+
+            $alertes[] = [
+                'niveau' => 'grave',
+                'titre' => self::phrase($immobilises->count(), 'alerte.immobilise_un', ':n camion immobilisé après un incident', 'alerte.immobilise_n', ':n camions immobilisés après un incident'),
+                'detail' => $immobilises->contains(fn ($i) => $i['decision_planificateur'])
+                    ? Traductions::t('alerte.immobilise_decision', 'Marchandise endommagée : une décision est attendue de la planification.')
+                    : Traductions::t('alerte.immobilise_detail', 'Accident ou panne signalé par le chauffeur : la mission est bloquée.'),
+                'lien' => $seul
+                    ? route('planning.index', ['q' => $seul->tracking_number, 'suivre' => 1])
+                    : route('planning.index', ['status' => 'IN_PROGRESS']),
+            ];
+        }
+
         $adr = TransportOrder::where('is_hazardous', true)
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereIn('status', TransportOrder::ACTIFS)
             ->whereNull('driver_id')
             ->count();
 
         if ($adr > 0) {
             $alertes[] = [
                 'niveau' => 'grave',
-                'titre' => self::phrase($adr, 'alerte.adr_un', ':n matiÃ¨re dangereuse sans chauffeur', 'alerte.adr_n', ':n matiÃ¨res dangereuses sans chauffeur'),
-                'detail' => Traductions::t('alerte.adr_detail', 'Ces expÃ©ditions exigent un chauffeur certifiÃ© ADR.'),
-                'lien' => route('planning.index'),
+                'titre' => self::phrase($adr, 'alerte.adr_un', ':n matière dangereuse sans chauffeur', 'alerte.adr_n', ':n matières dangereuses sans chauffeur'),
+                'detail' => Traductions::t('alerte.adr_detail', 'Ces expéditions exigent un chauffeur certifié ADR.'),
+                'lien' => route('planning.index', ['contrainte' => 'adr']),
             ];
         }
 
         $imminent = TransportOrder::where('status', 'PENDING')
             ->whereNull('vehicle_registration')
             ->whereNotNull('pickup_date')
+            ->where('pickup_date', '>=', today())
             ->where('pickup_date', '<=', now()->addDays(3))
             ->count();
 
         if ($imminent > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => self::phrase($imminent, 'alerte.imminent_un', ':n enlÃ¨vement sous trois jours sans vÃ©hicule', 'alerte.imminent_n', ':n enlÃ¨vements sous trois jours sans vÃ©hicule'),
-                'detail' => Traductions::t('alerte.imminent_detail', 'Ã€ affecter avant la date d\'enlÃ¨vement prÃ©vue.'),
-                'lien' => route('planning.index'),
+                'titre' => self::phrase($imminent, 'alerte.imminent_un', ':n enlèvement sous trois jours sans véhicule', 'alerte.imminent_n', ':n enlèvements sous trois jours sans véhicule'),
+                'detail' => Traductions::t('alerte.imminent_detail', 'À affecter avant la date d\'enlèvement prévue.'),
+                'lien' => route('planning.index', ['status' => 'PENDING', 'imminent' => 1]),
             ];
         }
 
@@ -231,8 +265,8 @@ class DashboardController extends Controller
         if ($permis > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => self::phrase($permis, 'alerte.permis_un', ':n permis arrive Ã  Ã©chÃ©ance', 'alerte.permis_n', ':n permis arrivent Ã  Ã©chÃ©ance'),
-                'detail' => Traductions::t('alerte.permis_detail', 'ValiditÃ© infÃ©rieure Ã  soixante jours.'),
+                'titre' => self::phrase($permis, 'alerte.permis_un', ':n permis arrive à échéance', 'alerte.permis_n', ':n permis arrivent à échéance'),
+                'detail' => Traductions::t('alerte.permis_detail', 'Validité inférieure à soixante jours.'),
                 'lien' => route('drivers.index', ['etat' => 'permis']),
             ];
         }
@@ -244,7 +278,7 @@ class DashboardController extends Controller
         if ($visite > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => self::phrase($visite, 'alerte.visite_un', ':n visite mÃ©dicale Ã  renouveler', 'alerte.visite_n', ':n visites mÃ©dicales Ã  renouveler'),
+                'titre' => self::phrase($visite, 'alerte.visite_un', ':n visite médicale à renouveler', 'alerte.visite_n', ':n visites médicales à renouveler'),
                 'detail' => Traductions::t('alerte.visite_detail', 'Dernier examen il y a plus d\'un an.'),
                 'lien' => route('drivers.index', ['etat' => 'visite']),
             ];
@@ -257,8 +291,8 @@ class DashboardController extends Controller
         if ($controle > 0) {
             $alertes[] = [
                 'niveau' => 'attention',
-                'titre' => self::phrase($controle, 'alerte.controle_un', ':n contrÃ´le technique dÃ©passÃ©', 'alerte.controle_n', ':n contrÃ´les techniques dÃ©passÃ©s'),
-                'detail' => Traductions::t('alerte.controle_detail', 'Dernier passage il y a plus d\'un an.'),
+                'titre' => self::phrase($controle, 'alerte.controle_un', ':n contrôle technique dépassé', 'alerte.controle_n', ':n contrôles techniques dépassés'),
+                'detail' => Traductions::t('alerte.controle_detail', 'La validité du contrôle technique est dépassée.'),
                 'lien' => route('vehicles.index', ['etat' => 'controle']),
             ];
         }
@@ -281,18 +315,19 @@ class DashboardController extends Controller
         $requete = Invoice::query();
 
         if (! $personnel) {
-            $requete->where('client_id', $utilisateur->id);
+            $requete->where('client_id', $utilisateur->client_id);
         }
 
         if ((clone $requete)->doesntExist()) {
             return null;
         }
 
-        $impayees = (clone $requete)->where('status', '!=', 'PAID');
+        $impayees = (clone $requete)->where('type', Invoice::FACTURE)->where('status', 'SENT');
 
         return [
-            'paye' => round((float) (clone $requete)->where('status', 'PAID')->sum('amount_incl_tax'), 2),
-            'du' => round((float) (clone $impayees)->sum('amount_incl_tax'), 2),
+            'paye' => round((float) (clone $requete)->where('type', Invoice::FACTURE)->where('status', 'PAID')->sum('amount_incl_tax'), 2),
+            'du' => round((float) (clone $impayees)->sum('amount_incl_tax')
+                - (float) Payment::whereIn('invoice_id', (clone $impayees)->select('id'))->sum('amount'), 2),
             'en_retard' => (clone $impayees)->where('due_on', '<', now()->toDateString())->count(),
             'dernieres' => (clone $requete)
                 ->orderByDesc('issued_on')
@@ -302,16 +337,13 @@ class DashboardController extends Controller
                 ->map(fn (Invoice $facture) => [
                     'id' => $facture->id,
                     'reference' => $facture->reference,
-                    'montant' => number_format((float) $facture->amount_incl_tax, 2, ',', ' ').' â‚¬',
-                    'etat' => $facture->estEnRetard() ? 'En retard' : Invoice::STATUTS[$facture->status],
+                    'montant' => Formats::montant($facture->amount_incl_tax),
+                    'etat' => $facture->estAvoir() ? 'CREDIT_NOTE' : ($facture->estEnRetard() ? 'OVERDUE' : $facture->status),
                 ])
                 ->all(),
         ];
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
     /**
      * @return array<string, mixed>
      */
@@ -320,12 +352,12 @@ class DashboardController extends Controller
         $debut = now()->startOfDay();
         $fin = $debut->copy()->addDays(13);
 
-        $enlevements = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $enlevements = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereBetween('pickup_date', [$debut, $fin->copy()->endOfDay()])
-            ->selectRaw('pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes')
+            ->selectRaw("pickup_date::date AS jour, count(*) AS nombre, count(driver_id) AS affectes, count(*) FILTER (WHERE status = 'ASSIGNED') AS a_partir")
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
 
-        $livraisons = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
+        $livraisons = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
             ->whereBetween('requested_delivery_date', [$debut->toDateString(), $fin->toDateString()])
             ->selectRaw('requested_delivery_date AS jour, count(*) AS nombre')
             ->groupBy('jour')->get()->keyBy(fn ($l) => (string) $l->jour);
@@ -358,6 +390,9 @@ class DashboardController extends Controller
                 'chome' => JoursFeries::chome($date),
                 'enlevements' => $enlevement,
                 'a_affecter' => $aAffecter,
+                // Enlevements affectes pas encore partis : sans eux, le jour
+                // ne compte que des missions deja en route.
+                'a_partir' => (int) ($enlevements[$cle]->a_partir ?? 0),
                 'livraisons' => (int) ($livraisons[$cle]->nombre ?? 0),
                 'sature' => $enlevement > $capacite,
             ];
@@ -404,18 +439,8 @@ class DashboardController extends Controller
      */
     private function conformite(): array
     {
-        $visite = now()->subYear()->toDateString();
         $echeance = now()->addDays(60)->toDateString();
-
-        $chauffeursAlerte = fn ($q) => $q
-            ->where('is_available', true)
-            ->whereNull('left_on')
-            ->where(fn ($e) => $e
-                ->where('medical_exam_date', '<', $visite)
-                ->orWhereNull('medical_exam_date')
-                ->orWhere('license_expiry', '<=', $echeance)
-                ->orWhere('cpc_expiry', '<', now()->toDateString())
-                ->orWhere('tacho_card_expiry', '<', now()->toDateString()));
+        $chauffeursAlerte = self::chauffeursAMettreEnRegle();
 
         $chauffeurs = Driver::with('user:id,first_name,last_name')
             ->where($chauffeursAlerte)
@@ -435,15 +460,13 @@ class DashboardController extends Controller
                 return [
                     'id' => $chauffeur->id,
                     'nom' => trim(($chauffeur->user?->first_name ?? '').' '.($chauffeur->user?->last_name ?? '')),
-                    'motif' => ucfirst(implode(' Â· ', $motifs)),
+                    'motif' => ucfirst(implode(' · ', $motifs)),
                     'disponible' => (bool) $chauffeur->is_available,
                 ];
             })
             ->all();
 
-        $vehiculesAlerte = fn ($q) => $q
-            ->where('is_available', true)
-            ->where('inspection_valid_until', '<', now()->toDateString());
+        $vehiculesAlerte = self::vehiculesControleRoulant();
 
         $vehicules = Vehicle::where($vehiculesAlerte)
             ->orderBy('inspection_valid_until')
@@ -452,7 +475,7 @@ class DashboardController extends Controller
             ->map(fn (Vehicle $vehicule) => [
                 'immatriculation' => $vehicule->registration,
                 'modele' => trim($vehicule->brand.' '.$vehicule->model),
-                'motif' => Traductions::t('empechement.controle', 'ContrÃ´le Ã©chu depuis le :date',
+                'motif' => Traductions::t('empechement.controle', 'Contrôle échu depuis le :date',
                     ['date' => $vehicule->inspection_valid_until->format('d/m/Y')]),
                 'disponible' => (bool) $vehicule->is_available,
             ])
@@ -464,6 +487,57 @@ class DashboardController extends Controller
             'total_chauffeurs' => Driver::where($chauffeursAlerte)->count(),
             'total_vehicules' => Vehicle::where($vehiculesAlerte)->count(),
         ];
+    }
+
+    // Les criteres ci-dessous sont partages avec les listes vers lesquelles
+    // renvoient les liens du tableau de bord : le nombre annonce ici est
+    // celui que la liste filtree affiche, sans derive possible.
+
+    /**
+     * Expeditions encore actives dont la livraison souhaitee est passee
+     * (liste des ordres, retard=1).
+     */
+    public static function expeditionsEnRetard(): Closure
+    {
+        return fn ($q) => $q
+            ->whereIn('status', TransportOrder::ACTIFS)
+            ->whereNotNull('requested_delivery_date')
+            ->where('requested_delivery_date', '<', now()->toDateString());
+    }
+
+    /**
+     * Chauffeurs encore en service dont une piece est echue ou le permis
+     * proche de l'echeance (liste des chauffeurs, etat=conformite).
+     */
+    public static function chauffeursAMettreEnRegle(): Closure
+    {
+        $aujourdhui = now()->toDateString();
+
+        return fn ($q) => $q
+            ->where('is_available', true)
+            // Un depart programme n'a pas encore eu lieu : le chauffeur
+            // roule jusque-la et ses documents doivent rester en regle.
+            ->where(fn ($d) => $d->whereNull('left_on')->orWhere('left_on', '>', $aujourdhui))
+            // Memes criteres que Driver::empechements, plus le permis qui
+            // expire dans les deux mois.
+            ->where(fn ($e) => $e
+                ->inapte()
+                ->orWhere('license_expiry', '<=', now()->addDays(60)->toDateString()));
+    }
+
+    /**
+     * Vehicules au controle echu qui roulent encore (liste des vehicules,
+     * etat=controle_roulant).
+     */
+    public static function vehiculesControleRoulant(): Closure
+    {
+        // Un camion en mission avec un controle echu roule bel et bien, meme
+        // s'il a ete retire du service entre-temps.
+        return fn ($q) => $q
+            ->where(fn ($r) => $r->where('is_available', true)
+                ->orWhereIn('registration', TransportOrder::whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
+                    ->whereNotNull('vehicle_registration')->select('vehicle_registration')))
+            ->where('inspection_valid_until', '<', now()->toDateString());
     }
 
     /**
@@ -478,11 +552,11 @@ class DashboardController extends Controller
 
         return $lignes->map(fn (ActivityLog $ligne) => [
             'action' => $ligne->action,
-            'description' => $ligne->description,
+            'description' => JournalLisible::resume($ligne),
             'auteur' => $auteurs[$ligne->user_id] ?? null
                 ? $auteurs[$ligne->user_id]->first_name.' '.$auteurs[$ligne->user_id]->last_name
-                : 'SystÃ¨me',
-            'horodatage' => $ligne->created_at->format('d/m/Y Ã  H\hi'),
+                : Traductions::t('msg.auteur_systeme', 'Système'),
+            'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
         ])->all();
     }
 }

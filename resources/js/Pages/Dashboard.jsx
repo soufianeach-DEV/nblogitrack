@@ -2,12 +2,13 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, usePays, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, usePays, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const STATUS = {
     PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
+    ASSIGNED: { cle: 'statut.affecte', label: 'Affecté', cls: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
     DELIVERED: { cle: 'statut.livre', label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
@@ -161,71 +162,83 @@ function PlanDeCharge({ calendrier }) {
 
             {}
             <div className="mt-5 grid flex-1 content-start grid-cols-7 gap-1.5">
-                {jours.map((j) => (
-                    <Link
-                        key={j.date}
-                        href={route('planning.index', { status: 'PENDING' })}
-                        title={`${j.jour} ${j.numero} ${j.mois}`
-                            + (j.ferie ? ` — ${j.ferie}, ${t('tdb.quai_ferme', 'quai fermé')}` : '')
-                            + ` — ${j.enlevements} ${j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}`
-                            + `, ${j.livraisons} ${j.livraisons > 1 ? t('tdb.livraisons_promises', 'livraisons promises') : t('tdb.livraison_promise', 'livraison promise')}`
-                            + (j.a_affecter > 0 ? ` — ${j.a_affecter} ${t('tdb.sans_vehicule', 'sans véhicule')}` : '')
-                            + (j.sature ? ` — ${t('tdb.au_dela', 'au-delà de la capacité de')} ${capacite}` : '')}
-                        className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
-                            j.aujourdhui ? 'border-action bg-action/5'
-                                : j.sature ? 'border-status-incident/40 bg-status-incident/5'
-                                : j.chome ? 'border-slate-200 bg-slate-100 hover:bg-slate-200'
-                                : 'border-slate-100 hover:bg-surface'
-                        }`}
-                    >
-                        <span className="flex items-baseline justify-between gap-1">
-                            <span className={`truncate text-[11px] capitalize ${
-                                j.aujourdhui ? 'font-bold text-action-dark' : 'text-slate-500'
-                            }`}>
-                                {j.jour}
-                            </span>
-                            <span className={`text-sm font-bold leading-none ${
-                                j.aujourdhui ? 'text-action-dark' : 'text-marine'
-                            }`}>
-                                {j.numero}
-                            </span>
-                        </span>
+                {jours.map((j) => {
+                    // La planification filtre sur le jour d'enlevement : un jour
+                    // sans enlevement menerait a une liste vide, il ne se clique
+                    // donc pas. Un jour tout affecte ouvre les missions affectees,
+                    // ou celles en route si toutes sont deja parties.
+                    const onglet = j.a_affecter > 0 ? 'PENDING' : (j.a_partir > 0 ? 'ASSIGNED' : 'IN_PROGRESS');
+                    const lien = j.enlevements > 0
+                        ? route('planning.index', { status: onglet, jour: j.date })
+                        : null;
+                    const Tuile = lien ? Link : 'div';
 
-                        {}
-                        {j.enlevements > 0 && (
-                            <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
-                                j.sature ? 'bg-status-incident' : 'bg-marine'
-                            }`}>
-                                {j.enlevements} {j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}
+                    return (
+                        <Tuile
+                            key={j.date}
+                            href={lien ?? undefined}
+                            title={`${j.jour} ${j.numero} ${j.mois}`
+                                + (j.ferie ? ` — ${j.ferie}, ${t('tdb.quai_ferme', 'quai fermé')}` : '')
+                                + ` — ${j.enlevements} ${j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}`
+                                + `, ${j.livraisons} ${j.livraisons > 1 ? t('tdb.livraisons_promises', 'livraisons promises') : t('tdb.livraison_promise', 'livraison promise')}`
+                                + (j.a_affecter > 0 ? ` — ${j.a_affecter} ${t('tdb.sans_vehicule', 'sans véhicule')}` : '')
+                                + (j.sature ? ` — ${t('tdb.au_dela', 'au-delà de la capacité de')} ${capacite}` : '')}
+                            className={`flex min-h-[92px] min-w-0 flex-col gap-1 rounded-lg border p-1.5 transition ${
+                                j.aujourdhui ? 'border-action bg-action/5'
+                                    : j.sature ? 'border-status-incident/40 bg-status-incident/5'
+                                    : j.chome ? `border-slate-200 bg-slate-100 ${lien ? 'hover:bg-slate-200' : ''}`
+                                    : `border-slate-100 ${lien ? 'hover:bg-surface' : ''}`
+                            }`}
+                        >
+                            <span className="flex items-baseline justify-between gap-1">
+                                <span className={`truncate text-[11px] capitalize ${
+                                    j.aujourdhui ? 'font-bold text-action-dark' : 'text-slate-500'
+                                }`}>
+                                    {j.jour}
+                                </span>
+                                <span className={`text-sm font-bold leading-none ${
+                                    j.aujourdhui ? 'text-action-dark' : 'text-marine'
+                                }`}>
+                                    {j.numero}
+                                </span>
                             </span>
-                        )}
 
-                        {j.livraisons > 0 && (
-                            <span className="rounded bg-brand-blue/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-marine">
-                                {j.livraisons} {j.livraisons > 1 ? t('commun.livraisons', 'livraisons') : t('commun.livraison', 'livraison')}
-                            </span>
-                        )}
+                            {}
+                            {j.enlevements > 0 && (
+                                <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-white ${
+                                    j.sature ? 'bg-status-incident' : 'bg-marine'
+                                }`}>
+                                    {j.enlevements} {j.enlevements > 1 ? t('commun.enlevements', 'enlèvements') : t('commun.enlevement', 'enlèvement')}
+                                </span>
+                            )}
 
-                        {}
-                        {j.enlevements > 0 && (
-                            <span className={`truncate text-[10px] font-semibold ${
-                                j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
-                            }`}>
-                                {j.enlevements - j.a_affecter}/{j.enlevements} {j.enlevements > 1 ? t('tdb.affectes', 'affectés') : t('tdb.affecte', 'affecté')}
-                            </span>
-                        )}
+                            {j.livraisons > 0 && (
+                                <span className="rounded bg-brand-blue/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-marine">
+                                    {j.livraisons} {j.livraisons > 1 ? t('commun.livraisons', 'livraisons') : t('commun.livraison', 'livraison')}
+                                </span>
+                            )}
 
-                        {j.ferie && (
-                            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                                {j.ferie}
-                            </span>
-                        )}
+                            {}
+                            {j.enlevements > 0 && (
+                                <span className={`truncate text-[10px] font-semibold ${
+                                    j.a_affecter > 0 ? 'text-status-incident' : 'text-status-delivered'
+                                }`}>
+                                    {j.enlevements - j.a_affecter}/{j.enlevements} {j.enlevements > 1 ? t('tdb.affectes', 'affectés') : t('tdb.affecte', 'affecté')}
+                                </span>
+                            )}
 
-                        {j.enlevements === 0 && j.livraisons === 0 && ! j.ferie && (
-                            <span className="text-[11px] text-slate-400">{t('tdb.rien_prevu', 'Rien de prévu')}</span>
-                        )}
-                    </Link>
-                ))}
+                            {j.ferie && (
+                                <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                    {j.ferie}
+                                </span>
+                            )}
+
+                            {j.enlevements === 0 && j.livraisons === 0 && ! j.ferie && (
+                                <span className="text-[11px] text-slate-400">{t('tdb.rien_prevu', 'Rien de prévu')}</span>
+                            )}
+                        </Tuile>
+                    );
+                })}
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
@@ -241,7 +254,7 @@ function PlanDeCharge({ calendrier }) {
                 <div className="text-right">
                     <p className="text-xs uppercase tracking-wide text-slate-600">{t('tdb.restent', 'Restent à affecter')}</p>
                     <p className={`font-bold ${aAffecter > 0 ? 'text-status-incident' : 'text-status-delivered'}`}>
-                        {aAffecter > 0 ? `${aAffecter} ${t('commun.expeditions', 'expéditions')}` : t('tdb.tout_affecte', 'Tout est affecté')}
+                        {aAffecter > 0 ? `${aAffecter} ${aAffecter > 1 ? t('commun.expeditions', 'expéditions') : t('commun.expedition', 'expédition')}` : t('tdb.tout_affecte', 'Tout est affecté')}
                     </p>
                 </div>
             </div>
@@ -339,7 +352,7 @@ function ValidationsEnAttente({ validations }) {
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">{t('tdb.validations', 'Validations en attente')}</h2>
-                <Link href={route('clients.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('clients.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -477,14 +490,14 @@ function CarteEnCirculation({ carte, total }) {
         <section className="overflow-hidden rounded-2xl bg-white shadow-sm">
             {}
             <div className="relative isolate h-56">
-                <CarteTrajets trajets={trajets} onSelection={ouvrir} className="h-full w-full" />
+                <CarteTrajets trajets={trajets} onSelection={ouvrir} positionZoom="bottomright" className="h-full w-full" />
                 <span className="pointer-events-none absolute left-3 top-3 z-[1100] rounded-lg bg-marine px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow">
                     {total > carte.length ? `${carte.length} ${t('tdb.des', 'des')} ${total}` : total} {t('tdb.en_circulation', 'en circulation')}
                 </span>
             </div>
             <Link
                 href={route('tracking.show')}
-                className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-action transition hover:bg-surface"
+                className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-semibold text-action-texte transition hover:bg-surface"
             >
                 {t('tdb.ouvrir_suivi', 'Ouvrir le suivi')}
             </Link>
@@ -505,7 +518,7 @@ function Facturation({ facturation }) {
         <section className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-marine">{t('nav.facturation', 'Facturation')}</h2>
-                <Link href={route('invoices.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('invoices.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -547,13 +560,11 @@ function Facturation({ facturation }) {
                                 <span className="ml-auto shrink-0 text-sm font-bold text-marine">{facture.montant}</span>
                                 {}
                                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                    facture.etat === 'Payée' ? 'bg-status-delivered/10 text-status-delivered'
-                                        : facture.etat === 'En retard' ? 'bg-status-incident/10 text-status-incident'
+                                    facture.etat === 'PAID' ? 'bg-status-delivered/10 text-status-delivered'
+                                        : facture.etat === 'OVERDUE' ? 'bg-status-incident/10 text-status-incident'
                                             : 'bg-slate-100 text-slate-700'
                                 }`}>
-                                    {facture.etat === 'Payée' ? t('statut.payee', 'Payée')
-                                        : facture.etat === 'En retard' ? t('statut.en_retard', 'En retard')
-                                            : t('statut.envoyee', 'Envoyée')}
+                                    {t(...(ETATS_FACTURE[facture.etat] ?? ETATS_FACTURE.SENT))}
                                 </span>
                                 </Link>
                             </li>
@@ -569,11 +580,11 @@ function Conformite({ conformite }) {
     const t = useTraduction();
 
     const colonne = (titre, lignes, total, adresse, rendu) => (
-        <div>
-            <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600">{titre}</h3>
                 {total > 0 && (
-                    <Link href={adresse} className="text-sm font-medium text-action hover:underline">
+                    <Link href={adresse} className="text-sm font-medium text-action-texte hover:underline">
                         {t('tdb.voir_les', 'Voir les')} {total}
                     </Link>
                 )}
@@ -602,12 +613,12 @@ function Conformite({ conformite }) {
                 {t('tdb.conformite_sous_titre', 'Uniquement ce qui roule encore alors qu\'une échéance est passée')}
             </p>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-6 lg:grid-cols-2">
                 {colonne(
                     t('nav.chauffeurs', 'Chauffeurs'),
                     conformite.chauffeurs,
                     conformite.total_chauffeurs,
-                    route('drivers.index', { etat: 'visite' }),
+                    route('drivers.index', { etat: 'conformite' }),
                     (c) => (
                         <li key={c.id} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
                             <span className="min-w-0 flex-1">
@@ -623,7 +634,7 @@ function Conformite({ conformite }) {
                     t('nav.vehicules', 'Véhicules'),
                     conformite.vehicules,
                     conformite.total_vehicules,
-                    route('vehicles.index', { etat: 'controle' }),
+                    route('vehicles.index', { etat: 'controle_roulant' }),
                     (v) => (
                         <li key={v.immatriculation} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
                             <span className="min-w-0 flex-1">
@@ -648,7 +659,7 @@ function DernieresTraces({ journal }) {
         <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
                 <h2 className="font-semibold text-marine">{t('tdb.traces', 'Dernières traces')}</h2>
-                <Link href={route('activity-logs.index')} className="text-sm font-medium text-action hover:underline">
+                <Link href={route('activity-logs.index')} className="text-sm font-medium text-action-texte hover:underline">
                     {t('action.voir_tout', 'Voir tout')}
                 </Link>
             </div>
@@ -689,6 +700,15 @@ function DernieresTraces({ journal }) {
     );
 }
 
+const ETATS_FACTURE = {
+    DRAFT: ['facture.brouillon', 'Brouillon'],
+    SENT: ['statut.envoyee', 'Envoyée'],
+    PAID: ['statut.payee', 'Payée'],
+    OVERDUE: ['statut.en_retard', 'En retard'],
+    CREDITED: ['facture.annulee_avoir', 'Annulée par avoir'],
+    CREDIT_NOTE: ['facture.avoir', 'Avoir'],
+};
+
 export default function Dashboard({
     stats,
     recent,
@@ -706,6 +726,7 @@ export default function Dashboard({
 }) {
     const { auth } = usePage().props;
     const t = useTraduction();
+    const adresse = useAdresse();
     const locale = useLocale();
     const personnel = Boolean(exploitation);
 
@@ -740,8 +761,8 @@ export default function Dashboard({
                         lien={auth.canValidateClients ? route('clients.index') : null}
                     />
                     <StatCard
-                        label={t('tdb.expeditions_cours', 'Expéditions en cours')}
-                        value={nombre(stats.pending + stats.in_progress)}
+                        label={t('tdb.expeditions_actives', 'Expéditions actives')}
+                        value={nombre(stats.pending + stats.assigned + stats.in_progress)}
                         detail={`${nombre(stats.in_progress)} ${t('tdb.en_circulation', 'en circulation')}`}
                         icone="camion"
                         accent="bg-marine/10 text-marine"
@@ -805,12 +826,12 @@ export default function Dashboard({
             )}
 
             {}
-            <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-1">
                     <section className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
                             <h2 className="font-semibold text-marine">{t('tdb.derniers_ordres', 'Derniers ordres')}</h2>
-                            <Link href={route('transport-orders.index')} className="text-sm font-medium text-action hover:underline">
+                            <Link href={route('transport-orders.index')} className="text-sm font-medium text-action-texte hover:underline">
                                 {t('action.voir_tout', 'Voir tout')}
                             </Link>
                         </div>
@@ -846,8 +867,8 @@ export default function Dashboard({
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-slate-600">
-                                                <span className="block max-w-[16rem] truncate" title={order.delivery_address}>
-                                                    {order.delivery_address}
+                                                <span className="block max-w-[16rem] truncate" title={adresse(order.delivery_address)}>
+                                                    {adresse(order.delivery_address)}
                                                 </span>
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-3">
@@ -868,32 +889,32 @@ export default function Dashboard({
                     </section>
                 </div>
 
-                <div className="flex flex-col gap-4 lg:col-start-3 lg:row-start-1">
+                <div className="flex min-w-0 flex-col gap-4 lg:col-start-3 lg:row-start-1">
                     {carte.length > 0 && <CarteEnCirculation carte={carte} total={carteTotal} />}
                     <Alertes alertes={alertes} />
                 </div>
 
                 {}
                 {volume.some((mois) => mois.nombre > 0) && (
-                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
+                    <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
                         <VolumeMensuel volume={volume} />
                     </div>
                 )}
 
                 {facturation && (
-                    <div className="flex flex-col lg:col-start-3 lg:row-start-2">
+                    <div className="flex min-w-0 flex-col lg:col-start-3 lg:row-start-2">
                         <Facturation facturation={facturation} />
                     </div>
                 )}
 
                 {journal && (
-                    <div className="flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
+                    <div className="flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3">
                         <DernieresTraces journal={journal} />
                     </div>
                 )}
 
                 {validations && (
-                    <div className="flex flex-col lg:col-start-3 lg:row-start-3">
+                    <div className="flex min-w-0 flex-col lg:col-start-3 lg:row-start-3">
                         <ValidationsEnAttente validations={validations} />
                     </div>
                 )}
@@ -901,8 +922,8 @@ export default function Dashboard({
                 {}
                 {conformite && (
                     <div className={journal
-                        ? 'lg:col-span-3 lg:col-start-1 lg:row-start-4'
-                        : 'flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3'}>
+                        ? 'min-w-0 lg:col-span-3 lg:col-start-1 lg:row-start-4'
+                        : 'flex min-w-0 flex-col lg:col-span-2 lg:col-start-1 lg:row-start-3'}>
                         <Conformite conformite={conformite} />
                     </div>
                 )}

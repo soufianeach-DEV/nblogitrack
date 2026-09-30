@@ -18,13 +18,14 @@ export default {
             colors: {
                 marine: { DEFAULT: '#14324F', deep: '#001D36' },
                 'brand-blue': '#0B61A1',
-                action: { DEFAULT: '#F59E0B', dark: '#D97706' },
+                action: { DEFAULT: '#F59E0B', dark: '#D97706', texte: '#B45309' },
                 ink: '#1A202C',
                 surface: '#F5F7FA',
                 // Teintes calibrees pour rester lisibles sur fond clair :
                 // au moins 4,5 pour 1 de contraste, seuil WCAG AA du texte courant.
                 status: {
                     pending: '#43474D',
+                    assigned: '#B45309',
                     progress: '#0B61A1',
                     delivered: '#15803D',
                     incident: '#BA1A1A',

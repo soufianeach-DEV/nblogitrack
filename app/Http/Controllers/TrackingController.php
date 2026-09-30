@@ -7,6 +7,9 @@ use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\Adresse;
+use App\Support\Formats;
+use App\Support\Incidents;
+use App\Support\Osrm;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,13 +33,18 @@ class TrackingController extends Controller
 
         $ordre = $cherche
             ? TransportOrder::with('client:id,company_name')
-                ->where('tracking_number', $request->query('tracking_number'))
-                ->where('tracking_code', strtoupper($request->query('code')))
+                ->where('tracking_number', strtoupper(trim((string) $request->query('tracking_number'))))
+                ->where('tracking_code', strtoupper(trim((string) $request->query('code'))))
                 ->first([
-                    'id', 'client_id', 'tracking_number', 'status',
-                    'pickup_address', 'delivery_address', 'requested_delivery_date',
+                    'client_id', 'tracking_number', 'status',
+                    'pickup_address', 'delivery_address', 'requested_delivery_date', 'delivered_at',
                 ])
             : null;
+
+        // client_id ne sert qu'a charger le nom de l'entreprise. Le visiteur
+        // n'a pas a connaitre les identifiants internes.
+        $ordre?->makeHidden('client_id');
+        $ordre?->client?->makeHidden('id');
 
         return Inertia::render('Tracking/Show', [
             'searched' => $cherche,
@@ -46,7 +54,7 @@ class TrackingController extends Controller
 
     private function pourUtilisateur(Request $request, User $utilisateur): Response
     {
-        $numero = trim((string) $request->query('tracking_number', ''));
+        $numero = strtoupper(trim((string) $request->query('tracking_number', '')));
         $ordre = null;
 
         if ($numero !== '') {
@@ -54,14 +62,23 @@ class TrackingController extends Controller
                 'client:id,company_name',
                 'vehicle:registration,brand,model,vehicle_type,euro_standard,fuel_type,capacity_tonnes',
                 'driver.user:id,first_name,last_name,phone',
-                'tariffGrid:id,label,delivery_days',
+                'tariffGrid:id,label,zone,service_level,delivery_days',
             ])->where('tracking_number', $numero);
 
             if ($utilisateur->cannot('view-all-orders')) {
-                $requete->where('client_id', $utilisateur->id);
+                $requete->where('client_id', $utilisateur->client_id);
             }
 
             $ordre = $requete->first();
+        }
+
+        // Meme raison que sur la fiche de l'ordre : le chauffeur est decrit
+        // par le tableau « chauffeur », qui choisit ses champs. Sa fiche
+        // complete ne doit pas voyager avec l'ordre.
+        $ordre?->makeHidden('driver');
+
+        if (! $utilisateur->isStaff()) {
+            $ordre?->makeHidden(TransportOrder::COLONNES_INTERNES);
         }
 
         return Inertia::render('Tracking/Show', [
@@ -154,19 +171,22 @@ class TrackingController extends Controller
             return response()->json([]);
         }
 
-        return response()->json(Cache::remember(
-            'peages:'.$this->cleTrajet($transportOrder),
-            now()->addDays(30),
-            fn () => $this->peagesDuTrace($trajet['geometrie']),
-        ));
+        // Serveurs Overpass muets : pas de liste vide gardee un mois, on
+        // reessaie dans dix minutes.
+        $cle = 'peages:'.$this->cleTrajet($transportOrder);
+        $peages = Cache::get($cle);
+
+        if ($peages === null) {
+            $peages = $this->peagesDuTrace($trajet['geometrie']);
+            Cache::put($cle, $peages ?? [], $peages === null ? now()->addMinutes(10) : now()->addDays(30));
+        }
+
+        return response()->json($peages ?? []);
     }
 
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
     {
-        abort_if(
-            $request->user()->cannot('view-all-orders') && $ordre->client_id !== $request->user()->id,
-            404,
-        );
+        abort_unless($request->user()->can('view', $ordre), 404);
 
         abort_if($ordre->pickup_lat === null || $ordre->delivery_lat === null, 404);
     }
@@ -184,16 +204,22 @@ class TrackingController extends Controller
      */
     private function trajet(TransportOrder $ordre): array
     {
-        return Cache::remember(
-            'itineraire:'.$this->cleTrajet($ordre),
-            now()->addDays(30),
-            fn () => $this->routeRoutiere(
+        $cle = 'itineraire:'.$this->cleTrajet($ordre);
+        $trajet = Cache::get($cle);
+
+        if ($trajet === null) {
+            $trajet = $this->routeRoutiere(
                 (float) $ordre->pickup_lat,
                 (float) $ordre->pickup_lng,
                 (float) $ordre->delivery_lat,
                 (float) $ordre->delivery_lng,
-            ),
-        );
+            );
+            // Le trace direct est un repli (OSRM injoignable) : il ne se
+            // garde que dix minutes, le vrai itineraire le remplacera.
+            Cache::put($cle, $trajet, $trajet['direct'] ? now()->addMinutes(10) : now()->addDays(30));
+        }
+
+        return $trajet;
     }
 
     /**
@@ -201,26 +227,18 @@ class TrackingController extends Controller
      */
     private function routeRoutiere(float $latDepart, float $lngDepart, float $latArrivee, float $lngArrivee): array
     {
-        try {
-            $reponse = Http::timeout(15)->get(
-                "https://router.project-osrm.org/route/v1/driving/{$lngDepart},{$latDepart};{$lngArrivee},{$latArrivee}",
-                ['overview' => 'full', 'geometries' => 'geojson'],
-            );
+        $route = Osrm::route($latDepart, $lngDepart, $latArrivee, $lngArrivee, trace: true);
 
-            $route = $reponse->ok() ? $reponse->json('routes.0') : null;
-
-            if (isset($route['geometry']['coordinates'])) {
-                return [
-                    'geometrie' => array_map(
-                        fn (array $point) => [round($point[1], 5), round($point[0], 5)],
-                        $route['geometry']['coordinates'],
-                    ),
-                    'distance_km' => (int) round($route['distance'] / 1000),
-                    'duree_min' => (int) round($route['duration'] / 60),
-                    'direct' => false,
-                ];
-            }
-        } catch (\Throwable $e) {
+        if ($route !== null) {
+            return [
+                'geometrie' => array_map(
+                    fn (array $point) => [round($point[1], 5), round($point[0], 5)],
+                    $route['geometry']['coordinates'],
+                ),
+                'distance_km' => (int) round($route['distance'] / 1000),
+                'duree_min' => (int) round(($route['duration'] ?? 0) / 60),
+                'direct' => false,
+            ];
         }
 
         return [
@@ -235,18 +253,24 @@ class TrackingController extends Controller
      * @param  array<int, array{0: float, 1: float}>  $geometrie
      * @return array<int, array<string, mixed>>
      */
-    private function peagesDuTrace(array $geometrie): array
+    /** Null si aucun serveur Overpass n'a repondu. */
+    private function peagesDuTrace(array $geometrie): ?array
     {
         $latitudes = array_column($geometrie, 0);
         $longitudes = array_column($geometrie, 1);
 
-        $requete = '[out:json][timeout:60];'
+        $requete = '[out:json][timeout:25];'
             .'node["barrier"~"^(toll_booth|toll_gantry)$"]('
             .(min($latitudes) - 0.05).','.(min($longitudes) - 0.05).','
             .(max($latitudes) + 0.05).','.(max($longitudes) + 0.05).');'
             .'out body 400;';
 
         $noeuds = $this->interrogerOverpass($requete);
+
+        if ($noeuds === null) {
+            return null;
+        }
+
         $peages = [];
 
         foreach ($noeuds as $noeud) {
@@ -262,7 +286,7 @@ class TrackingController extends Controller
                 'rang' => $rang,
                 'lat' => (float) $noeud['lat'],
                 'lng' => (float) $noeud['lon'],
-                'nom' => $tags['name'] ?? ($tags['operator'] ?? 'Péage'),
+                'nom' => $tags['name'] ?? ($tags['operator'] ?? Traductions::t('suivi.peage_sans_nom', 'Péage')),
                 'route' => $tags['highway:ref'] ?? ($tags['ref'] ?? null),
                 'portique' => ($tags['barrier'] ?? '') === 'toll_gantry',
             ];
@@ -315,11 +339,12 @@ class TrackingController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function interrogerOverpass(string $requete): array
+    private function interrogerOverpass(string $requete): ?array
     {
         foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'] as $hote) {
             try {
-                $reponse = Http::timeout(90)
+                // Une requete web n'attend pas une minute et demie par serveur.
+                $reponse = Http::connectTimeout(5)->timeout(25)
                     ->withHeaders(['User-Agent' => 'NBLogiTrack/1.0 (epreuve integree)'])
                     ->asForm()
                     ->post($hote, ['data' => $requete]);
@@ -332,7 +357,7 @@ class TrackingController extends Controller
             }
         }
 
-        return [];
+        return null;
     }
 
     /**
@@ -341,16 +366,16 @@ class TrackingController extends Controller
     private function expeditionsEnCours(User $utilisateur, ?TransportOrder $consultee): array
     {
         $requete = TransportOrder::with('client:id,company_name')
-            ->whereIn('status', ['PENDING', 'IN_PROGRESS'])
+            ->whereIn('status', TransportOrder::ACTIFS)
             ->whereNotNull('pickup_lat')
             ->whereNotNull('delivery_lat');
 
         if ($utilisateur->cannot('view-all-orders')) {
-            $requete->where('client_id', $utilisateur->id);
+            $requete->where('client_id', $utilisateur->client_id);
         }
 
         $expeditions = $requete
-            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE status WHEN 'IN_PROGRESS' THEN 0 WHEN 'ASSIGNED' THEN 1 ELSE 2 END")
             ->orderByRaw("CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'NORMAL' THEN 2 ELSE 3 END")
             ->orderBy('requested_delivery_date')
             ->get();
@@ -385,26 +410,34 @@ class TrackingController extends Controller
     {
         return [
             [
-                'libelle' => 'Commande enregistrée',
-                'detail' => 'Ordre créé et confirmé.',
+                'libelle' => Traductions::t('suivi.etape_enregistree', 'Commande enregistrée'),
+                'detail' => Traductions::t('suivi.etape_enregistree_detail', 'Ordre créé et confirmé.'),
                 'horodatage' => $ordre->created_date?->format('d/m/Y'),
                 'fait' => true,
             ],
             [
-                'libelle' => 'Prise en charge',
+                'libelle' => Traductions::t('suivi.etape_affectation', 'Affectation'),
                 'detail' => $ordre->vehicle
-                    ? 'Véhicule '.$ordre->vehicle->registration.' affecté.'
-                    : "En attente d'affectation d'un véhicule.",
-                'horodatage' => $ordre->assigned_at?->format('d/m/Y à H\hi'),
+                    ? Traductions::t('suivi.etape_vehicule_affecte', 'Véhicule :immatriculation affecté.', ['immatriculation' => $ordre->vehicle->registration])
+                    : Traductions::t('suivi.etape_attente_vehicule', 'En attente d\'affectation d\'un véhicule.'),
+                'horodatage' => $ordre->assigned_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
                 'fait' => $ordre->assigned_at !== null,
             ],
             [
-                'libelle' => 'Livraison',
+                'libelle' => Traductions::t('suivi.etape_enlevement', 'Enlèvement'),
+                'detail' => $ordre->picked_up_at
+                    ? Traductions::t('suivi.etape_chargee', 'Marchandise chargée, le camion est en route.')
+                    : Traductions::t('suivi.etape_chargement_attendu', 'Le chauffeur confirmera le chargement sur place.'),
+                'horodatage' => $ordre->picked_up_at?->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
+                'fait' => $ordre->picked_up_at !== null || $ordre->actual_delivery_date !== null,
+            ],
+            [
+                'libelle' => Traductions::t('suivi.jalon_livraison', 'Livraison'),
                 'detail' => $ordre->actual_delivery_date
-                    ? 'Marchandise livrée.'
+                    ? Traductions::t('suivi.etape_livree', 'Marchandise livrée.')
                     : ($ordre->requested_delivery_date
-                        ? 'Livraison souhaitée le '.$ordre->requested_delivery_date->format('d/m/Y').'.'
-                        : 'Date à confirmer.'),
+                        ? Traductions::t('suivi.etape_livraison_souhaitee', 'Livraison souhaitée le :date.', ['date' => $ordre->requested_delivery_date->format('d/m/Y')])
+                        : Traductions::t('suivi.etape_date_a_confirmer', 'Date à confirmer.')),
                 'horodatage' => $ordre->actual_delivery_date?->format('d/m/Y'),
                 'fait' => $ordre->actual_delivery_date !== null,
             ],
@@ -412,18 +445,87 @@ class TrackingController extends Controller
     }
 
     /**
-     * @return array<int, array<string, string>>
+     * La description du journal est ecrite en francais au moment de
+     * l'action. L'historique montre plutot le libelle traduit de
+     * l'action, complete des seuls details qui ne dependent d'aucune
+     * langue. Les identifiants internes restent dans le journal.
+     *
+     * @return array<int, array<string, ?string>>
      */
     private function historique(TransportOrder $ordre): array
     {
         return ActivityLog::where('subject_type', 'TransportOrder')
             ->where('subject_id', (string) $ordre->id)
             ->orderBy('created_at')
-            ->get(['description', 'created_at'])
-            ->map(fn ($ligne) => [
-                'description' => $ligne->description,
-                'horodatage' => $ligne->created_at->format('d/m/Y à H\hi'),
+            ->get(['action', 'description', 'properties', 'created_at'])
+            ->map(fn (ActivityLog $ligne) => [
+                // Une action inconnue du journal garde sa description :
+                // mieux vaut du francais qu'un code technique.
+                'libelle' => isset(ActivityLogController::ACTIONS[$ligne->action])
+                    ? Traductions::t(
+                        'journal.action_'.str_replace('.', '_', $ligne->action),
+                        ActivityLogController::ACTIONS[$ligne->action],
+                    )
+                    : $ligne->description,
+                'detail' => $this->detailHistorique($ligne->action, $ligne->properties ?? []),
+                'horodatage' => $ligne->created_at->format(Traductions::t('msg.format_date_heure', 'd/m/Y à H\hi')),
             ])
             ->all();
+    }
+
+    /**
+     * Les proprietes utiles a la lecture : camion, statuts, montants. Le
+     * motif d'une (des)affectation est une saisie libre du planificateur,
+     * montree telle qu'il l'a ecrite.
+     *
+     * @param  array<string, mixed>  $proprietes
+     */
+    private function detailHistorique(string $action, array $proprietes): ?string
+    {
+        $statut = fn (mixed $code) => match ($code) {
+            'PENDING' => Traductions::t('statut.en_attente', 'En attente'),
+            'ASSIGNED' => Traductions::t('statut.affecte', 'Affecté'),
+            'IN_PROGRESS' => Traductions::t('statut.en_cours', 'En cours'),
+            'DELIVERED' => Traductions::t('statut.livre', 'Livré'),
+            'CANCELLED' => Traductions::t('statut.annule', 'Annulé'),
+            default => (string) $code,
+        };
+
+        $details = match ($action) {
+            'order.assigned' => [$proprietes['vehicule'] ?? null],
+            'order.reassigned' => [
+                implode(' → ', array_filter([$proprietes['ancien_camion'] ?? null, $proprietes['vehicule'] ?? null])),
+                $proprietes['motif'] ?? null,
+            ],
+            'order.unassigned' => [$proprietes['camion'] ?? null, $proprietes['motif'] ?? null],
+            'order.incident' => [
+                Incidents::libelle($proprietes['type'] ?? null),
+                ($proprietes['type'] ?? null) !== 'DOMMAGE' && ($proprietes['marchandise_endommagee'] ?? false)
+                    ? Traductions::t('incident.avec_dommage', 'marchandise endommagée')
+                    : null,
+                $proprietes['commentaire'] ?? null,
+            ],
+            'order.incident_resolved', 'order.vehicle_requested' => [
+                Incidents::libelle($proprietes['type'] ?? null),
+                $proprietes['camion'] ?? null,
+                ($proprietes['par'] ?? null) === 'planificateur'
+                    ? Traductions::t('incident.par_planificateur', 'autorisée par le planificateur')
+                    : null,
+            ],
+            'order.status_changed' => [isset($proprietes['avant'], $proprietes['apres'])
+                ? $statut($proprietes['avant']).' → '.$statut($proprietes['apres'])
+                : null],
+            'order.charge_added', 'order.charge_removed' => [isset($proprietes['montant'])
+                ? Formats::montant($proprietes['montant'])
+                : null],
+            'order.cancelled_by_client' => [($proprietes['indemnite'] ?? 0) > 0
+                ? Formats::montant($proprietes['indemnite'])
+                : null],
+            default => [],
+        };
+
+        $details = array_filter($details, fn ($detail) => is_string($detail) && trim($detail) !== '');
+
+        return $details === [] ? null : implode(' · ', $details);
     }
 }

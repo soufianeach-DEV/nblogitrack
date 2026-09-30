@@ -12,7 +12,10 @@ class Traductions
     /** @return array<string, string> */
     public static function pour(string $langue): array
     {
-        return Cache::remember(
+        // Memorise pour la requete : l'ecran de planification demande des
+        // centaines de libelles, et chaque lecture du cache en base relisait
+        // tout le dictionnaire (950 requetes au lieu de 44).
+        return Cache::memo()->remember(
             self::cle($langue),
             self::DUREE_CACHE,
             fn () => Translation::all()
@@ -33,6 +36,19 @@ class Traductions
         }
 
         return $texte;
+    }
+
+    /** Execute un calcul dans une autre langue (texte destine a un tiers). */
+    public static function dans(string $langue, callable $calcul): mixed
+    {
+        $avant = app()->getLocale();
+        app()->setLocale(self::estServie($langue) ? $langue : 'fr');
+
+        try {
+            return $calcul();
+        } finally {
+            app()->setLocale($avant);
+        }
     }
 
     public static function vocabulaire(string $groupe, ?string $valeur): ?string
@@ -75,8 +91,19 @@ class Traductions
     public static function oublier(): void
     {
         foreach (array_keys(Translation::LANGUES) as $langue) {
-            Cache::forget(self::cle($langue));
+            Cache::memo()->forget(self::cle($langue));
         }
+
+        Cache::memo()->forever('traductions.version', bin2hex(random_bytes(4)));
+    }
+
+    /**
+     * Change a chaque modification du dictionnaire : le navigateur garde
+     * le dictionnaire tant que la version et la langue ne changent pas.
+     */
+    public static function version(): string
+    {
+        return Cache::memo()->rememberForever('traductions.version', fn () => bin2hex(random_bytes(4)));
     }
 
     public static function estServie(?string $langue): bool

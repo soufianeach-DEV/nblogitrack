@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Client;
+use App\Mail\AdresseDejaInscrite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -22,7 +23,7 @@ class RegistrationTest extends TestCase
             'postal_code' => '1050',
             'city' => 'Bruxelles',
             'country' => 'Belgique',
-            'business_sector' => 'Transport',
+            'business_sector' => 'Transport routier et ferroviaire',
             'first_name' => 'Soufiane',
             'last_name' => 'Achraa',
             'phone' => '+32 470 00 00 00',
@@ -63,7 +64,10 @@ class RegistrationTest extends TestCase
 
         $this->assertNotNull($utilisateur);
         $this->assertSame('CLIENT', $utilisateur->role);
-        $this->assertNotNull(Client::find($utilisateur->id));
+        $this->assertNotNull($utilisateur->client);
+        $this->assertSame('ADMIN', $utilisateur->company_role);
+        // Preuve de l'acceptation des conditions generales.
+        $this->assertNotNull($utilisateur->client->conditions_acceptees_le);
     }
 
     public function test_le_role_ne_se_choisit_pas_dans_le_formulaire(): void
@@ -112,5 +116,68 @@ class RegistrationTest extends TestCase
             ->assertSessionHasErrors('conditions_acceptees');
 
         $this->assertDatabaseMissing('users', ['email' => 'contact@transports-essai.be']);
+    }
+
+    public function test_la_langue_de_l_inscription_devient_celle_des_courriels(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register', ['langue' => 'nl']), $this->formulaire())
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('nl', User::where('email', 'contact@transports-essai.be')->value('locale'));
+    }
+
+    public function test_une_adresse_en_majuscules_est_rangee_en_minuscules(): void
+    {
+        $this->registreRepond();
+
+        $this->post(route('register'), $this->formulaire(['email' => 'Contact@Transports-Essai.BE']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull(User::where('email', 'contact@transports-essai.be')->first());
+    }
+
+    public function test_une_adresse_deja_inscrite_recoit_la_meme_reponse_et_son_titulaire_est_prevenu(): void
+    {
+        Mail::fake();
+        $this->registreRepond();
+        $titulaire = User::factory()->create(['email' => 'contact@transports-essai.be']);
+
+        $this->post(route('register'), $this->formulaire())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status');
+
+        $this->assertSame(1, User::where('email', 'contact@transports-essai.be')->count());
+        $this->assertNull($titulaire->fresh()->client_id);
+        Mail::assertSent(AdresseDejaInscrite::class, fn ($m) => $m->hasTo($titulaire->email));
+    }
+
+    public function test_le_numero_tente_avec_une_adresse_inscrite_ne_revele_pas_le_compte(): void
+    {
+        Mail::fake();
+        $this->registreRepond();
+        User::factory()->create(['email' => 'contact@transports-essai.be']);
+
+        $this->post(route('register'), $this->formulaire())->assertSessionHasNoErrors();
+
+        // Meme numero, autre adresse : la reponse est celle d'un numero deja
+        // pris, comme si la premiere inscription avait abouti.
+        $this->post(route('register'), $this->formulaire(['email' => 'autre@transports-essai.be']))
+            ->assertSessionHasErrors('vat_number');
+    }
+
+    public function test_une_societe_britannique_s_inscrit_sans_acces_au_registre_hmrc(): void
+    {
+        Mail::fake();
+
+        $this->post(route('register'), $this->formulaire([
+            'vat_number' => 'GB123456789',
+            'country' => 'Royaume-Uni',
+            'email' => 'contact@transport-uk.example',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('clients', ['vat_number' => 'GB123456789', 'is_validated' => false]);
     }
 }

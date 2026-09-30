@@ -45,7 +45,8 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // Un serveur SMTP muet ne bloque pas une page une minute entiere.
+            'timeout' => env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
@@ -114,5 +115,25 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Domaines bloques (jeu de demonstration)
+    |--------------------------------------------------------------------------
+    |
+    | Les adresses du jeu de demonstration sont inventees : un courriel qui
+    | leur est adresse revient en erreur et abime la reputation du compte
+    | d'envoi. Il est retenu et seulement note au journal. Un « * » remplace
+    | une partie du nom (client*.be). MAIL_DOMAINES_BLOQUES vide : tout part.
+    | nblogitrack.be n'y figure pas : le domaine est enregistre et ses
+    | adresses (admin@, client@, chauffeurs…) sont redirigees vers une vraie
+    | boite.
+    |
+    */
+
+    'domaines_bloques' => array_values(array_filter(array_map('trim', explode(',', (string) env(
+        'MAIL_DOMAINES_BLOQUES',
+        'contact.be,nblogitrack-test.eu,client*.be,bedrijf.be,societe.be,company.be,company.com,entreprise.be,exemple-devis.be,example.com,example.org,example.net',
+    ))))),
 
 ];

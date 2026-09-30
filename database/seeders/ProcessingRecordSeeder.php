@@ -25,6 +25,9 @@ class ProcessingRecordSeeder extends Seeder
     {
         $securite = 'Accès nominatif par rôle, mots de passe hachés, journalisation des actions sensibles, transport chiffré. La sauvegarde et la restauration relèvent du contrat d\'hébergement, à conclure avant mise en production.';
         $aucunTransfert = 'Aucun transfert hors de l\'Union européenne.';
+        $registres = 'Service VIES de la Commission européenne et registres d\'entreprises nationaux (Belgique, France, Suisse, Norvège, Royaume-Uni, Tchéquie, Finlande, Pologne, Roumanie), qui reçoivent le seul numéro de TVA saisi.';
+        $adresses = 'Services de recherche d\'adresses et de fonds de carte (Photon de komoot, Base adresse nationale française, PDOK néerlandais, OpenFreeMap), qui reçoivent le texte d\'adresse saisi et l\'adresse IP du navigateur.';
+        $transfertsRegistres = 'Numéros de TVA suisses et britanniques transmis au registre de ce pays : décision d\'adéquation de la Commission européenne.';
 
         return [
             [
@@ -33,10 +36,10 @@ class ProcessingRecordSeeder extends Seeder
                 'base_legale' => 'Exécution du contrat (art. 6.1.b)',
                 'personnes' => 'Personnes de contact des entreprises clientes.',
                 'donnees' => 'Nom, prénom, fonction, adresse électronique, téléphone, langue, numéro de TVA de l\'entreprise, adresse de facturation.',
-                'destinataires' => 'Service VIES de la Commission européenne et registres d\'entreprises belge et français, pour la seule vérification du numéro de TVA.',
-                'conservation' => 'Durée de la relation commerciale, puis les délais de prescription applicables.',
+                'destinataires' => $registres.' '.$adresses,
+                'conservation' => 'Durée de la relation commerciale, puis les délais de prescription applicables. Inscription refusée : six mois après la décision, puis effacement automatique. Acceptation des conditions générales : date et version conservées avec le compte.',
                 'mesures' => $securite,
-                'transferts' => $aucunTransfert,
+                'transferts' => $transfertsRegistres,
             ],
             [
                 'nom' => 'Exécution des ordres de transport',
@@ -44,7 +47,7 @@ class ProcessingRecordSeeder extends Seeder
                 'base_legale' => 'Exécution du contrat (art. 6.1.b)',
                 'personnes' => 'Personnes de contact des clients, expéditeurs et destinataires désignés dans l\'ordre, conducteurs affectés.',
                 'donnees' => 'Adresses d\'enlèvement et de livraison et leurs coordonnées géographiques, nature et poids de la marchandise, contacts sur place, dates, statuts horodatés.',
-                'destinataires' => 'Service de calcul d\'itinéraire fondé sur OpenStreetMap, qui reçoit les seules coordonnées des deux points. Sous-traitants de transport lorsqu\'un envoi leur est confié.',
+                'destinataires' => 'Service de calcul d\'itinéraire fondé sur OpenStreetMap, qui reçoit les seules coordonnées des deux points. '.$adresses.' Sous-traitants de transport lorsqu\'un envoi leur est confié.',
                 'conservation' => 'Cinq ans, durée de conservation des documents de transport.',
                 'mesures' => $securite,
                 'transferts' => $aucunTransfert,
@@ -77,21 +80,21 @@ class ProcessingRecordSeeder extends Seeder
                 'base_legale' => 'Obligation légale (art. 6.1.c)',
                 'personnes' => 'Personnes de contact des entreprises clientes.',
                 'donnees' => 'Raison sociale, adresse de facturation, numéro de TVA, identifiant Peppol, montants, échéances, dates de paiement.',
-                'destinataires' => 'Prestataire de paiement en ligne, pour les seules données que la transaction exige. Cabinet comptable. Administration fiscale.',
-                'conservation' => 'Sept ans, conformément au Code de la TVA.',
+                'destinataires' => 'Stripe (Stripe Payments Europe, Irlande), prestataire de paiement en ligne, pour les seules données que la transaction exige (adresse électronique, montant, référence). Point d\'accès Peppol du prestataire choisi, pour la facture électronique. Cabinet comptable. Administration fiscale.',
+                'conservation' => 'Factures et autres pièces comptables : sept ans (article 60 du Code de la TVA, modifié par la loi du 18 décembre 2025 ; article III.88 du Code de droit économique).',
                 'mesures' => $securite,
-                'transferts' => $aucunTransfert,
+                'transferts' => 'Stripe appartient à un groupe établi aux États-Unis : adhésion au cadre de protection des données UE–États-Unis et clauses contractuelles types de la Commission.',
             ],
             [
                 'nom' => 'Demandes de devis',
                 'finalite' => 'Répondre à une demande de prix émanant d\'une entreprise qui n\'est pas encore cliente.',
                 'base_legale' => 'Mesures précontractuelles (art. 6.1.b)',
-                'personnes' => 'Personnes ayant introduit une demande.',
-                'donnees' => 'Nom, entreprise, adresse électronique, téléphone, numéro de TVA, description de l\'envoi envisagé.',
-                'destinataires' => 'Aucun.',
-                'conservation' => 'Deux ans lorsque la demande reste sans suite.',
+                'personnes' => 'Personnes ayant introduit une demande ; contacts sur place (enlèvement et livraison) et client final qu\'elles désignent.',
+                'donnees' => 'Nom, fonction, entreprise, adresse électronique, téléphone et portable, numéro de TVA et EORI, adresse de facturation, client final, contacts et horaires sur place, description et valeur déclarée de l\'envoi, pièces jointes (bons de livraison, factures, photos).',
+                'destinataires' => $registres.' '.$adresses,
+                'conservation' => 'Deux ans, pièces jointes comprises, lorsque la demande reste sans suite (devis transmis sans réponse compris) ; cinq ans lorsqu\'elle devient une commande. Effacement automatique.',
                 'mesures' => $securite,
-                'transferts' => $aucunTransfert,
+                'transferts' => $transfertsRegistres,
             ],
             [
                 'nom' => 'Journal d\'activité et sécurité',
@@ -113,6 +116,17 @@ class ProcessingRecordSeeder extends Seeder
                 'destinataires' => 'Aucun. Une clé rattachée à une entreprise ne voit que les expéditions de cette entreprise.',
                 'conservation' => 'Journal des appels : douze mois. Clés : jusqu\'à leur révocation.',
                 'mesures' => 'Clés jamais conservées en clair, comparaison à temps constant, restriction par adresse IP, permissions déclarées sur chaque route, journalisation des refus.',
+                'transferts' => $aucunTransfert,
+            ],
+            [
+                'nom' => 'Mesure d\'audience du site public',
+                'finalite' => 'Connaître les pages consultées, la provenance des visites et les conversions (devis, inscriptions, simulations) pour améliorer le site.',
+                'base_legale' => 'Consentement (art. 6.1.a), recueilli par le bandeau des témoins et retirable à tout moment.',
+                'personnes' => 'Visiteurs non connectés du site public ayant accepté la mesure d\'audience.',
+                'donnees' => 'Date, page, langue, type d\'appareil, provenance de l\'arrivée (domaine d\'origine, paramètres de campagne). Aucun identifiant, aucune adresse IP, aucun témoin de suivi.',
+                'destinataires' => 'Aucun. La mesure est faite par l\'application elle-même.',
+                'conservation' => 'Treize mois, puis effacement automatique.',
+                'mesures' => 'Données agrégeables seulement, sans lien entre deux pages d\'un même visiteur ; comptes connectés et robots exclus ; consultation réservée aux administrateurs.',
                 'transferts' => $aucunTransfert,
             ],
         ];

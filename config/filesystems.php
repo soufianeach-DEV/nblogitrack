@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Aucun lien temporaire n'est emis : les fichiers prives sortent
+            // par les controleurs, qui controlent le droit d'y acceder.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

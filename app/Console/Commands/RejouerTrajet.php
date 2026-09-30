@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use App\Models\DriverAcknowledgement;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
+use App\Support\Osrm;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 
 class RejouerTrajet extends Command
 {
@@ -68,7 +68,7 @@ class RejouerTrajet extends Command
 
             ShipmentPosition::create([
                 'transport_order_id' => $ordre->id,
-                'driver_id' => $ordre->driver_id,
+                'driver_id' => $ordre->driver?->user_id,
                 'type' => ShipmentPosition::ROUTE,
                 'lat' => $lat,
                 'lng' => $lng,
@@ -104,7 +104,7 @@ class RejouerTrajet extends Command
             return 'Le suivi de position n\'est pas ouvert pour cette mission. Ouvrez-le depuis la planification.';
         }
 
-        if (! DriverAcknowledgement::aJour($ordre->driver_id)) {
+        if (! DriverAcknowledgement::aJour((int) $ordre->driver?->user_id)) {
             return 'Le conducteur n\'a pas pris connaissance de la note d\'information : aucune position ne serait relevée.';
         }
 
@@ -120,21 +120,18 @@ class RejouerTrajet extends Command
      */
     private function itineraire(TransportOrder $ordre): array
     {
-        try {
-            $reponse = Http::timeout(20)->get(sprintf(
-                'https://router.project-osrm.org/route/v1/driving/%s,%s;%s,%s',
-                $ordre->pickup_lng, $ordre->pickup_lat, $ordre->delivery_lng, $ordre->delivery_lat,
-            ), ['overview' => 'full', 'geometries' => 'geojson']);
+        $route = Osrm::route(
+            (float) $ordre->pickup_lat, (float) $ordre->pickup_lng,
+            (float) $ordre->delivery_lat, (float) $ordre->delivery_lng,
+            trace: true, delai: 20,
+        );
 
-            $points = $reponse->ok() ? $reponse->json('routes.0.geometry.coordinates') : null;
+        if ($route === null) {
+            $this->warn('  Service d\'itinéraire injoignable.');
 
-            if (is_array($points) && $points !== []) {
-                return array_map(fn (array $p) => [(float) $p[1], (float) $p[0]], $points);
-            }
-        } catch (\Throwable $e) {
-            $this->warn('  Service d\'itinéraire injoignable : '.$e->getMessage());
+            return [];
         }
 
-        return [];
+        return array_map(fn (array $p) => [(float) $p[1], (float) $p[0]], $route['geometry']['coordinates']);
     }
 }

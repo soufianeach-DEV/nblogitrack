@@ -1,4 +1,6 @@
 import BarreFiltres from '@/Components/BarreFiltres';
+import ChampRecherche from '@/Components/ChampRecherche';
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import OngletsFacturation from '@/Components/OngletsFacturation';
 
@@ -13,18 +15,28 @@ const ETATS = {
     OVERDUE: { cle: 'statut.en_retard', libelle: 'En retard', classe: 'bg-status-incident/10 text-status-incident' },
 };
 
+const deuxChiffres = (n) => String(n).padStart(2, '0');
+
+// La date du jour sur le poste, pas en UTC : a Bruxelles, entre minuit et
+// deux heures, toISOString() donnait encore la veille.
+const jourLocal = (d) => `${d.getFullYear()}-${deuxChiffres(d.getMonth() + 1)}-${deuxChiffres(d.getDate())}`;
+
 const dernierJour = (mois) => {
     const [annee, numero] = mois.split('-').map(Number);
-    return `${mois}-${String(new Date(annee, numero, 0).getDate()).padStart(2, '0')}`;
+    return `${mois}-${deuxChiffres(new Date(annee, numero, 0).getDate())}`;
 };
 
 function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
-    const moisPasse = new Date();
-    moisPasse.setMonth(moisPasse.getMonth() - 1);
-    const moisDefaut = `${moisPasse.getFullYear()}-${String(moisPasse.getMonth() + 1).padStart(2, '0')}`;
+    const maintenant = new Date();
+    const aujourdhui = jourLocal(maintenant);
+    const moisCourant = aujourdhui.slice(0, 7);
+    // Le premier du mois precedent : reculer d'un mois un 31 mars donnait
+    // le « 31 fevrier », soit le 3 mars, et proposait le mois en cours.
+    const moisPasse = new Date(maintenant.getFullYear(), maintenant.getMonth() - 1, 1);
+    const moisDefaut = `${moisPasse.getFullYear()}-${deuxChiffres(moisPasse.getMonth() + 1)}`;
 
     const { data, setData, post, processing, errors, transform } = useForm({
         supplier_name: '',
@@ -34,7 +46,7 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
         mois: moisDefaut,
         period_start: '',
         period_end: '',
-        issued_on: new Date().toISOString().slice(0, 10),
+        issued_on: aujourdhui,
         due_on: '',
         liters: '',
         taxed_km: '',
@@ -47,8 +59,10 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
         e.preventDefault();
 
         transform((donnees) => {
+            // Calcul en UTC de bout en bout : en heure locale, le passage a
+            // l'heure d'ete faisait perdre un jour a l'echeance.
             const d = new Date(donnees.issued_on);
-            d.setDate(d.getDate() + 30);
+            d.setUTCDate(d.getUTCDate() + 30);
 
             return {
                 ...donnees,
@@ -79,6 +93,27 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
     const champ = 'mt-1 block w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine';
     const intitule = 'text-xs uppercase tracking-wide text-slate-600';
 
+    // Chaque champ montre les refus du serveur qui le concernent. Seuls
+    // quatre champs le faisaient : une date d'emission future, refusee,
+    // laissait le formulaire ouvert sans dire pourquoi.
+    const erreur = (...cles) => {
+        const message = cles.map((cle) => errors[cle]).find(Boolean);
+
+        return message ? <p className="mt-1 text-xs text-status-incident">{message}</p> : null;
+    };
+
+    // La periode et l'echeance se deduisent du mois et de l'emission : leurs
+    // erreurs s'affichent sous ces champs-la. Ce qui ne trouve aucune place
+    // (des litres encodes avant de passer en peage, par exemple) s'affiche
+    // en bas du formulaire plutot que de disparaitre.
+    const affichees = [
+        'supplier_name', 'reference', 'category', 'vehicle_registration',
+        'mois', 'period_start', 'period_end', 'issued_on', 'due_on',
+        data.category === 'CARBURANT' ? 'liters' : 'taxed_km',
+        'amount_excl_tax', 'vat_rate', 'vat_deductible',
+    ];
+    const autres = Object.entries(errors).filter(([cle]) => ! affichees.includes(cle));
+
     return (
         <form onSubmit={enregistrer} className="p-6">
             <h2 className="text-lg font-bold text-marine">{t('achats.encoder', 'Encoder une facture fournisseur')}</h2>
@@ -86,18 +121,8 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
                     <label htmlFor="fournisseur" className={intitule}>{t('achats.fournisseur', 'Fournisseur')}</label>
-                    <input
-                        id="fournisseur"
-                        list="liste-fournisseurs"
-                        value={data.supplier_name}
-                        onChange={(e) => setData('supplier_name', e.target.value)}
-                        className={champ}
-                        required
-                    />
-                    <datalist id="liste-fournisseurs">
-                        {fournisseurs.map((f) => <option key={f} value={f} />)}
-                    </datalist>
-                    {errors.supplier_name && <p className="mt-1 text-xs text-status-incident">{errors.supplier_name}</p>}
+                    <ChampRecherche id="fournisseur" value={data.supplier_name} onChange={(v) => setData('supplier_name', v)} suggestions={fournisseurs} local className={champ} />
+                    {erreur('supplier_name')}
                 </div>
                 <div>
                     <label htmlFor="reference" className={intitule}>{t('achats.reference', 'Référence de la facture')}</label>
@@ -108,51 +133,50 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                         className={champ}
                         required
                     />
-                    {errors.reference && <p className="mt-1 text-xs text-status-incident">{errors.reference}</p>}
+                    {erreur('reference')}
                 </div>
                 <div>
                     <label htmlFor="categorie" className={intitule}>{t('personnel.categorie', 'Catégorie')}</label>
-                    <select id="categorie" value={data.category} onChange={(e) => choisirCategorie(e.target.value)} className={champ}>
-                        {Object.entries(categories).map(([valeur, libelle]) => (
-                            <option key={valeur} value={valeur}>{libelle}</option>
-                        ))}
-                    </select>
+                    <ListeRecherche id="categorie" value={data.category} onChange={(v) => v && choisirCategorie(v)} options={Object.entries(categories).map(([valeur, libelle]) => ({ valeur, libelle }))} className={champ} required />
+                    {erreur('category')}
                 </div>
                 <div>
                     <label htmlFor="vehicule" className={intitule}>{t('ordres.vehicule', 'Véhicule')}</label>
-                    <select
+                    <ListeRecherche
                         id="vehicule"
                         value={data.vehicle_registration}
-                        onChange={(e) => setData('vehicle_registration', e.target.value)}
+                        onChange={(v) => setData('vehicle_registration', v)}
+                        placeholder={t('commande.choisir', '— Choisir —')}
+                        options={vehicules}
                         className={champ}
-                        required
-                    >
-                        <option value="">{t('commande.choisir', '— Choisir —')}</option>
-                        {vehicules.map((v) => <option key={v.valeur} value={v.valeur}>{v.libelle}</option>)}
-                    </select>
-                    {errors.vehicle_registration && <p className="mt-1 text-xs text-status-incident">{errors.vehicle_registration}</p>}
+                    />
+                    {erreur('vehicle_registration')}
                 </div>
                 <div>
                     <label htmlFor="mois" className={intitule}>{t('achats.periode', 'Période facturée')}</label>
                     <input
                         id="mois"
                         type="month"
+                        max={moisCourant}
                         value={data.mois}
                         onChange={(e) => setData('mois', e.target.value)}
                         className={champ}
                         required
                     />
+                    {erreur('mois', 'period_start', 'period_end')}
                 </div>
                 <div>
                     <label htmlFor="emission" className={intitule}>{t('facture.emise_le', 'Émise le')}</label>
                     <input
                         id="emission"
                         type="date"
+                        max={aujourdhui}
                         value={data.issued_on}
                         onChange={(e) => setData('issued_on', e.target.value)}
                         className={champ}
                         required
                     />
+                    {erreur('issued_on', 'due_on')}
                 </div>
                 {data.category === 'CARBURANT' ? (
                     <div>
@@ -162,10 +186,12 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                             type="number"
                             step="0.01"
                             min="0"
+                            max="99999"
                             value={data.liters}
                             onChange={(e) => setData('liters', e.target.value)}
                             className={champ}
                         />
+                        {erreur('liters')}
                     </div>
                 ) : (
                     <div>
@@ -175,10 +201,12 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                             type="number"
                             step="0.1"
                             min="0"
+                            max="999999"
                             value={data.taxed_km}
                             onChange={(e) => setData('taxed_km', e.target.value)}
                             className={champ}
                         />
+                        {erreur('taxed_km')}
                     </div>
                 )}
                 <div>
@@ -188,12 +216,13 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                         type="number"
                         step="0.01"
                         min="0"
+                        max="9999999"
                         value={data.amount_excl_tax}
                         onChange={(e) => setData('amount_excl_tax', e.target.value)}
                         className={champ}
                         required
                     />
-                    {errors.amount_excl_tax && <p className="mt-1 text-xs text-status-incident">{errors.amount_excl_tax}</p>}
+                    {erreur('amount_excl_tax')}
                 </div>
                 <div>
                     <label htmlFor="taux" className={intitule}>{t('achats.taux_tva', 'Taux de TVA')}</label>
@@ -203,18 +232,28 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
                         <option value="12">12 %</option>
                         <option value="21">21 %</option>
                     </select>
+                    {erreur('vat_rate')}
                 </div>
-                <label className="flex items-end gap-2 pb-2">
-                    <input
-                        type="checkbox"
-                        checked={data.vat_deductible}
-                        disabled={Number(data.vat_rate) === 0}
-                        onChange={(e) => setData('vat_deductible', e.target.checked)}
-                        className="rounded border-slate-300 text-marine focus:ring-marine"
-                    />
-                    <span className="text-sm text-slate-600">{t('tva.deductible', 'TVA déductible')}</span>
-                </label>
+                <div className="flex flex-col justify-end pb-2">
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={data.vat_deductible}
+                            disabled={Number(data.vat_rate) === 0}
+                            onChange={(e) => setData('vat_deductible', e.target.checked)}
+                            className="rounded border-slate-300 text-marine focus:ring-marine"
+                        />
+                        <span className="text-sm text-slate-600">{t('tva.deductible', 'TVA déductible')}</span>
+                    </label>
+                    {erreur('vat_deductible')}
+                </div>
             </div>
+
+            {autres.length > 0 && (
+                <ul className="mt-3 space-y-1 text-xs text-status-incident">
+                    {autres.map(([cle, message]) => <li key={cle}>{message}</li>)}
+                </ul>
+            )}
 
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
                 <p className="text-sm text-slate-600">
@@ -237,12 +276,11 @@ function Encodage({ categories, vehicules, fournisseurs, onFermer }) {
     );
 }
 
-export default function Achats({ achats, compteurs, cartes, categories, vehicules = [], fournisseurs = [], filtres = {} }) {
+export default function Achats({ suggestions = [], achats, compteurs, cartes, categories, vehicules = [], fournisseurs = [], filtres = {} }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [encoder, setEncoder] = useState(false);
-    const flash = usePage().props.flash ?? {};
 
     return (
         <AuthenticatedLayout
@@ -266,16 +304,6 @@ export default function Achats({ achats, compteurs, cartes, categories, vehicule
 
             <OngletsFacturation actif="achats" />
 
-            {flash.success && (
-                <p className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-semibold text-status-delivered">
-                    {flash.success}
-                </p>
-            )}
-            {flash.error && (
-                <p className="mb-4 rounded-lg bg-status-incident/10 px-4 py-3 text-sm font-semibold text-status-incident">
-                    {flash.error}
-                </p>
-            )}
 
             <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white p-5 shadow-sm">
@@ -296,6 +324,7 @@ export default function Achats({ achats, compteurs, cartes, categories, vehicule
 
             <div className="mt-4">
                 <BarreFiltres
+                    suggestions={suggestions}
                     adresse={route('purchases.index')}
                     filtres={filtres}
                     placeholder={t('achats.filtre', 'Fournisseur, référence, immatriculation…')}

@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
@@ -21,7 +22,7 @@ function Onglet({ href, actif, icone, children }) {
     );
 }
 
-export default function ChauffeurLayout({ children }) {
+export default function ChauffeurLayout({ header = null, children }) {
     const { auth } = usePage().props;
     const t = useTraduction();
     const route_actuelle = typeof route !== 'undefined' ? route().current() : null;
@@ -68,6 +69,8 @@ export default function ChauffeurLayout({ children }) {
             </header>
 
             <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-4 lg:pb-8">
+                <MessagesFlash />
+                {header && <div className="mb-4">{header}</div>}
                 {children}
             </main>
 

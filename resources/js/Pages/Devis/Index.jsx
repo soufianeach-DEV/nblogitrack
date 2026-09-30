@@ -1,6 +1,7 @@
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useOuverture, usePays, useTraduction, useVocabulaire } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
@@ -9,15 +10,82 @@ const COULEUR = {
     PROCESSING: 'bg-status-progress/10 text-status-progress',
     QUOTED: 'bg-status-delivered/10 text-status-delivered',
     CLOSED: 'bg-slate-100 text-slate-600',
+    ORDERED: 'bg-action/10 text-action-dark',
 };
 
-export default function Index({ demandes, statut, recherche, statuts, compteurs }) {
-    const flash = usePage().props.flash ?? {};
+const LIBELLES_COLIS = {
+    palette_europe: ['devis.colis_palette_europe', 'Palette Europe (120 × 80)'],
+    palette_industrielle: ['devis.colis_palette_industrielle', 'Palette industrielle (120 × 100)'],
+    demi_palette: ['devis.colis_demi_palette', 'Demi-palette (80 × 60)'],
+    colis: ['devis.colis_colis', 'Colis'],
+    caisse: ['devis.colis_caisse', 'Caisse'],
+    rouleau: ['devis.colis_rouleau', 'Rouleau'],
+    vrac: ['devis.colis_vrac', 'Vrac'],
+    autre: ['devis.colis_autre', 'Autre'],
+};
+
+const LIBELLES_ACCES = {
+    centre_ville: ['devis.acces_centre_ville', 'Centre-ville'],
+    zone_basses_emissions: ['devis.acces_zbe', 'Zone de basses émissions'],
+    limite_tonnage: ['devis.acces_tonnage', 'Limite de tonnage'],
+    rue_etroite: ['devis.acces_rue_etroite', 'Rue étroite'],
+    sans_stationnement: ['devis.acces_stationnement', 'Pas de stationnement pour un camion'],
+};
+
+const LIBELLES_CRENEAU = {
+    matin: ['devis.creneau_matin', 'Le matin'],
+    apres_midi: ['devis.creneau_apres_midi', 'L\'après-midi'],
+    journee: ['devis.creneau_journee', 'Toute la journée'],
+    indifferent: ['devis.indifferent', 'Indifférent'],
+};
+
+export default function Index({ demandes, statut, recherche, statuts, compteurs, libelles = {}, entreprises = [] }) {
     const t = useTraduction();
+    const { auth } = usePage().props;
     const v = useVocabulaire();
+    const ouverture = useOuverture();
+    const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const nomPays = usePays();
     const locale = useLocale();
     const [champ, setChamp] = useState(recherche ?? '');
     const [traitement, setTraitement] = useState(null);
+    const [ouverte, setOuverte] = useState(null);
+
+    // Transformation en commande : l'agent confirme l'entreprise. La
+    // proposition vient du numero de TVA ou de l'e-mail saisis dans le
+    // formulaire public, qu'il faut verifier.
+    const [aCommander, setACommander] = useState(null);
+    const [entreprise, setEntreprise] = useState('');
+    const [envoiCommande, setEnvoiCommande] = useState(false);
+    const [poidsCommande, setPoidsCommande] = useState('');
+
+    const commander = (d) => {
+        setEntreprise(d.client_propose ? String(d.client_propose) : '');
+        setPoidsCommande('');
+        setACommander(d);
+    };
+
+    const confirmerCommande = (e) => {
+        e.preventDefault();
+        if (! entreprise || envoiCommande || (! aCommander.weight && ! poidsCommande)) return;
+        router.post(route('quotes.order', aCommander.id), { client_id: entreprise, weight: poidsCommande || null }, {
+            preserveScroll: true,
+            onStart: () => setEnvoiCommande(true),
+            onFinish: () => { setEnvoiCommande(false); setACommander(null); },
+        });
+    };
+
+    // Ce qu'on sait du lieu d'enlevement ou de livraison, en une ligne.
+    const surPlace = (d, lieu) => [
+        d[lieu + '_contact_name'] && (d[lieu + '_contact_name'] + (d[lieu + '_contact_phone'] ? ' · ' + d[lieu + '_contact_phone'] : '')),
+        ouverture(d[lieu + '_opening_hours']),
+        d[lieu + '_time_slot'] && t(...LIBELLES_CRENEAU[d[lieu + '_time_slot']]),
+        d[lieu + '_has_dock'] === true && t('devis.quai_oui', 'Oui, un quai'),
+        d[lieu + '_has_dock'] === false && t('devis.quai_non', 'Non : hayon nécessaire'),
+        d[lieu + '_appointment'] && t('devis.rendez_vous', 'Prise de rendez-vous obligatoire'),
+        ...(d[lieu + '_access'] ?? []).map((a) => LIBELLES_ACCES[a] ? t(...LIBELLES_ACCES[a]) : a),
+        d[lieu + '_access_notes'],
+    ].filter(Boolean).join(' · ');
     const minuteur = useRef(null);
 
     const { data, setData, patch, processing, errors, reset } = useForm({
@@ -51,6 +119,11 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
             onSuccess: () => setTraitement(null),
         });
     };
+
+    // Les choix du formulaire sont ranges en francais : le serveur fournit
+    // leur libelle dans la langue de l'ecran. Une ancienne valeur hors
+    // liste s'affiche telle quelle.
+    const choix = (valeur) => (valeur ? libelles[valeur] ?? valeur : valeur);
 
     const date = (valeur) => valeur
         ? new Date(valeur).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -86,11 +159,6 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('nav.devis_demandes', 'Demandes de devis')}</h1>}>
             <Head title={t('nav.devis_demandes', 'Demandes de devis')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered">
-                    {flash.success}
-                </div>
-            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 {Object.entries(statuts).map(([cle, libelle]) => onglet(cle, libelle))}
@@ -101,7 +169,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                 <input
                     value={champ}
                     onChange={(e) => chercher(e.target.value)}
-                    placeholder={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')}
+                    aria-label={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')} placeholder={t('demandes.filtre', 'Référence, entreprise, contact, e-mail ou numéro de TVA')}
                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine sm:max-w-lg"
                 />
             </div>
@@ -125,7 +193,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                 </div>
                                 <h2 className="mt-1 text-lg font-bold text-marine">{d.company_name}</h2>
                                 <p className="text-xs text-slate-600">
-                                    {t('demandes.recue_le', 'Reçue le')} {date(d.created_at)} · {d.customer_type}
+                                    {t('demandes.recue_le', 'Reçue le')} {date(d.created_at)} · {choix(d.customer_type)}
                                 </p>
                             </div>
 
@@ -138,6 +206,30 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                                     >
                                         {t('demandes.prendre_en_charge', 'Prendre en charge')}
                                     </button>
+                                )}
+                                {['PENDING', 'PROCESSING', 'QUOTED'].includes(d.status) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => commander(d)}
+                                        className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark"
+                                    >
+                                        {t('demandes.transformer', 'Transformer en commande')}
+                                    </button>
+                                )}
+                                {auth.canViewLogs && ! d.commande && (
+                                    <button
+                                        type="button"
+                                        onClick={() => window.confirm(t('demandes.effacer_confirmer', 'Effacer définitivement cette demande et ses pièces jointes (demande d\'effacement de la personne) ?'))
+                                            && router.delete(route('quotes.destroy', d.id), { preserveScroll: true })}
+                                        className="rounded-lg border border-status-incident px-4 py-2 text-sm font-semibold text-status-incident transition hover:bg-status-incident/10"
+                                    >
+                                        {t('demandes.effacer', 'Effacer')}
+                                    </button>
+                                )}
+                                {d.commande && (
+                                    <Link href={route('transport-orders.show', d.commande.id)} className="rounded-lg border border-action px-4 py-2 text-sm font-semibold text-action-dark">
+                                        {d.commande.tracking_number}
+                                    </Link>
                                 )}
                                 {(d.status === 'PENDING' || d.status === 'PROCESSING') && (
                                     <>
@@ -167,20 +259,77 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                             {ligne(t('compte.numero_tva', 'Numéro de TVA'), d.vat_number)}
                             {ligne(t('demandes.enlevement', 'Enlèvement'), d.pickup_address)}
                             {ligne(t('demandes.livraison', 'Livraison'), d.delivery_address)}
-                            {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + d.date_flexibility)}
-                            {ligne(t('devis.trajet', 'Trajet'), d.trip_type + ' · ' + d.frequency)}
+                            {ligne(t('demandes.date_souhaitee', 'Date souhaitée'), date(d.pickup_date) + ' · ' + choix(d.date_flexibility))}
+                            {ligne(t('devis.trajet', 'Trajet'), choix(d.trip_type) + ' · ' + choix(d.frequency))}
                             {ligne(t('devis.marchandise', 'Marchandise'), v('marchandise', d.goods_type) + (d.weight ? ' · ' + Number(d.weight).toLocaleString(locale) + ' kg' : ''))}
                             {ligne(t('commande.volume', 'Volume'), d.volume)}
-                            {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), d.vehicle_type)}
-                            {ligne(t('demandes.assurance', 'Assurance'), d.insurance_value)}
+                            {ligne(t('demandes.vehicule_souhaite', 'Véhicule souhaité'), choix(d.vehicle_type))}
+                            {ligne(t('demandes.assurance', 'Assurance'), choix(d.insurance_value))}
                         </dl>
 
-                        {(d.needs_tail_lift || d.is_hazardous || d.needs_express || d.needs_ecmr) && (
+                        <button type="button" onClick={() => setOuverte(ouverte === d.id ? null : d.id)} className="mt-3 text-xs font-semibold text-brand-blue" aria-expanded={ouverte === d.id}>
+                            {ouverte === d.id ? t('demandes.moins', 'Masquer le détail') : t('demandes.plus', 'Voir tout le détail')}
+                        </button>
+
+                        {ouverte === d.id && (
+                            <dl className="mt-3 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {d.end_client_name && ligne(t('devis.client_final', 'Entreprise pour laquelle vous demandez'), d.end_client_name)}
+                                {ligne(t('devis.forme_juridique', 'Forme juridique'), [d.legal_form, v('secteur', d.sector)].filter(Boolean).join(' · '))}
+                                {ligne(t('devis.eori', 'Numéro EORI'), d.eori_number)}
+                                {ligne(t('devis.adresse_facturation', 'Adresse de facturation'), [d.billing_street, [d.billing_postal_code, d.billing_city].filter(Boolean).join(' '), nomPays(d.billing_country)].filter(Boolean).join(', '))}
+                                {ligne(t('devis.fonction', 'Fonction'), v('fonction', d.contact_function))}
+                                {ligne(t('devis.portable', 'Téléphone portable'), d.mobile_phone)}
+                                {ligne(t('devis.email_facturation', 'E-mail de facturation'), d.billing_email)}
+                                {ligne(t('devis.canal', 'Comment vous répondre ?'), (d.preferred_channel === 'phone' ? t('devis.canal_telephone', 'Par téléphone') : t('devis.canal_email', 'Par e-mail'))
+                                    + (d.callback_slot && LIBELLES_CRENEAU[d.callback_slot] ? ' · ' + t(...LIBELLES_CRENEAU[d.callback_slot]) : '') + ' · ' + (d.correspondence_language ?? 'fr').toUpperCase())}
+                                {ligne(t('devis.sur_place_enlevement', 'À l\'enlèvement'), surPlace(d, 'pickup'))}
+                                {ligne(t('devis.sur_place_livraison', 'À la livraison'), surPlace(d, 'delivery'))}
+                                {ligne(t('devis.date_livraison', 'Date de livraison souhaitée'), d.delivery_date ? date(d.delivery_date) : null)}
+                                {ligne(t('devis.volume_mensuel', 'Volume prévu'), choix(d.monthly_volume))}
+                                {ligne(t('devis.valeur_declaree', 'Valeur de la marchandise (€ HT)'), d.declared_value ? euros(d.declared_value) : null)}
+                                {ligne(t('devis.budget', 'Budget indicatif (€ HT)'), d.budget ? euros(d.budget) : null)}
+                                {ligne(t('devis.reponse_avant', 'Réponse souhaitée avant le'), d.response_deadline ? date(d.response_deadline) : null)}
+                                {d.needs_temperature && ligne(t('devis.temperature', 'Température dirigée'), `${Number(d.temperature_min).toLocaleString(locale)} °C → ${Number(d.temperature_max).toLocaleString(locale)} °C`)}
+                                {d.is_hazardous && ligne('ADR', [d.un_number && t('devis.onu', 'ONU') + ' ' + d.un_number, d.adr_class && t('devis.classe_adr', 'Classe ADR') + ' ' + d.adr_class, d.packing_group && t('devis.groupe_emballage', 'Groupe d\'emballage') + ' ' + d.packing_group].filter(Boolean).join(' · '))}
+                                {(d.packages ?? []).length > 0 && (
+                                    <div className="sm:col-span-2 lg:col-span-3">
+                                        <dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.colis_titre', 'Colis et palettes')}</dt>
+                                        <dd className="text-sm text-marine">
+                                            <ul className="list-disc pl-4">
+                                                {d.packages.map((c, i) => (
+                                                    <li key={i}>
+                                                        {c.quantite} × {LIBELLES_COLIS[c.type] ? t(...LIBELLES_COLIS[c.type]) : c.type}
+                                                        {c.longueur && c.largeur ? ` · ${c.longueur} × ${c.largeur}${c.hauteur ? ' × ' + c.hauteur : ''} cm` : ''}
+                                                        {c.poids_unitaire ? ` · ${c.poids_unitaire} kg` : ''}
+                                                        {c.empilable === false || c.empilable === '0' ? ' · ' + t('demandes.non_empilable', 'non empilable') : ''}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </dd>
+                                    </div>
+                                )}
+                                {(d.attachments ?? []).length > 0 && (
+                                    <div className="sm:col-span-2 lg:col-span-3">
+                                        <dt className="text-xs uppercase tracking-wide text-slate-600">{t('devis.pieces_jointes', 'Pièces jointes')}</dt>
+                                        <dd className="mt-1 flex flex-wrap gap-2">
+                                            {d.attachments.map((p, i) => (
+                                                <a key={i} href={route('quotes.piece', { quoteRequest: d.id, rang: i })} className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-brand-blue shadow-sm hover:underline">
+                                                    {p.nom} ({Math.max(1, Math.round((p.taille ?? 0) / 1024)).toLocaleString(locale)} {t('unite.ko', 'Ko')})
+                                                </a>
+                                            ))}
+                                        </dd>
+                                    </div>
+                                )}
+                            </dl>
+                        )}
+
+                        {(d.needs_tail_lift || d.is_hazardous || d.needs_express || d.needs_ecmr || d.needs_temperature) && (
                             <p className="mt-3 flex flex-wrap gap-2">
                                 {d.needs_tail_lift && <span className="rounded-full bg-action/10 px-3 py-1 text-xs font-medium text-action-dark">{t('devis.hayon', 'Hayon élévateur')}</span>}
                                 {d.is_hazardous && <span className="rounded-full bg-status-incident/10 px-3 py-1 text-xs font-medium text-status-incident">ADR</span>}
                                 {d.needs_express && <span className="rounded-full bg-status-progress/10 px-3 py-1 text-xs font-medium text-status-progress">Express</span>}
                                 {d.needs_ecmr && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">e-CMR</span>}
+                                {d.needs_temperature && <span className="rounded-full bg-brand-blue/10 px-3 py-1 text-xs font-medium text-brand-blue">{t('devis.temperature', 'Température dirigée')}</span>}
                             </p>
                         )}
 
@@ -217,6 +366,54 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                 </div>
             )}
 
+            <Modal show={aCommander !== null} onClose={() => ! envoiCommande && setACommander(null)} maxWidth="lg">
+                <form onSubmit={confirmerCommande} className="p-6">
+                    <h2 className="text-lg font-bold text-marine">
+                        {t('demandes.transformer', 'Transformer en commande')} — {aCommander?.reference}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                        {t('demandes.commander_explication', 'La commande est créée pour l\'entreprise choisie et tarifée comme au formulaire de commande. Ses responsables reçoivent un e-mail et peuvent l\'annuler depuis leur espace.')}
+                    </p>
+                    <label htmlFor="entreprise_commande" className="mt-4 block text-sm font-semibold text-marine">
+                        {t('demandes.entreprise_commande', 'Entreprise cliente')}
+                    </label>
+                    <ListeRecherche
+                        id="entreprise_commande"
+                        value={entreprise}
+                        onChange={setEntreprise}
+                        options={entreprises}
+                        aria-label={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')} placeholder={t('demandes.entreprise_choisir', 'Choisir une entreprise validée')}
+                        className="mt-1"
+                    />
+                    {aCommander && (aCommander.client_propose
+                        ? String(aCommander.client_propose) === entreprise && (
+                            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                {t('demandes.entreprise_proposee', 'Proposée d\'après le numéro de TVA ou l\'e-mail saisis par le demandeur (:tva, :email) : vérifiez que la demande vient bien de cette entreprise.', { tva: aCommander.vat_number || '—', email: aCommander.email })}
+                            </p>
+                        )
+                        : (
+                            <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm text-slate-600">
+                                {t('demandes.entreprise_inconnue', 'Aucune entreprise validée n\'a ce numéro de TVA ni cette adresse e-mail. Choisissez-la, ou créez d\'abord son compte.')}
+                            </p>
+                        ))}
+                    {aCommander && ! aCommander.weight && (
+                        <div className="mt-4">
+                            <label htmlFor="poids_commande" className="block text-sm font-semibold text-marine">{t('demandes.poids_manquant', 'Poids de l\'envoi (kg)')}</label>
+                            <input id="poids_commande" type="number" min="1" max="44000" required value={poidsCommande} onChange={(e) => setPoidsCommande(e.target.value)} className="mt-1 block w-40 rounded-lg border-slate-300 text-sm" />
+                            <p className="mt-1 text-xs text-slate-500">{t('demandes.poids_manquant_aide', 'Le demandeur ne l\'a pas indiqué : demandez-le-lui avant de créer la commande.')}</p>
+                        </div>
+                    )}
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button type="button" onClick={() => setACommander(null)} disabled={envoiCommande} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-surface disabled:opacity-50">
+                            {t('action.annuler', 'Annuler')}
+                        </button>
+                        <button type="submit" disabled={! entreprise || envoiCommande || (aCommander && ! aCommander.weight && ! poidsCommande)} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep transition hover:bg-action-dark disabled:opacity-50">
+                            {envoiCommande ? t('demandes.creation_en_cours', 'Création…') : t('demandes.creer_commande', 'Créer la commande')}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
             <Modal show={traitement !== null} onClose={() => setTraitement(null)} maxWidth="lg">
                 <form onSubmit={enregistrer} className="p-6">
                     <h2 className="text-lg font-bold text-marine">
@@ -230,7 +427,7 @@ export default function Index({ demandes, statut, recherche, statuts, compteurs 
                         value={data.internal_note}
                         onChange={(e) => setData('internal_note', e.target.value)}
                         rows="3"
-                        placeholder={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')}
+                        aria-label={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')} placeholder={t('demandes.note_ex', 'Ex : client rappelé, chiffrage en cours sur base d\'un semi-remorque.')}
                         className="mt-4 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                     />
                     {errors.internal_note && <p className="mt-1 text-sm text-status-incident">{errors.internal_note}</p>}

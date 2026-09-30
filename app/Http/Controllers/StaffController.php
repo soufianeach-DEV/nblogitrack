@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Driver;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,20 @@ class StaffController extends Controller
         'ADMIN' => 'Administrateur',
     ];
 
+    /**
+     * Roles dans la langue de l'utilisateur.
+     *
+     * @return array<string, string>
+     */
+    private static function roles(): array
+    {
+        return [
+            'DRIVER' => Traductions::t('roles.driver', self::ROLES['DRIVER']),
+            'PLANNER' => Traductions::t('roles.planner', self::ROLES['PLANNER']),
+            'ADMIN' => Traductions::t('roles.administrateur', self::ROLES['ADMIN']),
+        ];
+    }
+
     public function index(Request $request): Response
     {
         $filtres = $request->validate([
@@ -33,11 +48,11 @@ class StaffController extends Controller
         $requete = User::whereIn('role', array_keys(self::ROLES));
 
         if (! empty($filtres['q'])) {
-            $terme = '%'.$filtres['q'].'%';
+            $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->where('first_name', 'ilike', $terme)
-                ->orWhere('last_name', 'ilike', $terme)
-                ->orWhere('email', 'ilike', $terme));
+                ->whereContient('first_name', $terme)
+                ->orWhereContient('last_name', $terme)
+                ->orWhereContient('email', $terme));
         }
 
         if (! empty($filtres['role'])) {
@@ -50,9 +65,10 @@ class StaffController extends Controller
             default => null,
         };
 
-        $chauffeurs = Driver::whereIn('id', (clone $requete)->pluck('id'))->get()->keyBy('id');
+        $chauffeurs = Driver::whereIn('user_id', (clone $requete)->pluck('id'))->get()->keyBy('user_id');
 
         return Inertia::render('Personnel/Index', [
+            'suggestions' => DriverController::noms(fn () => User::whereIn('role', array_keys(self::ROLES)), $filtres['q'] ?? null),
             'comptes' => $requete->orderBy('last_name')->orderBy('first_name')->get()
                 ->map(function (User $u) use ($chauffeurs, $request) {
                     $chauffeur = $chauffeurs->get($u->id);
@@ -62,7 +78,7 @@ class StaffController extends Controller
                         'nom' => trim($u->first_name.' '.$u->last_name),
                         'email' => $u->email,
                         'telephone' => $u->phone,
-                        'role' => self::ROLES[$u->role] ?? $u->role,
+                        'role' => self::roles()[$u->role] ?? $u->role,
                         'role_code' => $u->role,
                         'actif' => (bool) $u->is_active,
                         'confirme' => $u->email_verified_at !== null,
@@ -70,11 +86,12 @@ class StaffController extends Controller
                         'permis' => $chauffeur?->license_type,
                         'empechements' => $chauffeur?->empechements() ?? [],
                         'sorti_le' => $chauffeur?->left_on?->format('d/m/Y'),
+                        'depart_futur' => $chauffeur?->left_on !== null && $chauffeur->left_on->gt(today()),
                     ];
                 })->all(),
-            'roles' => self::ROLES,
+            'roles' => self::roles(),
             'permis' => ['C', 'CE', 'C1', 'C1E'],
-            'statuts' => Driver::STATUTS,
+            'statuts' => DriverController::statuts(),
             'compteurs' => [
                 'total' => User::whereIn('role', array_keys(self::ROLES))->count(),
                 'actifs' => User::whereIn('role', array_keys(self::ROLES))->where('is_active', true)->count(),
@@ -86,6 +103,10 @@ class StaffController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // En minuscules, comme a l'inscription : sinon un doublon passait
+        // l'unicite et le compte ne pouvait jamais se connecter.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $donnees = $request->validate([
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
@@ -98,10 +119,13 @@ class StaffController extends Controller
             'employment_status' => 'required_if:role,DRIVER|nullable|in:'.implode(',', array_keys(Driver::STATUTS)),
             'hired_on' => 'nullable|date|before_or_equal:today',
         ], [
-            'email.unique' => 'Cette adresse est déjà utilisée par un compte.',
-            'license_number.unique' => 'Ce numéro de permis est déjà enregistré.',
-            'license_expiry.after' => 'Un permis déjà expiré ne permet pas de créer le compte.',
-            'required_if' => 'Ce champ est obligatoire pour un chauffeur.',
+            'email.unique' => Traductions::t('msg.email_deja_utilise', 'Cette adresse est déjà utilisée par un compte.'),
+            'license_number.unique' => Traductions::t('msg.permis_deja_enregistre', 'Ce numéro de permis est déjà enregistré.'),
+            'license_expiry.after' => Traductions::t('msg.permis_expire', 'Un permis déjà expiré ne permet pas de créer le compte.'),
+            'required_if' => Traductions::t('msg.champ_requis_chauffeur', 'Ce champ est obligatoire pour un chauffeur.'),
+            // Sans message propre, la regle citait « hired on » et « today ».
+            'hired_on.before_or_equal' => Traductions::t('msg.entree_future', 'La date d\'entrée en service ne peut pas être dans le futur.'),
+            'role.required' => Traductions::t('msg.role_requis', 'Choisissez le rôle du compte.'),
         ]);
 
         $utilisateur = DB::transaction(function () use ($donnees) {
@@ -117,7 +141,7 @@ class StaffController extends Controller
 
             if ($donnees['role'] === 'DRIVER') {
                 Driver::create([
-                    'id' => $utilisateur->id,
+                    'user_id' => $utilisateur->id,
                     'license_number' => $donnees['license_number'],
                     'license_type' => $donnees['license_type'],
                     'license_expiry' => $donnees['license_expiry'],
@@ -132,7 +156,10 @@ class StaffController extends Controller
             return $utilisateur;
         });
 
-        Password::sendResetLink(['email' => $utilisateur->email]);
+        // Le compte existe deja : une panne du serveur de courriel ne doit
+        // pas se changer en erreur cinq cents, qui laisserait croire a un
+        // echec et bloquerait le nouvel essai sur « adresse deja utilisee ».
+        $envoye = $this->envoyerLien($utilisateur) === 'envoye';
 
         ActivityLog::record(
             'staff.created',
@@ -141,8 +168,16 @@ class StaffController extends Controller
             ['role' => $utilisateur->role, 'email' => $utilisateur->email],
         );
 
-        return back()->with('success',
-            'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à '.$utilisateur->email.'.');
+        return $envoye
+            ? back()->with('success', Traductions::t(
+                'msg.compte_cree',
+                'Compte créé. Un lien pour choisir le mot de passe vient d\'être envoyé à :email.',
+                ['email' => $utilisateur->email],
+            ))
+            : back()->with('error', Traductions::t(
+                'msg.compte_cree_sans_courriel',
+                'Compte créé, mais le courriel n\'a pas pu partir. Renvoyez le lien depuis la liste.',
+            ));
     }
 
     public function toggle(Request $request, User $user): RedirectResponse
@@ -151,18 +186,30 @@ class StaffController extends Controller
 
         if ($user->id === $request->user()->id) {
             return back()->withErrors([
-                'is_active' => 'Vous ne pouvez pas désactiver votre propre compte.',
+                'is_active' => Traductions::t('msg.desactiver_soi_meme', 'Vous ne pouvez pas désactiver votre propre compte.'),
             ]);
         }
 
-        if ($user->is_active && $user->isDriver()) {
-            $engage = TransportOrder::whereIn('status', ['PENDING', 'IN_PROGRESS'])
-                ->where('driver_id', $user->id)
+        // Un chauffeur sorti des effectifs ne revient pas par ce bouton : sa
+        // date de sortie se retire d'abord sur l'ecran Chauffeurs.
+        $sortie = $user->isDriver() ? $user->driver?->left_on : null;
+
+        if (! $user->is_active && $sortie !== null && $sortie->lte(now())) {
+            return back()->withErrors([
+                'is_active' => Traductions::t('msg.chauffeur_sorti', 'Ce chauffeur a quitté l\'entreprise le :date : retirez sa date de sortie sur l\'écran Chauffeurs avant de réactiver son compte.', [
+                    'date' => $sortie->format('d/m/Y'),
+                ]),
+            ]);
+        }
+
+        if ($user->is_active && $user->isDriver() && $user->driver !== null) {
+            $engage = TransportOrder::whereIn('status', TransportOrder::ACTIFS)
+                ->where('driver_id', $user->driver?->id)
                 ->exists();
 
             if ($engage) {
                 return back()->withErrors([
-                    'is_active' => 'Ce chauffeur porte une mission en cours : réaffectez-la avant de fermer son compte.',
+                    'is_active' => Traductions::t('msg.chauffeur_engage_compte', 'Ce chauffeur porte une mission en cours : réaffectez-la avant de fermer son compte.'),
                 ]);
             }
         }
@@ -170,7 +217,7 @@ class StaffController extends Controller
         if ($user->is_active && $user->isAdmin()
             && User::where('role', 'ADMIN')->where('is_active', true)->count() <= 1) {
             return back()->withErrors([
-                'is_active' => 'C\'est le dernier administrateur actif : nommez-en un autre avant de fermer celui-ci.',
+                'is_active' => Traductions::t('msg.dernier_admin', 'C\'est le dernier administrateur actif : nommez-en un autre avant de fermer celui-ci.'),
             ]);
         }
 
@@ -187,7 +234,28 @@ class StaffController extends Controller
             ['role' => $user->role],
         );
 
-        return back()->with('success', $user->is_active ? 'Compte réactivé.' : 'Compte désactivé.');
+        return back()->with('success', $user->is_active
+            ? Traductions::t('msg.compte_reactive', 'Compte réactivé.')
+            : Traductions::t('msg.compte_ferme', 'Compte désactivé.'));
+    }
+
+    /**
+     * @return 'envoye'|'attente'|'panne'
+     */
+    private function envoyerLien(User $user): string
+    {
+        try {
+            // Le courtier refuse un second lien dans la minute : il le dit
+            // par son statut, sans exception. L'ignorer annoncait « Lien
+            // envoye » alors que rien n'etait parti.
+            return Password::sendResetLink(['email' => $user->email]) === Password::RESET_THROTTLED
+                ? 'attente'
+                : 'envoye';
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 'panne';
+        }
     }
 
     private function couperLesAcces(User $user): void
@@ -205,7 +273,19 @@ class StaffController extends Controller
     {
         abort_if(! array_key_exists($user->role, self::ROLES), 404);
 
-        Password::sendResetLink(['email' => $user->email]);
+        if (! $user->is_active) {
+            return back()->with('error', Traductions::t('msg.lien_compte_ferme', 'Ce compte est fermé : réactivez-le avant d\'envoyer un lien.'));
+        }
+
+        $resultat = $this->envoyerLien($user);
+
+        if ($resultat === 'attente') {
+            return back()->with('error', Traductions::t('msg.lien_deja_envoye', 'Un lien vient déjà de partir vers cette adresse. Réessayez dans une minute.'));
+        }
+
+        if ($resultat === 'panne') {
+            return back()->with('error', Traductions::t('msg.courriel_echec', 'Le courriel n\'a pas pu partir. Réessayez dans quelques minutes.'));
+        }
 
         ActivityLog::record(
             'staff.reset_link',
@@ -213,6 +293,6 @@ class StaffController extends Controller
             $user,
         );
 
-        return back()->with('success', 'Lien envoyé à '.$user->email.'.');
+        return back()->with('success', Traductions::t('msg.lien_envoye', 'Lien envoyé à :email.', ['email' => $user->email]));
     }
 }

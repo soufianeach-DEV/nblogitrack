@@ -3,10 +3,12 @@
 namespace App\Http\Middleware;
 
 use App\Models\Page;
+use App\Models\TariffGrid;
 use App\Models\Translation;
 use App\Support\Traductions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -36,6 +38,10 @@ class HandleInertiaRequests extends Middleware
                 'canValidateClients' => (bool) $request->user()?->isAdmin(),
                 'canManageUsers' => (bool) $request->user()?->isAdmin(),
                 'canViewFleet' => (bool) $request->user()?->isStaff(),
+                // Les droits d'un compte au sein de son entreprise cliente.
+                'canOrder' => (bool) $request->user()?->peutCommander(),
+                'canSeeInvoices' => (bool) ($request->user()?->isStaff() || $request->user()?->voitFacturesEntreprise()),
+                'canManageCompany' => (bool) $request->user()?->gereEntreprise(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -44,15 +50,30 @@ class HandleInertiaRequests extends Middleware
             ],
             'langue' => app()->getLocale(),
             'langues' => Translation::LANGUES,
-            'dictionnaire' => fn () => Traductions::pour(app()->getLocale()),
+            // Un chiffre vrai pour la page de connexion : les pays ou une
+            // formule de transport est en vente.
+            'paysDesservis' => fn () => $request->user() === null
+                ? Cache::remember('pays-desservis', 3600, fn () => TariffGrid::where('is_active', true)->distinct()->count('zone'))
+                : null,
+            // Envoye une fois, puis garde par le navigateur d'une page a
+            // l'autre : il pesait jusqu'a 97 % de chaque reponse. Un
+            // changement de langue ou du dictionnaire le renvoie.
+            'dictionnaire' => Inertia::once(fn () => Traductions::pour(app()->getLocale()))
+                ->as('dictionnaire.'.app()->getLocale().'.'.Traductions::version()),
+            // Pages de l'entreprise sur les reseaux (pied du site public).
+            'reseaux' => array_filter(config('services.reseaux', [])),
             'pages_pied' => fn () => Cache::remember(
                 'pages.pied.'.app()->getLocale(),
                 Traductions::DUREE_CACHE,
+                // Une adresse relative : le lien suit l'hote qui sert la page,
+                // pas APP_URL. Une page sans adresse utilisable est ecartee
+                // au lieu de faire tomber tout le site.
                 fn () => Page::where('publiee', true)->where('au_pied', true)
+                    ->where('slug', '<>', '')
                     ->orderBy('rang')->orderBy('slug')->get()
                     ->map(fn (Page $p) => [
                         'libelle' => $p->titre(app()->getLocale()),
-                        'href' => route('pages.show', $p->slug),
+                        'href' => route('pages.show', $p->slug, false),
                     ])->all(),
             ),
         ];

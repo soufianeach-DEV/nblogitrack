@@ -3,29 +3,150 @@
 namespace App\Providers;
 
 use App\Listeners\JournaliserAuthentification;
+use App\Listeners\RetenirCourrielsDeDemonstration;
 use App\Models\User;
+use App\Support\MemoireRequete;
+use App\Support\Traductions;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Une instance par requete : rien ne passe d'une requete a l'autre.
+        $this->app->scoped(MemoireRequete::class);
+    }
 
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        // Les adresses inventees du jeu de demonstration ne recoivent rien :
+        // leurs retours en erreur feraient suspendre le compte d'envoi.
+        Event::listen(MessageSending::class, RetenirCourrielsDeDemonstration::class);
+
+        // Douze caracteres au moins : la longueur protege mieux qu'une
+        // regle de composition, et le defaut de Laravel (huit) est court
+        // pour des comptes qui commandent et paient.
+        // 72 caracteres au plus : bcrypt ignore ce qui suit le 72e octet, si bien que
+        // deux mots de passe plus longs, differents apres le 72e octet,
+        // ouvraient le meme compte.
+        Password::defaults(fn () => Password::min(12)->max(72));
+
+        // Les modeles designes par un numero : /ordres/abc repondait par une
+        // erreur 500 de PostgreSQL (entier invalide) au lieu d'une 404, et un
+        // nombre de vingt chiffres depassait le type bigint. Dix-huit
+        // chiffres au plus, sans zero en tete.
+        Route::patterns(array_fill_keys([
+            'apiKey', 'client', 'driver', 'id', 'indisponibilite', 'invoice',
+            'pageDocument', 'processingRecord', 'purchaseInvoice', 'quoteRequest',
+            'supplement', 'translation', 'transportOrder', 'user', 'utilisateur',
+        ], '[1-9][0-9]{0,17}'));
+
+        // Une remise fret retour hors bornes vendrait a perte ou n'aurait
+        // aucun sens : l'application refuse de demarrer.
+        $remise = config('fret.retour.remise');
+
+        if (! is_numeric($remise) || $remise < 0 || $remise > 0.25) {
+            throw new \InvalidArgumentException('fret.retour.remise doit etre comprise entre 0 et 0,25 (valeur : '.var_export($remise, true).').');
+        }
 
         URL::defaults(['langue' => 'fr']);
 
-        RateLimiter::for('suivi', fn (Request $r) => $r->user()
-            ? Limit::perMinute(120)->by('u'.$r->user()->id)
-            : Limit::perMinute(10)->by($r->ip()));
+        // Le lien de mot de passe, qui sert aussi d'invitation au personnel,
+        // part dans la langue du destinataire et a la charte des autres
+        // courriels, plutot que dans le gabarit anglais du cadriciel.
+        ResetPassword::toMailUsing(function (User $destinataire, string $jeton) {
+            $langue = $destinataire->preferredLocale();
+
+            return (new MailMessage)
+                ->subject(Traductions::t('courriel.mdp_sujet', 'Choisissez votre mot de passe NBLogiTrack'))
+                ->view('emails.lien-mot-de-passe', [
+                    'destinataire' => $destinataire,
+                    // Jamais connecte : c'est une invitation, pas une
+                    // reinitialisation.
+                    'invitation' => $destinataire->email_verified_at === null,
+                    'minutes' => config('auth.passwords.users.expire', 60),
+                    'lien' => route('password.reset', [
+                        'langue' => $langue,
+                        'token' => $jeton,
+                        'email' => $destinataire->email,
+                    ]),
+                ]);
+        });
+
+        // Le lien de verification d'adresse : dans la langue du destinataire,
+        // a la charte des autres courriels, et valable trois jours. Une
+        // inscription attend la validation de l'entreprise : le lien doit
+        // survivre jusque-la.
+        VerifyEmail::createUrlUsing(fn (User $destinataire) => URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addDays(3),
+            [
+                'langue' => $destinataire->preferredLocale(),
+                'id' => $destinataire->getKey(),
+                'hash' => sha1($destinataire->getEmailForVerification()),
+            ],
+        ));
+
+        VerifyEmail::toMailUsing(fn (User $destinataire, string $lien) => (new MailMessage)
+            ->subject(Traductions::t('courriel.verif_sujet', 'Confirmez votre adresse e-mail NBLogiTrack'))
+            ->view('emails.verification-adresse', [
+                'destinataire' => $destinataire,
+                'lien' => $lien,
+            ]));
+
+        // Seule une recherche (numero + code) compte : ouvrir la page ou y
+        // revenir n'use pas le quota qui protege les codes contre la force
+        // brute.
+        RateLimiter::for('suivi', fn (Request $r) => match (true) {
+            $r->user() !== null => Limit::perMinute(120)->by('u'.$r->user()->id),
+            ! $r->filled('code') => Limit::none(),
+            default => Limit::perMinute(10)->by($r->ip()),
+        });
+
+        // Registres d'entreprises et serveurs de numeros de rue : services
+        // publics qui bloquent l'adresse du serveur s'il abuse. Une limite
+        // par visiteur, et une limite commune a tous les visiteurs.
+        RateLimiter::for('tva', fn (Request $r) => [
+            Limit::perMinute(20)->by('ip'.$r->ip()),
+            Limit::perMinute(300)->by('tous'),
+        ]);
+        RateLimiter::for('geo-numeros', fn (Request $r) => [
+            Limit::perMinute(15)->by('ip'.$r->ip()),
+            Limit::perMinute(120)->by('tous'),
+        ]);
+
+        // API : la limite suit la cle, pas l'adresse IP. Deux partenaires
+        // derriere le meme proxy ne se genent plus, et un meme partenaire ne
+        // la contourne pas en changeant d'adresse. La limite par adresse,
+        // plus large, borne celui qui inventerait des cles a la volee.
+        RateLimiter::for('api', fn (Request $r) => [
+            Limit::perMinute(120)->by('cle'.strtok((string) $r->bearerToken(), '.')),
+            Limit::perMinute(300)->by('ip'.$r->ip()),
+        ]);
+
+        // Chaque invitation envoie un courriel a une adresse choisie par le
+        // client : trente par jour et par entreprise, pour que le formulaire
+        // ne serve pas a arroser des inconnus depuis notre domaine.
+        RateLimiter::for('invitation', fn (Request $r) => [
+            Limit::perMinute(10)->by('u'.$r->user()->id),
+            Limit::perDay(30)->by('e'.$r->user()->client_id),
+        ]);
 
         RateLimiter::for('itineraires', fn (Request $r) => Limit::perMinute(240)->by('u'.$r->user()->id));
 
@@ -45,7 +166,28 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('control-payments', fn (User $user) => $user->isAdmin());
         Gate::define('view-fleet', fn (User $user) => $user->isStaff());
         Gate::define('drive', fn (User $user) => $user->isDriver());
+        Gate::define('manage-company', fn (User $user) => $user->gereEntreprise());
 
         Event::subscribe(JournaliserAuthentification::class);
+
+        // Recherche « contient », insensible a la casse et aux accents ;
+        // % et _ tapes par l'utilisateur se cherchent tels quels.
+        $contient = function (string $colonne, string $terme, string $booleen = 'and') {
+            $motif = '%'.addcslashes($terme, '\\%_').'%';
+
+            // f_unaccent (migration d'indexation) : la meme expression que
+            // les index par trigrammes, qui peuvent donc servir.
+            return $this->whereRaw('f_unaccent(('.$this->getGrammar()->wrap($colonne).')::text) ILIKE f_unaccent(?)', [$motif], $booleen);
+        };
+        QueryBuilder::macro('whereContient', $contient);
+        QueryBuilder::macro('orWhereContient', fn (string $colonne, string $terme) => $this->whereContient($colonne, $terme, 'or'));
+
+        // Apres chaque migration, le dictionnaire suit le code : les textes
+        // ajoutes depuis le dernier deploiement sont traduits tout de suite.
+        Event::listen(MigrationsEnded::class, function (MigrationsEnded $evenement) {
+            if ($evenement->method === 'up' && ! $this->app->runningUnitTests() && Schema::hasTable('translations')) {
+                Artisan::call('traductions:synchroniser');
+            }
+        });
     }
 }

@@ -1,5 +1,7 @@
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
+import ChampRecherche from '@/Components/ChampRecherche';
 import ChampMotDePasse from '@/Components/ChampMotDePasse';
+import ListeSecteurs from '@/Components/ListeSecteurs';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -9,13 +11,16 @@ import { useLangue, useTraduction } from '@/traduire';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU' };
+const PREFIXE_TVA = { Belgique: 'BE', France: 'FR', 'Pays-Bas': 'NL', Allemagne: 'DE', Luxembourg: 'LU', 'Grèce': 'EL' };
+// VIES code la Grece « EL » et l'Irlande du Nord « XI » ; Intl ne connait
+// que GR et GB.
+const PAYS_DE_TVA = { EL: 'GR', XI: 'GB' };
 
 export default function Register({ secteurs, fonctions }) {
     const t = useTraduction();
 
     const nomRegion = new Intl.DisplayNames([useLangue()], { type: 'region' });
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         company_name: '', vat_number: '', billing_address: '', postal_code: '',
         city: '', country: '', business_sector: '',
         first_name: '', last_name: '', position: '', phone: '',
@@ -38,7 +43,7 @@ export default function Register({ secteurs, fonctions }) {
     const verifierTva = async () => {
         const tva = data.vat_number.toUpperCase().replace(/[^0-9A-Z]/g, '');
         if (tva.length < 6) {
-            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisis le numéro complet, code pays inclus (ex. BE0123456789).') });
+            setVies({ statut: 'format', message: t('auth.tva_format', 'Saisissez le numéro complet, code pays inclus (ex. BE0123456749).') });
             return;
         }
 
@@ -49,6 +54,9 @@ export default function Register({ secteurs, fonctions }) {
             setVies(resultat);
 
             if (resultat.statut === 'valide') {
+                // Le numero est confirme : l'erreur d'un envoi precedent
+                // (« numero de TVA obligatoire ») n'a plus lieu d'etre.
+                clearErrors('vat_number', 'company_name', 'billing_address');
                 setAdresseManuelle(false);
                 const d = resultat.entreprise?.dirigeant;
 
@@ -59,7 +67,7 @@ export default function Register({ secteurs, fonctions }) {
                     billing_address: resultat.adresse.rue,
                     postal_code: resultat.adresse.code_postal,
                     city: resultat.adresse.ville,
-                    country: nomRegion.of((resultat.tva ?? tva).slice(0, 2)) ?? '',
+                    country: nomRegion.of(PAYS_DE_TVA[(resultat.tva ?? tva).slice(0, 2)] ?? (resultat.tva ?? tva).slice(0, 2)) ?? '',
                     business_sector: resultat.entreprise?.secteur || data.business_sector,
                     first_name: d?.prenom || data.first_name,
                     last_name: d?.nom || data.last_name,
@@ -110,17 +118,7 @@ export default function Register({ secteurs, fonctions }) {
     const liste = (nom, libelle, valeurs, exemple, options = {}) => (
         <div className={options.large ? 'sm:col-span-2' : ''}>
             {etiquette(nom, libelle, true)}
-            <input
-                id={nom}
-                list={nom + '-liste'}
-                value={data[nom]}
-                placeholder={exemple}
-                onChange={(e) => setData(nom, e.target.value)}
-                className={selectCls}
-            />
-            <datalist id={nom + '-liste'}>
-                {valeurs.map((v) => <option key={v} value={v} />)}
-            </datalist>
+            <ChampRecherche id={nom} value={data[nom]} onChange={(v) => setData(nom, v)} suggestions={valeurs} local placeholder={exemple} className={selectCls} />
             <InputError message={errors[nom]} className="mt-1" />
         </div>
     );
@@ -150,7 +148,7 @@ export default function Register({ secteurs, fonctions }) {
                                 <TextInput
                                     id="vat_number"
                                     value={data.vat_number}
-                                    placeholder={t('auth.tva_exemple', 'ex. BE0123456789 ou SIRET 34119222700013')}
+                                    placeholder={t('auth.tva_exemple', 'ex. BE0123456749 ou SIRET 34119222700013')}
                                     className="block w-full py-1 text-sm"
                                     onChange={(e) => { setData('vat_number', e.target.value.toUpperCase()); setVies(null); }}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verifierTva(); } }}
@@ -185,7 +183,11 @@ export default function Register({ secteurs, fonctions }) {
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                             {champ('company_name', t('auth.raison_sociale', 'Raison sociale'), { large: true, exemple: t('auth.raison_sociale_ex', 'ex. Transports Dupont SA') })}
-                            {liste('business_sector', t('auth.secteur', 'Secteur d\'activité'), secteurs, t('auth.secteur_ex', 'ex. Construction'), { large: true })}
+                            <div className="sm:col-span-2">
+                                {etiquette('business_sector', t('auth.secteur', 'Secteur d\'activité'))}
+                                <ListeSecteurs id="business_sector" value={data.business_sector} onChange={(v) => setData('business_sector', v)} groupes={secteurs} className={selectCls} />
+                                <InputError message={errors.business_sector} className="mt-1" />
+                            </div>
                         </div>
 
                         <div className="mt-3">
@@ -243,12 +245,12 @@ export default function Register({ secteurs, fonctions }) {
                             {champ('first_name', t('auth.prenom', 'Prénom'), { autoComplete: 'given-name' })}
                             {champ('last_name', t('auth.nom', 'Nom'), { autoComplete: 'family-name' })}
                             {liste('position', t('auth.fonction', 'Fonction'), fonctions, t('auth.fonction_ex', 'ex. Directeur logistique'), { large: true })}
-                            {champ('phone', t('auth.telephone', 'Téléphone'), { large: true, exemple: 'ex. +32 2 123 45 67' })}
+                            {champ('phone', t('auth.telephone', 'Téléphone'), { large: true, exemple: t('commun.exemple', 'ex. :valeur', { valeur: '+32 2 123 45 67' }) })}
                         </div>
 
                         <p className={titre + ' mt-5'}>{t('auth.identifiants_titre', 'Identifiants')}</p>
                         <div className="grid gap-2 sm:grid-cols-2">
-                            {champ('email', t('compte.email', 'E-mail professionnel'), { large: true, type: 'email', autoComplete: 'username', exemple: 'nom@entreprise.be' })}
+                            {champ('email', t('compte.email', 'E-mail professionnel'), { large: true, type: 'email', autoComplete: 'username', exemple: t('auth.email_ex', 'nom@entreprise.be') })}
                             {champ('password', t('compte.mot_de_passe', 'Mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
                             {champ('password_confirmation', t('auth.confirmer_mdp', 'Confirmer le mot de passe'), { large: true, type: 'password', autoComplete: 'new-password' })}
                         </div>

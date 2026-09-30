@@ -7,6 +7,7 @@ use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Events\PasswordReset;
 
 class JournaliserAuthentification
 {
@@ -57,6 +58,17 @@ class JournaliserAuthentification
         );
     }
 
+    public function reinitialisation(PasswordReset $event): void
+    {
+        ActivityLog::record(
+            'auth.password_reset',
+            'Mot de passe choisi par lien pour '.$event->user->email,
+            $event->user,
+            [],
+            $event->user->id,
+        );
+    }
+
     public function subscribe(): array
     {
         return [
@@ -64,6 +76,7 @@ class JournaliserAuthentification
             Logout::class => 'deconnexion',
             Failed::class => 'echec',
             Lockout::class => 'blocage',
+            PasswordReset::class => 'reinitialisation',
         ];
     }
 }

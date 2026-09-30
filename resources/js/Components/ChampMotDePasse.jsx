@@ -1,18 +1,25 @@
 import TextInput from '@/Components/TextInput';
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
+import { useTraduction } from '@/traduire';
 
-export default function ChampMotDePasse({ className = '', ...props }) {
+// La reference est transmise au champ : les formulaires y remettent le
+// curseur quand le mot de passe est refuse.
+export default forwardRef(function ChampMotDePasse({ className = '', classeConteneur = '', ...props }, ref) {
     const [visible, setVisible] = useState(false);
+    const t = useTraduction();
+    const libelle = visible
+        ? t('auth.masquer_mdp', 'Masquer le mot de passe')
+        : t('auth.afficher_mdp', 'Afficher le mot de passe');
 
     return (
-        <div className="relative">
-            <TextInput {...props} type={visible ? 'text' : 'password'} className={className + ' pr-10'} />
+        <div className={'relative ' + classeConteneur}>
+            <TextInput {...props} ref={ref} type={visible ? 'text' : 'password'} className={className + ' pr-10'} />
             <button
                 type="button"
                 tabIndex={-1}
                 onClick={() => setVisible(! visible)}
-                aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-label={libelle}
+                title={libelle}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-600 transition hover:text-marine"
             >
                 {visible ? (
@@ -29,4 +36,4 @@ export default function ChampMotDePasse({ className = '', ...props }) {
             </button>
         </div>
     );
-}
+});

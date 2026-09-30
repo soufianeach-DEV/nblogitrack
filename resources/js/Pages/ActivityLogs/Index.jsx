@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ListeRecherche from '@/Components/ListeRecherche';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -78,19 +79,21 @@ export default function Index({ logs, actions, filtres, stats }) {
                     <input
                         value={champs.utilisateur}
                         onChange={(e) => filtrer('utilisateur', e.target.value)}
-                        placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
+                        aria-label={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')} placeholder={t('journal.filtre_utilisateur', 'Utilisateur ou e-mail')}
                         className={champCls}
                     />
-                    <select value={champs.action} onChange={(e) => filtrer('action', e.target.value)} className={champCls}>
-                        <option value="">{t('journal.toutes_actions', 'Toutes les actions')}</option>
-                        {Object.entries(actions).map(([cle, libelle]) => (
-                            <option key={cle} value={cle}>{libelle}</option>
-                        ))}
-                    </select>
+                    <ListeRecherche
+                        value={champs.action}
+                        onChange={(v) => filtrer('action', v)}
+                        vide={t('journal.toutes_actions', 'Toutes les actions')}
+                        aria-label={t('journal.toutes_actions', 'Toutes les actions')}
+                        options={Object.entries(actions).map(([cle, libelle]) => ({ valeur: cle, libelle }))}
+                        className={champCls}
+                    />
                     <input
                         value={champs.ip}
                         onChange={(e) => filtrer('ip', e.target.value)}
-                        placeholder={t('journal.ip', 'Adresse IP')}
+                        aria-label={t('journal.ip', 'Adresse IP')} placeholder={t('journal.ip', 'Adresse IP')}
                         className={champCls}
                     />
                     <input type="date" value={champs.du} onChange={(e) => filtrer('du', e.target.value)} className={champCls} />
@@ -142,9 +145,9 @@ export default function Index({ logs, actions, filtres, stats }) {
                                 </td>
                                 <td className="px-5 py-3 text-slate-600">
                                     {log.description}
-                                    {log.properties && (
+                                    {log.details?.length > 0 && (
                                         <span className="mt-1 block text-xs text-slate-600">
-                                            {Object.entries(log.properties).map(([cle, valeur]) => `${cle} : ${valeur}`).join(' · ')}
+                                            {log.details.join(' · ')}
                                         </span>
                                     )}
                                 </td>

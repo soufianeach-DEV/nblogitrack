@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
+use App\Support\EnvoiFacture;
 use App\Support\Facturier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -12,12 +13,23 @@ class GenererFactures extends Command
     protected $signature = 'factures:generer
                             {--mois= : Le mois a facturer, au format AAAA-MM. Par defaut, le mois ecoule.}
                             {--tout : Facture tout ce qui reste, sans limite de mois.}
-                            {--essai : Montre ce qui serait emis, sans rien ecrire.}';
+                            {--essai : Montre ce qui serait emis, sans rien ecrire.}
+                            {--sans-envoi : Emet les factures sans les envoyer par courriel.}';
 
     protected $description = 'Emet une facture par client et par mois pour les transports livres.';
 
     public function handle(Facturier $facturier): int
     {
+        // Un mois mal tape (2026-13, 26-08) faisait une erreur brute ; un
+        // mois en cours ou a venir ne se facture pas.
+        $mois = $this->option('mois');
+
+        if ($mois !== null && (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mois) || $mois >= now()->format('Y-m'))) {
+            $this->error('  --mois attend un mois termine, au format AAAA-MM (ex. '.now()->subMonth()->format('Y-m').').');
+
+            return self::INVALID;
+        }
+
         $periode = match (true) {
             $this->option('tout') => null,
             $this->option('mois') !== null => Carbon::createFromFormat('Y-m-d', $this->option('mois').'-01'),
@@ -37,15 +49,15 @@ class GenererFactures extends Command
         }
 
         $expeditions = $groupes->sum(fn ($g) => $g->count());
-        $montant = $groupes->sum(fn ($g) => $g->sum('estimated_cost'));
+        $montant = $groupes->sum(fn ($g) => $g->sum('montant'));
 
-        $this->line(sprintf('  %d facture(s) a emettre, %d expedition(s), %s EUR hors TVA.',
+        $this->line(sprintf('  %d facture(s) a emettre, %d ligne(s), %s EUR hors TVA.',
             $groupes->count(), $expeditions, number_format($montant, 2, ',', ' ')));
 
         if ($this->option('essai')) {
             foreach ($groupes as $cle => $lot) {
                 [$clientId, $mois] = explode('|', (string) $cle);
-                $this->line(sprintf('    client %-4s %s  %d expedition(s)',
+                $this->line(sprintf('    client %-4s %s  %d ligne(s)',
                     $clientId, $mois, $lot->count()));
             }
 
@@ -55,11 +67,24 @@ class GenererFactures extends Command
         }
 
         $emises = $facturier->facturer($periode);
+        $envoyer = ! $this->option('sans-envoi');
+        $echecs = 0;
 
         foreach ($emises as $facture) {
-            $this->line(sprintf('    %s  client %-4s %s EUR',
+            // Une facture emise est deja enregistree : si son courriel ne
+            // part pas, on le note et on passe a la suivante. Elle se
+            // renvoie ensuite depuis son ecran.
+            $envoi = '';
+
+            if ($envoyer && $facture->status === 'SENT') {
+                $destinataire = EnvoiFacture::envoyer($facture);
+                $envoi = $destinataire === null ? '  ENVOI ECHOUE' : '  -> '.$destinataire;
+                $echecs += $destinataire === null ? 1 : 0;
+            }
+
+            $this->line(sprintf('    %s  client %-4s %s EUR%s',
                 $facture->reference, $facture->client_id,
-                number_format((float) $facture->amount_incl_tax, 2, ',', ' ')));
+                number_format((float) $facture->amount_incl_tax, 2, ',', ' '), $envoi));
         }
 
         ActivityLog::record(
@@ -70,6 +95,10 @@ class GenererFactures extends Command
         );
 
         $this->info(sprintf('  %d facture(s) emise(s).', $emises->count()));
+
+        if ($echecs > 0) {
+            $this->warn(sprintf('  %d courriel(s) non envoye(s) : renvoyez-les depuis l\'ecran de la facture.', $echecs));
+        }
 
         return self::SUCCESS;
     }

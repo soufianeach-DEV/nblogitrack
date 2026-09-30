@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\ApiRequest;
 use App\Models\Client;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,11 +75,16 @@ class ApiKeyController extends Controller
     {
         $donnees = $request->validate([
             'nom' => 'required|string|max:80',
-            'client_id' => 'nullable|exists:clients,id',
+            // Une cle interne lit tout mais ne depose rien : sans entreprise
+            // a qui rattacher l'expedition, l'ecriture echouait a chaque appel.
+            'client_id' => ['nullable', 'integer', 'exists:clients,id', Rule::requiredIf(fn () => in_array('ecriture', (array) $request->input('permissions'), true))],
             'permissions' => 'required|array|min:1',
             'permissions.*' => Rule::in(array_keys(ApiKey::PERMISSIONS)),
             'ips' => 'nullable|string|max:500',
             'expire_le' => 'nullable|date|after:today',
+        ], [
+            'expire_le.after' => Traductions::t('msg.cle_expiration_passee', 'La date d\'expiration doit être postérieure à aujourd\'hui.'),
+            'client_id.required' => Traductions::t('msg.cle_ecriture_sans_entreprise', 'Une clé qui dépose des expéditions doit être rattachée à une entreprise.'),
         ]);
 
         $ips = collect(preg_split('/[\s,;]+/', (string) ($donnees['ips'] ?? '')))
@@ -88,7 +94,7 @@ class ApiKeyController extends Controller
 
         if ($invalides->isNotEmpty()) {
             return back()->withErrors([
-                'ips' => 'Adresse IP invalide : '.$invalides->implode(', '),
+                'ips' => Traductions::t('msg.ip_invalide', 'Adresse IP invalide : :ips', ['ips' => $invalides->implode(', ')]),
             ])->withInput();
         }
 
@@ -121,7 +127,7 @@ class ApiKeyController extends Controller
     public function revoke(Request $request, ApiKey $apiKey): RedirectResponse
     {
         if ($apiKey->revoked_at !== null) {
-            return back()->with('error', 'Cette clé est déjà révoquée.');
+            return back()->with('error', Traductions::t('msg.cle_deja_revoquee', 'Cette clé est déjà révoquée.'));
         }
 
         $apiKey->update(['revoked_at' => now()]);
@@ -133,7 +139,7 @@ class ApiKeyController extends Controller
             ['appels_effectues' => $apiKey->requests_count],
         );
 
-        return back()->with('success', 'Clé « '.$apiKey->name.' » révoquée.');
+        return back()->with('success', Traductions::t('msg.cle_revoquee', 'Clé « :nom » révoquée.', ['nom' => $apiKey->name]));
     }
 
     /**

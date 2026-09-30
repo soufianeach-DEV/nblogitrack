@@ -9,6 +9,13 @@ use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
+    // Une adresse tapee avec des majuscules etait refusee (regle
+    // « lowercase ») : elle est rangee en minuscules, comme partout.
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['email' => mb_strtolower(trim((string) $this->input('email')))]);
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -24,6 +31,14 @@ class ProfileUpdateRequest extends FormRequest
                 'email',
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
+            ],
+            // Changer l'adresse, c'est choisir ou arrive le lien de
+            // reinitialisation. Sans le mot de passe actuel, une session
+            // volee quelques minutes suffisait a prendre le compte pour de bon.
+            'current_password' => [
+                Rule::requiredIf(fn () => mb_strtolower((string) $this->input('email')) !== $this->user()->email),
+                'nullable',
+                'current_password',
             ],
         ];
     }

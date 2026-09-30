@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -19,12 +20,16 @@ class OrdreCree extends Mailable
         public TransportOrder $ordre,
         public User $destinataire,
         public ?TariffGrid $grille = null,
-    ) {}
+    ) {
+        $this->locale($destinataire->locale ?: 'fr');
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Votre expédition '.$this->ordre->tracking_number.' est enregistrée',
+            subject: Traductions::t('courriel.ordre_sujet', 'Votre expédition :numero est enregistrée', [
+                'numero' => $this->ordre->tracking_number,
+            ]),
         );
     }
 

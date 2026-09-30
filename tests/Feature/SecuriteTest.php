@@ -103,7 +103,7 @@ class SecuriteTest extends TestCase
             'delivery_address' => 'Quai des Usines 2, 4000 Liège',
         ]);
 
-        $reponse = $this->actingAs(User::find($sien->id))
+        $reponse = $this->actingAs($sien->compte())
             ->getJson(route('recherche.suggestions', ['q' => 'Liège']));
 
         $reponse->assertOk();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Request;
 
 class ActivityLog extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const UPDATED_AT = null;
 
     protected $table = 'activity_logs';

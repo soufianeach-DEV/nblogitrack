@@ -1,10 +1,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
 const STATUS = {
     PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
+    ASSIGNED: { cle: 'statut.affecte', label: 'Affecté', cls: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', label: 'En cours', cls: 'bg-status-progress/10 text-status-progress' },
     DELIVERED: { cle: 'statut.livre', label: 'Livré', cls: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', label: 'Annulé', cls: 'bg-status-incident/10 text-status-incident' },
@@ -29,13 +30,18 @@ function StatusBadge({ status, enAttenteDePaiement = false }) {
 
 export default function Index({ orders, filters }) {
     const t = useTraduction();
+    const adresse = useAdresse();
+    const locale = useLocale();
     const v = useVocabulaire();
     const estClient = usePage().props.auth.user.role === 'CLIENT';
+    const peutCommander = usePage().props.auth.canOrder;
     const [search, setSearch] = useState({
         tracking: filters.tracking ?? '',
         client: filters.client ?? '',
         destination: filters.destination ?? '',
         status: filters.status ?? '',
+        q: filters.q ?? '',
+        retard: filters.retard ?? '',
     });
     const timeout = useRef();
 
@@ -65,7 +71,7 @@ export default function Index({ orders, filters }) {
                             {orders.total} {orders.total > 1 ? t('ordres.resultats', 'résultats') : t('ordres.resultat', 'résultat')}
                         </p>
                     </div>
-                    {estClient && (
+                    {estClient && peutCommander && (
                         <Link href={route('transport-orders.create')} className="rounded-lg bg-action px-4 py-2 text-sm font-semibold text-marine-deep hover:bg-action-dark">
                             + {t('commande.titre', 'Nouvelle expédition')}
                         </Link>
@@ -74,6 +80,26 @@ export default function Index({ orders, filters }) {
             }
         >
             <Head title={t('nav.ordres', 'Ordres de transport')} />
+
+            {search.q && (
+                <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                    {t('ordres.recherche_active', 'Recherche : « :terme »', { terme: search.q })}
+                    <button type="button" onClick={() => update('q', '')} className="font-semibold text-brand-blue hover:text-marine">
+                        {t('ordres.effacer_recherche', 'Effacer')}
+                    </button>
+                </p>
+            )}
+
+            {/* Filtre pose par l'alerte du tableau de bord : il reste visible
+                pour pouvoir le retirer. */}
+            {search.retard && (
+                <p className="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                    {t('ordres.filtre_retard', 'Seulement les expéditions en retard')}
+                    <button type="button" onClick={() => update('retard', '')} className="font-semibold text-brand-blue hover:text-marine">
+                        {t('ordres.effacer_recherche', 'Effacer')}
+                    </button>
+                </p>
+            )}
 
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="overflow-x-auto">
@@ -87,13 +113,14 @@ export default function Index({ orders, filters }) {
                                 <th className="px-6 py-4 text-right font-semibold">{t('ordres.cout', 'Coût est.')}</th>
                             </tr>
                             <tr className="border-b border-slate-100">
-                                <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} placeholder="TRK-…" className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} placeholder={t('ordres.filtre_entreprise', 'Entreprise…')} className={inputCls} /></th>
-                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} placeholder={t('ordres.filtre_ville', 'Ville, adresse…')} className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.tracking} onChange={(e) => update('tracking', e.target.value)} aria-label={t('ordres.filtre_numero', 'Numéro de suivi')} placeholder="TRK-…" className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.client} onChange={(e) => update('client', e.target.value)} aria-label={t('ordres.filtre_entreprise', 'Entreprise…')} placeholder={t('ordres.filtre_entreprise', 'Entreprise…')} className={inputCls} /></th>
+                                <th className="px-6 py-2"><input value={search.destination} onChange={(e) => update('destination', e.target.value)} aria-label={t('ordres.filtre_ville', 'Ville, adresse…')} placeholder={t('ordres.filtre_ville', 'Ville, adresse…')} className={inputCls} /></th>
                                 <th className="px-6 py-2">
                                     <select value={search.status} onChange={(e) => update('status', e.target.value)} className={inputCls}>
                                         <option value="">{t('ordres.tous', 'Tous')}</option>
                                         <option value="PENDING">{t('statut.en_attente', 'En attente')}</option>
+                                        <option value="ASSIGNED">{t('statut.affecte', 'Affecté')}</option>
                                         <option value="IN_PROGRESS">{t('statut.en_cours', 'En cours')}</option>
                                         <option value="DELIVERED">{t('statut.livre', 'Livré')}</option>
                                         <option value="CANCELLED">{t('statut.annule', 'Annulé')}</option>
@@ -120,12 +147,14 @@ export default function Index({ orders, filters }) {
                                         <div className="text-xs text-slate-600">{v('marchandise', order.goods_type) ?? '—'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-700">{order.client?.company_name ?? '—'}</td>
-                                    <td className="px-6 py-4 text-slate-600">{order.delivery_address}</td>
+                                    <td className="px-6 py-4 text-slate-600">{adresse(order.delivery_address)}</td>
                                     <td className="px-6 py-4">
                                         <StatusBadge status={order.status} enAttenteDePaiement={order.en_attente_de_paiement} />
                                     </td>
                                     <td className="px-6 py-4 text-right font-medium text-marine">
-                                        {order.estimated_cost ? `${order.estimated_cost} €` : '—'}
+                                        {order.estimated_cost
+                                            ? Number(order.estimated_cost).toLocaleString(locale, { style: 'currency', currency: 'EUR' })
+                                            : '—'}
                                     </td>
                                 </tr>
                             ))}

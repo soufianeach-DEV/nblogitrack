@@ -1,15 +1,17 @@
-import BandeauTemoins from '@/Components/BandeauTemoins';
+import BandeauTemoins, { ouvrirTemoins } from '@/Components/BandeauTemoins';
 import BoutonRetour from '@/Components/BoutonRetour';
 import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
+import MessagesFlash from '@/Components/MessagesFlash';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useLocale, useTraduction, useVocabulaire } from '@/traduire';
+import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
 const STATUTS = {
     PENDING: { cle: 'statut.en_attente', libelle: 'En attente', classe: 'bg-slate-100 text-slate-700' },
+    ASSIGNED: { cle: 'statut.affecte', libelle: 'Affecté', classe: 'bg-status-assigned/10 text-status-assigned' },
     IN_PROGRESS: { cle: 'statut.en_cours', libelle: 'En cours', classe: 'bg-brand-blue/10 text-brand-blue' },
     DELIVERED: { cle: 'statut.livre', libelle: 'Livré', classe: 'bg-status-delivered/10 text-status-delivered' },
     CANCELLED: { cle: 'statut.annule', libelle: 'Annulé', classe: 'bg-status-incident/10 text-status-incident' },
@@ -20,8 +22,35 @@ const PRIORITES = {
     HIGH: { cle: 'suivi.prioritaire', libelle: 'Prioritaire', classe: 'bg-action/15 text-action-dark' },
 };
 
+// Met en forme le numero de suivi pendant la saisie : « trk2026003 »
+// devient « TRK-2026-003 ». Le tiret final ne s'ajoute qu'en tapant, pas
+// en effacant : sinon il reviendrait a chaque retour arriere.
+export function formaterNumeroSuivi(saisie, precedent = '') {
+    const brut = saisie.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (! 'TRK'.startsWith(brut.slice(0, 3))) {
+        return saisie.toUpperCase();
+    }
+
+    const annee = brut.slice(3, 7);
+    const numero = brut.slice(7);
+    const enTapant = saisie.length > precedent.length;
+    let resultat = brut.slice(0, 3);
+
+    if (brut.length > 3 || (brut.length === 3 && enTapant)) {
+        resultat += '-' + annee;
+    }
+
+    if (numero !== '' || (annee.length === 4 && enTapant)) {
+        resultat += '-' + numero;
+    }
+
+    return resultat;
+}
+
 const ETAPES_PUBLIQUES = [
     { cle: 'PENDING', libelle: ['statut.en_attente', 'En attente'], detail: ['suivi.detail_enregistree', 'Commande enregistrée.'] },
+    { cle: 'ASSIGNED', libelle: ['statut.affecte', 'Affecté'], detail: ['suivi.detail_affectee', 'Camion et chauffeur réservés.'] },
     { cle: 'IN_PROGRESS', libelle: ['statut.en_cours', 'En cours'], detail: ['suivi.detail_transit', 'Marchandise en transit.'] },
     { cle: 'DELIVERED', libelle: ['statut.livre', 'Livré'], detail: ['suivi.detail_livree', 'Livraison effectuée.'] },
 ];
@@ -265,6 +294,7 @@ function Reperes({ jalons = [], position = null }) {
 function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, historique, expeditions = [] }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
+    const adresse = useAdresse();
     const v = useVocabulaire();
     const locale = useLocale();
     const [agrandie, setAgrandie] = useState(false);
@@ -293,16 +323,17 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
         let vivant = true;
 
-        const charger = (adresse, appliquer) => fetch(adresse, { headers: { Accept: 'application/json' } })
+        const charger = (adresse, appliquer, echec = () => {}) => fetch(adresse, { headers: { Accept: 'application/json' } })
             .then((reponse) => (reponse.ok ? reponse.json() : null))
             .then((donnees) => {
-                if (vivant && donnees) {
-                    appliquer(donnees);
-                }
+                if (! vivant) return;
+                if (donnees) appliquer(donnees);
+                else echec();
             })
-            .catch(() => {});
+            .catch(() => vivant && echec());
 
-        charger(route('tracking.itineraire', order.id), setItineraire);
+        // Echec : on le dit, au lieu d'annoncer un calcul sans fin.
+        charger(route('tracking.itineraire', order.id), setItineraire, () => setItineraire({ echec: true }));
         charger(route('tracking.peages', order.id), (liste) => setPeages(Array.isArray(liste) ? liste : []));
 
         return () => {
@@ -353,7 +384,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
                             <p className="font-mono text-xs text-brand-blue">{order.tracking_number}</p>
                             <h2 className="mt-0.5 text-sm font-bold leading-snug text-marine">
-                                {order.pickup_address} → {order.delivery_address}
+                                {adresse(order.pickup_address)} → {adresse(order.delivery_address)}
                             </h2>
                             <p className="text-xs text-slate-600">{order.client?.company_name}</p>
 
@@ -441,8 +472,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                                                     </p>
                                                     {}
                                                     {[
-                                                        [order.vehicle.vehicle_type, order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
-                                                        [order.vehicle.euro_standard, order.vehicle.fuel_type],
+                                                        [v('vehicule', order.vehicle.vehicle_type), order.vehicle.capacity_tonnes && Math.round(order.vehicle.capacity_tonnes) + ' t'],
+                                                        [order.vehicle.euro_standard, v('carburant', order.vehicle.fuel_type)],
                                                     ].map((ligne, i) => {
                                                         const texte = ligne.filter(Boolean).join(' · ');
 
@@ -509,7 +540,10 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                                         {historique.map((ligne, i) => (
                                             <li key={i} className="border-l-2 border-slate-200 pl-2.5">
                                                 <p className="text-[11px] text-slate-600">{ligne.horodatage}</p>
-                                                <p className="text-xs text-marine">{ligne.description}</p>
+                                                <p className="text-xs text-marine">
+                                                    {ligne.libelle}
+                                                    {ligne.detail && <span className="text-slate-600"> · {ligne.detail}</span>}
+                                                </p>
                                             </li>
                                         ))}
                                     </ol>
@@ -588,6 +622,8 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[1100] rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur">
                             {itineraire === null ? (
                                 <p className="text-xs text-slate-600">{t('suivi.calcul_itineraire', 'Calcul de l\'itinéraire…')}</p>
+                            ) : itineraire.echec ? (
+                                <p className="text-xs text-slate-600">{t('suivi.itineraire_indisponible', 'Itinéraire momentanément indisponible.')}</p>
                             ) : itineraire.direct ? (
                                 <p className="text-xs text-slate-600">
                                     {t('suivi.itineraire_indispo', 'Itinéraire indisponible — liaison directe entre les deux points.')}
@@ -619,7 +655,16 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
 
 function SuiviVisiteur({ order, searched }) {
     const t = useTraduction();
-    const { data, setData, get, processing } = useForm({ tracking_number: '', code: '' });
+    const { pages_pied: pagesPied = [] } = usePage().props;
+    const adresse = useAdresse();
+    const locale = useLocale();
+    // Le lien du courriel porte le numero et le code : les champs les
+    // reprennent au lieu de rester vides au-dessus du resultat.
+    const parametres = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const { data, setData, get, processing } = useForm({
+        tracking_number: parametres?.get('tracking_number') ?? '',
+        code: parametres?.get('code') ?? '',
+    });
 
     const chercher = (e) => {
         e.preventDefault();
@@ -644,17 +689,21 @@ function SuiviVisiteur({ order, searched }) {
                     </div>
                 </header>
 
-                <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+                <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
                     <h1 className="text-2xl font-bold text-marine">{t('suivi.envoi_titre', 'Suivi d\'envoi')}</h1>
                     <p className="mb-6 mt-1 text-slate-600">
                         {t('suivi.entrez', 'Entrez votre numéro de suivi et le code reçu par e-mail.')}
                     </p>
 
+                    <MessagesFlash />
+
                     <form onSubmit={chercher} className="flex flex-col gap-3 sm:flex-row">
                         <input
                             value={data.tracking_number}
-                            onChange={(e) => setData('tracking_number', e.target.value)}
+                            onChange={(e) => setData('tracking_number', formaterNumeroSuivi(e.target.value, data.tracking_number))}
                             placeholder={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
+                            aria-label={t('suivi.numero_ph', 'Numéro de suivi (TRK-…)')}
+                            autoComplete="off"
                             className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine"
                             required
                         />
@@ -662,6 +711,8 @@ function SuiviVisiteur({ order, searched }) {
                             value={data.code}
                             onChange={(e) => setData('code', e.target.value)}
                             placeholder={t('suivi.code', 'Code')}
+                            aria-label={t('suivi.code', 'Code')}
+                            autoComplete="off"
                             className="w-full rounded-lg border-slate-300 shadow-sm focus:border-marine focus:ring-marine sm:w-48"
                             required
                         />
@@ -704,9 +755,17 @@ function SuiviVisiteur({ order, searched }) {
                                     )}
                                 </div>
                                 <dl className="space-y-3 text-sm">
-                                    <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{order.pickup_address}</dd></div>
-                                    <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{order.delivery_address}</dd></div>
-                                    <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date?.slice(0, 10) ?? '—'}</dd></div>
+                                    <div><dt className="text-slate-600">{t('suivi.depart', 'Départ')}</dt><dd className="font-medium text-marine">{adresse(order.pickup_address)}</dd></div>
+                                    <div><dt className="text-slate-600">{t('suivi.destination', 'Destination')}</dt><dd className="font-medium text-marine">{adresse(order.delivery_address)}</dd></div>
+                                    {order.status === 'DELIVERED' && order.delivered_at ? (
+                                        <div><dt className="text-slate-600">{t('suivi.livre_le', 'Livré le')}</dt><dd className="font-medium text-marine">
+                                            {new Date(order.delivered_at).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </dd></div>
+                                    ) : (
+                                        <div><dt className="text-slate-600">{t('suivi.livraison_prevue', 'Livraison prévue')}</dt><dd className="font-medium text-marine">{order.requested_delivery_date
+                                            ? new Date(order.requested_delivery_date).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                            : '—'}</dd></div>
+                                    )}
                                 </dl>
                             </div>
                         </div>
@@ -717,10 +776,21 @@ function SuiviVisiteur({ order, searched }) {
                             {t('suivi.introuvable_code', 'Aucun envoi trouvé. Vérifiez le numéro de suivi et le code.')}
                         </div>
                     )}
-                </div>
+                </main>
 
                 <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-600">
-                    {t('suivi.pied', 'NBLogiTrack Belgium — suivi d\'expédition')}
+                    {t('suivi.pied', 'NBLogiTrack SRL — suivi d\'expédition')}
+                    {/* Page mesuree : le choix des cookies et les pages legales
+                        doivent y etre accessibles. */}
+                    <nav className="mt-2 flex flex-wrap justify-center gap-4">
+                        <Link href={route('accueil')} className="hover:text-marine hover:underline">{t('nav.accueil', 'Accueil')}</Link>
+                        {pagesPied.map((p) => (
+                            <Link key={p.href} href={p.href} className="hover:text-marine hover:underline">{p.libelle}</Link>
+                        ))}
+                        <button type="button" onClick={ouvrirTemoins} className="hover:text-marine hover:underline">
+                            {t('temoins.gerer', 'Gérer les cookies')}
+                        </button>
+                    </nav>
                 </footer>
 
                 <BandeauTemoins />

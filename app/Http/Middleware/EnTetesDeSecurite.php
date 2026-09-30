@@ -9,7 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnTetesDeSecurite
 {
-    private const IMAGES = 'https://*.basemaps.cartocdn.com';
+    // Carte de secours, sans WebGL 2 : les tuiles images d'OpenStreetMap.
+    private const IMAGES = 'https://tile.openstreetmap.org';
+
+    // Fond de carte vectoriel : description, tuiles et polices d'OpenFreeMap.
+    private const TUILES = 'https://tiles.openfreemap.org';
 
     private const APPELS = 'https://photon.komoot.io https://router.project-osrm.org https://api-adresse.data.gouv.fr https://api.pdok.nl';
 
@@ -24,6 +28,13 @@ class EnTetesDeSecurite
 
         foreach ($this->entetes($request, $nonce) as $nom => $valeur) {
             $reponse->headers->set($nom, $valeur);
+        }
+
+        // Une page ou un fichier servi a un compte connecte (factures, export
+        // des donnees) ne reste pas dans le cache du navigateur : sur un
+        // poste partage, il se relisait apres la deconnexion.
+        if (auth()->check() && ! $request->is('build/*')) {
+            $reponse->headers->set('Cache-Control', 'no-store, private');
         }
 
         return $reponse;
@@ -63,7 +74,9 @@ class EnTetesDeSecurite
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob: ".self::IMAGES,
             "font-src 'self'",
-            "connect-src 'self' ".self::APPELS,
+            "connect-src 'self' ".self::TUILES.' '.self::APPELS,
+            // Le travailleur de MapLibre est un fichier de l'application.
+            "worker-src 'self'",
         ]);
     }
 }

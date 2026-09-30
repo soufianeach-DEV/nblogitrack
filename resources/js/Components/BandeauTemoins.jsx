@@ -2,42 +2,50 @@ import { useTraduction } from '@/traduire';
 import { Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
-const NOM = 'temoins_vus';
+// « essentiels » ou « audience » : le serveur le lit pour savoir s'il
+// peut compter la visite (App\Support\Audience). Nouveau nom : un choix
+// fait avant l'arrivee de la mesure d'audience est redemande.
+const NOM = 'temoins_choix';
 const DUREE = 180 * 24 * 60 * 60;
 const EVENEMENT = 'nblogitrack:temoins';
 
-const dejaChoisi = () => document.cookie.split('; ').some((c) => c.startsWith(`${NOM}=`));
+const choixActuel = () => document.cookie.split('; ').find((c) => c.startsWith(`${NOM}=`))?.split('=')[1] ?? null;
 
 export function ouvrirTemoins() {
     window.dispatchEvent(new Event(EVENEMENT));
 }
 
-function Categorie({ titre, description, etat, actif }) {
+function Categorie({ titre, description, etat, actif, interrupteur = null }) {
     return (
         <div className="flex items-start justify-between gap-4 rounded-lg bg-white/5 px-4 py-3">
             <div>
                 <p className="font-semibold text-white">{titre}</p>
                 <p className="mt-0.5 text-xs text-slate-300">{description}</p>
             </div>
-            <span
-                className={
-                    'mt-0.5 shrink-0 rounded-full px-3 py-1 text-xs font-bold ' +
-                    (actif ? 'bg-status-delivered/20 text-status-delivered' : 'bg-white/10 text-slate-300')
-                }
-            >
-                {etat}
-            </span>
+            {interrupteur ?? (
+                <span
+                    className={
+                        'mt-0.5 shrink-0 rounded-full px-3 py-1 text-xs font-bold ' +
+                        (actif ? 'bg-status-delivered/20 text-status-delivered' : 'bg-white/10 text-slate-300')
+                    }
+                >
+                    {etat}
+                </span>
+            )}
         </div>
     );
 }
 
 export default function BandeauTemoins() {
     const t = useTraduction();
-    const [visible, setVisible] = useState(() => ! dejaChoisi());
+    const [visible, setVisible] = useState(() => choixActuel() === null);
     const [panneau, setPanneau] = useState(false);
+    // Refusee par defaut : seule une action du visiteur l'active.
+    const [audience, setAudience] = useState(() => choixActuel() === 'audience');
 
     useEffect(() => {
         const rouvrir = () => {
+            setAudience(choixActuel() === 'audience');
             setVisible(true);
             setPanneau(true);
         };
@@ -60,12 +68,12 @@ export default function BandeauTemoins() {
             <div className="mx-auto max-w-7xl">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <p className="flex-1">
-                        {t('temoins.bandeau', 'Ce site ne dépose que des témoins (cookies) indispensables à son fonctionnement et à la sécurité de votre session. Aucun témoin publicitaire, aucune mesure d\'audience.')}{' '}
+                        {t('temoins.bandeau2', 'Ce site utilise des témoins (cookies) indispensables à son fonctionnement. Avec votre accord, il mesure aussi sa fréquentation, lui-même, sans témoin de suivi ni partage avec des tiers.')}{' '}
                         <Link
                             href={route('pages.show', 'politique-cookies')}
                             className="font-semibold text-action underline-offset-2 hover:underline"
                         >
-                            {t('temoins.savoir_plus', 'En savoir plus')}
+                            {t('temoins.politique', 'Lire la politique de cookies')}
                         </Link>
                     </p>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -85,7 +93,7 @@ export default function BandeauTemoins() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => choisir('tout')}
+                            onClick={() => choisir('audience')}
                             className="rounded-lg bg-action px-5 py-2.5 font-bold text-marine-deep transition hover:bg-action-dark"
                         >
                             {t('temoins.tout_accepter', 'Tout accepter')}
@@ -103,8 +111,19 @@ export default function BandeauTemoins() {
                         />
                         <Categorie
                             titre={t('temoins.audience', 'Mesure d\'audience')}
-                            description={t('temoins.audience_detail', 'Aucun outil de statistiques n\'est installé sur ce site.')}
-                            etat={t('temoins.non_utilises', 'Non utilisés')}
+                            description={t('temoins.audience_detail2', 'Pages vues et provenance des visites (moteur de recherche, réseau social, campagne), mesurées par NBLogiTrack lui-même : aucun témoin de suivi, aucune adresse IP conservée, rien n\'est transmis à un tiers. Données gardées 13 mois.')}
+                            interrupteur={(
+                                <label className="mt-0.5 flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold text-white">
+                                    <input
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={audience}
+                                        onChange={(e) => setAudience(e.target.checked)}
+                                        className="rounded border-white/40 bg-transparent text-action focus:ring-action"
+                                    />
+                                    {audience ? t('temoins.active', 'Activée') : t('temoins.desactivee', 'Désactivée')}
+                                </label>
+                            )}
                         />
                         <Categorie
                             titre={t('temoins.publicite', 'Publicité et réseaux sociaux')}
@@ -114,7 +133,7 @@ export default function BandeauTemoins() {
                         <div className="flex justify-end pt-1">
                             <button
                                 type="button"
-                                onClick={() => choisir('essentiels')}
+                                onClick={() => choisir(audience ? 'audience' : 'essentiels')}
                                 className="rounded-lg border border-white/25 px-5 py-2.5 font-bold text-white transition hover:bg-white/10"
                             >
                                 {t('temoins.enregistrer', 'Enregistrer mes choix')}

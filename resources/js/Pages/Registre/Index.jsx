@@ -1,4 +1,5 @@
 import Modal from '@/Components/Modal';
+import ChampRecherche from '@/Components/ChampRecherche';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTraduction } from '@/traduire';
 import { Head, useForm, usePage } from '@inertiajs/react';
@@ -17,7 +18,6 @@ const CHAMPS = [
 
 export default function Index({ traitements, bases, responsable, information }) {
     const t = useTraduction();
-    const flash = usePage().props.flash ?? {};
     const [edition, setEdition] = useState(null);
 
     const { data, setData, patch, processing, errors } = useForm({});
@@ -58,11 +58,6 @@ export default function Index({ traitements, bases, responsable, information }) 
         >
             <Head title={t('registre.titre', 'Registre des traitements')} />
 
-            {flash.success && (
-                <div className="mb-4 rounded-lg bg-status-delivered/10 px-4 py-3 text-sm font-medium text-status-delivered print:hidden">
-                    {flash.success}
-                </div>
-            )}
 
             <section className="rounded-2xl bg-white p-5 shadow-sm">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
@@ -101,6 +96,9 @@ export default function Index({ traitements, bases, responsable, information }) 
             </section>
 
             <div className="mt-6 space-y-4">
+                {traitements.length === 0 && (
+                    <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-sm">{t('registre.aucun', 'Aucun traitement enregistré.')}</p>
+                )}
                 {traitements.map((entree, i) => (
                     <article key={entree.id} className="break-inside-avoid rounded-2xl bg-white p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -159,16 +157,7 @@ export default function Index({ traitements, bases, responsable, information }) 
                             <label htmlFor="base" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                 {t('registre.base', 'Base légale')}
                             </label>
-                            <input
-                                id="base"
-                                list="bases-legales"
-                                value={data.base_legale ?? ''}
-                                onChange={(e) => setData('base_legale', e.target.value)}
-                                className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                            />
-                            <datalist id="bases-legales">
-                                {Object.values(bases).map((b) => <option key={b} value={b} />)}
-                            </datalist>
+                            <ChampRecherche id="base" value={data.base_legale ?? ''} onChange={(v) => setData('base_legale', v)} suggestions={Object.values(bases)} local className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine" />
                             {errors.base_legale && <p className="mt-1 text-sm text-status-incident">{errors.base_legale}</p>}
                         </div>
 

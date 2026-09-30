@@ -4,9 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Models\ApiKey;
 use App\Models\ApiRequest;
+use App\Models\Translation;
+use App\Support\Traductions;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthentifierCleApi
@@ -15,6 +18,13 @@ class AuthentifierCleApi
     {
         $depart = microtime(true);
         $jeton = $request->bearerToken();
+
+        // Les refus partent avant que la cle soit connue : ils suivent deja
+        // la langue demandee (Accept-Language). Ils sortaient en francais.
+        $demandee = trim((string) $request->header('Accept-Language')) !== ''
+            ? $request->getPreferredLanguage(array_keys(Translation::LANGUES))
+            : null;
+        app()->setLocale(Traductions::estServie($demandee) ? $demandee : 'fr');
 
         if ($jeton === null || $jeton === '') {
             return $this->refuser($request, null, 'jeton_absent', 401, $depart);
@@ -27,19 +37,26 @@ class AuthentifierCleApi
         }
 
         if ($motif = $cle->empechement($request->ip(), $permission)) {
-            $code = $motif === 'permission_absente' || $motif === 'adresse_refusee' ? 403 : 401;
+            $code = in_array($motif, ['permission_absente', 'adresse_refusee', 'entreprise_inactive'], true) ? 403 : 401;
 
             return $this->refuser($request, $cle, $motif, $code, $depart);
         }
 
         $request->attributes->set('cle_api', $cle);
 
+        // Langue des messages : celle demandee par l'integrateur
+        // (Accept-Language), sinon celle du compte de l'entreprise.
+        $langue = $demandee ?? ($cle->client?->compte()?->locale ?? 'fr');
+        app()->setLocale(Traductions::estServie($langue) ? $langue : 'fr');
+
         $reponse = $next($request);
 
-        $cle->forceFill([
+        // Increment fait par la base : deux appels simultanes ne se
+        // perdent plus l'un l'autre.
+        ApiKey::whereKey($cle->id)->update([
             'last_used_at' => now(),
-            'requests_count' => $cle->requests_count + 1,
-        ])->save();
+            'requests_count' => DB::raw('requests_count + 1'),
+        ]);
 
         $this->journaliser($request, $cle, $reponse->getStatusCode(), null, $depart);
 
@@ -50,10 +67,15 @@ class AuthentifierCleApi
     {
         $this->journaliser($request, $cle, $code, $motif, $depart);
 
-        return response()->json([
-            'message' => ApiRequest::MOTIFS[$motif] ?? 'Accès refusé.',
+        $reponse = response()->json([
+            'message' => Traductions::t('api_motif.'.$motif, ApiRequest::MOTIFS[$motif] ?? 'Accès refusé.'),
             'motif' => $motif,
         ], $code);
+
+        // RFC 9110 : un 401 dit quel schema d'authentification presenter.
+        return $code === 401
+            ? $reponse->header('WWW-Authenticate', 'Bearer realm="api"')
+            : $reponse;
     }
 
     private function journaliser(Request $request, ?ApiKey $cle, int $statut, ?string $motif, float $depart): void

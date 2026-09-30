@@ -10,10 +10,9 @@
         "@headlessui/react": "^2.0.0",
         "@inertiajs/react": "^2.0.0",
         "@tailwindcss/forms": "^0.5.3",
-        "@tailwindcss/vite": "^4.0.0",
         "@vitejs/plugin-react": "^4.2.0",
         "autoprefixer": "^10.4.12",
-        "axios": "^1.11.0",
+        "axios": "^1.20.0",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^2.0.0",
         "postcss": "^8.4.31",
@@ -23,6 +22,8 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "leaflet": "^1.9.4"
+        "@maplibre/maplibre-gl-leaflet": "^0.1.4",
+        "leaflet": "^1.9.4",
+        "maplibre-gl": "^6.11.2"
     }
 }

@@ -24,7 +24,7 @@ class ClientValidationController extends Controller
         $etat = $request->query('etat', 'attente');
 
         $query = Client::with([
-            'user:id,first_name,last_name,email',
+            'user:id,client_id,first_name,last_name,email',
             'contacts',
             'validator:id,first_name,last_name',
         ]);
@@ -45,7 +45,7 @@ class ClientValidationController extends Controller
         if ($filtres['q'] !== '') {
             $query->where(function ($q) use ($filtres) {
                 foreach (['company_name', 'vat_number', 'peppol_id', 'city'] as $colonne) {
-                    $q->orWhere($colonne, 'ilike', '%'.$filtres['q'].'%');
+                    $q->orWhereContient($colonne, (string) $filtres['q']);
                 }
             });
         }
@@ -59,7 +59,21 @@ class ClientValidationController extends Controller
         }
 
         return Inertia::render('Clients/Index', [
-            'clients' => $query->orderBy('company_name')->paginate(10)->withQueryString(),
+            // La demande la plus recente d'abord : celle qu'on vient de
+            // recevoir ne se perd plus au milieu de l'ordre alphabetique.
+            // La table des entreprises ne date pas ses lignes : la demande
+            // date de la creation du premier compte, fait a l'inscription.
+            // Les validees suivent la date de leur validation.
+            'clients' => $query
+                ->select('clients.*')
+                ->addSelect(['inscrit_le' => User::withTrashed()
+                    ->selectRaw('min(created_at)')
+                    ->whereColumn('users.client_id', 'clients.id')])
+                ->withCasts(['inscrit_le' => 'datetime'])
+                ->orderByRaw(($etat === 'validees' ? 'validated_at' : 'inscrit_le').' desc nulls last')
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->withQueryString(),
             'etat' => $etat,
             'filtres' => $filtres,
             'suggestions' => [
@@ -81,13 +95,13 @@ class ClientValidationController extends Controller
     public function approve(Client $client): RedirectResponse
     {
         if ($client->is_validated) {
-            return back()->withErrors(['client' => 'Cette entreprise est déjà validée.']);
+            return back()->with('error', Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.'));
         }
 
-        $utilisateur = User::find($client->id);
+        $utilisateur = $client->compte();
         $refusPrecedent = $client->rejection_reason;
 
-        DB::transaction(function () use ($client, $utilisateur) {
+        DB::transaction(function () use ($client) {
             $client->update([
                 'is_validated' => true,
                 'validated_at' => now(),
@@ -95,12 +109,14 @@ class ClientValidationController extends Controller
                 'rejection_reason' => null,
             ]);
 
-            $utilisateur?->update(['is_active' => true]);
+            $client->users()->update(['is_active' => true]);
         });
 
-        if ($utilisateur) {
-            Mail::to($utilisateur->email)->send(new CompteActive($client, $utilisateur));
-        }
+        // La validation est deja enregistree. Un courriel qui ne part pas
+        // ne doit ni la masquer derriere une erreur cinq cents, ni empecher
+        // le journal de la retenir.
+        $envoye = $utilisateur === null
+            || $this->envoyer(fn () => Mail::to($utilisateur->email)->send(new CompteActive($client, $utilisateur)));
 
         ActivityLog::record(
             'client.validated',
@@ -113,9 +129,25 @@ class ClientValidationController extends Controller
             ]),
         );
 
-        return back()->with('success', $client->company_name.($refusPrecedent
-            ? ' est revalidée, le refus est levé et le contact a reçu son e-mail d\'activation.'
-            : ' est validée, le contact a reçu son e-mail d\'activation.'));
+        if (! $envoye) {
+            return back()->with('error', Traductions::t(
+                'msg.entreprise_validee_sans_courriel',
+                ':entreprise est validée, mais l\'e-mail d\'activation n\'a pas pu partir : prévenez le contact.',
+                ['entreprise' => $client->company_name],
+            ));
+        }
+
+        return back()->with('success', $refusPrecedent
+            ? Traductions::t(
+                'msg.entreprise_revalidee',
+                ':entreprise est revalidée, le refus est levé et le contact a reçu son e-mail d\'activation.',
+                ['entreprise' => $client->company_name],
+            )
+            : Traductions::t(
+                'msg.entreprise_validee',
+                ':entreprise est validée, le contact a reçu son e-mail d\'activation.',
+                ['entreprise' => $client->company_name],
+            ));
     }
 
     public function reject(Request $request, Client $client): RedirectResponse
@@ -123,29 +155,28 @@ class ClientValidationController extends Controller
         $data = $request->validate([
             'motif' => 'required|string|min:10|max:255',
         ], [
-            'motif.required' => 'Indiquez le motif : il sera envoyé à l\'entreprise.',
-            'motif.min' => 'Le motif doit être explicite, 10 caractères au minimum.',
+            'motif.required' => Traductions::t('msg.motif_refus_requis', 'Indiquez le motif : il sera envoyé à l\'entreprise.'),
+            'motif.min' => Traductions::t('msg.motif_refus_court', 'Le motif doit être explicite, 10 caractères au minimum.'),
         ]);
 
         if ($client->is_validated) {
-            return back()->withErrors(['motif' => 'Cette entreprise est déjà validée.']);
+            return back()->withErrors(['motif' => Traductions::t('msg.entreprise_deja_validee', 'Cette entreprise est déjà validée.')]);
         }
 
-        $utilisateur = User::find($client->id);
+        $utilisateur = $client->compte();
 
-        DB::transaction(function () use ($client, $data, $utilisateur) {
+        DB::transaction(function () use ($client, $data) {
             $client->update([
                 'validated_at' => now(),
                 'validated_by' => Auth::id(),
                 'rejection_reason' => $data['motif'],
             ]);
 
-            $utilisateur?->update(['is_active' => false]);
+            $client->users()->update(['is_active' => false]);
         });
 
-        if ($utilisateur) {
-            Mail::to($utilisateur->email)->send(new InscriptionRefusee($client, $utilisateur, $data['motif']));
-        }
+        $envoye = $utilisateur === null
+            || $this->envoyer(fn () => Mail::to($utilisateur->email)->send(new InscriptionRefusee($client, $utilisateur, $data['motif'])));
 
         ActivityLog::record(
             'client.rejected',
@@ -154,6 +185,31 @@ class ClientValidationController extends Controller
             ['motif' => $data['motif']],
         );
 
-        return back()->with('success', 'Demande refusée, '.$client->company_name.' en a été informée.');
+        if (! $envoye) {
+            return back()->with('error', Traductions::t(
+                'msg.demande_refusee_sans_courriel',
+                'Demande refusée, mais l\'e-mail n\'a pas pu partir : prévenez :entreprise.',
+                ['entreprise' => $client->company_name],
+            ));
+        }
+
+        return back()->with('success', Traductions::t(
+            'msg.demande_refusee',
+            'Demande refusée, :entreprise en a été informée.',
+            ['entreprise' => $client->company_name],
+        ));
+    }
+
+    private function envoyer(callable $envoi): bool
+    {
+        try {
+            $envoi();
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 }

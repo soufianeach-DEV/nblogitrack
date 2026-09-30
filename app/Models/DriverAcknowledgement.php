@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DriverAcknowledgement extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const NOTE = 'information-chauffeurs';
 
     protected $fillable = ['user_id', 'version', 'acknowledged_at', 'ip_address'];
@@ -33,7 +36,7 @@ class DriverAcknowledgement extends Model
         }
 
         return self::where('user_id', $utilisateur)
-            ->where('version', $note->updated_at)
+            ->where('version', $note->version())
             ->exists();
     }
 

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DatesHeureDeBruxelles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApiRequest extends Model
 {
+    use DatesHeureDeBruxelles;
+
     public const UPDATED_AT = null;
 
     protected $fillable = [
@@ -25,6 +28,7 @@ class ApiRequest extends Model
         'expiree' => 'Clé expirée',
         'adresse_refusee' => 'Adresse IP non autorisée',
         'permission_absente' => 'Permission absente',
+        'entreprise_inactive' => 'Entreprise non validée ou désactivée',
     ];
 
     public function cle(): BelongsTo

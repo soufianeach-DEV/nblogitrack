@@ -4,16 +4,26 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\VatController;
+use App\Mail\AdresseDejaInscrite;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientContact;
+use App\Models\Page;
 use App\Models\User;
+use App\Support\Audience;
 use App\Support\IdentifiantEntreprise;
+use App\Support\Pays;
+use App\Support\Secteurs;
+use App\Support\Traductions;
+use Closure;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -59,39 +69,11 @@ class RegisteredUserController extends Controller
         'Travailleur indépendant',
     ];
 
-    private const SECTEURS_METIER = [
-        'Agriculture',
-        'Agroalimentaire',
-        'Automobile',
-        'Aéronautique',
-        'Bois et papier',
-        'Chimie',
-        'Construction',
-        'Cosmétique',
-        'Distribution',
-        'E-commerce',
-        'Emballage',
-        'Énergie',
-        'Grande distribution',
-        'Logistique',
-        'Machines et équipements',
-        'Matériaux de construction',
-        'Mobilier',
-        'Métallurgie',
-        'Pharmaceutique',
-        'Plasturgie',
-        'Recyclage',
-        'Santé',
-        'Textile',
-        'Transport',
-        'Électronique',
-    ];
-
     public function create(): Response
     {
         return Inertia::render('Auth/Register', [
-            'secteurs' => $this->referentiel('clients', 'business_sector', self::SECTEURS_METIER),
-            'fonctions' => $this->referentiel('client_contacts', 'position', self::FONCTIONS_METIER),
+            'secteurs' => Secteurs::groupes(app()->getLocale()),
+            'fonctions' => $this->referentiel(self::FONCTIONS_METIER, 'fonction'),
         ]);
     }
 
@@ -99,13 +81,19 @@ class RegisteredUserController extends Controller
      * @param  array<int, string>  $metier
      * @return array<int, string>
      */
-    private function referentiel(string $table, string $colonne, array $metier): array
+    private function referentiel(array $metier, string $vocabulaire): array
     {
-        $enBase = DB::table($table)->whereNotNull($colonne)->distinct()->pluck($colonne)->all();
+        // Seule la liste de reference est proposee : la page est publique,
+        // et les fonctions saisies librement par les autres entreprises
+        // (parfois un nom ou un numero) n'ont pas a y paraitre.
+        // Les valeurs sont rangees en francais : la liste est montree
+        // dans la langue de l'interface.
+        $valeurs = array_unique(array_map(
+            fn (string $valeur) => (string) Traductions::vocabulaire($vocabulaire, $valeur),
+            $metier,
+        ));
 
-        $valeurs = array_unique(array_merge($metier, $enBase));
-
-        collator_sort(collator_create('fr_FR'), $valeurs);
+        collator_sort(collator_create(app()->getLocale()), $valeurs);
 
         return array_values($valeurs);
     }
@@ -128,6 +116,11 @@ class RegisteredUserController extends Controller
             ->exists();
     }
 
+    private static function reservation(string $tva): string
+    {
+        return 'inscription.tva.'.sha1($tva);
+    }
+
     private function situationInterdite(string $tva): ?string
     {
         $verification = app(VatController::class)->verifier(
@@ -138,17 +131,21 @@ class RegisteredUserController extends Controller
         $statut = $resultat['statut'] ?? '';
 
         if ($statut === 'invalide') {
-            return 'Ce numéro n\'est pas actif dans le registre européen.';
+            return Traductions::t('msg.tva_inactive', 'Ce numéro n\'est pas actif dans le registre européen.');
         }
 
-        if ($statut !== 'valide') {
-            return 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.';
+        // Un numero britannique sans acces au registre HMRC n'est controle
+        // que sur son format : l'inscription passe, et l'administrateur la
+        // valide a la main comme toutes les autres. Seul un registre
+        // injoignable empeche de conclure.
+        if (! in_array($statut, ['valide', 'non_verifie'], true)) {
+            return Traductions::t('msg.tva_registre_injoignable', 'Le registre européen est momentanément injoignable, la vérification est impossible. Réessayez dans quelques minutes.');
         }
 
         $situation = $resultat['entreprise']['situation'] ?? null;
 
         if ($situation !== null && $situation['acceptable'] === false) {
-            return 'Situation juridique incompatible : '.$situation['libelle'].'. L\'inscription est refusée.';
+            return Traductions::t('msg.situation_incompatible', 'Situation juridique incompatible : :libelle. L\'inscription est refusée.', ['libelle' => $situation['libelle']]);
         }
 
         return null;
@@ -159,59 +156,110 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Une adresse tapee en majuscules est la meme adresse : on la range
+        // en minuscules plutot que de la refuser.
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
-            'vat_number' => ['required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/'],
+            'vat_number' => [
+                'bail', 'required', 'string', 'max:30', 'regex:/^([A-Z]{2}[0-9A-Z]{8,12}|\d{9}|\d{14})$/',
+                // Un numero belge porte sa propre cle de controle : un
+                // chiffre de trop ou mal tape se refuse ici, sans attendre
+                // la reponse du registre europeen.
+                function (string $attribut, mixed $valeur, Closure $echec) {
+                    if (! IdentifiantEntreprise::controleLocal((string) $valeur)) {
+                        $echec(Traductions::t('msg.tva_belge_invalide', 'Ce numéro de TVA belge n\'est pas valide : vérifiez-le. Il compte 10 chiffres après BE et commence par 0 ou 1 (ex. BE0123456749).'));
+                    }
+                },
+            ],
             'billing_address' => 'required|string|max:255',
             'postal_code' => 'required|string|max:10',
             'city' => 'required|string|max:100',
             'country' => 'required|string|max:60',
-            'business_sector' => 'nullable|string|max:100',
+            'business_sector' => ['required', Rule::in(Secteurs::valeurs())],
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'position' => 'nullable|string|max:100',
             'phone' => 'required|string|max:20',
-            'email' => 'required|string|lowercase|email|max:150|unique:'.User::class,
+            'email' => 'required|string|email|max:150',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'marque_declaree' => 'accepted',
             'conditions_acceptees' => 'accepted',
         ], [
-            'vat_number.regex' => 'Saisis un numéro de TVA (ex. BE0123456789) ou un SIREN/SIRET français.',
-            'billing_address.required' => 'Sélectionne l\'adresse du siège dans les listes proposées.',
-            'marque_declaree.accepted' => 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.',
-            'conditions_acceptees.accepted' => 'Vous devez accepter les conditions générales et la politique de confidentialité.',
+            'vat_number.regex' => Traductions::t('msg.tva_format', 'Saisissez un numéro de TVA (ex. BE0123456749) ou un SIREN/SIRET français.'),
+            'billing_address.required' => Traductions::t('msg.adresse_siege_requise', 'Sélectionnez l\'adresse du siège dans les listes proposées.'),
+            'marque_declaree.accepted' => Traductions::t('msg.marque_non_confirmee', 'Vous devez confirmer que la dénomination ne porte pas atteinte à une marque déposée.'),
+            'conditions_acceptees.accepted' => Traductions::t('msg.conditions_non_acceptees', 'Vous devez accepter les conditions générales et la politique de confidentialité.'),
         ]);
+
+        // Le formulaire envoie le nom du pays dans la langue de
+        // l'interface. On le range sous son nom francais, le seul que la
+        // facturation et les recherches connaissent.
+        $data['country'] = Pays::nomFrancais(trim($data['country']));
+
+        // Meme principe pour le secteur et la fonction choisis dans les
+        // listes traduites.
+        foreach (['business_sector' => 'secteur', 'position' => 'fonction'] as $champ => $vocabulaire) {
+            if (! empty($data[$champ])) {
+                $data[$champ] = Traductions::vocabulaireEnFrancais($vocabulaire, trim($data[$champ]));
+            }
+        }
 
         if ($this->denominationDejaPrise($data)) {
             return back()->withInput()->withErrors([
-                'company_name' => 'Une entreprise portant ce nom est déjà enregistrée dans le même secteur et la même localité. Précisez la dénomination pour la distinguer.',
+                'company_name' => Traductions::t('msg.denomination_prise', 'Une entreprise portant ce nom est déjà enregistrée dans le même secteur et la même localité. Précisez la dénomination pour la distinguer.'),
             ]);
         }
 
         $identifiants = IdentifiantEntreprise::analyser($data['vat_number']);
         $data['vat_number'] = $identifiants['tva'] ?? strtoupper($data['vat_number']);
 
-        if (Client::where('vat_number', $data['vat_number'])->exists()) {
-            return back()->withInput()->withErrors(['vat_number' => 'Ce numéro de TVA est déjà enregistré.']);
+        // Un numero tente avec une adresse deja inscrite est reserve un jour,
+        // comme s'il avait servi : sans cela, le reessayer avec une autre
+        // adresse revelait si la premiere avait un compte.
+        if (Client::where('vat_number', $data['vat_number'])->exists() || Cache::has(self::reservation($data['vat_number']))) {
+            return back()->withInput()->withErrors(['vat_number' => Traductions::t('msg.tva_deja_enregistree', 'Ce numéro de TVA est déjà enregistré.')]);
         }
 
         if ($message = $this->situationInterdite($data['vat_number'])) {
             return back()->withInput()->withErrors(['vat_number' => $message]);
         }
 
-        $user = DB::transaction(function () use ($data, $identifiants) {
-            $user = User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'password' => Hash::make($data['password']),
-                'role' => 'CLIENT',
-                'is_active' => true,
-            ]);
+        // Une adresse deja inscrite recoit la meme reponse qu'une inscription
+        // reussie : le formulaire ne sert plus a tester quelles adresses ont
+        // un compte. Le titulaire est prevenu par courriel.
+        if ($existant = User::where('email', $data['email'])->first()) {
+            // Meme travail qu'une vraie inscription : le temps de reponse ne
+            // trahit pas l'adresse.
+            Hash::make($data['password']);
+            Cache::put(self::reservation($data['vat_number']), true, now()->addDay());
 
-            Client::create([
-                'id' => $user->id,
+            ActivityLog::record(
+                'client.register_existing_email',
+                'Inscription tentée avec une adresse déjà inscrite : '.$existant->email,
+                $existant,
+                ['entreprise' => $data['company_name']],
+                $existant->id,
+            );
+
+            // Envoye apres la reponse, comme le courriel de verification d'une
+            // vraie inscription.
+            defer(function () use ($existant) {
+                try {
+                    Mail::to($existant->email)->send(new AdresseDejaInscrite($existant));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
+
+            return $this->inscriptionEnregistree();
+        }
+
+        $user = DB::transaction(function () use ($data, $identifiants) {
+            // L'entreprise d'abord, avec sa propre numerotation ; le compte
+            // qui l'inscrit en devient l'administrateur.
+            $client = Client::create([
                 'company_name' => $data['company_name'],
                 'vat_number' => $data['vat_number'],
                 'enterprise_number' => $identifiants['national'],
@@ -222,10 +270,28 @@ class RegisteredUserController extends Controller
                 'country' => $data['country'],
                 'business_sector' => $data['business_sector'] ?? null,
                 'is_validated' => false,
+                // Ce qui a ete accepte, et quand : les conditions opposables
+                // sont celles de cette version.
+                'conditions_acceptees_le' => now(),
+                'conditions_version' => Page::where('slug', 'conditions-generales')->first()?->updated_at?->toIso8601String(),
+            ]);
+
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role' => 'CLIENT',
+                'client_id' => $client->id,
+                'company_role' => 'ADMIN',
+                // La langue de l'inscription devient celle de ses courriels.
+                'locale' => app()->getLocale(),
+                'is_active' => true,
             ]);
 
             ClientContact::create([
-                'client_id' => $user->id,
+                'client_id' => $client->id,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
@@ -237,7 +303,8 @@ class RegisteredUserController extends Controller
             return $user;
         });
 
-        event(new Registered($user));
+        defer(fn () => event(new Registered($user)));
+        Audience::noterEvenement($request, 'inscription');
 
         ActivityLog::record(
             'client.registered',
@@ -247,8 +314,14 @@ class RegisteredUserController extends Controller
             $user->id,
         );
 
-        return redirect()->route('login')->with('status',
-            'Votre demande est enregistrée. Un administrateur doit valider votre entreprise avant votre première connexion : vous recevrez un e-mail dès l\'activation.'
-        );
+        return $this->inscriptionEnregistree();
+    }
+
+    private function inscriptionEnregistree(): RedirectResponse
+    {
+        return redirect()->route('login')->with('status', Traductions::t(
+            'msg.inscription_enregistree',
+            'Votre demande est enregistrée. Un administrateur doit valider votre entreprise avant votre première connexion : vous recevrez un e-mail dès l\'activation.',
+        ));
     }
 }

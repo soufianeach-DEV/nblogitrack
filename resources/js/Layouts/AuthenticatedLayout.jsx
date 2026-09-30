@@ -1,3 +1,4 @@
+import MessagesFlash from '@/Components/MessagesFlash';
 import BandeauTemoins from '@/Components/BandeauTemoins';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Dropdown from '@/Components/Dropdown';
@@ -8,7 +9,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const ROLES = {
-    ADMIN: 'Superviseur',
+    ADMIN: 'Administrateur',
     PLANNER: 'Planificateur',
     CLIENT: 'Client',
     DRIVER: 'Chauffeur',
@@ -46,13 +47,18 @@ function Groupe({ titre, children }) {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet } = usePage().props.auth;
+    const { user, canPlan, canViewLogs, canValidateClients, canManageUsers, canHandleQuotes, canViewFleet, canOrder, canSeeInvoices, canManageCompany } = usePage().props.auth;
     const t = useTraduction();
     const [menuOuvert, setMenuOuvert] = useState(false);
 
     const estAdmin = canValidateClients;
 
     const estClient = user.role === 'CLIENT';
+
+    // Le chauffeur arrive ici par son profil ou le suivi : son menu ne lui
+    // propose que ce qu'il peut ouvrir. Les expeditions et les factures des
+    // clients lui repondaient par un refus.
+    const estChauffeur = user.role === 'DRIVER';
 
     useEffect(() => {
         const echap = (e) => e.key === 'Escape' && setMenuOuvert(false);
@@ -66,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const rechercher = (terme) => {
         estAdmin
             ? router.get(route('clients.index'), { etat: 'tout', q: terme })
-            : router.get(route('transport-orders.index'), { tracking: terme });
+            : router.get(route('transport-orders.index'), { q: terme });
     };
 
     const marque = (
@@ -94,21 +100,32 @@ export default function AuthenticatedLayout({ header, children }) {
     const navigation = (
         <>
             <Groupe titre={t('nav.operations', 'Opérations')}>
-                <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
-                    {t('nav.tableau_de_bord', 'Tableau de bord')}
-                </LienMenu>
-                <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
-                    {canPlan ? t('nav.ordres', 'Ordres de transport') : t('nav.mes_expeditions', 'Mes expéditions')}
-                </LienMenu>
+                {estChauffeur ? (
+                    <LienMenu href={route('missions.index')} active={route().current('missions.index')} icone="camion" onClick={fermer}>
+                        {t('mission.mes_missions', 'Mes missions')}
+                    </LienMenu>
+                ) : (
+                    <>
+                        <LienMenu href={route('dashboard')} active={route().current('dashboard')} icone="dashboard" onClick={fermer}>
+                            {t('nav.tableau_de_bord', 'Tableau de bord')}
+                        </LienMenu>
+                        <LienMenu href={route('transport-orders.index')} active={route().current('transport-orders.*')} icone="colis" onClick={fermer}>
+                            {canPlan ? t('nav.ordres', 'Ordres de transport') : t('nav.mes_expeditions', 'Mes expéditions')}
+                        </LienMenu>
+                    </>
+                )}
                 {canPlan && (
                     <LienMenu href={route('planning.index')} active={route().current('planning.index')} icone="planning" onClick={fermer}>
                         {t('nav.planification', 'Planification')}
                     </LienMenu>
                 )}
-                {}
-                <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
-                    {t('nav.suivi', 'Suivre un envoi')}
-                </LienMenu>
+                {/* Le suivi public ne montre rien a un chauffeur : ses
+                    missions sont sur son propre ecran. */}
+                {! estChauffeur && (
+                    <LienMenu href={route('tracking.show')} active={route().current('tracking.show')} icone="camion" onClick={fermer}>
+                        {t('nav.suivi', 'Suivre un envoi')}
+                    </LienMenu>
+                )}
                 {canHandleQuotes && (
                     <LienMenu href={route('quotes.index')} active={route().current('quotes.index')} icone="journal" onClick={fermer}>
                         {t('nav.devis_demandes', 'Demandes de devis')}
@@ -136,16 +153,29 @@ export default function AuthenticatedLayout({ header, children }) {
                 )}
             </Groupe>
 
-            <Groupe titre={t('nav.finance', 'Finance & data')}>
-                <LienMenu href={route('invoices.index')} active={route().current('invoices.index')} icone="facture" onClick={fermer}>
-                    {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
-                </LienMenu>
-            </Groupe>
+            {canSeeInvoices && (
+                <Groupe titre={t('nav.finance', 'Finance et données')}>
+                    <LienMenu href={route('invoices.index')} active={route().current('invoices.*') || route().current('purchases.*')} icone="facture" onClick={fermer}>
+                        {canPlan ? t('nav.facturation', 'Facturation') : t('nav.mes_factures', 'Mes factures')}
+                    </LienMenu>
+                </Groupe>
+            )}
+
+            {canManageCompany && (
+                <Groupe titre={t('nav.mon_entreprise', 'Mon entreprise')}>
+                    <LienMenu href={route('company.users.index')} active={route().current('company.users.*')} icone="profil" onClick={fermer}>
+                        {t('nav.utilisateurs_entreprise', 'Utilisateurs')}
+                    </LienMenu>
+                </Groupe>
+            )}
 
             {canViewLogs && (
                 <Groupe titre={t('nav.systeme', 'Système')}>
                     <LienMenu href={route('activity-logs.index')} active={route().current('activity-logs.index')} icone="journal" onClick={fermer}>
                         {t('nav.journaux', 'Journaux')}
+                    </LienMenu>
+                    <LienMenu href={route('audience.index')} active={route().current('audience.index')} icone="dashboard" onClick={fermer}>
+                        {t('nav.audience', 'Audience du site')}
                     </LienMenu>
                     {canManageUsers && (
                         <>
@@ -189,7 +219,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </Link>
             <div className="flex items-center gap-2 px-4 pb-1 pt-2">
                 <span className="text-xs text-slate-500">{t('nav.langue', 'Langue')}</span>
-                <ChoixLangue sombre />
+                <ChoixLangue sombre haut />
             </div>
         </div>
     );
@@ -197,7 +227,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const panneau = (
         <>
             {marque}
-            {estClient && nouvelleExpedition}
+            {estClient && canOrder && nouvelleExpedition}
             <nav className="mt-1 flex-1">{navigation}</nav>
             {pied}
         </>
@@ -210,13 +240,13 @@ export default function AuthenticatedLayout({ header, children }) {
             </aside>
 
             {menuOuvert && (
-                <div className="fixed inset-0 z-40 md:hidden">
+                <div className="fixed inset-0 z-50 md:hidden">
                     <div className="absolute inset-0 bg-marine-deep/70" onClick={fermer} aria-hidden="true" />
                     <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col overflow-y-auto bg-marine-deep py-3 shadow-xl">
                         <button
                             type="button"
                             onClick={fermer}
-                            aria-label="Fermer le menu"
+                            aria-label={t('nav.fermer_menu', 'Fermer le menu')}
                             className="absolute right-4 top-5 rounded-lg p-1 text-slate-300 transition hover:bg-white/10 hover:text-white"
                         >
                             <Icone nom="fermer" className="h-6 w-6" />
@@ -232,7 +262,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <button
                         type="button"
                         onClick={() => setMenuOuvert(true)}
-                        aria-label="Ouvrir le menu"
+                        aria-label={t('nav.ouvrir_menu', 'Ouvrir le menu')}
                         aria-expanded={menuOuvert}
                         className="rounded-lg p-2 text-marine transition hover:bg-surface md:hidden"
                     >
@@ -275,6 +305,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                 <main className="p-4 sm:p-6 lg:p-8">
                     {header && <div className="mb-6">{header}</div>}
+                    <MessagesFlash />
                     {children}
                 </main>
             </div>

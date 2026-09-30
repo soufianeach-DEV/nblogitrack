@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\NoteInformation;
+use App\Jobs\EnvoyerNoteAuxConducteurs;
 use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\Page;
 use App\Models\PageDocument;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -26,6 +26,10 @@ class PageController extends Controller
                 ->map(fn (Page $p) => [
                     'id' => $p->id,
                     'slug' => $p->slug,
+                    // La liste suit la langue de l'interface, avec le
+                    // francais en repli comme sur le site public. Les
+                    // trois titres restent envoyes pour le formulaire.
+                    'titre' => $p->titre(app()->getLocale()),
                     'titre_fr' => $p->titre_fr,
                     'titre_nl' => $p->titre_nl,
                     'titre_en' => $p->titre_en,
@@ -73,7 +77,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.created', 'Page « '.$page->slug.' » créée', $page);
 
-        return back()->with('success', 'Page créée.');
+        return back()->with('success', Traductions::t('msg.page_creee', 'Page créée.'));
     }
 
     public function update(Request $request, Page $page): RedirectResponse
@@ -88,7 +92,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.updated', 'Page « '.$page->slug.' » modifiée', $page);
 
-        return back()->with('success', 'Page enregistrée.');
+        return back()->with('success', Traductions::t('msg.page_enregistree', 'Page enregistrée.'));
     }
 
     public function publier(Page $page): RedirectResponse
@@ -106,31 +110,28 @@ class PageController extends Controller
             $page,
         );
 
-        return back()->with('success', $publiee ? 'Page publiée.' : 'Page retirée du site.');
+        return back()->with('success', $publiee
+            ? Traductions::t('msg.page_publiee', 'Page publiée.')
+            : Traductions::t('msg.page_retiree', 'Page retirée du site.'));
     }
 
     public function envoyerNote(Page $page): RedirectResponse
     {
         if ($page->slug !== DriverAcknowledgement::NOTE) {
-            return back()->with('error', 'Seule la note aux conducteurs peut être envoyée.');
+            return back()->with('error', Traductions::t('msg.note_seule_envoyable', 'Seule la note aux conducteurs peut être envoyée.'));
         }
 
-        $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->get();
-
-        foreach ($conducteurs as $conducteur) {
-            Mail::to($conducteur->email)->send(
-                new NoteInformation($page, $conducteur, $conducteur->locale ?? 'fr'),
-            );
+        // Un brouillon ne part pas chez les conducteurs.
+        if (! $page->publiee) {
+            return back()->with('error', Traductions::t('msg.note_brouillon', 'Publiez la note avant de l\'envoyer aux conducteurs.'));
         }
 
-        ActivityLog::record(
-            'driver.notice_sent',
-            'Note d\'information adressée à '.$conducteurs->count().' conducteur(s)',
-            $page,
-            ['version' => $page->updated_at?->toIso8601String()],
-        );
+        $nombre = User::where('role', 'DRIVER')->where('is_active', true)->count();
 
-        return back()->with('success', $conducteurs->count().' conducteur(s) ont reçu la note.');
+        // Envoi en file d'attente : le journal d'activite dira qui l'a recue.
+        EnvoyerNoteAuxConducteurs::dispatch($page);
+
+        return back()->with('success', Traductions::t('msg.note_en_cours', 'Envoi de la note en cours à :n conducteur(s). Le journal d\'activité indiquera les éventuels échecs.', ['n' => $nombre]));
     }
 
     public function destroy(Page $page): RedirectResponse
@@ -140,7 +141,7 @@ class PageController extends Controller
 
         ActivityLog::record('page.deleted', 'Page « '.$slug.' » supprimée');
 
-        return back()->with('success', 'Page supprimée.');
+        return back()->with('success', Traductions::t('msg.page_supprimee', 'Page supprimée.'));
     }
 
     public function televerser(Request $request): RedirectResponse
@@ -149,8 +150,8 @@ class PageController extends Controller
             'titre' => 'required|string|max:120',
             'fichier' => 'required|file|max:10240|mimetypes:'.implode(',', array_keys(PageDocument::TYPES)),
         ], [
-            'fichier.mimetypes' => 'Seuls les PDF et les images (JPEG, PNG, WebP) sont acceptés.',
-            'fichier.max' => 'Le fichier ne peut pas dépasser 10 Mo.',
+            'fichier.mimetypes' => Traductions::t('msg.document_types', 'Seuls les PDF et les images (JPEG, PNG, WebP) sont acceptés.'),
+            'fichier.max' => Traductions::t('msg.document_taille', 'Le fichier ne peut pas dépasser 10 Mo.'),
         ]);
 
         $fichier = $request->file('fichier');
@@ -168,7 +169,7 @@ class PageController extends Controller
 
         ActivityLog::record('document.uploaded', 'Document « '.$document->titre.' » déposé', $document);
 
-        return back()->with('success', 'Document déposé.');
+        return back()->with('success', Traductions::t('msg.document_depose', 'Document déposé.'));
     }
 
     public function supprimerDocument(PageDocument $pageDocument): RedirectResponse
@@ -179,14 +180,17 @@ class PageController extends Controller
 
         ActivityLog::record('document.deleted', 'Document « '.$titre.' » supprimé');
 
-        return back()->with('success', 'Document supprimé.');
+        return back()->with('success', Traductions::t('msg.document_supprime', 'Document supprimé.'));
     }
 
     /** @return array<string, mixed> */
     private function valider(Request $request, ?Page $page = null): array
     {
         return $request->validate([
-            'slug' => 'required|string|max:80|regex:/^[a-z0-9\-]+$/|unique:pages,slug'
+            // Des mots separes par des tirets : « - » seul donnait une
+            // adresse vide, et la page placee au pied du site le faisait
+            // tomber en entier.
+            'slug' => 'required|string|max:80|regex:/^[a-z0-9]+(-[a-z0-9]+)*$/|unique:pages,slug'
                 .($page ? ','.$page->id : ''),
             'titre_fr' => 'required|string|max:150',
             'titre_nl' => 'nullable|string|max:150',
@@ -197,7 +201,7 @@ class PageController extends Controller
             'au_pied' => 'boolean',
             'rang' => 'nullable|integer|min:0|max:999',
         ], [
-            'slug.regex' => 'L\'adresse ne peut contenir que des minuscules, des chiffres et des tirets.',
+            'slug.regex' => Traductions::t('msg.page_slug', 'L\'adresse ne peut contenir que des minuscules, des chiffres et des tirets.'),
         ]);
     }
 

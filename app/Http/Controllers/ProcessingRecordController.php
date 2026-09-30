@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\DriverAcknowledgement;
 use App\Models\ProcessingRecord;
 use App\Models\User;
+use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class ProcessingRecordController extends Controller
         $note = DriverAcknowledgement::note();
         $conducteurs = User::where('role', 'DRIVER')->where('is_active', true)->count();
 
-        $informes = $note === null ? 0 : DriverAcknowledgement::where('version', $note->updated_at)
+        $informes = $note === null ? 0 : DriverAcknowledgement::where('version', $note->version())
             ->whereHas('utilisateur', fn ($q) => $q->where('role', 'DRIVER')->where('is_active', true))
             ->count();
 
@@ -43,12 +44,12 @@ class ProcessingRecordController extends Controller
             'responsable' => [
                 'nom' => 'NBLogiTrack SRL',
                 'adresse' => 'Avenue du Port 86C, 1000 Bruxelles, Belgique',
-                'entreprise' => 'BE 0123.456.789',
+                'entreprise' => 'BE 0123.456.749',
                 'contact' => 'info@nblogitrack.be',
             ],
             'information' => [
                 'note_existe' => $note !== null,
-                'version' => $note?->updated_at?->format('d/m/Y'),
+                'version' => $note?->version()?->format('d/m/Y'),
                 'conducteurs' => $conducteurs,
                 'informes' => $informes,
             ],
@@ -77,6 +78,6 @@ class ProcessingRecordController extends Controller
             $processingRecord,
         );
 
-        return back()->with('success', 'Entrée du registre enregistrée.');
+        return back()->with('success', Traductions::t('msg.registre_enregistre', 'Entrée du registre enregistrée.'));
     }
 }
