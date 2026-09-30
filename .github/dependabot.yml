@@ -1,17 +1,19 @@
-# Mises a jour de securite et de version, proposees chaque semaine en PR.
+# Mises a jour de version suspendues (limite a 0) jusqu'apres la
+# presentation : aucune PR de version ne s'ouvre. Les alertes de securite
+# restent actives. Remettre 5 pour les reprendre.
 version: 2
 updates:
   - package-ecosystem: composer
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     # Une version publiee depuis moins de trois jours n'est pas proposee :
     # les paquets pieges sont en general retires dans ce delai.
     cooldown:
@@ -21,3 +23,4 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
