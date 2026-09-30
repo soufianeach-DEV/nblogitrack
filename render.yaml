@@ -9,7 +9,7 @@ services:
     # free s'endort apres 15 minutes sans visite ; starter reste eveille.
     plan: free
     region: frankfurt
-    branch: fix/audit-approfondi
+    branch: main
     envVars:
       - key: APP_NAME
         value: NBLogiTrack
