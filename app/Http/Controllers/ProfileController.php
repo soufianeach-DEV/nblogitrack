@@ -181,7 +181,7 @@ class ProfileController extends Controller
             if ($user->company_role === 'ADMIN'
                 && (clone $collegues)->exists()
                 && ! (clone $collegues)->where('company_role', 'ADMIN')->where('is_active', true)->exists()) {
-                return Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul administrateur de votre entreprise : désignez-en un autre avant de supprimer votre compte.');
+                return Traductions::t('msg.dernier_admin_entreprise', 'Vous êtes le seul gestionnaire de votre entreprise : désignez-en un autre avant de supprimer votre compte.');
             }
 
             // Une entreprise qui a deja transporte ou ete facturee garde ses
