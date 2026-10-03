@@ -2528,6 +2528,9 @@ class TranslationSeeder extends Seeder
             'expirees' => ['Expirées', 'Verlopen', 'Expired'],
             'n_sur_total' => [':n sur :total', ':n van :total', ':n of :total'],
             'aucune_cle_trouvee' => ['Aucune clé ne correspond à la recherche.', 'Geen enkele sleutel komt overeen met de zoekopdracht.', 'No key matches the search.'],
+            'rechercher_journal' => ['Clé, préfixe nblt_…, entreprise ou IP', 'Sleutel, prefix nblt_…, bedrijf of IP', 'Key, nblt_… prefix, company or IP'],
+            'entreprise_journal' => ['Entreprise du journal', 'Bedrijf in het logboek', 'Log company'],
+            'etat_journal' => ['État des appels', 'Status van de oproepen', 'Call status'],
             'nouvelle_aide' => [
                 'La valeur ne s\'affichera qu\'une seule fois, juste après la création.',
                 'De waarde wordt slechts één keer getoond, meteen na het aanmaken.',
