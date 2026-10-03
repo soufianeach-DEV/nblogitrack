@@ -99,6 +99,26 @@ class Localite
      * Geocodeur::EMPRISES et sans aucune ligne dans postal_codes. Si les
      * donnees arrivent un jour, la verification stricte reprend la main.
      */
+    /**
+     * La localite du referentiel la plus proche d'un point, a moins de
+     * $rayon km : une ville choisie dans une liste sous son nom francais
+     * (« Cologne ») se retrouve sous son nom local (« Köln »).
+     */
+    public static function plusProche(string $pays, float $lat, float $lng, float $rayon = 15): ?object
+    {
+        $point = DB::table('postal_codes')
+            ->selectRaw('city AS ville, lat, lng, region')
+            ->where('country_code', strtoupper(trim($pays)))
+            ->orderByRaw('power(lat - ?, 2) + power((lng - ?) * cos(radians(?)), 2)', [$lat, $lng, $lat])
+            ->first();
+
+        if ($point === null || Tarificateur::distanceVol($lat, $lng, (float) $point->lat, (float) $point->lng) > $rayon) {
+            return null;
+        }
+
+        return $point;
+    }
+
     public static function enLigne(string $pays): bool
     {
         $pays = strtoupper(trim($pays));
