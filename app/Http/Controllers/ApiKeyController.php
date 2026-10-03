@@ -7,6 +7,7 @@ use App\Models\ApiKey;
 use App\Models\ApiRequest;
 use App\Models\Client;
 use App\Support\Traductions;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,8 +66,17 @@ class ApiKeyController extends Controller
             'journal' => $journal,
             'filtres' => $filtres,
             'permissions' => ApiKey::PERMISSIONS,
-            'entreprises' => Client::orderBy('company_name')->get(['id', 'company_name'])
-                ->map(fn (Client $e) => ['valeur' => $e->id, 'libelle' => $e->company_name]),
+            // Seules les entreprises inscrites que l'API accepte : une cle
+            // rattachee a une entreprise en attente serait refusee a chaque appel.
+            'entreprises' => Client::accesApi()->with('user:id,client_id,email')->orderBy('company_name')
+                ->get(['id', 'company_name', 'vat_number', 'city'])
+                ->map(fn (Client $e) => [
+                    'valeur' => $e->id,
+                    'libelle' => $e->company_name,
+                    'detail' => $e->vat_number,
+                    'ville' => $e->city,
+                    'contact' => $e->user?->email,
+                ]),
             'statistiques' => $this->statistiques(),
         ]);
     }
@@ -74,10 +84,20 @@ class ApiKeyController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $donnees = $request->validate([
-            'nom' => 'required|string|max:80',
+            // Le libelle sert a reconnaitre la cle ; vide, il reprend le nom
+            // de l'entreprise.
+            'nom' => 'nullable|string|max:80',
             // Une cle interne lit tout mais ne depose rien : sans entreprise
             // a qui rattacher l'expedition, l'ecriture echouait a chaque appel.
-            'client_id' => ['nullable', 'integer', 'exists:clients,id', Rule::requiredIf(fn () => in_array('ecriture', (array) $request->input('permissions'), true))],
+            'client_id' => [
+                'nullable', 'integer',
+                Rule::requiredIf(fn () => in_array('ecriture', (array) $request->input('permissions'), true)),
+                function (string $attribut, mixed $valeur, Closure $echec) {
+                    if (! Client::accesApi()->whereKey($valeur)->exists()) {
+                        $echec(Traductions::t('msg.cle_entreprise_hors_liste', 'Choisissez une entreprise inscrite et validée dans la liste.'));
+                    }
+                },
+            ],
             'permissions' => 'required|array|min:1',
             'permissions.*' => Rule::in(array_keys(ApiKey::PERMISSIONS)),
             'ips' => 'nullable|string|max:500',
@@ -98,8 +118,16 @@ class ApiKeyController extends Controller
             ])->withInput();
         }
 
+        $nom = trim((string) ($donnees['nom'] ?? ''));
+
+        if ($nom === '') {
+            $nom = isset($donnees['client_id'])
+                ? Client::whereKey($donnees['client_id'])->value('company_name')
+                : Traductions::t('api.cle_interne', 'Clé interne');
+        }
+
         [$cle, $enClair] = ApiKey::generer([
-            'name' => $donnees['nom'],
+            'name' => $nom,
             'client_id' => $donnees['client_id'] ?? null,
             'abilities' => $donnees['permissions'],
             'allowed_ips' => $ips->isEmpty() ? null : $ips->all(),

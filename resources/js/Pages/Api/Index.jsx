@@ -1,3 +1,4 @@
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
@@ -32,11 +33,35 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
         expire_le: '',
     });
 
+    const [libelleManuel, setLibelleManuel] = useState(false);
+    const entrepriseChoisie = entreprises.find((e) => String(e.valeur) === String(data.client_id)) ?? null;
+
+    // Dans un an, au format du champ date.
+    const dansUnAn = () => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+    };
+
+    // Choisir l'entreprise remplit le reste : son nom comme libelle (tant
+    // qu'on ne l'a pas change a la main), lecture et ecriture pour un
+    // partenaire, lecture seule pour une cle interne, expiration a un an.
+    const choisirEntreprise = (valeur) => {
+        const entreprise = entreprises.find((e) => String(e.valeur) === String(valeur)) ?? null;
+        setData((d) => ({
+            ...d,
+            client_id: valeur,
+            nom: libelleManuel ? d.nom : (entreprise?.libelle ?? ''),
+            permissions: entreprise ? ['lecture', 'ecriture'] : ['lecture'],
+            expire_le: entreprise && ! d.expire_le ? dansUnAn() : d.expire_le,
+        }));
+    };
+
     const soumettre = (e) => {
         e.preventDefault();
         post(route('api-keys.store'), {
             preserveScroll: true,
-            onSuccess: () => { setCreation(false); reset(); },
+            onSuccess: () => { setCreation(false); setLibelleManuel(false); reset(); },
         });
     };
 
@@ -355,36 +380,44 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
 
                     <div className="mt-4 space-y-4">
                         <div>
+                            <label htmlFor="entreprise" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                {t('api.entreprise', 'Entreprise')}
+                            </label>
+                            {/* Les entreprises inscrites et validees : on tape pour chercher, on ne saisit pas un nom. */}
+                            <ListeRecherche
+                                id="entreprise"
+                                value={data.client_id}
+                                onChange={choisirEntreprise}
+                                options={entreprises}
+                                vide={t('api.interne', 'Interne — accès complet')}
+                                className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                            />
+                            {entrepriseChoisie && (
+                                <p className="mt-2 rounded-md bg-surface px-3 py-2 text-xs text-slate-700">
+                                    {[entrepriseChoisie.detail, entrepriseChoisie.ville, entrepriseChoisie.contact].filter(Boolean).join(' · ')}
+                                </p>
+                            )}
+                            <p className="mt-1 text-xs text-slate-600">
+                                {t('api.entreprise_liste_aide', 'Tapez pour chercher parmi les entreprises inscrites et validées. Une clé rattachée ne voit que les expéditions de cette entreprise.')}
+                            </p>
+                            {errors.client_id && <p className="mt-1 text-xs text-status-incident">{errors.client_id}</p>}
+                        </div>
+
+                        <div>
                             <label htmlFor="nom" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                {t('api.nom', 'Nom')}
+                                {t('api.libelle', 'Libellé')}
                             </label>
                             <input
                                 id="nom"
                                 value={data.nom}
-                                onChange={(e) => setData('nom', e.target.value)}
-                                placeholder={t('api.nom_ex', 'Ex : portail logistique Peeters')}
+                                onChange={(e) => { setLibelleManuel(true); setData('nom', e.target.value); }}
+                                placeholder={entrepriseChoisie?.libelle ?? t('api.cle_interne', 'Clé interne')}
                                 className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                             />
-                            {errors.nom && <p className="mt-1 text-sm text-status-incident">{errors.nom}</p>}
-                        </div>
-
-                        <div>
-                            <label htmlFor="entreprise" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                {t('api.entreprise', 'Entreprise')}
-                            </label>
-                            <select
-                                id="entreprise"
-                                value={data.client_id}
-                                onChange={(e) => setData('client_id', e.target.value)}
-                                className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                            >
-                                <option value="">{t('api.interne', 'Interne — accès complet')}</option>
-                                {entreprises.map((e) => <option key={e.valeur} value={e.valeur}>{e.libelle}</option>)}
-                            </select>
                             <p className="mt-1 text-xs text-slate-600">
-                                {t('api.entreprise_aide', 'Une clé rattachée ne voit que les expéditions de cette entreprise.')}
+                                {t('api.libelle_aide', 'Rempli avec le nom de l\'entreprise. Il sert à reconnaître la clé dans la liste.')}
                             </p>
-                            {errors.client_id && <p className="mt-1 text-xs text-status-incident">{errors.client_id}</p>}
+                            {errors.nom && <p className="mt-1 text-sm text-status-incident">{errors.nom}</p>}
                         </div>
 
                         <div>
