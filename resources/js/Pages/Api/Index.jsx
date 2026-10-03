@@ -2,7 +2,7 @@ import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 function Carte({ intitule, valeur, detail, alerte = false }) {
     return (
@@ -21,6 +21,9 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
     const [creation, setCreation] = useState(false);
     const [aRevoquer, setARevoquer] = useState(null);
     const [copie, setCopie] = useState(false);
+    const [recherche, setRecherche] = useState('');
+    const [entrepriseCle, setEntrepriseCle] = useState('');
+    const [etatCle, setEtatCle] = useState('');
 
     const nouvelleCle = flash.cle_en_clair ?? null;
 
@@ -45,6 +48,23 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
             ? data.permissions.filter((p) => p !== cle)
             : [...data.permissions, cle]);
     };
+
+    // Retrouver une cle a revoquer : par son nom, son prefixe (nblt_...),
+    // son entreprise ou son auteur, sans recharger la page.
+    const normaliser = (texte) => (texte ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const etatDe = (c) => (c.active ? 'actives' : (c.revoquee_le ? 'revoquees' : 'expirees'));
+    const suggestions = useMemo(() => [...new Set(cles.flatMap((c) => [c.nom, c.prefixe, c.entreprise].filter(Boolean)))], [cles]);
+    const clesAffichees = useMemo(() => {
+        const mots = normaliser(recherche.trim()).split(/\s+/).filter(Boolean);
+        return cles.filter((c) => {
+            const texte = normaliser([c.nom, c.prefixe, c.entreprise, c.creee_par].join(' '));
+            return mots.every((m) => texte.includes(m))
+                && (entrepriseCle === '' || (entrepriseCle === 'interne' ? c.entreprise === null : c.entreprise === entrepriseCle))
+                && (etatCle === '' || etatDe(c) === etatCle);
+        });
+    }, [cles, recherche, entrepriseCle, etatCle]);
+    const entreprisesDesCles = useMemo(() => [...new Set(cles.map((c) => c.entreprise).filter(Boolean))].sort(), [cles]);
+    const filtreActif = recherche !== '' || entrepriseCle !== '' || etatCle !== '';
 
     const filtrer = (champ, valeur) => {
         router.get(route('api-keys.index'), { ...filtres, [champ]: valeur || undefined }, {
@@ -159,9 +179,51 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
             )}
 
             <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm">
-                <h2 className="border-b border-slate-100 px-5 py-4 font-semibold text-marine">
-                    {t('api.les_cles', 'Les clés')}
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                    <h2 className="font-semibold text-marine">
+                        {t('api.les_cles', 'Les clés')}
+                        {filtreActif && (
+                            <span className="ml-2 text-xs font-normal text-slate-600">
+                                {t('api.n_sur_total', ':n sur :total', { n: clesAffichees.length, total: cles.length })}
+                            </span>
+                        )}
+                    </h2>
+                    <div className="flex flex-wrap gap-2">
+                        <input
+                            type="search"
+                            list="suggestions-cles"
+                            value={recherche}
+                            onChange={(e) => setRecherche(e.target.value)}
+                            placeholder={t('api.rechercher_cle', 'Nom, préfixe nblt_… ou entreprise')}
+                            aria-label={t('api.rechercher_cle', 'Nom, préfixe nblt_… ou entreprise')}
+                            className="w-64 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                        <datalist id="suggestions-cles">
+                            {suggestions.map((v) => <option key={v} value={v} />)}
+                        </datalist>
+                        <select
+                            value={entrepriseCle}
+                            onChange={(e) => setEntrepriseCle(e.target.value)}
+                            aria-label={t('api.entreprise', 'Entreprise')}
+                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        >
+                            <option value="">{t('api.toutes_entreprises', 'Toutes les entreprises')}</option>
+                            <option value="interne">{t('api.interne_court', 'Interne')}</option>
+                            {entreprisesDesCles.map((e) => <option key={e} value={e}>{e}</option>)}
+                        </select>
+                        <select
+                            value={etatCle}
+                            onChange={(e) => setEtatCle(e.target.value)}
+                            aria-label={t('api.etat', 'État')}
+                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        >
+                            <option value="">{t('api.tous_etats', 'Tous les états')}</option>
+                            <option value="actives">{t('api.actives', 'Actives')}</option>
+                            <option value="revoquees">{t('api.revoquees', 'Révoquées')}</option>
+                            <option value="expirees">{t('api.expirees', 'Expirées')}</option>
+                        </select>
+                    </div>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
@@ -177,7 +239,7 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                             </tr>
                         </thead>
                         <tbody>
-                            {cles.map((c) => (
+                            {clesAffichees.map((c) => (
                                 <tr key={c.id} className="border-b border-slate-50 last:border-0">
                                     <td className="px-4 py-3 font-semibold text-marine">
                                         {c.nom}
@@ -240,6 +302,13 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                                     </td>
                                 </tr>
                             ))}
+                            {cles.length > 0 && clesAffichees.length === 0 && (
+                                <tr>
+                                    <td className="px-4 py-8 text-center text-slate-600" colSpan={8}>
+                                        {t('api.aucune_cle_trouvee', 'Aucune clé ne correspond à la recherche.')}
+                                    </td>
+                                </tr>
+                            )}
                             {cles.length === 0 && (
                                 <tr>
                                     <td className="px-4 py-8 text-center text-slate-600" colSpan={8}>
