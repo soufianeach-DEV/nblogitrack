@@ -1,3 +1,4 @@
+import ListeRecherche from '@/Components/ListeRecherche';
 import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
@@ -264,27 +265,30 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                         <datalist id="suggestions-cles">
                             {suggestions.map((v) => <option key={v} value={v} />)}
                         </datalist>
-                        <select
+                        <ListeRecherche
                             value={entrepriseCle}
-                            onChange={(e) => setEntrepriseCle(e.target.value)}
+                            onChange={setEntrepriseCle}
+                            vide={t('api.toutes_entreprises', 'Toutes les entreprises')}
                             aria-label={t('api.entreprise', 'Entreprise')}
-                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        >
-                            <option value="">{t('api.toutes_entreprises', 'Toutes les entreprises')}</option>
-                            <option value="interne">{t('api.interne_court', 'Interne')}</option>
-                            {entreprisesDesCles.map((e) => <option key={e} value={e}>{e}</option>)}
-                        </select>
-                        <select
+                            options={[
+                                { valeur: 'interne', libelle: t('api.interne_court', 'Interne') },
+                                ...entreprisesDesCles.map((e) => ({ valeur: e, libelle: e })),
+                            ]}
+                            className="w-56 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                        <ListeRecherche
                             value={etatCle}
-                            onChange={(e) => setEtatCle(e.target.value)}
+                            onChange={setEtatCle}
+                            vide={t('api.tous_etats', 'Tous les états')}
                             aria-label={t('api.etat', 'État')}
-                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        >
-                            <option value="">{t('api.tous_etats', 'Tous les états')}</option>
-                            <option value="actives">{t('api.actives', 'Actives')}</option>
-                            <option value="revoquees">{t('api.revoquees', 'Révoquées')}</option>
-                            <option value="expirees">{t('api.expirees', 'Expirées')}</option>
-                        </select>
+                            trier={false}
+                            options={[
+                                { valeur: 'actives', libelle: t('api.actives', 'Actives') },
+                                { valeur: 'revoquees', libelle: t('api.revoquees', 'Révoquées') },
+                                { valeur: 'expirees', libelle: t('api.expirees', 'Expirées') },
+                            ]}
+                            className="w-44 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -388,23 +392,26 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                     <h2 className="font-semibold text-marine">{t('api.journal', 'Journal d\'accès')}</h2>
                     <div className="flex flex-wrap gap-2">
-                        <select
-                            value={filtres.cle ?? ''}
-                            onChange={(e) => filtrer('cle', e.target.value)}
-                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        >
-                            <option value="">{t('api.toutes_cles', 'Toutes les clés')}</option>
-                            {cles.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                        </select>
-                        <select
+                        <ListeRecherche
+                            value={filtres.cle ? String(filtres.cle) : ''}
+                            onChange={(valeur) => filtrer('cle', valeur)}
+                            vide={t('api.toutes_cles', 'Toutes les clés')}
+                            aria-label={t('api.cle', 'Clé')}
+                            options={cles.map((c) => ({ valeur: String(c.id), libelle: c.nom + ' · ' + c.prefixe }))}
+                            className="w-56 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
+                        <ListeRecherche
                             value={filtres.etat ?? ''}
-                            onChange={(e) => filtrer('etat', e.target.value)}
-                            className="rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                        >
-                            <option value="">{t('api.tout', 'Tout')}</option>
-                            <option value="servis">{t('api.servis', 'Servis')}</option>
-                            <option value="refuses">{t('api.refuses', 'Refusés')}</option>
-                        </select>
+                            onChange={(valeur) => filtrer('etat', valeur)}
+                            vide={t('api.tout', 'Tout')}
+                            aria-label={t('api.etat', 'État')}
+                            trier={false}
+                            options={[
+                                { valeur: 'servis', libelle: t('api.servis', 'Servis') },
+                                { valeur: 'refuses', libelle: t('api.refuses', 'Refusés') },
+                            ]}
+                            className="w-40 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -504,15 +511,14 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                             <label htmlFor="entreprise" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                 {t('api.entreprise', 'Entreprise')}
                             </label>
-                            <select
+                            <ListeRecherche
                                 id="entreprise"
-                                value={data.client_id}
-                                onChange={(e) => setData('client_id', e.target.value)}
+                                value={data.client_id ? String(data.client_id) : ''}
+                                onChange={(valeur) => setData('client_id', valeur)}
+                                vide={t('api.interne', 'Interne — accès complet')}
+                                options={entreprises.map((e) => ({ valeur: String(e.valeur), libelle: e.libelle }))}
                                 className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
-                            >
-                                <option value="">{t('api.interne', 'Interne — accès complet')}</option>
-                                {entreprises.map((e) => <option key={e.valeur} value={e.valeur}>{e.libelle}</option>)}
-                            </select>
+                            />
                             <p className="mt-1 text-xs text-slate-600">
                                 {t('api.entreprise_aide', 'Une clé rattachée ne voit que les expéditions de cette entreprise.')}
                             </p>
