@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\OrderCharge;
@@ -195,6 +196,29 @@ class FacturationTroisiemeParcoursTest extends TestCase
         $this->actingAs(User::factory()->administrateur()->create())
             ->patch(route('invoices.paid', $facture), ['montant' => 100, 'date' => '2026-04-05'])
             ->assertSessionHasErrors(['methode' => 'Le champ moyen de paiement est obligatoire.']);
+    }
+
+    public function test_les_especes_ne_sont_pas_un_moyen_de_paiement(): void
+    {
+        $facture = $this->factureEmise();
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->patch(route('invoices.paid', $facture), ['montant' => 100, 'date' => '2026-04-05', 'methode' => 'CASH'])
+            ->assertSessionHasErrors('methode');
+
+        $this->assertSame(0, $facture->payments()->count());
+    }
+
+    public function test_les_paiements_deja_notes_en_especes_passent_en_autre(): void
+    {
+        $facture = $this->factureEmise();
+        $paiement = $facture->payments()->create(['amount' => 100, 'paid_on' => '2026-04-05', 'method' => 'CASH']);
+        ActivityLog::record('invoice.paid', 'Paiement', $facture, ['montant' => '100.00', 'methode' => 'CASH']);
+
+        (require database_path('migrations/2026_10_08_120000_retirer_les_especes.php'))->up();
+
+        $this->assertSame('OTHER', $paiement->fresh()->method);
+        $this->assertSame('OTHER', ActivityLog::where('action', 'invoice.paid')->sole()->properties['methode']);
     }
 
     public function test_le_nom_du_champ_de_paiement_suit_la_langue_de_l_interface(): void

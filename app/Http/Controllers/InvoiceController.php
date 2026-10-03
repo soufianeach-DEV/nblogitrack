@@ -223,7 +223,7 @@ class InvoiceController extends Controller
         $donnees = $request->validate([
             'montant' => 'required|numeric|min:0.01|max:'.$invoice->solde(),
             'date' => 'required|date|before_or_equal:today|after_or_equal:'.$invoice->issued_on->toDateString(),
-            'methode' => 'required|in:TRANSFER,CASH,OTHER',
+            'methode' => 'required|in:TRANSFER,OTHER',
         ], [
             'montant.max' => Traductions::t('msg.paiement_trop_eleve', 'Le montant dépasse le solde dû (:solde).', ['solde' => Formats::montant($invoice->solde())]),
             // Le message par defaut citait la regle telle quelle : « today »

@@ -17,7 +17,6 @@ const AVOIR = { cle: 'facture.avoir', libelle: 'Avoir', classe: 'bg-action/20 te
 
 const METHODES = {
     TRANSFER: ['facture.methode_virement', 'Virement'],
-    CASH: ['facture.methode_especes', 'Espèces'],
     OTHER: ['facture.methode_autre', 'Autre'],
     STRIPE: ['facture.methode_en_ligne', 'Paiement en ligne'],
 };
@@ -53,7 +52,7 @@ function FormulairePaiement({ facture, onFermer }) {
             <label className="text-sm font-medium text-marine">
                 {t('facture.methode', 'Moyen de paiement')}
                 <select value={data.methode} onChange={(e) => setData('methode', e.target.value)} className={champ}>
-                    {['TRANSFER', 'CASH', 'OTHER'].map((m) => <option key={m} value={m}>{t(...METHODES[m])}</option>)}
+                    {['TRANSFER', 'OTHER'].map((m) => <option key={m} value={m}>{t(...METHODES[m])}</option>)}
                 </select>
                 {errors.methode && <span className="mt-1 block text-xs text-status-incident">{errors.methode}</span>}
             </label>

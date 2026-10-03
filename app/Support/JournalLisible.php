@@ -32,7 +32,6 @@ class JournalLisible
         'ADMIN' => ['roles.admin', 'Administrateur'],
         'DRIVER' => ['roles.driver', 'Chauffeur'],
         'TRANSFER' => ['journal.methode_virement', 'Virement'],
-        'CASH' => ['journal.methode_especes', 'Espèces'],
         'OTHER' => ['journal.methode_autre', 'Autre'],
         'STRIPE' => ['journal.methode_carte', 'Carte (Stripe)'],
     ];

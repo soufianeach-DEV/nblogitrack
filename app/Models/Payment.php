@@ -10,7 +10,7 @@ class Payment extends Model
 {
     use DatesHeureDeBruxelles;
 
-    public const METHODES = ['TRANSFER', 'STRIPE', 'CASH', 'OTHER'];
+    public const METHODES = ['TRANSFER', 'STRIPE', 'OTHER'];
 
     protected $fillable = ['invoice_id', 'amount', 'paid_on', 'method', 'reference', 'recorded_by'];
 

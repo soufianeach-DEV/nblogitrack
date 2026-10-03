@@ -38,7 +38,7 @@ class InvoiceSeeder extends Seeder
     private function encaisser(Collection $factures): void
     {
         $comptable = User::where('role', 'ADMIN')->orderBy('id')->value('id');
-        $methodes = ['TRANSFER', 'TRANSFER', 'TRANSFER', 'STRIPE', 'CASH'];
+        $methodes = ['TRANSFER', 'TRANSFER', 'TRANSFER', 'STRIPE', 'TRANSFER'];
 
         foreach ($factures->values() as $rang => $facture) {
             if (! $facture->due_on->isPast() || ($rang + 1) % 10 === 0) {
