@@ -12,7 +12,7 @@ class ClientSeeder extends Seeder
         DB::unprepared(file_get_contents(database_path('seeders/sql/clients.sql')));
 
         // Le jeu de demonstration inscrit chaque entreprise par un compte
-        // du meme numero : ce compte en devient l'administrateur, et la
+        // du meme numero : ce compte en devient le gestionnaire, et la
         // numerotation des entreprises reprend apres la derniere.
         DB::statement("UPDATE users SET client_id = users.id, company_role = 'ADMIN'
             WHERE role = 'CLIENT' AND client_id IS NULL AND EXISTS (SELECT 1 FROM clients WHERE clients.id = users.id)");
@@ -21,7 +21,7 @@ class ClientSeeder extends Seeder
         // L'entreprise de demonstration montre aussi les deux autres roles
         // d'une societe cliente : un collegue qui passe les commandes et un
         // comptable qui regle les factures. Meme mot de passe que son
-        // administrateur.
+        // gestionnaire.
         // Le fichier SQL insere les comptes avec leur numero : la sequence
         // doit repartir apres le dernier.
         DB::statement("SELECT setval('users_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM users), 1))");

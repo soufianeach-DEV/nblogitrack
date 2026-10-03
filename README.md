@@ -30,7 +30,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 
 | Rôle | Accès |
 |---|---|
-| **Client** | Une entreprise, plusieurs comptes : l'administrateur de l'entreprise invite ses collègues et choisit leur rôle (administrateur, commandes, comptabilité). Les commandes passent, suivent et annulent les expéditions ; la comptabilité consulte et règle les factures |
+| **Client** | Une entreprise, plusieurs comptes : le gestionnaire de l'entreprise invite ses collègues et choisit leur rôle (gestionnaire, commandes, comptabilité). Les commandes passent, suivent et annulent les expéditions ; la comptabilité consulte et règle les factures |
 | **Chauffeur** | Consulte ses missions, confirme l'enlèvement puis la livraison, qui émet aussitôt la facture du client |
 | **Planificateur** | Affecte un véhicule et un chauffeur à chaque commande, réaffecte en cas d'imprévu |
 | **Administrateur** | Valide les entreprises clientes, consulte le journal d'activité, gère la flotte et les utilisateurs |
@@ -294,7 +294,7 @@ Chaque table métier y porte au moins cent lignes cohérentes entre elles : 270 
 |---|---|---|
 | Administrateur | `admin@nblogitrack.be` | `Nblogitrack2026@` |
 | Planificateur | `planner@nblogitrack.be` | `Nblogitrack2026@` |
-| Client — administrateur de l'entreprise (Demo Transport SA) | `client@nblogitrack.be` | `Nblogitrack2026@` |
+| Client — gestionnaire de l'entreprise (Demo Transport SA) | `client@nblogitrack.be` | `Nblogitrack2026@` |
 | Client — commandes (même entreprise) | `commandes@nblogitrack.be` | `Nblogitrack2026@` |
 | Client — comptabilité (même entreprise) | `comptabilite@nblogitrack.be` | `Nblogitrack2026@` |
 | Chauffeur (une mission en cours) | `wim.peeters121@nblogitrack.be` | `password` |

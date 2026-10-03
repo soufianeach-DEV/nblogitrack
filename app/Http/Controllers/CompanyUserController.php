@@ -15,9 +15,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * L'administrateur d'une entreprise cliente gere ses collegues : il les
- * invite, choisit leur role (administrateur, commandes, comptabilite) et
- * ferme leur acces. L'entreprise garde toujours un administrateur actif.
+ * Le gestionnaire d'une entreprise cliente gere ses collegues : il les
+ * invite, choisit leur role (gestionnaire, commandes, comptabilite) et
+ * ferme leur acces. L'entreprise garde toujours un gestionnaire actif.
+ * En base, le role de gestionnaire vaut ADMIN (company_role).
  */
 class CompanyUserController extends Controller
 {
@@ -119,7 +120,7 @@ class CompanyUserController extends Controller
                 ->exists();
 
             if (! $resteAdmin && ($apres['company_role'] !== 'ADMIN' || ! $apres['is_active'])) {
-                return Traductions::t('msg.dernier_admin_societe', 'L\'entreprise doit garder au moins un administrateur actif.');
+                return Traductions::t('msg.dernier_admin_societe', 'L\'entreprise doit garder au moins un gestionnaire actif.');
             }
 
             $utilisateur->update($apres);

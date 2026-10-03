@@ -3,7 +3,7 @@ import { useTraduction } from '@/traduire';
 import { Head, router, useForm } from '@inertiajs/react';
 
 const ROLES = {
-    ADMIN: ['entreprise.role_admin', 'Administrateur', 'entreprise.role_admin_aide', 'Commandes, factures et gestion des comptes'],
+    ADMIN: ['entreprise.role_admin', 'Gestionnaire', 'entreprise.role_admin_aide', 'Commandes, factures et gestion des comptes'],
     ORDERS: ['entreprise.role_commandes', 'Commandes', 'entreprise.role_commandes_aide', 'Passe, suit et annule les expéditions'],
     BILLING: ['entreprise.role_comptabilite', 'Comptabilité', 'entreprise.role_comptabilite_aide', 'Consulte et règle les factures'],
 };
