@@ -23,7 +23,8 @@ class DroitDeRetractationTest extends TestCase
         $cgv = Page::where('slug', 'conditions-generales')->sole();
 
         $this->assertStringContainsString('## Article 8 ter — Droit de rétractation', $cgv->corps_fr);
-        $this->assertStringContainsString('VI.53, 12°', $cgv->corps_fr);
+        $this->assertStringContainsString('VI.47', $cgv->corps_fr);
+        $this->assertStringNotContainsString('VI.53', $cgv->corps_fr);
         $this->assertStringContainsString('## Artikel 8 ter — Herroepingsrecht', $cgv->corps_nl);
         $this->assertStringContainsString('## Article 8b — Right of withdrawal', $cgv->corps_en);
     }
