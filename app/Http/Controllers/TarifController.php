@@ -43,6 +43,10 @@ class TarifController extends Controller
             'pays' => 'required|string|size:2|exists:tariff_grids,zone',
             'poids' => 'required|numeric|min:1|max:44000',
             'adr' => 'boolean',
+            'depart_lat' => 'nullable|numeric|between:-90,90',
+            'depart_lng' => 'nullable|numeric|between:-180,180',
+            'destination_lat' => 'nullable|numeric|between:-90,90',
+            'destination_lng' => 'nullable|numeric|between:-180,180',
         ], [
             'depart.required' => Traductions::t('msg.localite_enlevement_requise', 'Indiquez la localité d\'enlèvement.'),
             'destination.required' => Traductions::t('msg.localite_livraison_requise', 'Indiquez la localité de livraison.'),
@@ -63,8 +67,8 @@ class TarifController extends Controller
         }
 
         try {
-            $depart = $this->localiser($donnees['depart'], $paysDepart);
-            $arrivee = $this->localiser($donnees['destination'], $donnees['pays']);
+            $depart = $this->localiser($donnees['depart'], $paysDepart, $donnees['depart_lat'] ?? null, $donnees['depart_lng'] ?? null);
+            $arrivee = $this->localiser($donnees['destination'], $donnees['pays'], $donnees['destination_lat'] ?? null, $donnees['destination_lng'] ?? null);
         } catch (GeocodageIndisponible) {
             return response()->json([
                 'erreur' => Traductions::t('tarifs.service_indisponible', 'Le service est momentanément indisponible.'),
@@ -154,8 +158,21 @@ class TarifController extends Controller
         return $pays;
     }
 
-    private function localiser(string $ville, string $pays): ?object
+    /**
+     * Le point d'une ville choisie dans la liste departage les homonymes, et
+     * retrouve une grande ville proposee sous son nom francais : « Cologne »
+     * n'est dans le referentiel que sous « Köln ».
+     */
+    private function localiser(string $ville, string $pays, mixed $lat, mixed $lng): ?object
     {
-        return Localite::coordonnees($ville, $pays);
+        $lat = $lat === null ? null : (float) $lat;
+        $lng = $lng === null ? null : (float) $lng;
+        $point = Localite::coordonnees($ville, $pays, $lat, $lng);
+
+        if ($point === null && $lat !== null && $lng !== null && ! Localite::enLigne($pays)) {
+            $point = Localite::plusProche($pays, $lat, $lng);
+        }
+
+        return $point;
     }
 }
