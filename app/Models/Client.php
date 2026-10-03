@@ -57,6 +57,17 @@ class Client extends Model
             ->whereHas('users', fn ($u) => $u->where('is_active', true)->whereIn('company_role', ['ADMIN', 'ORDERS']));
     }
 
+    /**
+     * Entreprises a qui l'on peut rattacher une cle d'API : celles que l'API
+     * accepte (voir ApiKey::empechement), validees et avec un compte actif.
+     */
+    public function scopeAccesApi($query)
+    {
+        return $query->where('is_validated', true)
+            ->whereNull('rejection_reason')
+            ->whereHas('users', fn ($u) => $u->where('is_active', true));
+    }
+
     /** Les comptes actifs qui passent les commandes de l'entreprise. */
     public function commanditaires()
     {
