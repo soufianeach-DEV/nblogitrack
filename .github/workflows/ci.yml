@@ -72,7 +72,8 @@ jobs:
       - name: Build frontend
         run: |
           npm ci
-          npm audit --audit-level=high
+          npm audit --json > audit-npm.json || true
+          node .github/audit-npm.mjs < audit-npm.json
           npm run build
 
       - name: Prepare environment

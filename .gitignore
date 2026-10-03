@@ -25,3 +25,4 @@ Thumbs.db
 
 # Fichier cree par une redirection PowerShell mal ecrite (2>$null).
 $null
+/audit-npm.json
