@@ -57,13 +57,13 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Tableau de bord** | Indicateurs clés et derniers ordres | ✅ v0.1 alpha |
 | **Gestion de la flotte** | Véhicules et chauffeurs, contrôle technique, permis exigé par chaque véhicule et équipement ADR, permis, code 95, carte tachygraphe et certificat ADR des chauffeurs, statut d'emploi, départs programmés, congés et passages au garage datés à l'avance | ✅ v0.2 beta |
 | **Facturation** | Une facture émise et envoyée dès la livraison d'une mission, que le chauffeur la confirme ou que le planificateur l'enregistre : le transport et les suppléments déjà posés (attente, manutention). Le 1er du mois, une facture par client reprend le reste : suppléments posés après la livraison et indemnités d'annulation. Identité de l'acheteur figée à l'émission, catégorie de TVA par ligne (21 %, autoliquidation intracommunautaire, hors champ hors Union), avoirs numérotés à part qui annulent une facture, avec ou sans refacturation immédiate, communication structurée belge, PDF et fichier UBL au format Peppol BIS 3.0 (norme européenne EN 16931), envoi par courriel avec les deux fichiers en pièces jointes. Bouton « Facturer maintenant » pour l'administrateur, en solution de repli : émet et envoie tout de suite ce qui reste à facturer (supplément tardif, indemnité d'annulation, facture en échec), mois en cours compris, sans attendre le 1er du mois. La transmission sur le réseau Peppol demande un point d'accès certifié, pas encore raccordé | ✅ v0.2 beta |
-| **Paiement** | Paiements enregistrés un à un (virement, espèces, en ligne), paiements partiels et reste dû ; règlement en ligne du solde (Stripe), enregistré dès le retour du client ou par la notification signée, jamais deux fois, paiement différé (SEPA) suivi, trop-perçu signalé ; rapport de TVA qui déduit les avoirs | ✅ v0.2 beta |
+| **Paiement** | Paiements enregistrés un à un (virement, en ligne ou autre moyen ; les espèces ne sont plus acceptées), paiements partiels et reste dû ; règlement en ligne du solde (Stripe), enregistré dès le retour du client ou par la notification signée, jamais deux fois, paiement différé (SEPA) suivi, trop-perçu signalé ; rapport de TVA qui déduit les avoirs | ✅ v0.2 beta |
 | **Multilingue** | Français, néerlandais et anglais partout : écrans, messages, courriels et facture PDF, dans la langue de chaque utilisateur ; écran d'administration des traductions, et un test qui refuse toute clé sans ses trois traductions | ✅ v0.2 beta |
 | **Achats et TVA** | Factures de carburant et de péage, synthèse de TVA mensuelle | ✅ v0.2 beta |
 | **Devis** | Demande publique en cinq étapes, avec barre de progression et brouillon gardé dans le navigateur : société (numéro de TVA vérifié dans toute l'Union par VIES, en Suisse par le registre UID, en Norvège par Brønnøysund, au Royaume-Uni par HMRC si une application est déclarée ; format et clé de contrôle vérifiés avant tout appel ; raison sociale, adresse du siège, forme juridique et dirigeant repris du registre, forme juridique et secteur complétés par les registres nationaux gratuits (BCE, INSEE, ARES tchèque, PRH finlandais, KRS polonais, ANAF roumaine) ou, à défaut, lus dans la raison sociale ; ce que le registre du pays ne publie pas est signalé ; nouvel essai automatique si le registre est saturé), EORI exigé pour la Suisse, le Royaume-Uni et la Norvège, adresse de facturation, contact et moyen de rappel, contacts, horaires, quai, rendez-vous et accès difficiles à l'enlèvement et à la livraison, colis détaillés (poids et volume calculés), valeur déclarée, température dirigée, numéro ONU et classe ADR, volume mensuel, budget, pièces jointes privées. Le personnel voit tout le détail, télécharge les pièces jointes et transforme le devis en commande tarifée pour l'entreprise cliente | ✅ v0.2 beta |
 | **Audience et référencement** | Mesure d'audience propre au site public, seulement avec l'accord du visiteur (bandeau des témoins, refusée par défaut) : pages vues, arrivées et leur provenance (moteurs, réseaux, campagnes `utm_*`), demandes de devis, inscriptions et simulations, sans témoin de suivi ni adresse IP, effacées après 13 mois ; écran « Audience du site » pour l'administrateur. Titre, description et aperçu de partage (Open Graph) posés par le serveur, pages privées en `noindex`, `sitemap.xml` trilingue avec `hreflang`, `robots.txt`, fiche de l'entreprise pour les moteurs (schema.org) | ✅ v0.3 beta |
 | **Suivi géolocalisé** | Jalons horodatés (enlèvement, livraison), conservés avec le dossier, et position en direct, activable par mission, effacée sept jours après la livraison ou l'annulation ; carte vectorielle aux couleurs de Waze (itinéraire routier, péages, camion en route), avec repli sur la carte OpenStreetMap standard | ✅ v0.2 beta |
-| **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit par clé, dépôt idempotent ; documentation dans [docs/API.md](docs/API.md) | ✅ v0.2 beta |
+| **Interface de programmation (API REST)** | Interface versionnée pour les partenaires, clés révocables, limitation de débit par clé, dépôt idempotent ; documentation dans [docs/API.md](docs/API.md) et spécification OpenAPI 3 ([docs/openapi.yaml](docs/openapi.yaml)), affichée par Swagger UI sur `/api/docs`, d'où l'on essaie les appels avec sa clé | ✅ v0.2 beta |
 | **Pages publiques** | Mentions légales, confidentialité et conditions générales, modifiables sans redéploiement | ✅ v0.2 beta |
 | **Conformité RGPD** | Registre des traitements et durées de conservation du règlement général sur la protection des données, appliqués par tâches planifiées | ✅ v0.2 beta |
 | **Mise en ligne** | Application en ligne sur Render (conteneur Docker), base PostgreSQL hébergée chez Supabase, migrations et traductions synchronisées à chaque démarrage. Courriels réels par le relais SMTP de Brevo, les adresses inventées du jeu de démonstration étant retenues. Codes postaux importés au démarrage du serveur, repris pays par pays après une coupure (voir *Déploiement en ligne*) | ✅ v0.3 beta |
@@ -98,7 +98,7 @@ L'application interroge plusieurs services ouverts, sans clé d'accès :
 | Couche | Technologie |
 |---|---|
 | Back-end | Laravel 12 (PHP 8.2+) |
-| Front-end | React 18 + Inertia + Vite |
+| Front-end | React 19 + Inertia + Vite |
 | Mise en forme | Tailwind CSS |
 | Cartographie | Leaflet et MapLibre GL (fond vectoriel) |
 | Base de données | PostgreSQL 16 |
@@ -214,7 +214,7 @@ Le paiement s'enregistre dès le retour du client sur le site, et par la notific
 
 ### Tâches planifiées
 
-Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
+Les traitements ci-dessous tournent d'eux-mêmes. En production, l'ordonnanceur doit être appelé chaque minute :
 
 ```bash
 * * * * * cd /chemin/vers/nblogitrack && php artisan schedule:run >> /dev/null 2>&1
@@ -223,8 +223,9 @@ Quatre traitements tournent d'eux-mêmes. En production, l'ordonnanceur doit êt
 | Quand | Commande | Rôle |
 |---|---|---|
 | Le 1ᵉʳ du mois à 4 h | `factures:generer` | Facture ce qui reste du mois écoulé (suppléments posés après la livraison, indemnités d'annulation, livraison dont la facture a échoué) et envoie chaque facture par courriel |
+| Chaque nuit à 4 h 15 | `factures:envoyer-brouillons` | Envoie les factures en brouillon dont la date d'émission est arrivée |
 | Chaque nuit à 3 h 30 | `positions:purger` | Efface les positions de route des expéditions livrées ou annulées depuis plus de sept jours ; les jalons sont conservés |
-| Chaque lundi à 3 h 45 | `journaux:purger` | Applique les douze mois de conservation du journal |
+| Chaque lundi à 3 h 45 | `journaux:purger` | Applique les durées de conservation : journal d'activité et appels d'API 12 mois, mesure d'audience 13 mois, demandes de devis 2 ans (5 ans si elles sont devenues une commande), inscriptions refusées 6 mois |
 | Chaque nuit à 0 h 15 | `chauffeurs:cloturer-departs` | Ferme le compte d'un chauffeur le jour de son départ enregistré à l'avance |
 | Chaque minute | `queue:work --stop-when-empty` | Vide la file d'attente (note aux conducteurs) ; un worker permanent sous Supervisor peut la remplacer |
 | Chaque nuit | `queue:prune-failed`, `auth:clear-resets`, purge du cache périmé | Entretien |
