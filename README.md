@@ -70,7 +70,7 @@ NBLogiTrack suit une expédition de bout en bout, de la commande du client jusqu
 | **Tests et intégration continue** | 653 tests sur PostgreSQL, exécutés à chaque proposition de fusion, avec `composer audit` et `npm audit` : une faille haute ou critique publiée dans une dépendance fait échouer la CI, sauf un avis examiné et documenté dans `.github/audit-npm.mjs` (`braces`, sans version corrigée, utilisé seulement par Tailwind 3 à la compilation). Actions GitHub épinglées par empreinte, jeton en lecture seule, mises à jour proposées par Dependabot | ✅ v0.2 beta |
 | **Preuve de livraison** | Signature du destinataire depuis l'espace chauffeur | 🔜 à venir |
 
-Jalon où chaque fonctionnalité est apparue : **v0.1 alpha** (8 août 2026), **v0.2 beta** (17 août 2026), **v0.3 beta** (mise en ligne et opérations terrain, septembre 2026).
+Version où chaque fonctionnalité est apparue : **v0.1 alpha** (8 août 2026), **v0.2 beta** (17 août 2026), **v0.3 beta** (mise en ligne et opérations terrain, septembre 2026).
 
 ---
 
