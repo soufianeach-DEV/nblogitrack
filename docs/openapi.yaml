@@ -1,0 +1,521 @@
+openapi: 3.0.3
+info:
+  title: NBLogiTrack — API partenaires
+  version: "1.0"
+  description: |
+    L'API permet à une entreprise cliente de déposer des expéditions et de
+    suivre les siennes depuis son propre logiciel (ERP, WMS, boutique en ligne).
+
+    - Toutes les réponses sont en JSON, y compris les erreurs.
+    - Les messages suivent l'en-tête `Accept-Language` (`fr`, `nl`, `en`),
+      sinon la langue du compte de l'entreprise.
+    - Limite de débit : 120 appels par minute et par clé, 300 par minute et
+      par adresse IP. Au-delà, `429` avec l'en-tête `Retry-After`.
+
+    La documentation détaillée se trouve dans `docs/API.md`.
+servers:
+  - url: https://nblogitrack.be/api/v1
+    description: Production
+  - url: http://localhost:8000/api/v1
+    description: Poste de développement
+
+security:
+  - cleApi: []
+
+tags:
+  - name: Expéditions
+
+paths:
+  /expeditions:
+    get:
+      tags: [Expéditions]
+      operationId: listerExpeditions
+      summary: Lister les expéditions
+      description: |
+        Permission `lecture`. Une clé d'entreprise ne voit que les expéditions
+        de son entreprise ; une clé sans entreprise les voit toutes.
+        Les plus récentes d'abord.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: statut
+          in: query
+          schema:
+            $ref: '#/components/schemas/Statut'
+        - name: depuis
+          in: query
+          description: Expéditions créées à partir de cette date.
+          schema:
+            type: string
+            format: date
+            example: "2026-10-01"
+        - name: par_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        "200":
+          description: Une page d'expéditions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageExpeditions'
+        "401":
+          $ref: '#/components/responses/NonAuthentifie'
+        "403":
+          $ref: '#/components/responses/Interdit'
+        "422":
+          $ref: '#/components/responses/Refuse'
+        "429":
+          $ref: '#/components/responses/TropDAppels'
+
+    post:
+      tags: [Expéditions]
+      operationId: deposerExpedition
+      summary: Déposer une expédition
+      description: |
+        Permission `ecriture`, clé rattachée à une entreprise. Les règles sont
+        celles d'une commande passée en ligne : pays cohérent avec l'adresse,
+        jour ouvrable, formule qui tient le délai, prix calculé par le serveur.
+        Avec deux jours ou moins pour livrer, l'expédition est `URGENT`.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: Idempotency-Key
+          in: header
+          description: |
+            Identifiant unique de l'envoi (un UUID par exemple). Rejoué avec la
+            même clé, l'appel renvoie l'expédition déjà créée.
+          schema:
+            type: string
+            maxLength: 100
+            example: 7f1c2d4e-0b7a-4f7e-9c1d-2a6b8e3f5a10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NouvelleExpedition'
+            example:
+              enlevement: Rue Neuve 43, 3500 Hasselt
+              livraison: Avenue Louise 200, 1000 Bruxelles
+              poids: 850
+              marchandise: Palettes
+              date_enlevement: "2026-10-05"
+              date_livraison: "2026-10-07"
+              reference_chargement: CMD-2026-0042
+      responses:
+        "201":
+          description: |
+            Expédition créée, ou déjà créée sous la même `Idempotency-Key`
+            (en-tête `Idempotent-Replayed: true`).
+          headers:
+            Location:
+              description: Adresse de `GET /expeditions/{numero}`.
+              schema:
+                type: string
+                format: uri
+            Idempotent-Replayed:
+              description: Présent quand l'appel rejoue un envoi déjà créé.
+              schema:
+                type: string
+                enum: ["true"]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReponseExpedition'
+        "401":
+          $ref: '#/components/responses/NonAuthentifie'
+        "403":
+          $ref: '#/components/responses/Interdit'
+        "409":
+          description: Référence de chargement déjà déposée sur une expédition non annulée.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, numero]
+                properties:
+                  message:
+                    type: string
+                  numero:
+                    type: string
+                    description: Numéro de l'expédition existante.
+                    example: TRK-2026-00042
+        "422":
+          $ref: '#/components/responses/Refuse'
+        "429":
+          $ref: '#/components/responses/TropDAppels'
+        "503":
+          description: Vérification des adresses momentanément indisponible.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+
+  /expeditions/{numero}:
+    get:
+      tags: [Expéditions]
+      operationId: lireExpedition
+      summary: Lire une expédition
+      description: |
+        Permission `lecture`. Une expédition d'une autre entreprise répond
+        `404`, comme une expédition inconnue.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: numero
+          in: path
+          required: true
+          schema:
+            type: string
+            example: TRK-2026-00042
+      responses:
+        "200":
+          description: L'expédition détaillée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReponseExpedition'
+        "401":
+          $ref: '#/components/responses/NonAuthentifie'
+        "403":
+          $ref: '#/components/responses/Interdit'
+        "404":
+          description: Expédition introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erreur'
+        "429":
+          $ref: '#/components/responses/TropDAppels'
+
+components:
+  securitySchemes:
+    cleApi:
+      type: http
+      scheme: bearer
+      bearerFormat: nblt_<préfixe>.<secret>
+      description: |
+        Clé créée par un administrateur et affichée une seule fois. Le serveur
+        n'en garde qu'une empreinte SHA-256. Une clé peut être limitée à
+        certaines adresses IP, expirer ou être révoquée.
+
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      description: Langue des messages.
+      schema:
+        type: string
+        enum: [fr, nl, en]
+
+  headers:
+    RetryAfter:
+      description: Nombre de secondes à attendre avant de réessayer.
+      schema:
+        type: integer
+
+  responses:
+    NonAuthentifie:
+      description: Clé absente, inconnue, révoquée ou expirée.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: Bearer realm="api"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Refus'
+          example:
+            message: Clé révoquée
+            motif: revoquee
+    Interdit:
+      description: Adresse IP non autorisée, permission absente ou entreprise inactive.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Refus'
+          example:
+            message: Permission absente
+            motif: permission_absente
+    Refuse:
+      description: |
+        Données refusées. `message` explique la cause ; `errors` donne le
+        détail par champ pour une erreur de validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErreurValidation'
+    TropDAppels:
+      description: Limite de débit dépassée.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+
+  schemas:
+    Statut:
+      type: string
+      enum: [PENDING, ASSIGNED, IN_PROGRESS, DELIVERED, CANCELLED]
+
+    Marchandise:
+      type: string
+      enum:
+        - Boissons
+        - Colis express
+        - Machines
+        - Matériaux de construction
+        - Matériel électronique
+        - Mobilier
+        - Palettes
+        - Pièces automobiles
+        - Produits alimentaires
+        - Produits chimiques
+        - Produits pharmaceutiques
+        - Textile
+        - Autre
+
+    Expedition:
+      type: object
+      properties:
+        numero:
+          type: string
+          example: TRK-2026-00042
+        statut:
+          $ref: '#/components/schemas/Statut'
+        priorite:
+          type: string
+          enum: [URGENT, HIGH, NORMAL, LOW]
+        depart:
+          type: string
+          description: Localité d'enlèvement.
+          example: Hasselt
+        arrivee:
+          type: string
+          description: Localité de livraison.
+          example: Bruxelles
+        pays_depart:
+          type: string
+          example: BE
+        pays_arrivee:
+          type: string
+          example: BE
+        enlevement_prevu:
+          type: string
+          format: date
+          nullable: true
+        enlevement_prevu_a:
+          type: string
+          format: date-time
+          nullable: true
+          description: Heure d'enlèvement prévue, avec son fuseau.
+        livraison_prevue:
+          type: string
+          format: date
+          nullable: true
+        livraison_reelle:
+          type: string
+          format: date
+          nullable: true
+
+    ExpeditionDetaillee:
+      allOf:
+        - $ref: '#/components/schemas/Expedition'
+        - type: object
+          properties:
+            adresse_enlevement:
+              type: string
+            adresse_livraison:
+              type: string
+            poids_kg:
+              type: number
+            marchandise:
+              $ref: '#/components/schemas/Marchandise'
+            matieres_dangereuses:
+              type: boolean
+            hayon:
+              type: boolean
+            distance_km:
+              type: number
+              nullable: true
+            prix_ht:
+              type: number
+              nullable: true
+              description: Prix hors TVA en euros, calculé par le serveur.
+            tarif:
+              type: string
+              enum: [ligne, fret_retour]
+            expediteur:
+              type: string
+              nullable: true
+            reference_chargement:
+              type: string
+              nullable: true
+            creee_le:
+              type: string
+              format: date
+              nullable: true
+            code_suivi:
+              type: string
+              nullable: true
+            suivi_url:
+              type: string
+              format: uri
+              nullable: true
+              description: Page de suivi publique, à transmettre au destinataire.
+
+    PageExpeditions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expedition'
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            par_page:
+              type: integer
+            total:
+              type: integer
+            pages:
+              type: integer
+        liens:
+          type: object
+          properties:
+            suivante:
+              type: string
+              format: uri
+              nullable: true
+            precedente:
+              type: string
+              format: uri
+              nullable: true
+
+    ReponseExpedition:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ExpeditionDetaillee'
+
+    NouvelleExpedition:
+      type: object
+      required: [enlevement, livraison, poids, marchandise, date_enlevement, date_livraison]
+      properties:
+        enlevement:
+          type: string
+          maxLength: 255
+          description: Adresse d'enlèvement, avec le code postal et la localité.
+        livraison:
+          type: string
+          maxLength: 255
+          description: Adresse de livraison, avec le code postal et la localité.
+        poids:
+          type: number
+          minimum: 1
+          description: En kg, jusqu'à la charge utile du plus gros camion.
+        volume:
+          type: number
+          minimum: 0.1
+          description: En m³.
+        marchandise:
+          $ref: '#/components/schemas/Marchandise'
+        matieres_dangereuses:
+          type: boolean
+          description: |
+            Obligatoire pour `Produits chimiques`, `Produits pharmaceutiques`,
+            `Matériel électronique` et `Pièces automobiles`.
+        hayon:
+          type: boolean
+        date_enlevement:
+          type: string
+          format: date
+          description: Aujourd'hui au plus tôt, un jour ouvrable du pays d'enlèvement.
+        date_livraison:
+          type: string
+          format: date
+          description: Au plus tôt le jour de l'enlèvement.
+        formule:
+          type: string
+          enum: [ECO, STANDARD, EXPRESS]
+          description: Sans ce champ, la moins rapide des formules qui tiennent le délai.
+        pays_livraison:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Code ISO. Par défaut, le pays écrit dans l'adresse, sinon la Belgique.
+        pays_enlevement:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Même règle que `pays_livraison`.
+        expediteur:
+          type: string
+          maxLength: 150
+          description: Contact sur le lieu de chargement. Obligatoire hors de Belgique.
+        telephone_expediteur:
+          type: string
+          maxLength: 30
+          description: Obligatoire hors de Belgique.
+        reference_chargement:
+          type: string
+          maxLength: 60
+          description: Votre référence, unique pour chaque envoi.
+        instructions:
+          type: string
+          maxLength: 500
+
+    Erreur:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    Refus:
+      type: object
+      required: [message, motif]
+      properties:
+        message:
+          type: string
+        motif:
+          type: string
+          enum:
+            - jeton_absent
+            - cle_inconnue
+            - revoquee
+            - expiree
+            - adresse_refusee
+            - permission_absente
+            - entreprise_inactive
+
+    ErreurValidation:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            poids: [Le champ poids est obligatoire.]
