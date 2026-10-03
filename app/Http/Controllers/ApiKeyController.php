@@ -22,11 +22,26 @@ class ApiKeyController extends Controller
     public function index(Request $request): Response
     {
         $filtres = $request->validate([
+            'q' => 'nullable|string|max:100',
+            'entreprise' => ['nullable', 'regex:/^(interne|\d+)$/'],
             'cle' => 'nullable|integer',
             'etat' => 'nullable|in:refuses,servis',
         ]);
 
+        // Memes filtres que la liste des cles : nom, prefixe ou entreprise de
+        // la cle, et aussi l'adresse IP ou le chemin de l'appel.
+        $terme = trim((string) ($filtres['q'] ?? ''));
+
         $journal = ApiRequest::with('cle:id,name,prefix')
+            ->when($terme !== '', fn ($q) => $q->where(fn ($q) => $q
+                ->whereHas('cle', fn ($c) => $c->where(fn ($c) => $c
+                    ->whereContient('name', $terme)
+                    ->orWhereContient('prefix', $terme)
+                    ->orWhereHas('client', fn ($e) => $e->whereContient('company_name', $terme))))
+                ->orWhereContient('ip_address', $terme)
+                ->orWhereContient('path', $terme)))
+            ->when(($filtres['entreprise'] ?? null) === 'interne', fn ($q) => $q->whereHas('cle', fn ($c) => $c->whereNull('client_id')))
+            ->when(ctype_digit((string) ($filtres['entreprise'] ?? '')), fn ($q) => $q->whereHas('cle', fn ($c) => $c->where('client_id', (int) $filtres['entreprise'])))
             ->when($filtres['cle'] ?? null, fn ($q, $id) => $q->where('api_key_id', $id))
             ->when(($filtres['etat'] ?? null) === 'refuses', fn ($q) => $q->whereNotNull('refus'))
             ->when(($filtres['etat'] ?? null) === 'servis', fn ($q) => $q->whereNull('refus'))
@@ -55,6 +70,7 @@ class ApiKeyController extends Controller
                     'nom' => $c->name,
                     'prefixe' => $c->prefix,
                     'entreprise' => $c->client?->company_name,
+                    'entreprise_id' => $c->client_id,
                     'permissions' => $c->abilities,
                     'ips' => $c->allowed_ips ?? [],
                     'expire_le' => $c->expires_at?->format('d/m/Y'),

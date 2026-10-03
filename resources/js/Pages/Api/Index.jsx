@@ -3,7 +3,7 @@ import Modal from '@/Components/Modal';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 function Carte({ intitule, valeur, detail, alerte = false }) {
     return (
@@ -91,12 +91,27 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
     const filtreActif = recherche !== '' || entrepriseCle !== '' || etatCle !== '';
 
     const filtrer = (champ, valeur) => {
-        router.get(route('api-keys.index'), { ...filtres, [champ]: valeur || undefined }, {
+        router.get(route('api-keys.index'), { ...filtres, [champ]: valeur || undefined, page: undefined }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
         });
     };
+
+    // Recherche du journal : la saisie s'affiche tout de suite, la requete
+    // part quand on s'arrete de taper.
+    const [rechercheJournal, setRechercheJournal] = useState(filtres.q ?? '');
+    const minuteur = useRef(null);
+    const chercherJournal = (valeur) => {
+        setRechercheJournal(valeur);
+        clearTimeout(minuteur.current);
+        minuteur.current = setTimeout(() => filtrer('q', valeur.trim()), 300);
+    };
+    const entreprisesJournal = useMemo(() => {
+        const vues = new Map();
+        cles.forEach((c) => { if (c.entreprise_id) vues.set(String(c.entreprise_id), c.entreprise); });
+        return [...vues].map(([valeur, libelle]) => ({ valeur, libelle }));
+    }, [cles]);
 
     const codeStatut = (statut) => statut < 300
         ? 'bg-status-delivered/10 text-status-delivered'
@@ -392,19 +407,28 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                     <h2 className="font-semibold text-marine">{t('api.journal', 'Journal d\'accès')}</h2>
                     <div className="flex flex-wrap gap-2">
+                        <input
+                            type="search"
+                            list="suggestions-cles"
+                            value={rechercheJournal}
+                            onChange={(e) => chercherJournal(e.target.value)}
+                            placeholder={t('api.rechercher_journal', 'Clé, préfixe nblt_…, entreprise ou IP')}
+                            aria-label={t('api.rechercher_journal', 'Clé, préfixe nblt_…, entreprise ou IP')}
+                            className="w-64 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
+                        />
                         <ListeRecherche
-                            value={filtres.cle ? String(filtres.cle) : ''}
-                            onChange={(valeur) => filtrer('cle', valeur)}
-                            vide={t('api.toutes_cles', 'Toutes les clés')}
-                            aria-label={t('api.cle', 'Clé')}
-                            options={cles.map((c) => ({ valeur: String(c.id), libelle: c.nom + ' · ' + c.prefixe }))}
+                            value={filtres.entreprise ?? ''}
+                            onChange={(valeur) => filtrer('entreprise', valeur)}
+                            vide={t('api.toutes_entreprises', 'Toutes les entreprises')}
+                            aria-label={t('api.entreprise_journal', 'Entreprise du journal')}
+                            options={[{ valeur: 'interne', libelle: t('api.interne_court', 'Interne') }, ...entreprisesJournal]}
                             className="w-56 rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
                         />
                         <ListeRecherche
                             value={filtres.etat ?? ''}
                             onChange={(valeur) => filtrer('etat', valeur)}
                             vide={t('api.tout', 'Tout')}
-                            aria-label={t('api.etat', 'État')}
+                            aria-label={t('api.etat_journal', 'État des appels')}
                             trier={false}
                             options={[
                                 { valeur: 'servis', libelle: t('api.servis', 'Servis') },
