@@ -4,7 +4,7 @@ L'API permet à une entreprise cliente de déposer des expéditions et de suivre
 
 - Adresse de base : `https://<domaine>/api/v1`
 - Format : JSON en entrée comme en sortie, encodé en UTF-8.
-- Spécification OpenAPI 3 : [`openapi.yaml`](openapi.yaml), lisible dans Swagger UI (https://editor.swagger.io, menu File > Import file) ou Postman.
+- Spécification OpenAPI 3 : [`openapi.yaml`](openapi.yaml). L'application l'affiche dans Swagger UI sur `https://<domaine>/api/docs`, d'où l'on peut essayer les appels avec sa clé.
 - Toutes les réponses sont en JSON, y compris les erreurs, que l'appel envoie `Accept: application/json` ou non.
 
 ## Authentification

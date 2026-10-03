@@ -1,7 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\DocumentationController;
 use App\Http\Controllers\Api\ExpeditionController;
 use Illuminate\Support\Facades\Route;
+
+// La documentation de l'API, lisible dans Swagger UI. Le meme domaine que
+// l'API : le bouton « Try it out » y envoie de vrais appels.
+Route::get('/docs', [DocumentationController::class, 'page'])->name('api.docs');
+Route::get('/docs/openapi.yaml', [DocumentationController::class, 'specification'])->name('api.docs.specification');
 
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::middleware('cle.api:lecture')->group(function () {
