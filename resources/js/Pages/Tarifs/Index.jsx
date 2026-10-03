@@ -1,93 +1,10 @@
+import ChampVille from '@/Components/ChampVille';
 import Icone from '@/Components/Icone';
 import ListeRecherche from '@/Components/ListeRecherche';
 import VitrineLayout from '@/Layouts/VitrineLayout';
 import { useLocale, useTraduction } from '@/traduire';
 import { Head, Link } from '@inertiajs/react';
-import { useState, useRef } from 'react';
-
-// Pays sans codes postaux (la Grece) : le serveur n'a pas de liste de
-// localites, Photon propose les siennes, que le serveur sait verifier.
-const villesPhoton = async (q, pays) => {
-    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=fr&limit=10&layer=city&layer=district&layer=locality`);
-
-    if (! r.ok) return [];
-
-    const { features = [] } = await r.json();
-
-    return features
-        .filter((f) => f.properties?.name && (f.properties.countrycode || '').toUpperCase() === pays)
-        .map((f) => ({ ville: f.properties.name, region: f.properties.state || null, code: null }));
-};
-
-function ChoixVille({ id, pays, enLigne = false, valeur, onChange, placeholder }) {
-    const [suggestions, setSuggestions] = useState([]);
-    const [minuteur, setMinuteur] = useState(null);
-    // Une reponse qui arrive apres que le champ a perdu le focus ne doit
-    // pas rouvrir la liste par-dessus le reste du formulaire.
-    const actif = useRef(false);
-
-    const saisir = (texte) => {
-        onChange(texte);
-        clearTimeout(minuteur);
-
-        if (texte.trim().length < 2) {
-            setSuggestions([]);
-
-            return;
-        }
-
-        setMinuteur(setTimeout(async () => {
-            const q = texte.trim();
-            let villes = await fetch(route('geo.villes', { pays, q }), { headers: { Accept: 'application/json' } })
-                .then((r) => (r.ok ? r.json() : []))
-                .catch(() => []);
-
-            if (enLigne && (! Array.isArray(villes) || villes.length === 0)) {
-                villes = await villesPhoton(q, pays).catch(() => []);
-            }
-
-            if (actif.current) {
-                setSuggestions(Array.isArray(villes) ? villes.slice(0, 6) : []);
-            }
-        }, 200));
-    };
-
-    return (
-        <div className="relative">
-            <input
-                id={id}
-                value={valeur}
-                onChange={(e) => saisir(e.target.value)}
-                onFocus={() => { actif.current = true; }}
-                onBlur={() => {
-                    actif.current = false;
-                    clearTimeout(minuteur);
-                    setTimeout(() => setSuggestions([]), 150);
-                }}
-                placeholder={placeholder}
-                autoComplete="off"
-                className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
-            />
-            {suggestions.length > 0 && (
-                <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {suggestions.map((ville, i) => (
-                        <li key={`${i}-${ville.ville}-${ville.code ?? ''}`}>
-                            <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => { onChange(ville.ville); setSuggestions([]); }}
-                                className="flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm transition hover:bg-surface"
-                            >
-                                <span className="font-medium text-marine">{ville.ville}</span>
-                                {ville.region && <span className="text-xs text-slate-600">{ville.region}</span>}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-}
+import { useState } from 'react';
 
 const NOM_FORMULE = {
     'Éco': ['commande.offre_eco', 'Éco'],
@@ -101,6 +18,11 @@ export default function Index({ destinations = [], departs = [], formules = [], 
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const [depart, setDepart] = useState('');
     const [destination, setDestination] = useState('');
+    // Le point de la ville choisie dans la liste : le serveur s'en sert
+    // quand le nom affiche n'est pas celui du referentiel (« Cologne »).
+    const [pointDepart, setPointDepart] = useState(null);
+    const [pointDestination, setPointDestination] = useState(null);
+    const point = (f) => ({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] });
     const [pays, setPays] = useState('BE');
     // Un enlevement hors de Belgique livre en Belgique : les trajets entre
     // deux pays etrangers se traitent sur devis.
@@ -108,7 +30,8 @@ export default function Index({ destinations = [], departs = [], formules = [], 
     const changerDepart = (code) => {
         setPaysDepart(code);
         setDepart('');
-        if (code !== 'BE') { setPays('BE'); setDestination(''); }
+        setPointDepart(null);
+        if (code !== 'BE') { setPays('BE'); setDestination(''); setPointDestination(null); }
     };
     const [poids, setPoids] = useState('500');
     const [adr, setAdr] = useState(false);
@@ -132,7 +55,18 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                         document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '',
                     ),
                 },
-                body: JSON.stringify({ depart, pays_depart: paysDepart, destination, pays, poids, adr }),
+                body: JSON.stringify({
+                    depart,
+                    pays_depart: paysDepart,
+                    destination,
+                    pays,
+                    poids,
+                    adr,
+                    depart_lat: pointDepart?.lat,
+                    depart_lng: pointDepart?.lng,
+                    destination_lat: pointDestination?.lat,
+                    destination_lng: pointDestination?.lng,
+                }),
             });
 
             const donnees = await reponse.json().catch(() => ({}));
@@ -194,13 +128,16 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                 <label htmlFor="depart" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     {t('tarifs.localite_enlevement', 'Localité d\'enlèvement')}
                                 </label>
-                                <ChoixVille
+                                <ChampVille
                                     id="depart"
                                     pays={paysDepart}
-                                    enLigne={departs.find((d) => d.code === paysDepart)?.en_ligne === true}
+                                    photon={departs.find((d) => d.code === paysDepart)?.en_ligne === true}
                                     valeur={depart}
-                                    onChange={setDepart}
+                                    choisie={pointDepart !== null}
+                                    onSaisie={(v) => { setDepart(v); setPointDepart(null); }}
+                                    onChoix={(f) => { setDepart(f.properties.name); setPointDepart(point(f)); }}
                                     placeholder={paysDepart === 'BE' ? t('tarifs.villes_ex', 'Bruxelles, Anvers, Liège…') : t('tarifs.taper', 'Commencez à taper…')}
+                                    className="block w-full rounded-lg border-slate-300 py-2.5 pr-9 text-sm focus:border-marine focus:ring-marine"
                                 />
                             </div>
 
@@ -212,7 +149,7 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                     id="pays"
                                     value={pays}
                                     disabled={paysDepart !== 'BE'}
-                                    onChange={(code) => { if (code) { setPays(code); setDestination(''); } }}
+                                    onChange={(code) => { if (code) { setPays(code); setDestination(''); setPointDestination(null); } }}
                                     options={destinations.map((d) => ({ valeur: d.code, libelle: d.nom }))}
                                     className="w-full rounded-lg border-slate-300 py-2.5 text-sm shadow-sm focus:border-marine focus:ring-marine"
                                 />
@@ -222,13 +159,16 @@ export default function Index({ destinations = [], departs = [], formules = [], 
                                 <label htmlFor="destination" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     {t('tarifs.localite', 'Localité de livraison')}
                                 </label>
-                                <ChoixVille
+                                <ChampVille
                                     id="destination"
                                     pays={pays}
-                                    enLigne={destinations.find((d) => d.code === pays)?.en_ligne === true}
+                                    photon={destinations.find((d) => d.code === pays)?.en_ligne === true}
                                     valeur={destination}
-                                    onChange={setDestination}
+                                    choisie={pointDestination !== null}
+                                    onSaisie={(v) => { setDestination(v); setPointDestination(null); }}
+                                    onChoix={(f) => { setDestination(f.properties.name); setPointDestination(point(f)); }}
                                     placeholder={t('tarifs.taper', 'Commencez à taper…')}
+                                    className="block w-full rounded-lg border-slate-300 py-2.5 pr-9 text-sm focus:border-marine focus:ring-marine"
                                 />
                             </div>
 
