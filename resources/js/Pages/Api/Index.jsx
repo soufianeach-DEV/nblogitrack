@@ -14,7 +14,7 @@ function Carte({ intitule, valeur, detail, alerte = false }) {
     );
 }
 
-export default function Index({ cles, journal, filtres, permissions, entreprises, statistiques }) {
+export default function Index({ cles, journal, filtres, permissions, entreprises, statistiques, demandes = [] }) {
     const t = useTraduction();
     const locale = useLocale();
     const flash = usePage().props.flash ?? {};
@@ -26,6 +26,29 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
     const [etatCle, setEtatCle] = useState('');
 
     const nouvelleCle = flash.cle_en_clair ?? null;
+
+    // Demande d'une entreprise : accordee avec un formulaire prerempli, ou
+    // refusee avec un motif. L'administrateur ne voit jamais la cle accordee.
+    const [aAccorder, setAAccorder] = useState(null);
+    const [aRefuser, setARefuser] = useState(null);
+    const accord = useForm({ nom: '', permissions: [], ips: '', expire_le: '' });
+    const refus = useForm({ motif: '' });
+
+    const ouvrirAccord = (d) => {
+        accord.clearErrors();
+        accord.setData({ nom: t('api.nom_demande', 'Intégration :entreprise', { entreprise: d.entreprise }), permissions: d.permissions, ips: d.ips.join(', '), expire_le: '' });
+        setAAccorder(d);
+    };
+
+    const accorder = (e) => {
+        e.preventDefault();
+        accord.post(route('api-keys.grant', aAccorder.id), { preserveScroll: true, onSuccess: () => setAAccorder(null) });
+    };
+
+    const refuser = (e) => {
+        e.preventDefault();
+        refus.patch(route('api-keys.refuse', aRefuser.id), { preserveScroll: true, onSuccess: () => { setARefuser(null); refus.reset(); } });
+    };
 
     const { data, setData, post, processing, errors, reset } = useForm({
         nom: '',
@@ -175,6 +198,46 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                             </span>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {demandes.length > 0 && (
+                <div className="mt-6 overflow-hidden rounded-2xl border-2 border-action bg-white shadow-sm">
+                    <h2 className="border-b border-slate-100 px-5 py-4 font-semibold text-marine">
+                        {t('api.demandes_attente', 'Demandes en attente')}
+                        <span className="ml-2 rounded-full bg-action px-2 py-0.5 text-xs font-bold text-marine-deep">{demandes.length}</span>
+                    </h2>
+                    <ul className="divide-y divide-slate-100">
+                        {demandes.map((d) => (
+                            <li key={d.id} className="flex flex-col gap-3 p-5 text-sm sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-marine">{d.entreprise}</p>
+                                    <p className="text-slate-600">{d.demandeur}{d.email && ` · ${d.email}`} · {d.demandee_le}</p>
+                                    <p className="mt-1 text-slate-700">
+                                        {d.permissions.map((p) => t('api_permission.' + p, permissions[p] ?? p)).join(', ')}
+                                        {d.ips.length > 0 && <span className="font-mono text-xs text-slate-600"> · {d.ips.join(', ')}</span>}
+                                    </p>
+                                    {d.message && <p className="mt-1 text-slate-600">« {d.message} »</p>}
+                                </div>
+                                <div className="flex shrink-0 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { refus.clearErrors(); setARefuser(d); }}
+                                        className="rounded-lg border border-status-incident/40 px-4 py-2 text-sm font-semibold text-status-incident transition hover:bg-status-incident/5"
+                                    >
+                                        {t('api.refuser', 'Refuser')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => ouvrirAccord(d)}
+                                        className="rounded-lg bg-marine px-4 py-2 text-sm font-bold text-white transition hover:bg-marine-deep"
+                                    >
+                                        {t('api.accorder', 'Accorder')}
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 
@@ -546,6 +609,81 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                         </button>
                     </div>
                 </div>
+            </Modal>
+            <Modal show={aAccorder !== null} onClose={() => setAAccorder(null)} maxWidth="lg">
+                {aAccorder && (
+                    <form onSubmit={accorder} className="p-6">
+                        <h2 className="text-lg font-bold text-marine">{t('api.accorder_titre', 'Accorder l\'accès à :entreprise', { entreprise: aAccorder.entreprise })}</h2>
+                        <p className="mt-1 text-sm text-slate-600">
+                            {t('api.accorder_aide', 'La clé est générée maintenant, mais vous ne la verrez pas : le client l\'affichera une seule fois dans son espace.')}
+                        </p>
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <label htmlFor="accord-nom" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">{t('api.nom', 'Nom')}</label>
+                                <input id="accord-nom" value={accord.data.nom} onChange={(e) => accord.setData('nom', e.target.value)} maxLength={80} className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine" />
+                                {accord.errors.nom && <p className="mt-1 text-sm text-status-incident">{accord.errors.nom}</p>}
+                            </div>
+                            <div>
+                                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">{t('api.permissions', 'Permissions')}</span>
+                                <div className="flex flex-wrap gap-4">
+                                    {Object.entries(permissions).map(([cle, libelle]) => (
+                                        <label key={cle} className="flex items-center gap-2 text-sm text-marine">
+                                            <input
+                                                type="checkbox"
+                                                checked={accord.data.permissions.includes(cle)}
+                                                onChange={() => accord.setData('permissions', accord.data.permissions.includes(cle)
+                                                    ? accord.data.permissions.filter((p) => p !== cle)
+                                                    : [...accord.data.permissions, cle])}
+                                                className="rounded border-gray-300 text-marine focus:ring-marine"
+                                            />
+                                            {t('api_permission.' + cle, libelle)}
+                                        </label>
+                                    ))}
+                                </div>
+                                {accord.errors.permissions && <p className="mt-1 text-sm text-status-incident">{accord.errors.permissions}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="accord-ips" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">{t('api.restriction_ip', 'Adresses autorisées')}</label>
+                                <input id="accord-ips" value={accord.data.ips} onChange={(e) => accord.setData('ips', e.target.value)} placeholder="203.0.113.7, 198.51.100.24" className="w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-marine focus:ring-marine" />
+                                <p className="mt-1 text-xs text-slate-600">{t('api.ip_aide', 'Séparées par des virgules. Laisser vide autorise toutes les adresses.')}</p>
+                                {accord.errors.ips && <p className="mt-1 text-sm text-status-incident">{accord.errors.ips}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="accord-expire" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">{t('api.expiration', 'Expiration')}</label>
+                                <input id="accord-expire" type="date" value={accord.data.expire_le} onChange={(e) => accord.setData('expire_le', e.target.value)} className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine" />
+                                <p className="mt-1 text-xs text-slate-600">{t('api.expiration_aide', 'Facultatif. Sans date, la clé reste valable jusqu\'à sa révocation.')}</p>
+                                {accord.errors.expire_le && <p className="mt-1 text-sm text-status-incident">{accord.errors.expire_le}</p>}
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button type="button" onClick={() => setAAccorder(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:text-marine">
+                                {t('action.annuler', 'Annuler')}
+                            </button>
+                            <button disabled={accord.processing} className="rounded-lg bg-marine px-4 py-2 text-sm font-semibold text-white transition hover:bg-marine-deep disabled:opacity-50">
+                                {t('api.accorder', 'Accorder')}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
+            <Modal show={aRefuser !== null} onClose={() => setARefuser(null)} maxWidth="md">
+                {aRefuser && (
+                    <form onSubmit={refuser} className="p-6">
+                        <h2 className="text-lg font-bold text-marine">{t('api.refuser_titre', 'Refuser la demande de :entreprise', { entreprise: aRefuser.entreprise })}</h2>
+                        <label htmlFor="refus-motif" className="mt-4 mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">{t('api.motif_refus', 'Motif, envoyé au client')}</label>
+                        <textarea id="refus-motif" rows={3} maxLength={300} value={refus.data.motif} onChange={(e) => refus.setData('motif', e.target.value)} className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-marine focus:ring-marine" />
+                        {refus.errors.motif && <p className="mt-1 text-sm text-status-incident">{refus.errors.motif}</p>}
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button type="button" onClick={() => setARefuser(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:text-marine">
+                                {t('action.annuler', 'Annuler')}
+                            </button>
+                            <button disabled={refus.processing} className="rounded-lg bg-status-incident px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+                                {t('api.refuser', 'Refuser')}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </Modal>
         </AuthenticatedLayout>
     );

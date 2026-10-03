@@ -166,6 +166,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     <LienMenu href={route('company.users.index')} active={route().current('company.users.*')} icone="profil" onClick={fermer}>
                         {t('nav.utilisateurs_entreprise', 'Utilisateurs')}
                     </LienMenu>
+                    <LienMenu href={route('company.api.index')} active={route().current('company.api.*')} icone="journal" onClick={fermer}>
+                        {t('nav.acces_api', 'Accès à l\'API')}
+                    </LienMenu>
                 </Groupe>
             )}
 
