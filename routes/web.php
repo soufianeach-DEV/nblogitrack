@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccesApiController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\AudienceController;
@@ -92,6 +93,14 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
                 ->name('company.users.store');
             Route::patch('/entreprise/utilisateurs/{utilisateur}', [CompanyUserController::class, 'update'])
                 ->name('company.users.update');
+
+            Route::get('/entreprise/acces-api', [AccesApiController::class, 'index'])->name('company.api.index');
+            Route::post('/entreprise/acces-api', [AccesApiController::class, 'store'])
+                ->middleware('throttle:5,1,demande-api')
+                ->name('company.api.store');
+            Route::post('/entreprise/acces-api/{demande}/cle', [AccesApiController::class, 'reveler'])
+                ->middleware('throttle:10,1,cle-api')
+                ->name('company.api.reveal');
         });
 
         Route::middleware(['can:plan-orders', 'throttle:30,1,supplement'])->group(function () {
@@ -199,6 +208,8 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
                 Route::get('/api', [ApiKeyController::class, 'index'])->name('api-keys.index');
                 Route::post('/api', [ApiKeyController::class, 'store'])->name('api-keys.store');
                 Route::patch('/api/{apiKey}/revocation', [ApiKeyController::class, 'revoke'])->name('api-keys.revoke');
+                Route::post('/api/demandes/{demande}/accord', [ApiKeyController::class, 'accorder'])->name('api-keys.grant');
+                Route::patch('/api/demandes/{demande}/refus', [ApiKeyController::class, 'refuser'])->name('api-keys.refuse');
             });
 
             Route::get('/traductions', [TranslationController::class, 'index'])->name('translations.index');
