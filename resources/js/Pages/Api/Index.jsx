@@ -68,13 +68,24 @@ export default function Index({ cles, journal, filtres, permissions, entreprises
                             {t('api.sous_titre', 'Les clés d\'accès des partenaires et leur activité.')}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setCreation(true)}
-                        className="rounded-lg bg-marine px-4 py-2 text-sm font-bold text-white transition hover:bg-marine-deep"
-                    >
-                        {t('api.nouvelle', 'Générer une clé')}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        {/* Swagger UI, dans un nouvel onglet : on y essaie la cle generee ici. */}
+                        <a
+                            href="/api/docs"
+                            target="_blank"
+                            rel="noopener"
+                            className="rounded-lg border border-marine px-4 py-2 text-sm font-bold text-marine transition hover:bg-marine hover:text-white"
+                        >
+                            {t('api.documentation', 'Documentation de l\'API')}
+                        </a>
+                        <button
+                            type="button"
+                            onClick={() => setCreation(true)}
+                            className="rounded-lg bg-marine px-4 py-2 text-sm font-bold text-white transition hover:bg-marine-deep"
+                        >
+                            {t('api.nouvelle', 'Générer une clé')}
+                        </button>
+                    </div>
                 </div>
             }
         >
