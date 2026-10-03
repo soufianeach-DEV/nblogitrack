@@ -815,6 +815,13 @@ L'annulation est gratuite tant qu'aucun véhicule n'a été affecté à l'expéd
 
 Une fois la marchandise chargée, l'expédition ne peut plus être annulée en ligne. Un retour ou un déroutement se traite alors par écrit et donne lieu à facturation des prestations effectuées.
 
+## Article 8 ter — Droit de rétractation
+Les services du transporteur sont réservés aux entreprises. Le droit de rétractation prévu par les articles VI.47 et suivants du Code de droit économique protège les consommateurs ; il ne s'applique pas aux commandes passées par une entreprise pour les besoins de son activité.
+
+En outre, chaque commande fixe une date d'enlèvement. Conformément à l'article VI.53, 12° du même Code, les contrats de transport de biens qui prévoient une date ou une période d'exécution spécifique sont exclus du droit de rétractation, même lorsque le donneur d'ordre agit en qualité de consommateur.
+
+Le donneur d'ordre conserve la faculté d'annuler une expédition dans les conditions de l'article 8 bis.
+
 ## Article 9 — Facturation et paiement
 Les factures sont émises par voie électronique et payables à trente jours de date de facture, sans escompte, sauf convention écrite contraire.
 
@@ -931,6 +938,13 @@ De annulering is kosteloos zolang geen voertuig aan de zending is toegewezen. Zo
 
 Zodra de goederen geladen zijn, kan de zending niet meer online geannuleerd worden. Een terugzending of omleiding wordt dan schriftelijk geregeld en de uitgevoerde prestaties worden gefactureerd.
 
+## Artikel 8 ter — Herroepingsrecht
+De diensten van de vervoerder zijn voorbehouden aan ondernemingen. Het herroepingsrecht van de artikelen VI.47 en volgende van het Wetboek van economisch recht beschermt consumenten; het geldt niet voor bestellingen die een onderneming plaatst voor haar beroepsactiviteit.
+
+Bovendien legt elke bestelling een ophaaldatum vast. Overeenkomstig artikel VI.53, 12° van hetzelfde Wetboek zijn overeenkomsten voor goederenvervoer met een specifieke datum of periode van uitvoering uitgesloten van het herroepingsrecht, ook wanneer de opdrachtgever als consument handelt.
+
+De opdrachtgever behoudt de mogelijkheid om een zending te annuleren onder de voorwaarden van artikel 8 bis.
+
 ## Artikel 9 — Facturatie en betaling
 Facturen worden elektronisch uitgereikt en zijn betaalbaar binnen dertig dagen na factuurdatum, zonder korting, behoudens andersluidende schriftelijke afspraak.
 
@@ -1046,6 +1060,13 @@ The customer may cancel a shipment from its customer area as long as the goods h
 Cancellation is free of charge as long as no vehicle has been assigned to the shipment. Once a vehicle and a driver have been booked for it, cancellation gives rise to a fixed indemnity of twenty-five per cent of the agreed price excluding VAT, with a minimum of fifty euros, without exceeding that price. This indemnity covers the immobilisation of the vehicle and driver; it appears on the invoice for the month of cancellation.
 
 Once the goods have been loaded, the shipment can no longer be cancelled online. A return or diversion is then handled in writing and the services performed are invoiced.
+
+## Article 8b — Right of withdrawal
+The carrier's services are reserved for businesses. The right of withdrawal under Articles VI.47 et seq. of the Belgian Code of Economic Law protects consumers; it does not apply to orders placed by a business for the purposes of its activity.
+
+Furthermore, each order sets a pickup date. Under Article VI.53, 12° of the same Code, contracts for the transport of goods that provide for a specific date or period of performance are excluded from the right of withdrawal, even when the customer acts as a consumer.
+
+The customer retains the option to cancel a shipment under the conditions of Article 8a.
 
 ## Article 9 — Invoicing and payment
 Invoices are issued electronically and payable within thirty days of the invoice date, without discount, unless otherwise agreed in writing.
