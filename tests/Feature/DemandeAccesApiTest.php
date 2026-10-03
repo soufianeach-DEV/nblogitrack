@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -30,7 +31,7 @@ class DemandeAccesApiTest extends TestCase
         return User::factory()->create(['role' => 'ADMIN']);
     }
 
-    private function demander(User $client, array $donnees = []): \Illuminate\Testing\TestResponse
+    private function demander(User $client, array $donnees = []): TestResponse
     {
         return $this->actingAs($client)->post(route('company.api.store', ['langue' => 'fr']), $donnees + [
             'permissions' => ['lecture', 'ecriture'],
@@ -39,7 +40,7 @@ class DemandeAccesApiTest extends TestCase
         ]);
     }
 
-    private function accorder(User $admin, ApiKeyRequest $demande): \Illuminate\Testing\TestResponse
+    private function accorder(User $admin, ApiKeyRequest $demande): TestResponse
     {
         return $this->actingAs($admin)
             ->withSession(['auth.password_confirmed_at' => time()])
