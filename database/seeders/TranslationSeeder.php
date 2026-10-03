@@ -1433,6 +1433,7 @@ class TranslationSeeder extends Seeder
             'prop_ancien' => ['Ancienne valeur', 'Vorige waarde', 'Previous value'],
             'prop_nouveau' => ['Nouvelle valeur', 'Nieuwe waarde', 'New value'],
             'action_invoices_generated' => ['Émission des factures', 'Uitgifte van facturen', 'Invoices issued'],
+            'action_invoice_auto_failed' => ['Échec de la facture à la livraison', 'Factuur bij levering niet uitgegeven', 'Invoice not issued on delivery'],
             'action_invoices_drafts_sent' => ['Envoi des factures en brouillon', 'Verzending van conceptfacturen', 'Draft invoices sent'],
             'action_invoice_sent' => ['Facture envoyée', 'Factuur verstuurd', 'Invoice sent'],
             'action_invoice_send_failed' => ['Échec d\'envoi de facture', 'Verzending van factuur mislukt', 'Invoice sending failed'],

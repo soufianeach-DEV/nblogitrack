@@ -50,6 +50,7 @@ class ActivityLogController extends Controller
         'invoices.drafts_sent' => 'Envoi des factures en brouillon',
         'invoice.sent' => 'Facture envoyée',
         'invoice.send_failed' => 'Échec d\'envoi de facture',
+        'invoice.auto_failed' => 'Échec de la facture à la livraison',
         'invoice.paid' => 'Facture payée',
         'invoice.paid_online' => 'Paiement en ligne',
         'invoice.payment_duplicate' => 'Paiement en double',

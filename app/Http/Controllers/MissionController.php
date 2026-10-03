@@ -15,6 +15,7 @@ use App\Support\Adresse;
 use App\Support\AvisLivraison;
 use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
+use App\Support\FactureALaLivraison;
 use App\Support\Incidents;
 use App\Support\OrderWorkflow;
 use App\Support\Traductions;
@@ -217,6 +218,7 @@ class MissionController extends Controller
 
         if ($vise === 'DELIVERED') {
             AvisLivraison::envoyer($transportOrder);
+            FactureALaLivraison::emettre($transportOrder->fresh());
         }
 
         return back()->with('success', $vise === 'DELIVERED'

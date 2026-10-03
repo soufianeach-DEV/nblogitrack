@@ -12,6 +12,7 @@ use App\Support\Adresse;
 use App\Support\AvisLivraison;
 use App\Support\ClientsAPrevenir;
 use App\Support\ControleAffectation;
+use App\Support\FactureALaLivraison;
 use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\Incidents;
@@ -633,6 +634,7 @@ class PlanningController extends Controller
 
         if ($data['status'] === 'DELIVERED') {
             AvisLivraison::envoyer($transportOrder);
+            FactureALaLivraison::emettre($transportOrder->fresh());
         }
 
         return back()->with('success', Traductions::t('msg.planif_statut_mis_a_jour', 'Ordre :numero : statut mis à jour.', ['numero' => $transportOrder->tracking_number]));
