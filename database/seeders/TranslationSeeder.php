@@ -2505,6 +2505,7 @@ class TranslationSeeder extends Seeder
                 'Partner access keys and their activity.',
             ],
             'nouvelle' => ['Générer une clé', 'Sleutel genereren', 'Generate a key'],
+            'documentation' => ['Documentation de l\'API', 'API-documentatie', 'API documentation'],
             'nouvelle_aide' => [
                 'La valeur ne s\'affichera qu\'une seule fois, juste après la création.',
                 'De waarde wordt slechts één keer getoond, meteen na het aanmaken.',
