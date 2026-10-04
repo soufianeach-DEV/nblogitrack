@@ -74,8 +74,12 @@ class Encours
     {
         $retards = self::de($client)['en_retard'];
 
-        return $retards > 0 && $retards < self::RETARDS_BLOQUANTS
-            ? Traductions::t('msg.encours_avertissement', ':n facture(s) en retard de paiement. À partir de :seuil, les nouvelles commandes sont bloquées.', ['n' => $retards, 'seuil' => self::RETARDS_BLOQUANTS])
-            : null;
+        if ($retards === 0 || $retards >= self::RETARDS_BLOQUANTS) {
+            return null;
+        }
+
+        return $retards === 1
+            ? Traductions::t('msg.encours_avertissement_une', 'Une facture est en retard de paiement. À partir de :seuil, les nouvelles commandes sont bloquées.', ['seuil' => self::RETARDS_BLOQUANTS])
+            : Traductions::t('msg.encours_avertissement', ':n factures sont en retard de paiement. À partir de :seuil, les nouvelles commandes sont bloquées.', ['n' => $retards, 'seuil' => self::RETARDS_BLOQUANTS]);
     }
 }

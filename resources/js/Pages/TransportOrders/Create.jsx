@@ -7,7 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AdresseAutocompletion from '@/Components/AdresseAutocompletion';
 import { useLangue, useLocale, useTraduction, useVocabulaire } from '@/traduire';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 const MARCHANDISES = [
@@ -218,13 +218,22 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
     // Pas de prix pour un envoi qu'aucun camion ne peut prendre.
     const total = refusFlotte || messageVolume ? null : prixDe(selectedGrid);
 
+    // Le lien vers les factures, pour qui peut les voir et les regler.
+    const peutVoirFactures = usePage().props.auth?.canSeeInvoices;
+    const voirFactures = peutVoirFactures ? (
+        <Link href={route('invoices.index')} className="rounded-lg bg-marine px-4 py-2 text-sm font-bold text-white transition hover:bg-marine-deep">
+            {t('commande.voir_factures', 'Voir mes factures')}
+        </Link>
+    ) : null;
+
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('commande.titre', 'Nouvelle expédition')}</h1>}>
             <Head title={t('commande.titre', 'Nouvelle expédition')} />
 
             {! blocageEncours && avertissementEncours && (
-                <div role="status" className="mb-4 rounded-2xl border-2 border-action bg-action/10 p-4 text-sm text-marine">
-                    {avertissementEncours}
+                <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-action bg-action/10 p-4 text-sm text-marine">
+                    <span>{avertissementEncours}</span>
+                    {voirFactures}
                 </div>
             )}
 
@@ -232,6 +241,7 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
                 <div role="alert" className="mb-4 rounded-2xl border-2 border-status-incident/40 bg-status-incident/5 p-5 text-sm text-status-incident">
                     <p className="font-bold">{t('commande.encours_titre', 'Commande impossible pour le moment')}</p>
                     <p className="mt-1">{blocageEncours}</p>
+                    {voirFactures && <div className="mt-3">{voirFactures}</div>}
                 </div>
             )}
 
