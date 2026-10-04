@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\Client;
+use App\Models\Invoice;
+use App\Models\OrderCharge;
+use App\Models\Payment;
 use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
@@ -18,8 +22,8 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * Une facture en retard, ou un encours qui depasserait le plafond de credit,
- * bloque toute nouvelle commande.
+ * Trois factures en retard, ou une commande qui ferait depasser le plafond de
+ * credit aux factures dues, bloquent toute nouvelle commande.
  */
 class PlafondEncoursTest extends TestCase
 {
@@ -65,19 +69,119 @@ class PlafondEncoursTest extends TestCase
         app(Facturier::class)->facturer();
     }
 
-    public function test_l_encours_additionne_factures_dues_et_courses_a_facturer(): void
+    public function test_l_encours_ne_compte_que_les_factures_emises_non_reglees(): void
     {
         $entreprise = Client::factory()->create(['credit_limit' => null, 'payment_terms' => '30 jours']);
         $this->facturer($entreprise);
-        TransportOrder::factory()->create(['client_id' => $entreprise->id, 'status' => 'PENDING', 'estimated_cost' => 200]);
-        TransportOrder::factory()->create(['client_id' => $entreprise->id, 'status' => 'CANCELLED', 'estimated_cost' => 999]);
+        $enAttente = TransportOrder::factory()->create(['client_id' => $entreprise->id, 'status' => 'PENDING', 'estimated_cost' => 200]);
+        OrderCharge::create(['transport_order_id' => $enAttente->id, 'label' => 'Attente', 'amount' => 50]);
+        TransportOrder::factory()->create(['client_id' => $entreprise->id, 'status' => 'CANCELLED', 'estimated_cost' => 800, 'cancellation_fee' => 100]);
 
+        // Facture de 500 HT, soit 605 TTC. Les expeditions, supplements et
+        // indemnites pas encore factures ne comptent pas.
         $encours = Encours::de($entreprise);
-
         $this->assertSame(605.0, $encours['factures']);
-        $this->assertSame(200.0, $encours['a_facturer']);
-        $this->assertSame(805.0, $encours['total']);
+        $this->assertSame(605.0, $encours['total']);
         $this->assertSame(0, $encours['en_retard']);
+
+        // Un paiement partiel reduit l'encours ; la facture reglee l'annule.
+        $facture = Invoice::where('client_id', $entreprise->id)->first();
+        Payment::create(['invoice_id' => $facture->id, 'amount' => 100, 'paid_on' => '2026-04-12', 'method' => 'TRANSFER']);
+        $this->assertSame(505.0, Encours::de($entreprise)['total']);
+        Payment::create(['invoice_id' => $facture->id, 'amount' => 505, 'paid_on' => '2026-04-15', 'method' => 'TRANSFER']);
+        $this->assertSame(0.0, Encours::de($entreprise)['total']);
+    }
+
+    public function test_la_commande_est_comptee_au_regime_de_tva_de_l_entreprise(): void
+    {
+        $belge = Client::factory()->create();
+        // Preneur etabli en France : autoliquidation, le montant reste HT.
+        $francaise = Client::factory()->create(['country' => 'France', 'vat_number' => 'FR40303265045']);
+
+        $this->assertSame(242.0, Encours::ttc($belge, 200));
+        $this->assertSame(200.0, Encours::ttc($francaise, 200));
+    }
+
+    public function test_le_refus_cite_la_commande_et_le_formulaire_previent_quand_le_plafond_est_atteint(): void
+    {
+        $entreprise = Client::factory()->create(['credit_limit' => 1210, 'payment_terms' => '30 jours']);
+        $this->facturer($entreprise);
+        $espaces = fn (?string $m) => str_replace(["\u{202F}", "\u{00A0}"], ' ', (string) $m);
+
+        // 605 TTC dus : 500 HT de plus (605 TTC) tiennent juste, 501 non.
+        $this->assertNull(Encours::refus($entreprise, 500));
+        $refus = $espaces(Encours::refus($entreprise, 501));
+        $this->assertStringContainsString('605,00', $refus);
+        $this->assertStringContainsString('606,21', $refus);
+        $this->assertNull(Encours::refus($entreprise, 0));
+
+        // Plafond atteint pile, ou plafond de 0 : plus rien ne passe, et le
+        // formulaire le dit des l'ouverture.
+        $entreprise->update(['credit_limit' => 605]);
+        $this->assertNotNull(Encours::refus($entreprise, 0));
+
+        $sansCredit = Client::factory()->create(['credit_limit' => 0, 'is_validated' => true]);
+        $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $sansCredit->id, 'company_role' => 'ADMIN']);
+        $this->actingAs($client)->get(route('transport-orders.create', ['langue' => 'fr']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('blocageEncours', fn ($m) => is_string($m) && str_contains($m, 'Plafond')));
+    }
+
+    public function test_une_commande_qui_atteint_pile_un_plafond_a_centimes_passe(): void
+    {
+        $entreprise = Client::factory()->create(['credit_limit' => 618.43, 'payment_terms' => '30 jours']);
+        $this->facturer($entreprise);
+        $facture = Invoice::where('client_id', $entreprise->id)->first();
+        Payment::create(['invoice_id' => $facture->id, 'amount' => 0.01, 'paid_on' => '2026-04-12', 'method' => 'TRANSFER']);
+
+        // 604,99 dus + 13,44 TTC (11,11 HT) = 618,43 : le plafond est atteint
+        // sans etre depasse. En flottants, la somme vaut 618.4300000000001.
+        $this->assertSame(604.99, Encours::de($entreprise)['total']);
+        $this->assertNull(Encours::refus($entreprise, 11.11));
+        $this->assertNotNull(Encours::refus($entreprise, 11.12));
+    }
+
+    public function test_le_site_refuse_une_commande_qui_ferait_depasser_le_plafond(): void
+    {
+        $grille = TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create(['credit_limit' => 700, 'payment_terms' => '30 jours', 'is_validated' => true]);
+        $this->facturer($entreprise);
+        $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
+        $commande = [
+            'pickup_address' => 'Rue Neuve 43, 3500 Hasselt, Belgique',
+            'delivery_address' => 'Avenue Louise 200, 1000 Bruxelles, Belgique',
+            'delivery_country' => 'BE',
+            'pickup_lat' => 50.9311,
+            'pickup_lng' => 5.3378,
+            'delivery_lat' => 50.8504,
+            'delivery_lng' => 4.3488,
+            'weight' => 1200,
+            'goods_type' => TransportOrder::MARCHANDISES[0],
+            'priority' => 'NORMAL',
+            'requested_delivery_date' => now()->addDays(7)->toDateString(),
+            'tariff_grid_id' => $grille->id,
+        ];
+
+        // 605 TTC dus : avec cette commande, le plafond de 700 serait depasse.
+        $this->actingAs($client)->post(route('transport-orders.store'), $commande)
+            ->assertSessionHasErrors('tariff_grid_id');
+        $this->assertStringContainsString('Plafond de crédit dépassé', session('errors')->first('tariff_grid_id'));
+        $this->assertSame(0, TransportOrder::where('client_id', $entreprise->id)->where('status', 'PENDING')->count());
+
+        // Plafond releve : la meme commande passe (compte recharge, sans
+        // l'entreprise gardee en memoire par la requete precedente).
+        $entreprise->update(['credit_limit' => 100000]);
+        $this->actingAs($client->fresh())->post(route('transport-orders.store'), $commande)->assertSessionHasNoErrors();
+        $this->assertSame(1, TransportOrder::where('client_id', $entreprise->id)->where('status', 'PENDING')->count());
+    }
+
+    public function test_le_personnel_recoit_un_message_qui_lui_est_adresse(): void
+    {
+        $entreprise = Client::factory()->create(['company_name' => 'Transports Dubois', 'credit_limit' => 100]);
+
+        $message = Encours::refus($entreprise, 500, pourLePersonnel: true);
+
+        $this->assertStringContainsString('Transports Dubois', $message);
+        $this->assertStringContainsString('par un administrateur (écran Entreprises)', $message);
     }
 
     public function test_une_facture_en_retard_avertit_trois_bloquent(): void
@@ -146,6 +250,13 @@ class PlafondEncoursTest extends TestCase
         $this->actingAs($admin)->patch(route('clients.terms', ['langue' => 'fr', 'client' => $entreprise]), [
             'payment_terms' => '90 jours',
         ])->assertSessionHasErrors('payment_terms');
+
+        // Enregistrer sans rien changer n'ecrit rien au journal.
+        $avant = ActivityLog::where('action', 'client.terms_updated')->count();
+        $this->actingAs($admin)->patch(route('clients.terms', ['langue' => 'fr', 'client' => $entreprise]), [
+            'payment_terms' => '60 jours', 'credit_limit' => '',
+        ])->assertSessionHas('success');
+        $this->assertSame($avant, ActivityLog::where('action', 'client.terms_updated')->count());
 
         $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
         $this->actingAs($client)->patch(route('clients.terms', ['langue' => 'fr', 'client' => $entreprise]), [

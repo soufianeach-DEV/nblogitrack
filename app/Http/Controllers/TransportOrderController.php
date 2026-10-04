@@ -659,8 +659,8 @@ class TransportOrderController extends Controller
                 ])];
             }
 
-            // Encours verifie sous le meme verrou : deux commandes simultanees
-            // ne depassent pas ensemble le plafond.
+            // Encours verifie sous le verrou de commande, sur les factures dues
+            // a cet instant ; les expeditions pas encore facturees n'y entrent pas.
             if ($refus = Encours::refus($request->user()->client, $prix)) {
                 return ['erreur' => $refus];
             }

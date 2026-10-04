@@ -15,8 +15,8 @@ const ONGLETS = {
 
 /**
  * Delai de paiement et plafond de credit d'une entreprise validee, avec son
- * encours : ce qu'elle doit (factures TTC) et ce qu'elle devra (expeditions
- * pas encore facturees, HT).
+ * encours : ce qu'elle doit sur ses factures emises et non reglees, TVA
+ * comprise.
  */
 function ConditionsPaiement({ client, delais, retardsBloquants }) {
     const t = useTraduction();
@@ -28,7 +28,9 @@ function ConditionsPaiement({ client, delais, retardsBloquants }) {
     const euros = (m) => Number(m ?? 0).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
     const encours = client.encours;
     const plafond = client.credit_limit === null || client.credit_limit === '' ? null : Number(client.credit_limit);
-    const part = plafond ? Math.min(100, Math.round((encours.total / plafond) * 100)) : null;
+    // Un plafond de 0 est un plafond : aucune commande ne passe.
+    const part = plafond === null ? null : plafond > 0 ? Math.min(100, Math.round((encours.total / plafond) * 100)) : 100;
+    const atteint = plafond !== null && encours.total >= plafond;
 
     const enregistrer = (e) => {
         e.preventDefault();
@@ -49,7 +51,7 @@ function ConditionsPaiement({ client, delais, retardsBloquants }) {
                     </div>
                 )}
                 <p className="mt-1 text-xs text-slate-600">
-                    {t('entreprises.encours_detail', 'Factures dues :factures TTC · à facturer :a_facturer HT', { factures: euros(encours.factures), a_facturer: euros(encours.a_facturer) })}
+                    {t('entreprises.encours_detail', 'Factures émises non réglées, TVA comprise')}
                 </p>
                 {encours.en_retard >= retardsBloquants && (
                     <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
@@ -63,7 +65,7 @@ function ConditionsPaiement({ client, delais, retardsBloquants }) {
                             : t('entreprises.factures_retard_avertissement', ':n factures en retard (blocage à :seuil)', { n: encours.en_retard, seuil: retardsBloquants })}
                     </p>
                 )}
-                {encours.en_retard < retardsBloquants && part !== null && part >= 100 && (
+                {encours.en_retard < retardsBloquants && atteint && (
                     <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
                         {t('entreprises.plafond_atteint', 'Plafond atteint : commandes bloquées')}
                     </p>
@@ -86,7 +88,7 @@ function ConditionsPaiement({ client, delais, retardsBloquants }) {
                     <input
                         type="number"
                         min="0"
-                        step="100"
+                        step="0.01"
                         value={data.credit_limit}
                         onChange={(e) => setData('credit_limit', e.target.value)}
                         placeholder={t('entreprises.sans_plafond', 'Sans plafond')}

@@ -176,6 +176,24 @@ class DevisCompletTest extends TestCase
         $this->assertSame(1, TransportOrder::count());
     }
 
+    public function test_un_devis_n_est_pas_transforme_au_dela_du_plafond_de_credit(): void
+    {
+        Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
+        $this->creerLesGrillesDeDemonstration();
+        $client = Client::factory()->create(['vat_number' => 'BE0123456749', 'company_name' => 'Transports Dubois', 'credit_limit' => 10]);
+
+        $this->post(route('devis.store'), $this->demande())->assertSessionHasNoErrors();
+        $devis = QuoteRequest::firstOrFail();
+
+        // Le message s'adresse au personnel : seul un administrateur releve le plafond.
+        $this->actingAs(User::factory()->planificateur()->create())
+            ->post(route('quotes.order', $devis), ['client_id' => $client->id])
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'Transports Dubois') && str_contains($m, 'par un administrateur (écran Entreprises)'));
+
+        $this->assertSame(0, TransportOrder::count());
+        $this->assertNull($devis->fresh()->converted_order_id);
+    }
+
     public function test_sans_entreprise_choisie_la_transformation_est_refusee(): void
     {
         $this->creerLesGrillesDeDemonstration();
