@@ -278,19 +278,21 @@ class RegisteredUserController extends Controller
                 'conditions_version' => Page::where('slug', 'conditions-generales')->first()?->version()?->toIso8601String(),
             ]);
 
-            $user = User::create([
+            $user = new User([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
                 'password' => Hash::make($data['password']),
-                'role' => 'CLIENT',
                 'client_id' => $client->id,
                 'company_role' => 'ADMIN',
                 // La langue de l'inscription devient celle de ses courriels.
                 'locale' => app()->getLocale(),
-                'is_active' => true,
             ]);
+            // Hors assignation en masse : fixes ici, jamais lus du formulaire.
+            $user->role = 'CLIENT';
+            $user->is_active = true;
+            $user->save();
 
             ClientContact::create([
                 'client_id' => $client->id,

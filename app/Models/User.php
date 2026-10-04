@@ -21,10 +21,15 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     use DatesHeureDeBruxelles, HasFactory, Notifiable, SoftDeletes;
 
     /**
+     * Ni role ni is_active : un tableau venu d'un formulaire ne peut ni
+     * nommer quelqu'un administrateur ni rouvrir un compte ferme. Ces deux
+     * champs s'ecrivent un par un, sur des valeurs fixees ou validees par
+     * le controleur.
+     *
      * @var list<string>
      */
     protected $fillable = [
-        'first_name', 'last_name', 'email', 'password', 'phone', 'role', 'is_active', 'locale',
+        'first_name', 'last_name', 'email', 'password', 'phone', 'locale',
         'client_id', 'company_role',
     ];
 

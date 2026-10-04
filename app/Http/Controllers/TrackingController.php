@@ -90,12 +90,15 @@ class TrackingController extends Controller
                 'telephone' => $ordre->driver->user->phone,
                 'adr' => (bool) $ordre->driver->adr_certified,
                 'permis' => $ordre->driver->license_type,
-                'numero_permis' => $utilisateur->can('view-all-orders')
+                // Donnee de gestion du personnel (Driver::DONNEES_RH) : seul
+                // qui peut modifier la fiche la lit, comme a l'ecran
+                // Chauffeurs.
+                'numero_permis' => $utilisateur->can('manage-fleet')
                     ? $ordre->driver->license_number
                     : null,
                 // L'activite du conducteur aupres des autres clients ne
                 // regarde pas ce client (RGPD, minimisation) : seul le
-                // personnel la voit, comme le numero de permis.
+                // personnel la voit.
                 'trajets' => $utilisateur->can('view-all-orders')
                     ? TransportOrder::where('driver_id', $ordre->driver_id)->count()
                     : null,

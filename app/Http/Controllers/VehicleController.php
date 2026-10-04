@@ -134,6 +134,14 @@ class VehicleController extends Controller
             'inspection_valid_until.after_or_equal' => Traductions::t('msg.validite_avant_controle', 'La validité ne peut pas précéder le passage au contrôle.'),
         ]);
 
+        // Une case decochee peut arriver en « 0 » plutot qu'en false : les
+        // gardes ci-dessous comparent a un vrai booleen.
+        $donnees['is_available'] = $request->boolean('is_available');
+
+        if (array_key_exists('adr_equipe', $donnees)) {
+            $donnees['adr_equipe'] = $request->boolean('adr_equipe');
+        }
+
         // Seul un vrai retrait du service se refuse : enregistrer la fiche
         // d'un camion deja hors service ne doit pas etre bloque.
         if ($donnees['is_available'] === false && $vehicle->is_available) {

@@ -164,8 +164,10 @@ final class ControleAffectation
             $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_empeche', 'Ce chauffeur ne peut pas prendre la route : :motifs.', ['motifs' => implode(', ', $empechements)])];
         }
 
+        // La periode suffit a refuser : le motif d'une absence (« maladie »)
+        // ne part pas vers le planificateur ni vers le chauffeur.
         if ($absence = $chauffeur->indisponibleEntre($debut, $fin)) {
-            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_absent', 'Ce chauffeur est indisponible pendant la mission : :periode.', ['periode' => $absence->resume()])];
+            $refus[] = ['champ' => 'driver_id', 'message' => Traductions::t('msg.planif_chauffeur_absent', 'Ce chauffeur est indisponible pendant la mission : :periode.', ['periode' => $absence->periode()])];
         }
 
         if ($immobilisation = $vehicule->indisponibleEntre($debut, $fin)) {
@@ -249,8 +251,9 @@ final class ControleAffectation
             return $empechements[0];
         }
 
+        // Sans le motif, comme dans conformite().
         if ($absence = $chauffeur->indisponibleEntre(self::debut($ordre, $fin), $fin)) {
-            return $absence->resume();
+            return $absence->periode();
         }
 
         return $ordre->is_hazardous ? $chauffeur->motifAdr($fin) : null;

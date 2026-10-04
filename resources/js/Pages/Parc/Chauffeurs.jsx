@@ -62,34 +62,53 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                     </div>
                 )}
 
+                {/* Numero de permis, entree en service, age, retraite et motif
+                    de sortie ne sont envoyes qu'a qui peut modifier la fiche :
+                    sans eux, les cases ne s'affichent pas. */}
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
                     <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('suivi.permis', 'Permis')}</dt><dd className="font-semibold text-marine">{chauffeur.permis}</dd></div>
-                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.numero', 'Numéro')}</dt><dd className="font-mono text-xs text-marine">{chauffeur.numero_permis}</dd></div>
+                    {peutModifier && (
+                        <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.numero', 'Numéro')}</dt><dd className="font-mono text-xs text-marine">{chauffeur.numero_permis}</dd></div>
+                    )}
                     <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('commun.statut', 'Statut')}</dt><dd className="font-semibold text-marine">{chauffeur.statut}</dd></div>
-                    <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('personnel.entree_service', 'Entrée en service')}</dt><dd className="font-semibold text-marine">{chauffeur.embauche ?? '—'}</dd></div>
+                    {peutModifier && (
+                        <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('personnel.entree_service', 'Entrée en service')}</dt><dd className="font-semibold text-marine">{chauffeur.embauche ?? '—'}</dd></div>
+                    )}
                     <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('auth.telephone', 'Téléphone')}</dt><dd className="font-semibold text-marine">{chauffeur.telephone ?? '—'}</dd></div>
                     <div><dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.missions_confiees', 'Missions confiées')}</dt><dd className="font-semibold text-marine">{chauffeur.missions}</dd></div>
-                    <div>
-                        <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.age', 'Âge')}</dt>
-                        <dd className="font-semibold text-marine">{chauffeur.age !== null ? chauffeur.age + ' ' + t('chauffeurs.ans', 'ans') : '—'}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.retraite', 'Retraite')}</dt>
-                        <dd className="font-semibold text-marine">{chauffeur.retraite_affichee ?? '—'}</dd>
-                    </div>
+                    {peutModifier && (
+                        <>
+                            <div>
+                                <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.age', 'Âge')}</dt>
+                                <dd className="font-semibold text-marine">{chauffeur.age !== null ? chauffeur.age + ' ' + t('chauffeurs.ans', 'ans') : '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs uppercase tracking-wide text-slate-600">{t('chauffeurs.retraite', 'Retraite')}</dt>
+                                <dd className="font-semibold text-marine">{chauffeur.retraite_affichee ?? '—'}</dd>
+                            </div>
+                        </>
+                    )}
                 </dl>
 
                 {chauffeur.sorti_le && (
                     <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
                         {chauffeur.depart_futur
-                            ? t('chauffeurs.depart_prevu_le', 'Départ prévu le :date — :motif. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', {
-                                date: chauffeur.sorti_le,
-                                motif: chauffeur.motif_sortie,
-                            })
-                            : t('chauffeurs.parti_le', 'Parti le :date — :motif. La fiche est conservée pour que les missions passées gardent un nom.', {
-                                date: chauffeur.sorti_le,
-                                motif: chauffeur.motif_sortie,
-                            })}
+                            ? (chauffeur.motif_sortie
+                                ? t('chauffeurs.depart_prevu_le', 'Départ prévu le :date — :motif. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', {
+                                    date: chauffeur.sorti_le,
+                                    motif: chauffeur.motif_sortie,
+                                })
+                                : t('chauffeurs.depart_prevu_le_sans_motif', 'Départ prévu le :date. Le compte se fermera ce jour-là ; d\'ici là, le chauffeur roule normalement.', {
+                                    date: chauffeur.sorti_le,
+                                }))
+                            : (chauffeur.motif_sortie
+                                ? t('chauffeurs.parti_le', 'Parti le :date — :motif. La fiche est conservée pour que les missions passées gardent un nom.', {
+                                    date: chauffeur.sorti_le,
+                                    motif: chauffeur.motif_sortie,
+                                })
+                                : t('chauffeurs.parti_le_sans_motif', 'Parti le :date. La fiche est conservée pour que les missions passées gardent un nom.', {
+                                    date: chauffeur.sorti_le,
+                                }))}
                     </p>
                 )}
 
@@ -247,10 +266,12 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         <div>
                             <label htmlFor="echeance" className="text-xs uppercase tracking-wide text-slate-600">
                                 {t('chauffeurs.echeance_permis', 'Échéance du permis')}
+                                <span className="text-status-incident"> *</span>
                             </label>
                             <input
                                 id="echeance"
                                 type="date"
+                                required
                                 value={data.license_expiry ?? ''}
                                 onChange={(e) => setData('license_expiry', e.target.value)}
                                 className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
@@ -380,7 +401,9 @@ export default function Chauffeurs({ suggestions = [], chauffeurs = [], permis =
                 suggestions={suggestions}
                 adresse={route('drivers.index')}
                 filtres={filtres}
-                placeholder={t('chauffeurs.filtre', 'Nom, adresse électronique, numéro de permis…')}
+                placeholder={peutModifier
+                    ? t('chauffeurs.filtre', 'Nom, adresse électronique, numéro de permis…')
+                    : t('chauffeurs.filtre_sans_numero', 'Nom, adresse électronique…')}
                 listes={[{ champ: 'permis', intitule: t('chauffeurs.tous_permis', 'Tous les permis'), options: permis, trier: false }]}
                 compteurs={[
                     { libelle: t('parc.tous', 'Tous'), valeur: null, nombre: compteurs.total },
@@ -419,7 +442,7 @@ export default function Chauffeurs({ suggestions = [], chauffeurs = [], permis =
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-3">
                                         <span className="font-semibold text-marine">{c.permis}</span>
-                                        <span className="ml-2 font-mono text-xs text-slate-600">{c.numero_permis}</span>
+                                        {c.numero_permis && <span className="ml-2 font-mono text-xs text-slate-600">{c.numero_permis}</span>}
                                         <span className={`block text-xs ${c.permis_bientot ? 'font-semibold text-status-incident' : 'text-slate-600'}`}>
                                             {c.permis_echeance
                                                 ? `${t('chauffeurs.expire_le', 'expire le')} ${c.permis_echeance}`

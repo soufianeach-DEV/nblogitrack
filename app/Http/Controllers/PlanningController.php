@@ -150,6 +150,14 @@ class PlanningController extends Controller
             ->paginate(15)
             ->withQueryString()
             ->through(function (TransportOrder $o) use ($parcDisponible, $chauffeursDisponibles) {
+                // Comme sur la fiche de l'ordre et au suivi : l'ecran n'a
+                // besoin que du nom du chauffeur. Sa fiche complete (date de
+                // naissance, numero de permis, motif de sortie) ne voyage
+                // pas avec l'ordre ; elle reste chargee pour les controles.
+                $o->makeHidden('driver');
+                $o->setAttribute('chauffeur', $o->driver?->user
+                    ? $o->driver->user->first_name.' '.$o->driver->user->last_name
+                    : null);
                 $o->setAttribute('conduite', TempsDeConduite::resume($o->distance_km));
                 $o->setAttribute('trajet', $o->trajet()->court());
 
@@ -262,6 +270,11 @@ class PlanningController extends Controller
             ->groupBy('driver_id')
             ->pluck('km', 'driver_id');
 
+        // L'ecran sert au planificateur comme a l'administrateur ; ce qui
+        // tient a la gestion du personnel ne part que vers ce dernier,
+        // comme a l'ecran Chauffeurs.
+        $peutModifier = $request->user()->can('manage-fleet');
+
         return Inertia::render('Planning/Index', [
             'orders' => $orders,
             'vehicles' => $parcDisponible->map(fn (Vehicle $v) => [
@@ -282,12 +295,15 @@ class PlanningController extends Controller
                     'license_type' => $d->license_type,
                     'adr_certified' => $d->adr_certified,
                     'conduite_semaine' => TempsDeConduite::heuresDeConduite((int) ($conduiteSemaine[$d->id] ?? 0)),
+                ] + ($peutModifier ? [
                     // Une retraite prevue passee sans depart enregistre
                     // n'interdit pas de conduire, mais la fiche est a revoir.
+                    // Seul l'administrateur la corrige : le planificateur
+                    // n'en fait rien, et la date laisse deviner l'age.
                     'retraite_passee' => $d->left_on === null && $d->retirement_planned_on?->lt(today())
                         ? $d->retirement_planned_on->format('d/m/Y')
                         : null,
-                ])
+                ] : []))
                 ->sortBy('nom')
                 ->values(),
             // Ce que couvre chaque permis : l'ecran compare le permis du

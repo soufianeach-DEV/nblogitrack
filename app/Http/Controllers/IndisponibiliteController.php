@@ -38,9 +38,22 @@ class IndisponibiliteController extends Controller
     {
         $indisponibilite->delete();
 
-        ActivityLog::record('unavailability.removed', 'Indisponibilité supprimée ('.self::concerne($indisponibilite).') : '.$indisponibilite->resume(), $indisponibilite->driver ?? $indisponibilite->vehicle, ['concerne' => self::concerne($indisponibilite)]);
+        ActivityLog::record('unavailability.removed', 'Indisponibilité supprimée ('.self::concerne($indisponibilite).') : '.self::periodeAuJournal($indisponibilite), $indisponibilite->driver ?? $indisponibilite->vehicle, ['concerne' => self::concerne($indisponibilite)]);
 
         return back()->with('success', Traductions::t('msg.indispo_supprimee', 'Indisponibilité supprimée.'));
+    }
+
+    /**
+     * La periode telle que le journal la garde. Pour un chauffeur, sans
+     * son motif : « maladie » est une donnee de sante, et la ligne du
+     * journal survit a la periode comme a l'effacement de la fiche
+     * (chauffeurs:cloturer-departs). Le motif d'un camion reste.
+     */
+    private static function periodeAuJournal(Indisponibilite $periode): string
+    {
+        return $periode->driver_id !== null
+            ? 'du '.$periode->du->format('d/m/Y').' au '.$periode->au->format('d/m/Y')
+            : $periode->resume();
     }
 
     /** Le chauffeur (par son nom) ou le camion (par sa plaque) concerne. */
@@ -81,7 +94,7 @@ class IndisponibiliteController extends Controller
      */
     private function enregistre(Indisponibilite $periode, $missions): RedirectResponse
     {
-        ActivityLog::record('unavailability.created', 'Indisponibilité enregistrée ('.self::concerne($periode).') : '.$periode->resume(), $periode->driver ?? $periode->vehicle, ['concerne' => self::concerne($periode)]);
+        ActivityLog::record('unavailability.created', 'Indisponibilité enregistrée ('.self::concerne($periode).') : '.self::periodeAuJournal($periode), $periode->driver ?? $periode->vehicle, ['concerne' => self::concerne($periode)]);
 
         $reponse = back()->with('success', Traductions::t('msg.indispo_enregistree', 'Indisponibilité enregistrée : :periode.', ['periode' => $periode->resume()]));
         $aReaffecter = ControleAffectation::missionsNonConformes($missions);

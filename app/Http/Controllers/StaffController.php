@@ -129,15 +129,18 @@ class StaffController extends Controller
         ]);
 
         $utilisateur = DB::transaction(function () use ($donnees) {
-            $utilisateur = User::create([
+            $utilisateur = new User([
                 'first_name' => $donnees['first_name'],
                 'last_name' => $donnees['last_name'],
                 'email' => $donnees['email'],
                 'phone' => $donnees['phone'] ?? null,
-                'role' => $donnees['role'],
                 'password' => Str::random(48),
-                'is_active' => true,
             ]);
+            // Hors assignation en masse : le role est l'un de ceux du
+            // personnel, valide ci-dessus.
+            $utilisateur->role = $donnees['role'];
+            $utilisateur->is_active = true;
+            $utilisateur->save();
 
             if ($donnees['role'] === 'DRIVER') {
                 Driver::create([
@@ -221,7 +224,8 @@ class StaffController extends Controller
             ]);
         }
 
-        $user->update(['is_active' => ! $user->is_active]);
+        $user->is_active = ! $user->is_active;
+        $user->save();
 
         if (! $user->is_active) {
             $this->couperLesAcces($user);

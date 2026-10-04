@@ -259,7 +259,7 @@ class CorrectionsAuditTest extends TestCase
     public function test_un_chauffeur_au_compte_ferme_n_est_plus_propose(): void
     {
         $chauffeur = $this->chauffeur();
-        $chauffeur->user->update(['is_active' => false]);
+        $chauffeur->user->forceFill(['is_active' => false])->save();
 
         $this->actingAs(User::factory()->planificateur()->create())
             ->get(route('planning.index'))
