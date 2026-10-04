@@ -743,7 +743,8 @@ class QuoteController extends Controller
 
             $offre = Tarificateur::offre($trajet, $demande, $km);
 
-            if ($refus = Encours::refus($client, (float) $offre['prix'][$grille->id])) {
+            // Message adresse au personnel, et non au client.
+            if ($refus = Encours::refus($client, (float) $offre['prix'][$grille->id], pourLePersonnel: true)) {
                 return $refus;
             }
 

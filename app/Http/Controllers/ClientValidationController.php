@@ -119,12 +119,15 @@ class ClientValidationController extends Controller
             'credit_limit' => $donnees['credit_limit'] ?? null,
         ]);
 
-        ActivityLog::record(
-            'client.terms_updated',
-            'Conditions de paiement de '.$client->company_name.' modifiées',
-            $client,
-            ['avant' => $avant, 'apres' => $client->only(['payment_terms', 'credit_limit'])],
-        );
+        // Le journal ne garde que les vrais changements.
+        if ($client->wasChanged(['payment_terms', 'credit_limit'])) {
+            ActivityLog::record(
+                'client.terms_updated',
+                'Conditions de paiement de '.$client->company_name.' modifiées',
+                $client,
+                ['avant' => $avant, 'apres' => $client->only(['payment_terms', 'credit_limit'])],
+            );
+        }
 
         return back()->with('success', Traductions::t('msg.conditions_enregistrees', 'Conditions de paiement de :entreprise enregistrées.', ['entreprise' => $client->company_name]));
     }
