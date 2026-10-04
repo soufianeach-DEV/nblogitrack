@@ -255,8 +255,9 @@ components:
       description: |
         Données refusées. `message` explique la cause ; `errors` donne le
         détail par champ pour une erreur de validation.
-        Avec `motif: encours`, l'entreprise a trois factures en retard ou a
-        atteint son plafond de crédit : aucune nouvelle expédition.
+        Avec `motif: encours`, l'entreprise a trois factures en retard, ou ses
+        factures dues TTC, augmentées du prix TTC de cette expédition,
+        dépasseraient son plafond de crédit : la commande est refusée.
       content:
         application/json:
           schema:
