@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,14 +30,21 @@ class DriverController extends Controller
 
         $requete = Driver::with('user:id,first_name,last_name,email,phone,is_active');
 
+        // L'ecran est ouvert a tout le personnel, la fiche ne se modifie
+        // que par l'administrateur : les donnees de gestion du personnel
+        // (Driver::DONNEES_RH) ne partent que vers lui.
+        $peutModifier = $request->user()->can('manage-fleet');
+
         if (! empty($filtres['q'])) {
             $terme = (string) $filtres['q'];
+            // Le numero de permis n'est cherche que pour qui le voit :
+            // sinon la recherche le laissait deviner chiffre par chiffre.
             $requete->where(fn ($q) => $q
-                ->whereContient('license_number', $terme)
-                ->orWhereHas('user', fn ($u) => $u
+                ->whereHas('user', fn ($u) => $u
                     ->whereContient('first_name', $terme)
                     ->orWhereContient('last_name', $terme)
-                    ->orWhereContient('email', $terme)));
+                    ->orWhereContient('email', $terme))
+                ->when($peutModifier, fn ($q) => $q->orWhereContient('license_number', $terme)));
         }
 
         if (! empty($filtres['permis'])) {
@@ -89,7 +97,6 @@ class DriverController extends Controller
                     'telephone' => $d->user?->phone,
                     'actif' => (bool) ($d->user?->is_active ?? false),
                     'permis' => $d->license_type,
-                    'numero_permis' => $d->license_number,
                     'permis_echeance' => $d->license_expiry?->format('d/m/Y'),
                     'permis_bientot' => $d->license_expiry !== null
                         && $d->license_expiry->lte(now()->addDays(60)),
@@ -102,32 +109,38 @@ class DriverController extends Controller
                     'code95_affiche' => $d->cpc_expiry?->format('d/m/Y'),
                     'tacho' => $d->tacho_card_expiry?->format('Y-m-d'),
                     'adr_fin' => $d->adr_expiry?->format('Y-m-d'),
+                    // La periode sert a planifier ; son motif (« maladie »)
+                    // et le commentaire libre qui le precise restent a qui
+                    // gere la fiche.
                     'indisponibilites' => $d->indisponibilites->map(fn (Indisponibilite $i) => [
                         'id' => $i->id,
-                        'resume' => $i->resume(),
-                        'commentaire' => $i->commentaire,
+                        'resume' => $peutModifier ? $i->resume() : $i->periode(),
+                        'commentaire' => $peutModifier ? $i->commentaire : null,
                     ])->all(),
                     'tacho_affiche' => $d->tacho_card_expiry?->format('d/m/Y'),
                     'statut' => self::statuts()[$d->employment_status] ?? $d->employment_status,
                     'statut_code' => $d->employment_status,
+                    // La date de sortie reste : elle borne la planification.
+                    'sorti_le' => $d->left_on?->format('d/m/Y'),
+                    'depart_futur' => $d->left_on !== null && $d->left_on->gt(today()),
+                    'empechements' => $d->empechements(),
+                    'heures' => (float) $d->daily_driving_hours,
+                    'disponible' => (bool) $d->is_available,
+                    'missions' => (int) ($missions[$d->id] ?? 0),
+                    'engage' => $enCours->has($d->id),
+                ] + ($peutModifier ? [
+                    'numero_permis' => $d->license_number,
                     'embauche' => $d->hired_on?->format('d/m/Y'),
                     'naissance' => $d->birth_date?->format('Y-m-d'),
                     'naissance_affichee' => $d->birth_date?->format('d/m/Y'),
                     'age' => $d->birth_date?->age,
                     'retraite_prevue' => $d->retirement_planned_on?->format('Y-m-d'),
                     'retraite_affichee' => $d->retirement_planned_on?->format('d/m/Y'),
-                    'sorti_le' => $d->left_on?->format('d/m/Y'),
-                    'depart_futur' => $d->left_on !== null && $d->left_on->gt(today()),
                     'motif_sortie' => $d->departure_reason !== null
                         ? (self::motifsSortie()[$d->departure_reason] ?? $d->departure_reason)
                         : null,
                     'motif_sortie_code' => $d->departure_reason,
-                    'empechements' => $d->empechements(),
-                    'heures' => (float) $d->daily_driving_hours,
-                    'disponible' => (bool) $d->is_available,
-                    'missions' => (int) ($missions[$d->id] ?? 0),
-                    'engage' => $enCours->has($d->id),
-                ])->sortBy('nom')->values()->all(),
+                ] : []))->sortBy('nom')->values()->all(),
             'permis' => Driver::distinct()->orderBy('license_type')->pluck('license_type'),
             'statuts' => self::statuts(),
             'motifsSortie' => self::motifsSortie(),
@@ -141,7 +154,7 @@ class DriverController extends Controller
                 'conformite' => Driver::where(DashboardController::chauffeursAMettreEnRegle())->count(),
             ],
             'filtres' => $filtres,
-            'peutModifier' => $request->user()->can('manage-fleet'),
+            'peutModifier' => $peutModifier,
         ]);
     }
 
@@ -240,14 +253,17 @@ class DriverController extends Controller
 
         $driver->update($donnees);
 
+        // Le journal dit qui a modifie la fiche, pas son contenu RH : ni
+        // le motif de sortie dans la phrase, ni Driver::DONNEES_RH dans le
+        // detail. Ces valeurs restent sur la fiche, qui s'efface un an
+        // apres le depart (chauffeurs:cloturer-departs).
         ActivityLog::record(
             ! empty($donnees['left_on']) ? 'driver.left' : 'driver.updated',
             ! empty($donnees['left_on'])
                 ? 'Départ de '.trim($driver->user?->first_name.' '.$driver->user?->last_name)
-                    .' ('.(Driver::MOTIFS_SORTIE[$donnees['departure_reason']] ?? '—').')'
                 : 'Chauffeur '.trim($driver->user?->first_name.' '.$driver->user?->last_name).' mis à jour',
             $driver,
-            $donnees,
+            Arr::except($donnees, Driver::DONNEES_RH),
         );
 
         $reponse = back()->with('success', ! empty($donnees['left_on'])

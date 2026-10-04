@@ -621,9 +621,7 @@ export default function Index({
                                     </span>
                                     <span>
                                         <span className="text-slate-600">{t('suivi.chauffeur', 'Chauffeur')} : </span>
-                                        {ordre.driver?.user
-                                            ? `${ordre.driver.user.first_name} ${ordre.driver.user.last_name}`
-                                            : t('planif.non_affecte', 'non affecté')}
+                                        {ordre.chauffeur ?? t('planif.non_affecte', 'non affecté')}
                                     </span>
                                     {ordre.porteuse_info && <div className="basis-full"><FretRetour ordre={ordre} /></div>}
                                     {(ordre.retours_possibles ?? []).length > 0 && (

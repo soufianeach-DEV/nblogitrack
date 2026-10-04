@@ -76,4 +76,18 @@ class Indisponibilite extends Model
             'au' => $this->au->format('d/m/Y'),
         ]);
     }
+
+    /**
+     * « absence du 10/10/2026 au 20/10/2026 » : la periode d'un chauffeur
+     * sans son motif, pour qui planifie sans gerer le personnel (« maladie »
+     * est une donnee de sante). Tous les motifs la prennent : ne masquer
+     * que la maladie la laisserait deviner.
+     */
+    public function periode(): string
+    {
+        return Traductions::t('indispo.absence', 'absence du :du au :au', [
+            'du' => $this->du->format('d/m/Y'),
+            'au' => $this->au->format('d/m/Y'),
+        ]);
+    }
 }
