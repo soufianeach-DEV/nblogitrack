@@ -12,6 +12,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Chronologie;
+use App\Support\Encours;
 use App\Support\FretRetour;
 use App\Support\GeocodageIndisponible;
 use App\Support\JoursFeries;
@@ -277,6 +278,10 @@ class ExpeditionController extends Controller
 
             $offre = Tarificateur::offre($trajet, $demande, $km);
 
+            if ($refus = Encours::refus($cle->client, (float) $offre['prix'][$grille->id])) {
+                return $refus;
+            }
+
             return TransportOrder::deposer([
                 'client_id' => $cle->client_id,
                 'created_date' => now()->toDateString(),
@@ -315,6 +320,10 @@ class ExpeditionController extends Controller
                 'idempotency_key' => $idempotence !== '' ? $idempotence : null,
             ]);
         });
+
+        if (is_string($expedition)) {
+            return response()->json(['message' => $expedition, 'motif' => 'encours'], 422);
+        }
 
         if ($expedition->getAttribute('rejoue')) {
             return $this->dejaDeposee($cle->client_id, $idempotence);

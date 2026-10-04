@@ -243,6 +243,7 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             Route::get('/entreprises', [ClientValidationController::class, 'index'])->name('clients.index');
             Route::post('/entreprises/{client}/validation', [ClientValidationController::class, 'approve'])->name('clients.approve');
             Route::post('/entreprises/{client}/refus', [ClientValidationController::class, 'reject'])->name('clients.reject');
+            Route::patch('/entreprises/{client}/conditions', [ClientValidationController::class, 'conditions'])->name('clients.terms');
         });
     });
 

@@ -12,6 +12,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Adresse;
 use App\Support\Chronologie;
+use App\Support\Encours;
 use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\GeocodageIndisponible;
@@ -352,6 +353,9 @@ class TransportOrderController extends Controller
             'paysEnlevement' => config('fret.pays_enlevement'),
             'paysEnlevementDevis' => config('fret.pays_enlevement_devis'),
             'remiseFretRetour' => (int) round(Tarificateur::remise() * 100),
+            // Prevenu des l'ouverture du formulaire : une facture en retard ou
+            // un plafond atteint bloquera la commande.
+            'blocageEncours' => $request->user()->client ? Encours::refus($request->user()->client, 0) : null,
         ]);
     }
 
@@ -652,6 +656,12 @@ class TransportOrderController extends Controller
                     'nouveau' => Formats::montant($prix),
                     'ancien' => Formats::montant((float) $data['prix_annonce']),
                 ])];
+            }
+
+            // Encours verifie sous le meme verrou : deux commandes simultanees
+            // ne depassent pas ensemble le plafond.
+            if ($refus = Encours::refus($request->user()->client, $prix)) {
+                return ['erreur' => $refus];
             }
 
             $approche = $data['pickup_country'] !== 'BE'

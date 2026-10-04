@@ -823,7 +823,19 @@ class TranslationSeeder extends Seeder
             'depart_prevu_le' => ['départ prévu le', 'vertrek gepland op', 'departure planned on'],
         ],
 
+        'delai' => [
+            '30_jours' => ['30 jours', '30 dagen', '30 days'],
+            '45_jours' => ['45 jours', '45 dagen', '45 days'],
+            '60_jours' => ['60 jours', '60 dagen', '60 days'],
+            'fin_de_mois' => ['Fin de mois', 'Einde van de maand', 'End of month'],
+        ],
         'entreprises' => [
+            'encours' => ['Encours', 'Openstaand bedrag', 'Outstanding balance'],
+            'encours_detail' => ['Factures dues :factures TTC · à facturer :a_facturer HT', 'Verschuldigde facturen :factures incl. btw · te factureren :a_facturer excl. btw', 'Invoices due :factures incl. VAT · to invoice :a_facturer excl. VAT'],
+            'factures_retard' => [':n facture(s) en retard : commandes bloquées', ':n achterstallige factuur/facturen: bestellingen geblokkeerd', ':n overdue invoice(s): orders blocked'],
+            'plafond_atteint' => ['Plafond atteint : commandes bloquées', 'Kredietlimiet bereikt: bestellingen geblokkeerd', 'Credit limit reached: orders blocked'],
+            'delai_paiement' => ['Délai de paiement', 'Betalingstermijn', 'Payment term'],
+            'sans_plafond' => ['Sans plafond', 'Geen limiet', 'No limit'],
             'tous_pays' => ['Tous les pays', 'Alle landen', 'All countries'],
             'tous_secteurs' => ['Tous les secteurs', 'Alle sectoren', 'All sectors'],
             'titre' => ['Entreprises inscrites', 'Geregistreerde ondernemingen', 'Registered companies'],
@@ -1421,6 +1433,7 @@ class TranslationSeeder extends Seeder
             'action_client_registered' => ['Inscription entreprise', 'Registratie onderneming', 'Company registration'],
             'action_client_validated' => ['Validation entreprise', 'Goedkeuring onderneming', 'Company approval'],
             'action_client_rejected' => ['Refus entreprise', 'Weigering onderneming', 'Company rejection'],
+            'action_client_terms_updated' => ['Conditions de paiement modifiées', 'Betalingsvoorwaarden gewijzigd', 'Payment terms updated'],
             'action_quote_handled' => ['Traitement de devis', 'Behandeling van offerte', 'Quote handling'],
             'action_order_created_api' => ['Création d\'ordre par API', 'Opdracht aangemaakt via API', 'Order created via API'],
             'action_order_unassigned' => ['Désaffectation', 'Loskoppeling', 'Unassignment'],
@@ -2071,6 +2084,7 @@ class TranslationSeeder extends Seeder
         ],
 
         'commande' => [
+            'encours_titre' => ['Commande impossible pour le moment', 'Bestellen is momenteel niet mogelijk', 'Ordering is not possible right now'],
             'estimation_indisponible' => ['Le prix n\'a pas pu être calculé (service momentanément indisponible).', 'De prijs kon niet worden berekend (dienst tijdelijk niet beschikbaar).', 'The price could not be calculated (service temporarily unavailable).'],
             'reessayer' => ['Réessayer', 'Opnieuw proberen', 'Try again'],
             'distance_km' => ['Distance : :km km', 'Afstand: :km km', 'Distance: :km km'],
@@ -3001,6 +3015,9 @@ class TranslationSeeder extends Seeder
             'peage' => ['Péage', 'Tol', 'Toll'],
         ],
         'msg' => [
+            'encours_retard' => ['Une facture est en retard de paiement : réglez-la avant de commander une nouvelle expédition.', 'Een factuur is achterstallig: betaal ze voordat u een nieuwe zending bestelt.', 'An invoice is overdue: please pay it before ordering a new shipment.'],
+            'encours_plafond' => ['Plafond de crédit atteint : encours de :encours pour un plafond de :plafond. Réglez vos factures ou contactez-nous pour le relever.', 'Kredietlimiet bereikt: openstaand bedrag van :encours voor een limiet van :plafond. Betaal uw facturen of neem contact met ons op om de limiet te verhogen.', 'Credit limit reached: outstanding balance of :encours for a limit of :plafond. Pay your invoices or contact us to raise it.'],
+            'conditions_enregistrees' => ['Conditions de paiement de :entreprise enregistrées.', 'Betalingsvoorwaarden van :entreprise opgeslagen.', 'Payment terms of :entreprise saved.'],
             'demande_api_en_cours' => ['Une demande d\'accès à l\'API est déjà en cours d\'examen.', 'Er wordt al een aanvraag voor API-toegang behandeld.', 'An API access request is already being reviewed.'],
             'demande_api_envoyee' => ['Demande envoyée. Vous serez prévenu par e-mail dès qu\'elle sera traitée.', 'Aanvraag verstuurd. U krijgt een e-mail zodra ze behandeld is.', 'Request sent. You will be notified by email as soon as it is handled.'],
             'cle_deja_affichee' => ['Cette clé a déjà été affichée. Si vous l\'avez perdue, faites une nouvelle demande.', 'Deze sleutel werd al getoond. Bent u hem kwijt, dien dan een nieuwe aanvraag in.', 'This key has already been displayed. If you lost it, submit a new request.'],
