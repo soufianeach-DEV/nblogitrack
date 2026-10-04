@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import TextInput from '@/Components/TextInput';
-import { useLangue, useTraduction } from '@/traduire';
+import { useLangue, useTraduction, useVocabulaire } from '@/traduire';
 
-// Proposees des la premiere lettre, avant toute recherche.
+// Proposees des la premiere lettre, avant toute recherche. Le nom francais
+// est la valeur transmise et enregistree ; l'affichage suit la langue par
+// le vocabulaire des villes. Vienne et Valence portent leurs noms ici :
+// une adresse en France (Isere, Drome) porte le meme nom francais.
 export const GRANDES_VILLES = {
-    AT: [['Vienne', 48.2082, 16.3738], ['Graz', 47.0707, 15.4395], ['Linz', 48.3069, 14.2858], ['Salzbourg', 47.8095, 13.0550]],
+    AT: [['Vienne', 48.2082, 16.3738, { nl: 'Wenen', en: 'Vienna' }], ['Graz', 47.0707, 15.4395], ['Linz', 48.3069, 14.2858], ['Salzbourg', 47.8095, 13.0550]],
     BE: [['Bruxelles', 50.8466, 4.3528], ['Anvers', 51.2199, 4.4035], ['Gand', 51.0543, 3.7174], ['Charleroi', 50.4114, 4.4448], ['Liège', 50.6326, 5.5797], ['Bruges', 51.2093, 3.2247], ['Namur', 50.4674, 4.8720], ['Louvain', 50.8796, 4.7009]],
     BG: [['Sofia', 42.6977, 23.3219], ['Plovdiv', 42.1354, 24.7453], ['Varna', 43.2141, 27.9147]],
     CH: [['Zurich', 47.3769, 8.5417], ['Genève', 46.2044, 6.1432], ['Bâle', 47.5596, 7.5886], ['Berne', 46.9480, 7.4474], ['Lausanne', 46.5197, 6.6323]],
@@ -12,7 +15,7 @@ export const GRANDES_VILLES = {
     DE: [['Berlin', 52.5200, 13.4050], ['Hambourg', 53.5511, 9.9937], ['Munich', 48.1351, 11.5820], ['Cologne', 50.9375, 6.9603], ['Francfort', 50.1109, 8.6821], ['Düsseldorf', 51.2277, 6.7735], ['Stuttgart', 48.7758, 9.1829]],
     DK: [['Copenhague', 55.6761, 12.5683], ['Aarhus', 56.1629, 10.2039], ['Odense', 55.4038, 10.4024]],
     EE: [['Tallinn', 59.4370, 24.7536], ['Tartu', 58.3776, 26.7290]],
-    ES: [['Madrid', 40.4168, -3.7038], ['Barcelone', 41.3874, 2.1686], ['Valence', 39.4699, -0.3763], ['Séville', 37.3891, -5.9845], ['Bilbao', 43.2630, -2.9350]],
+    ES: [['Madrid', 40.4168, -3.7038], ['Barcelone', 41.3874, 2.1686], ['Valence', 39.4699, -0.3763, { nl: 'Valencia', en: 'Valencia' }], ['Séville', 37.3891, -5.9845], ['Bilbao', 43.2630, -2.9350]],
     FI: [['Helsinki', 60.1699, 24.9384], ['Tampere', 61.4978, 23.7610], ['Turku', 60.4518, 22.2666]],
     FR: [['Paris', 48.8566, 2.3522], ['Marseille', 43.2965, 5.3698], ['Lyon', 45.7640, 4.8357], ['Toulouse', 43.6047, 1.4442], ['Nice', 43.7102, 7.2620], ['Nantes', 47.2184, -1.5536], ['Strasbourg', 48.5734, 7.7521], ['Lille', 50.6292, 3.0573]],
     GB: [['Londres', 51.5074, -0.1278], ['Manchester', 53.4808, -2.2426], ['Birmingham', 52.4862, -1.8904], ['Leeds', 53.8008, -1.5491], ['Glasgow', 55.8642, -4.2518]],
@@ -33,6 +36,8 @@ export const GRANDES_VILLES = {
     SI: [['Ljubljana', 46.0569, 14.5058], ['Maribor', 46.5547, 15.6459]],
     SK: [['Bratislava', 48.1486, 17.1077], ['Kosice', 48.7164, 21.2611]],
 };
+
+const sansAccent = (texte) => texte.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const photon = async (q, pays) => {
     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=fr&limit=6&layer=city&layer=district`;
@@ -62,6 +67,7 @@ const photon = async (q, pays) => {
 export default function ChampVille({ id, pays, valeur, choisie, onSaisie, onChoix, placeholder, photon: avecPhoton = true, className = 'block w-full pr-9' }) {
     const t = useTraduction();
     const langue = useLangue();
+    const vocabulaire = useVocabulaire();
     const nomPays = useMemo(() => new Intl.DisplayNames([langue], { type: 'region' }).of(pays) ?? pays, [langue, pays]);
     const [suggestions, setSuggestions] = useState([]);
     const [aucune, setAucune] = useState(false);
@@ -76,9 +82,18 @@ export default function ChampVille({ id, pays, valeur, choisie, onSaisie, onChoi
         setAucune(false);
     }, [pays]);
 
+    // Le nom d'une grande ville dans la langue de l'interface.
+    const nomAffiche = (nom) => {
+        const ville = (GRANDES_VILLES[pays] ?? []).find(([n]) => n === nom);
+
+        return ville?.[3]?.[langue] ?? vocabulaire('ville', nom);
+    };
+
+    // En neerlandais, « l » propose Luik et Leuven : la premiere lettre se
+    // compare au nom affiche, sans tenir compte des accents.
     const grandesVilles = (v) => (GRANDES_VILLES[pays] ?? [])
-        .filter(([n]) => n.toLowerCase().startsWith(v.toLowerCase()))
-        .map(([n, lat, lng]) => ({ properties: { name: n }, geometry: { coordinates: [lng, lat] } }));
+        .map(([n, lat, lng]) => ({ properties: { name: n, affiche: nomAffiche(n) }, geometry: { coordinates: [lng, lat] } }))
+        .filter((f) => sansAccent(f.properties.affiche).startsWith(sansAccent(v)));
 
     const chercher = (v) => {
         clearTimeout(minuteur.current);
@@ -128,7 +143,7 @@ export default function ChampVille({ id, pays, valeur, choisie, onSaisie, onChoi
             <div className="relative">
                 <TextInput
                     id={id}
-                    value={valeur}
+                    value={choisie ? nomAffiche(valeur) : valeur}
                     aria-label={t('adresse.ville', 'Ville')}
                     onChange={(e) => {
                         const v = e.target.value.toLowerCase();
@@ -165,7 +180,7 @@ export default function ChampVille({ id, pays, valeur, choisie, onSaisie, onChoi
                         {suggestions.map((f, i) => (
                             <li key={i}>
                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); choisir(f); }} className="block w-full px-4 py-2 text-left text-sm hover:bg-surface">
-                                    {f.properties.name}{f.properties.postcode ? ` — ${f.properties.postcode}` : ''}{f.properties.state ? ` · ${f.properties.state}` : ''}
+                                    {f.properties.affiche ?? f.properties.name}{f.properties.postcode ? ` — ${f.properties.postcode}` : ''}{f.properties.state ? ` · ${f.properties.state}` : ''}
                                 </button>
                             </li>
                         ))}

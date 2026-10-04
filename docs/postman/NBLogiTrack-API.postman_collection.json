@@ -1,0 +1,319 @@
+{
+  "info": {
+    "name": "NBLogiTrack — API partenaires v1",
+    "description": "Appels de l'API partenaires (docs/API.md, docs/openapi.yaml).\n\nLes clés ne sont jamais écrites dans cette collection. Elles se renseignent dans l'environnement « NBLogiTrack » (fichier NBLogiTrack.postman_environment.json), en valeur courante, dans des variables de type secret :\n- cleApi : clé d'une entreprise, avec les permissions lecture et écriture ;\n- cleApiBloquee : clé d'une entreprise qui a trois factures en retard ou dont le plafond de crédit est atteint (refus pour encours).\n\nbaseUrl est l'adresse de l'API, par exemple https://nblogitrack.onrender.com/api/v1.\n\nLes dates d'enlèvement et de livraison sont calculées avant chaque appel : le prochain jour ouvrable, puis trois jours ouvrables plus tard. Un jour férié belge n'est pas pris en compte : ce jour-là, l'API refuse la date.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{cleApi}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Prochain jour ouvrable (lundi a vendredi), puis trois jours ouvrables plus tard.",
+          "const ouvrable = (d) => [1, 2, 3, 4, 5].includes(d.getDay());",
+          "const jour = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;",
+          "const enlevement = new Date();",
+          "do { enlevement.setDate(enlevement.getDate() + 1); } while (! ouvrable(enlevement));",
+          "const livraison = new Date(enlevement);",
+          "for (let n = 0; n < 3;) { livraison.setDate(livraison.getDate() + 1); if (ouvrable(livraison)) n++; }",
+          "pm.collectionVariables.set('dateEnlevement', jour(enlevement));",
+          "pm.collectionVariables.set('dateLivraison', jour(livraison));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Lister les expéditions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "fr"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/expeditions?par_page=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "expeditions"
+          ],
+          "query": [
+            {
+              "key": "par_page",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "GET /expeditions, permission lecture. Les expéditions de l'entreprise de la clé, 10 par page."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('Une liste paginee', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.data).to.be.an('array');",
+              "    pm.expect(json.meta).to.include.keys('page', 'par_page', 'total', 'pages');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Déposer une expédition",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "fr"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enlevement\": \"Rue Neuve 43, 3500 Hasselt\",\n  \"livraison\": \"Avenue Louise 200, 1000 Bruxelles\",\n  \"poids\": 850,\n  \"marchandise\": \"Palettes\",\n  \"date_enlevement\": \"{{dateEnlevement}}\",\n  \"date_livraison\": \"{{dateLivraison}}\",\n  \"reference_chargement\": \"PM-{{$timestamp}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/expeditions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "expeditions"
+          ]
+        },
+        "description": "POST /expeditions, permission écriture. La référence de chargement change à chaque envoi ; l'en-tête Idempotency-Key aussi."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json().data;",
+              "pm.test('Un numero de suivi et un prix calcule par le serveur', () => {",
+              "    pm.expect(json.numero).to.be.a('string');",
+              "    pm.expect(json.prix_ht).to.be.a('number');",
+              "});",
+              "pm.test('Location pointe vers l\\'expedition', () => pm.expect(pm.response.headers.get('Location')).to.include(json.numero));",
+              "pm.collectionVariables.set('numero', json.numero);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lire l'expédition déposée",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "fr"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/expeditions/{{numero}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "expeditions",
+            "{{numero}}"
+          ]
+        },
+        "description": "GET /expeditions/{numero}, permission lecture. Le numéro vient de l'appel précédent."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('La meme expedition, avec son lien de suivi', () => {",
+              "    const json = pm.response.json().data;",
+              "    pm.expect(json.numero).to.eql(pm.collectionVariables.get('numero'));",
+              "    pm.expect(json.suivi_url).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refus sans clé (401)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "fr"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/expeditions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "expeditions"
+          ]
+        },
+        "description": "Appel sans en-tête Authorization : refusé avec le motif jeton_absent.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('Motif jeton_absent', () => pm.expect(pm.response.json().motif).to.eql('jeton_absent'));",
+              "pm.test('En-tete WWW-Authenticate', () => pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Bearer'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refus pour encours (422)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "fr"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enlevement\": \"Rue Neuve 43, 3500 Hasselt\",\n  \"livraison\": \"Avenue Louise 200, 1000 Bruxelles\",\n  \"poids\": 850,\n  \"marchandise\": \"Palettes\",\n  \"date_enlevement\": \"{{dateEnlevement}}\",\n  \"date_livraison\": \"{{dateLivraison}}\",\n  \"reference_chargement\": \"PM-{{$timestamp}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/expeditions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "expeditions"
+          ]
+        },
+        "description": "Dépôt avec la clé d'une entreprise bloquée (variable cleApiBloquee) : trois factures en retard, ou plafond de crédit atteint. L'expédition n'est pas créée.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{cleApiBloquee}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('422 Unprocessable', () => pm.response.to.have.status(422));",
+              "pm.test('Motif encours et message explicatif', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.motif).to.eql('encours');",
+              "    pm.expect(json.message).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://nblogitrack.onrender.com/api/v1"
+    },
+    {
+      "key": "dateEnlevement",
+      "value": ""
+    },
+    {
+      "key": "dateLivraison",
+      "value": ""
+    },
+    {
+      "key": "numero",
+      "value": ""
+    }
+  ]
+}

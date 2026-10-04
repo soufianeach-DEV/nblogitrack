@@ -76,7 +76,7 @@ class ClientValidationController extends Controller
                 ->orderByDesc('id')
                 ->paginate(10)
                 ->withQueryString()
-                // Ce que l'entreprise doit et devra, face a son plafond.
+                // Ce que l'entreprise doit sur ses factures emises et non reglees, TTC, face a son plafond.
                 ->through(fn (Client $c) => $c->setAttribute('encours', $c->is_validated ? Encours::de($c) : null)),
             'etat' => $etat,
             'delais' => self::DELAIS,
@@ -103,7 +103,8 @@ class ClientValidationController extends Controller
 
     /**
      * Le delai de paiement et le plafond de credit d'une entreprise. Sans
-     * plafond, seule une facture en retard bloque ses commandes.
+     * plafond, seules trois factures en retard bloquent ses commandes ; une
+     * ou deux donnent un avertissement.
      */
     public function conditions(Request $request, Client $client): RedirectResponse
     {
@@ -119,12 +120,15 @@ class ClientValidationController extends Controller
             'credit_limit' => $donnees['credit_limit'] ?? null,
         ]);
 
-        ActivityLog::record(
-            'client.terms_updated',
-            'Conditions de paiement de '.$client->company_name.' modifiées',
-            $client,
-            ['avant' => $avant, 'apres' => $client->only(['payment_terms', 'credit_limit'])],
-        );
+        // Le journal ne garde que les vrais changements.
+        if ($client->wasChanged(['payment_terms', 'credit_limit'])) {
+            ActivityLog::record(
+                'client.terms_updated',
+                'Conditions de paiement de '.$client->company_name.' modifiées',
+                $client,
+                ['avant' => $avant, 'apres' => $client->only(['payment_terms', 'credit_limit'])],
+            );
+        }
 
         return back()->with('success', Traductions::t('msg.conditions_enregistrees', 'Conditions de paiement de :entreprise enregistrées.', ['entreprise' => $client->company_name]));
     }

@@ -12,7 +12,8 @@ use Tests\TestCase;
 /**
  * Le simulateur de tarif propose les grandes villes sous leur nom
  * francais, comme les autres formulaires : le point de la ville choisie
- * la retrouve dans le referentiel, ou elle porte son nom local.
+ * la retrouve dans le referentiel, ou elle porte son nom local. Le
+ * resultat garde le nom choisi.
  */
 class VilleChoisieDansLaListeTest extends TestCase
 {
@@ -25,6 +26,7 @@ class VilleChoisieDansLaListeTest extends TestCase
         Http::fake(['router.project-osrm.org/*' => Http::response([], 503)]);
         DB::table('postal_codes')->insert([
             ['country_code' => 'BE', 'code' => '1000', 'city' => 'Bruxelles', 'lat' => 50.8504, 'lng' => 4.3488],
+            ['country_code' => 'BE', 'code' => '2000', 'city' => 'Antwerpen', 'lat' => 51.2194, 'lng' => 4.4025],
             ['country_code' => 'DE', 'code' => '50667', 'city' => 'Köln', 'lat' => 50.9384, 'lng' => 6.9599],
         ]);
         TariffGrid::factory()->create();
@@ -41,11 +43,15 @@ class VilleChoisieDansLaListeTest extends TestCase
         ]);
     }
 
-    public function test_une_grande_ville_choisie_sous_son_nom_francais_est_tarifee(): void
+    public function test_une_grande_ville_choisie_sous_son_nom_francais_est_tarifee_sous_ce_nom(): void
     {
-        $this->simuler(['destination' => 'Cologne', 'destination_lat' => 50.9375, 'destination_lng' => 6.9603])
+        $this->simuler([
+            'depart' => 'Anvers', 'depart_lat' => 51.2199, 'depart_lng' => 4.4035,
+            'destination' => 'Cologne', 'destination_lat' => 50.9375, 'destination_lng' => 6.9603,
+        ])
             ->assertOk()
-            ->assertJsonPath('arrivee', 'Köln');
+            ->assertJsonPath('depart', 'Anvers')
+            ->assertJsonPath('arrivee', 'Cologne');
     }
 
     public function test_un_nom_inconnu_sans_point_reste_refuse(): void
