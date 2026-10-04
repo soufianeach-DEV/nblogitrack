@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/docs', [DocumentationController::class, 'page'])->name('api.docs');
 Route::get('/docs/openapi.yaml', [DocumentationController::class, 'specification'])->name('api.docs.specification');
 
-Route::prefix('v1')->middleware('throttle:api')->group(function () {
+// Le journal des refus de limite passe avant la limite : il voit son 429.
+Route::prefix('v1')->middleware(['journal.limite', 'throttle:api'])->group(function () {
     Route::middleware('cle.api:lecture')->group(function () {
         Route::get('/expeditions', [ExpeditionController::class, 'index'])
             ->name('api.expeditions.index');

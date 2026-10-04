@@ -8,9 +8,11 @@ info:
 
     - Toutes les réponses sont en JSON, y compris les erreurs.
     - Les messages suivent l'en-tête `Accept-Language` (`fr`, `nl`, `en`),
-      sinon la langue du compte de l'entreprise.
+      sinon la langue du compte de l'entreprise une fois la clé acceptée ;
+      un refus de clé et la limite de débit répondent alors en français.
     - Limite de débit : 120 appels par minute et par clé, 300 par minute et
-      par adresse IP. Au-delà, `429` avec l'en-tête `Retry-After`.
+      par adresse IP. Au-delà, `429` avec l'en-tête `Retry-After` et le motif
+      `limite_depassee`.
 
     La documentation détaillée se trouve dans `docs/API.md`.
 servers:
@@ -258,14 +260,17 @@ components:
           schema:
             $ref: '#/components/schemas/ErreurValidation'
     TropDAppels:
-      description: Limite de débit dépassée.
+      description: Limite de débit dépassée. L'appel est inscrit au journal.
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Erreur'
+            $ref: '#/components/schemas/LimiteDepassee'
+          example:
+            message: Trop de requêtes. Réessayez dans 42 secondes.
+            motif: limite_depassee
 
   schemas:
     Statut:
@@ -487,6 +492,16 @@ components:
       properties:
         message:
           type: string
+
+    LimiteDepassee:
+      type: object
+      required: [message, motif]
+      properties:
+        message:
+          type: string
+        motif:
+          type: string
+          enum: [limite_depassee]
 
     Refus:
       type: object
