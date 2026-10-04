@@ -869,6 +869,8 @@ Les factures sont émises par voie électronique et payables à trente jours de 
 
 Le non-paiement d'une facture à son échéance rend immédiatement exigibles toutes les autres factures, même non échues, et autorise le transporteur à suspendre les prestations en cours après notification écrite.
 
+Le transporteur peut fixer à chaque donneur d'ordre un délai de paiement et un plafond de crédit, qui borne le total des factures non réglées et des expéditions pas encore facturées. Tant que ce plafond serait dépassé, ou que trois factures restent impayées après leur échéance, aucune nouvelle expédition ne peut être commandée ; les expéditions déjà confiées ne sont pas remises en cause par ce seul fait.
+
 ## Article 10 — Contestation d'une facture
 Toute contestation doit parvenir par écrit dans les dix jours calendrier de la date de facture, avec l'indication précise des motifs. Passé ce délai, la facture est présumée acceptée, sauf preuve contraire.
 
@@ -990,6 +992,8 @@ Bij niet-betaling op de vervaldag zijn van rechtswege en zonder ingebrekestellin
 
 De niet-betaling van één factuur op haar vervaldag maakt alle andere facturen onmiddellijk opeisbaar, ook de niet-vervallen, en machtigt de vervoerder om lopende prestaties op te schorten na schriftelijke kennisgeving.
 
+De vervoerder kan voor elke opdrachtgever een betalingstermijn en een kredietlimiet vastleggen; die limiet begrenst het totaal van de onbetaalde facturen en de nog niet gefactureerde zendingen. Zolang die limiet overschreden zou worden, of zolang drie facturen na hun vervaldag onbetaald blijven, kan geen nieuwe zending besteld worden; de reeds toevertrouwde zendingen komen daardoor alleen niet in het gedrang.
+
 ## Artikel 10 — Betwisting van een factuur
 Elke betwisting moet schriftelijk toekomen binnen tien kalenderdagen na factuurdatum, met nauwkeurige opgave van de redenen. Na die termijn wordt de factuur vermoed aanvaard te zijn, behoudens tegenbewijs.
 
@@ -1110,6 +1114,8 @@ Failing payment on the due date, and without prior notice, the following are due
 - beyond that fixed sum, reimbursement of other recovery costs reasonably incurred, on proof, under Article 6 of the same Act.
 
 Non-payment of one invoice on its due date makes all other invoices immediately payable, including those not yet due, and entitles the carrier to suspend ongoing services after written notice.
+
+The carrier may set a payment term and a credit limit for each customer; the limit caps the total of unpaid invoices and shipments not yet invoiced. As long as that limit would be exceeded, or three invoices remain unpaid after their due date, no new shipment can be ordered; shipments already entrusted are not called into question by this alone.
 
 ## Article 10 — Disputing an invoice
 Any dispute must be received in writing within ten calendar days of the invoice date, stating precise grounds. After that period, the invoice is presumed accepted, unless proven otherwise.
