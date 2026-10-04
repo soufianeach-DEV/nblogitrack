@@ -53,12 +53,14 @@ function ConditionsPaiement({ client, delais, retardsBloquants }) {
                 </p>
                 {encours.en_retard >= retardsBloquants && (
                     <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
-                        {t('entreprises.factures_retard', ':n facture(s) en retard : commandes bloquées', { n: encours.en_retard })}
+                        {t('entreprises.factures_retard', ':n factures en retard : commandes bloquées', { n: encours.en_retard })}
                     </p>
                 )}
                 {encours.en_retard > 0 && encours.en_retard < retardsBloquants && (
                     <p className="mt-1 inline-block rounded-full bg-action/15 px-3 py-0.5 text-xs font-semibold text-marine">
-                        {t('entreprises.factures_retard_avertissement', ':n facture(s) en retard (blocage à :seuil)', { n: encours.en_retard, seuil: retardsBloquants })}
+                        {encours.en_retard === 1
+                            ? t('entreprises.facture_retard_avertissement', '1 facture en retard (blocage à :seuil)', { seuil: retardsBloquants })
+                            : t('entreprises.factures_retard_avertissement', ':n factures en retard (blocage à :seuil)', { n: encours.en_retard, seuil: retardsBloquants })}
                     </p>
                 )}
                 {encours.en_retard < retardsBloquants && part !== null && part >= 100 && (
