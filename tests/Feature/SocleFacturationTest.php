@@ -8,6 +8,7 @@ use App\Models\OrderCharge;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Support\EnvoiPeppol;
+use App\Support\FactureALaLivraison;
 use App\Support\FactureUbl;
 use App\Support\Facturier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -173,6 +174,29 @@ class SocleFacturationTest extends TestCase
         $client = Client::factory()->create(['billing_address' => 'Rue Fausse 1']);
         $ordre = $this->livree($client);
         $facture = $this->facturer();
+
+        $client->update(['billing_address' => 'Rue Juste 2']);
+
+        $this->actingAs($this->admin())
+            ->post(route('invoices.credit', $facture), ['motif' => 'Adresse de facturation erronée', 'refacturer' => true])
+            ->assertSessionHas('success');
+
+        $nouvelle = Invoice::where('type', Invoice::FACTURE)->where('id', '!=', $facture->id)->first();
+        $this->assertNotNull($nouvelle);
+        $this->assertSame('Rue Juste 2', $nouvelle->buyer_address);
+        $this->assertSame($nouvelle->id, $ordre->fresh()->invoiceLine->invoice_id);
+        $this->assertEquals($facture->amount_incl_tax, $nouvelle->amount_incl_tax);
+    }
+
+    public function test_un_avoir_avec_refacturation_reemet_aussi_une_facture_du_mois_en_cours(): void
+    {
+        // Livree le 8 avril et facturee a la livraison : la facture porte sur
+        // le mois en cours. Annulee avec refacturation, elle doit repartir
+        // tout de suite, et non au 1er mai.
+        $client = Client::factory()->create(['billing_address' => 'Rue Fausse 1']);
+        $ordre = $this->livree($client, 1000, '2026-04-08');
+        $facture = FactureALaLivraison::emettre($ordre);
+        $this->assertNotNull($facture);
 
         $client->update(['billing_address' => 'Rue Juste 2']);
 
