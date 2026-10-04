@@ -247,10 +247,12 @@ function Fiche({ chauffeur, statuts, motifsSortie, peutModifier, onFermer }) {
                         <div>
                             <label htmlFor="echeance" className="text-xs uppercase tracking-wide text-slate-600">
                                 {t('chauffeurs.echeance_permis', 'Échéance du permis')}
+                                <span className="text-status-incident"> *</span>
                             </label>
                             <input
                                 id="echeance"
                                 type="date"
+                                required
                                 value={data.license_expiry ?? ''}
                                 onChange={(e) => setData('license_expiry', e.target.value)}
                                 className="mt-1 w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-marine focus:ring-marine"
