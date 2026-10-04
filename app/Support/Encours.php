@@ -68,7 +68,14 @@ class Encours
 
         $plafond = (float) $client->credit_limit;
         $commande = self::ttc($client, $prixHt);
-        $depasse = $prixHt > 0 ? $plafond < $encours['total'] + $commande : $encours['total'] >= $plafond;
+
+        // En centimes : une somme de flottants comme 604.99 + 13.44 vaut
+        // 618.4300000000001 et refuserait une commande qui atteint pile le
+        // plafond, sans le depasser.
+        $centimes = fn (float $montant) => (int) round($montant * 100);
+        $depasse = $prixHt > 0
+            ? $centimes($plafond) < $centimes($encours['total'] + $commande)
+            : $centimes($encours['total']) >= $centimes($plafond);
 
         if (! $depasse) {
             return null;
@@ -82,7 +89,7 @@ class Encours
         ];
 
         return match (true) {
-            $pourLePersonnel => Traductions::t('msg.encours_plafond_personnel', 'Cette commande ferait dépasser le plafond de crédit de :entreprise : factures dues de :encours, plus :commande pour cette commande, pour un plafond de :plafond. Relevez le plafond sur l’écran Entreprises ou attendez le règlement de ses factures.', $valeurs),
+            $pourLePersonnel => Traductions::t('msg.encours_plafond_personnel', 'Cette commande ferait dépasser le plafond de crédit de :entreprise : factures dues de :encours, plus :commande pour cette commande, pour un plafond de :plafond. Faites relever le plafond par un administrateur (écran Entreprises) ou attendez le règlement de ses factures.', $valeurs),
             $prixHt > 0 => Traductions::t('msg.encours_plafond_commande', 'Plafond de crédit dépassé : factures dues de :encours, plus :commande pour cette commande, pour un plafond de :plafond. Réglez vos factures ou contactez-nous pour le relever.', $valeurs),
             default => Traductions::t('msg.encours_plafond', 'Plafond de crédit atteint : factures dues de :encours pour un plafond de :plafond. Réglez vos factures ou contactez-nous pour le relever.', $valeurs),
         };

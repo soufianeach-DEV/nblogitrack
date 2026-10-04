@@ -7,9 +7,10 @@
 -- est toujours renseigne, a trente jours par defaut, celui que fixe la
 -- loi du deux aout deux mille deux a defaut de convention contraire.
 --
--- Le plafond de credit bloque une commande qui le ferait depasser : les
--- entreprises en attente de validation n'en ont pas encore (vide, sans
--- limite) ; un plafond de 0 bloquerait toute commande.
+-- Le plafond de credit bloque une commande qui le ferait depasser. Les
+-- entreprises de test par pays, encore en attente de validation
+-- (identifiants 435 a 461), n'en ont pas (vide, sans limite) : un
+-- plafond de 0 bloquerait toute commande.
 INSERT INTO clients (id, company_name, vat_number, enterprise_number, peppol_id, billing_address, city, postal_code, country, is_validated, business_sector, credit_limit, payment_terms, validated_by, validated_at) VALUES
   (1, 'Matériaux Mertens NV', 'BE0265042007', '0265.042.007', '0208:0265042007', 'Avenue Louise 123', 'Charleroi', '6000', 'Belgique', TRUE, 'Construction de bâtiments', 7000.00, '30 jours', 331, '2025-12-24 08:29:39'),
   (2, 'Chimie De Vos SC', 'BE0935548019', '0935.548.019', '0208:0935548019', 'Rue de la Loi 24', 'Tournai', '7500', 'Belgique', TRUE, 'Commerce de gros', 20000.00, 'Fin de mois', 332, '2025-02-13 12:43:08'),

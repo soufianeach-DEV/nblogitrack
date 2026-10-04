@@ -126,6 +126,20 @@ class PlafondEncoursTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('blocageEncours', fn ($m) => is_string($m) && str_contains($m, 'Plafond')));
     }
 
+    public function test_une_commande_qui_atteint_pile_un_plafond_a_centimes_passe(): void
+    {
+        $entreprise = Client::factory()->create(['credit_limit' => 618.43, 'payment_terms' => '30 jours']);
+        $this->facturer($entreprise);
+        $facture = Invoice::where('client_id', $entreprise->id)->first();
+        Payment::create(['invoice_id' => $facture->id, 'amount' => 0.01, 'paid_on' => '2026-04-12', 'method' => 'TRANSFER']);
+
+        // 604,99 dus + 13,44 TTC (11,11 HT) = 618,43 : le plafond est atteint
+        // sans etre depasse. En flottants, la somme vaut 618.4300000000001.
+        $this->assertSame(604.99, Encours::de($entreprise)['total']);
+        $this->assertNull(Encours::refus($entreprise, 11.11));
+        $this->assertNotNull(Encours::refus($entreprise, 11.12));
+    }
+
     public function test_le_personnel_recoit_un_message_qui_lui_est_adresse(): void
     {
         $entreprise = Client::factory()->create(['company_name' => 'Transports Dubois', 'credit_limit' => 100]);
@@ -133,7 +147,7 @@ class PlafondEncoursTest extends TestCase
         $message = Encours::refus($entreprise, 500, pourLePersonnel: true);
 
         $this->assertStringContainsString('Transports Dubois', $message);
-        $this->assertStringContainsString('écran Entreprises', $message);
+        $this->assertStringContainsString('par un administrateur (écran Entreprises)', $message);
     }
 
     public function test_une_facture_en_retard_avertit_trois_bloquent(): void
