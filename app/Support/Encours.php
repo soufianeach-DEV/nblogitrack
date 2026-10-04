@@ -10,11 +10,14 @@ use Illuminate\Support\Facades\DB;
 /**
  * L'encours d'une entreprise : ce qu'elle doit deja (factures emises non
  * reglees, TTC) et ce qu'elle devra (expeditions non annulees pas encore
- * facturees, HT estime). Une facture en retard, ou un encours qui
- * depasserait le plafond de credit, bloque toute nouvelle commande.
+ * facturees, HT estime). Trois factures en retard, ou un encours qui
+ * depasserait le plafond de credit, bloquent toute nouvelle commande.
  */
 class Encours
 {
+    /** A partir de ce nombre de factures en retard, l'entreprise ne commande plus. */
+    public const RETARDS_BLOQUANTS = 3;
+
     /** @return array{factures: float, a_facturer: float, total: float, en_retard: int} */
     public static function de(Client $client): array
     {
@@ -49,8 +52,8 @@ class Encours
     {
         $encours = self::de($client);
 
-        if ($encours['en_retard'] > 0) {
-            return Traductions::t('msg.encours_retard', 'Une facture est en retard de paiement : réglez-la avant de commander une nouvelle expédition.');
+        if ($encours['en_retard'] >= self::RETARDS_BLOQUANTS) {
+            return Traductions::t('msg.encours_retards', ':n factures sont en retard de paiement : réglez-les avant de commander une nouvelle expédition.', ['n' => $encours['en_retard']]);
         }
 
         if ($client->credit_limit !== null && (float) $client->credit_limit < $encours['total'] + $montant) {
@@ -61,5 +64,18 @@ class Encours
         }
 
         return null;
+    }
+
+    /**
+     * Un rappel sans blocage : une ou deux factures en retard, avant le
+     * seuil qui bloque les commandes.
+     */
+    public static function avertissement(Client $client): ?string
+    {
+        $retards = self::de($client)['en_retard'];
+
+        return $retards > 0 && $retards < self::RETARDS_BLOQUANTS
+            ? Traductions::t('msg.encours_avertissement', ':n facture(s) en retard de paiement. À partir de :seuil, les nouvelles commandes sont bloquées.', ['n' => $retards, 'seuil' => self::RETARDS_BLOQUANTS])
+            : null;
     }
 }

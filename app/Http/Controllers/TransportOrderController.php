@@ -353,9 +353,10 @@ class TransportOrderController extends Controller
             'paysEnlevement' => config('fret.pays_enlevement'),
             'paysEnlevementDevis' => config('fret.pays_enlevement_devis'),
             'remiseFretRetour' => (int) round(Tarificateur::remise() * 100),
-            // Prevenu des l'ouverture du formulaire : une facture en retard ou
-            // un plafond atteint bloquera la commande.
+            // Prevenu des l'ouverture du formulaire : trois factures en retard
+            // ou un plafond atteint bloqueront la commande.
             'blocageEncours' => $request->user()->client ? Encours::refus($request->user()->client, 0) : null,
+            'avertissementEncours' => $request->user()->client ? Encours::avertissement($request->user()->client) : null,
         ]);
     }
 

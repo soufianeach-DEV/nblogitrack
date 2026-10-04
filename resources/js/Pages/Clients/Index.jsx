@@ -18,7 +18,7 @@ const ONGLETS = {
  * encours : ce qu'elle doit (factures TTC) et ce qu'elle devra (expeditions
  * pas encore facturees, HT).
  */
-function ConditionsPaiement({ client, delais }) {
+function ConditionsPaiement({ client, delais, retardsBloquants }) {
     const t = useTraduction();
     const locale = useLocale();
     const { data, setData, patch, processing, errors, isDirty } = useForm({
@@ -51,12 +51,17 @@ function ConditionsPaiement({ client, delais }) {
                 <p className="mt-1 text-xs text-slate-600">
                     {t('entreprises.encours_detail', 'Factures dues :factures TTC · à facturer :a_facturer HT', { factures: euros(encours.factures), a_facturer: euros(encours.a_facturer) })}
                 </p>
-                {encours.en_retard > 0 && (
+                {encours.en_retard >= retardsBloquants && (
                     <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
                         {t('entreprises.factures_retard', ':n facture(s) en retard : commandes bloquées', { n: encours.en_retard })}
                     </p>
                 )}
-                {encours.en_retard === 0 && part !== null && part >= 100 && (
+                {encours.en_retard > 0 && encours.en_retard < retardsBloquants && (
+                    <p className="mt-1 inline-block rounded-full bg-action/15 px-3 py-0.5 text-xs font-semibold text-marine">
+                        {t('entreprises.factures_retard_avertissement', ':n facture(s) en retard (blocage à :seuil)', { n: encours.en_retard, seuil: retardsBloquants })}
+                    </p>
+                )}
+                {encours.en_retard < retardsBloquants && part !== null && part >= 100 && (
                     <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
                         {t('entreprises.plafond_atteint', 'Plafond atteint : commandes bloquées')}
                     </p>
@@ -97,7 +102,7 @@ function ConditionsPaiement({ client, delais }) {
     );
 }
 
-export default function Index({ clients, etat, filtres, suggestions, compteurs, delais = [] }) {
+export default function Index({ clients, etat, filtres, suggestions, compteurs, delais = [], retardsBloquants = 3 }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const p = usePays();
@@ -314,7 +319,7 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs, 
                                 {ligne(t('auth.telephone', 'Téléphone'), contact?.phone)}
                             </dl>
 
-                            {etatClient === 'validee' && client.encours && <ConditionsPaiement client={client} delais={delais} />}
+                            {etatClient === 'validee' && client.encours && <ConditionsPaiement client={client} delais={delais} retardsBloquants={retardsBloquants} />}
 
                             {client.rejection_reason && (
                                 <p className="mt-3 rounded-lg bg-status-incident/5 px-3 py-2 text-xs text-status-incident">

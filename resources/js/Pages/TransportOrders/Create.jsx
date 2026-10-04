@@ -34,7 +34,7 @@ const NOMS_OFFRE = {
 
 const ORDRE_OFFRE = { ECO: 0, STANDARD: 1, EXPRESS: 2 };
 
-export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [], paysEnlevement = ['BE'], remiseFretRetour = 0, blocageEncours = null }) {
+export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 44000, volumeMax = 120, flotte = [], paysEnlevement = ['BE'], remiseFretRetour = 0, blocageEncours = null, avertissementEncours = null }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const locale = useLocale();
@@ -221,6 +221,12 @@ export default function Create({ tariffGrids, marchandisesAdr = [], poidsMax = 4
     return (
         <AuthenticatedLayout header={<h1 className="text-2xl font-bold text-marine">{t('commande.titre', 'Nouvelle expédition')}</h1>}>
             <Head title={t('commande.titre', 'Nouvelle expédition')} />
+
+            {! blocageEncours && avertissementEncours && (
+                <div role="status" className="mb-4 rounded-2xl border-2 border-action bg-action/10 p-4 text-sm text-marine">
+                    {avertissementEncours}
+                </div>
+            )}
 
             {blocageEncours && (
                 <div role="alert" className="mb-4 rounded-2xl border-2 border-status-incident/40 bg-status-incident/5 p-5 text-sm text-status-incident">

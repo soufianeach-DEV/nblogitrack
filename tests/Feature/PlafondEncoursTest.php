@@ -80,20 +80,36 @@ class PlafondEncoursTest extends TestCase
         $this->assertSame(0, $encours['en_retard']);
     }
 
-    public function test_une_facture_en_retard_bloque_les_commandes(): void
+    public function test_une_facture_en_retard_avertit_trois_bloquent(): void
     {
         TariffGrid::factory()->create();
         $entreprise = Client::factory()->create(['credit_limit' => null, 'payment_terms' => '30 jours']);
-        $this->facturer($entreprise);
+        $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
 
-        // Echeance le 10 mai : le 20 mai, la facture est en retard.
+        // Une facture par mois : janvier, fevrier, mars.
+        foreach (['2026-02-05' => '2026-01-10', '2026-03-05' => '2026-02-10', '2026-04-05' => '2026-03-10'] as $jour => $livraison) {
+            $this->travelTo($jour);
+            TransportOrder::factory()->livree()->create(['client_id' => $entreprise->id, 'actual_delivery_date' => $livraison, 'estimated_cost' => 500]);
+            app(Facturier::class)->facturer();
+        }
+
+        // Le 20 mars : seule la facture de janvier (echeance 7 mars) est en retard.
+        $this->travelTo('2026-03-20');
+        $this->assertSame(1, Encours::de($entreprise)['en_retard']);
+        $this->assertNull(Encours::refus($entreprise, 0));
+        $this->actingAs($client)->get(route('transport-orders.create', ['langue' => 'fr']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('blocageEncours', null)
+                ->where('avertissementEncours', fn ($m) => is_string($m) && str_contains($m, '3')));
+
+        // Le 20 mai : les trois sont en retard, les commandes sont bloquees.
         $this->travelTo('2026-05-20');
+        $this->assertSame(3, Encours::de($entreprise)['en_retard']);
         $avant = TransportOrder::count();
 
         $this->deposer($entreprise)->assertStatus(422)->assertJsonPath('motif', 'encours');
         $this->assertSame($avant, TransportOrder::count());
 
-        $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
         $this->actingAs($client)->get(route('transport-orders.create', ['langue' => 'fr']))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('blocageEncours', fn ($m) => is_string($m) && str_contains($m, 'retard')));
     }

@@ -80,6 +80,7 @@ class ClientValidationController extends Controller
                 ->through(fn (Client $c) => $c->setAttribute('encours', $c->is_validated ? Encours::de($c) : null)),
             'etat' => $etat,
             'delais' => self::DELAIS,
+            'retardsBloquants' => Encours::RETARDS_BLOQUANTS,
             'filtres' => $filtres,
             'suggestions' => [
                 'entreprises' => Client::orderBy('company_name')->distinct()->limit(300)->pluck('company_name'),

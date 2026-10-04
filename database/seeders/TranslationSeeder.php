@@ -833,6 +833,7 @@ class TranslationSeeder extends Seeder
             'encours' => ['Encours', 'Openstaand bedrag', 'Outstanding balance'],
             'encours_detail' => ['Factures dues :factures TTC · à facturer :a_facturer HT', 'Verschuldigde facturen :factures incl. btw · te factureren :a_facturer excl. btw', 'Invoices due :factures incl. VAT · to invoice :a_facturer excl. VAT'],
             'factures_retard' => [':n facture(s) en retard : commandes bloquées', ':n achterstallige factuur/facturen: bestellingen geblokkeerd', ':n overdue invoice(s): orders blocked'],
+            'factures_retard_avertissement' => [':n facture(s) en retard (blocage à :seuil)', ':n achterstallige factuur/facturen (blokkering vanaf :seuil)', ':n overdue invoice(s) (blocked at :seuil)'],
             'plafond_atteint' => ['Plafond atteint : commandes bloquées', 'Kredietlimiet bereikt: bestellingen geblokkeerd', 'Credit limit reached: orders blocked'],
             'delai_paiement' => ['Délai de paiement', 'Betalingstermijn', 'Payment term'],
             'sans_plafond' => ['Sans plafond', 'Geen limiet', 'No limit'],
@@ -3015,7 +3016,8 @@ class TranslationSeeder extends Seeder
             'peage' => ['Péage', 'Tol', 'Toll'],
         ],
         'msg' => [
-            'encours_retard' => ['Une facture est en retard de paiement : réglez-la avant de commander une nouvelle expédition.', 'Een factuur is achterstallig: betaal ze voordat u een nieuwe zending bestelt.', 'An invoice is overdue: please pay it before ordering a new shipment.'],
+            'encours_retards' => [':n factures sont en retard de paiement : réglez-les avant de commander une nouvelle expédition.', ':n facturen zijn achterstallig: betaal ze voordat u een nieuwe zending bestelt.', ':n invoices are overdue: please pay them before ordering a new shipment.'],
+            'encours_avertissement' => [':n facture(s) en retard de paiement. À partir de :seuil, les nouvelles commandes sont bloquées.', ':n achterstallige factuur/facturen. Vanaf :seuil worden nieuwe bestellingen geblokkeerd.', ':n overdue invoice(s). From :seuil onwards, new orders are blocked.'],
             'encours_plafond' => ['Plafond de crédit atteint : encours de :encours pour un plafond de :plafond. Réglez vos factures ou contactez-nous pour le relever.', 'Kredietlimiet bereikt: openstaand bedrag van :encours voor een limiet van :plafond. Betaal uw facturen of neem contact met ons op om de limiet te verhogen.', 'Credit limit reached: outstanding balance of :encours for a limit of :plafond. Pay your invoices or contact us to raise it.'],
             'conditions_enregistrees' => ['Conditions de paiement de :entreprise enregistrées.', 'Betalingsvoorwaarden van :entreprise opgeslagen.', 'Payment terms of :entreprise saved.'],
             'demande_api_en_cours' => ['Une demande d\'accès à l\'API est déjà en cours d\'examen.', 'Er wordt al een aanvraag voor API-toegang behandeld.', 'An API access request is already being reviewed.'],
