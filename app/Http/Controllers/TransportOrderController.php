@@ -281,6 +281,20 @@ class TransportOrderController extends Controller
                     (float) $data[$cle.'_lat'],
                     (float) $data[$cle.'_lng'],
                 );
+
+                // Une ville choisie sous son nom francais (« Cologne ») n'est
+                // dans le referentiel que sous son nom local : son code postal
+                // la retrouve. L'ecart de 15 km confronte toujours l'adresse
+                // ecrite au point transmis. Il faut un nom de ville : « 59000 % »
+                // reste refuse.
+                if ($point === null && ! Localite::enLigne($pays) && preg_match('/\p{L}{2}/u', Adresse::localite($data[$champ]))) {
+                    $point = Localite::parCodePostal(
+                        $pays,
+                        Adresse::codePostal($data[$champ]),
+                        (float) $data[$cle.'_lat'],
+                        (float) $data[$cle.'_lng'],
+                    );
+                }
             } catch (GeocodageIndisponible) {
                 return ['champ' => $champ, 'message' => Traductions::t('msg.verification_adresse_indisponible', 'La vérification de l\'adresse est momentanément indisponible. Réessayez dans quelques minutes.')];
             }
