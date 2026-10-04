@@ -8,9 +8,9 @@ use Illuminate\Console\Command;
 
 class PurgerPositions extends Command
 {
-    protected $signature = 'positions:purger {--jours=7 : Delai apres livraison} {--essai : Compter sans effacer}';
+    protected $signature = 'positions:purger {--jours=7 : Delai apres livraison} {--jalons=365 : Delai avant d\'effacer les jalons} {--essai : Compter sans effacer}';
 
-    protected $description = 'Efface les positions de route des expéditions livrées.';
+    protected $description = 'Efface les positions de route des expéditions livrées, puis leurs jalons un an plus tard.';
 
     public function handle(): int
     {
@@ -39,18 +39,30 @@ class PurgerPositions extends Command
         $requete = ShipmentPosition::where('type', ShipmentPosition::ROUTE)
             ->whereIn('transport_order_id', $livrees);
 
+        // Les jalons (enlevement, livraison) prouvent le passage du
+        // chauffeur pendant le delai ordinaire de prescription de la
+        // convention CMR (art. 32 : un an). Ensuite, l'ordre garde l'heure,
+        // le receptionnaire et les reserves, sans la position du chauffeur.
+        $jalons = ShipmentPosition::where('type', ShipmentPosition::JALON)
+            ->whereIn('transport_order_id', TransportOrder::whereIn('status', ['DELIVERED', 'CANCELLED'])
+                ->whereRaw('COALESCE(delivered_at, actual_delivery_date, cancelled_at, updated_at) <= ?', [now()->subDays(max(0, (int) $this->option('jalons')))])
+                ->select('id'));
+
         $nombre = $requete->count();
+        $nombreJalons = $jalons->count();
 
         if ($this->option('essai')) {
             $this->line("  $nombre position(s) de route seraient effacées.");
             $this->line('  Expéditions livrées depuis plus de '.$jours.' jour(s) : '.$livrees->count());
+            $this->line("  $nombreJalons jalon(s) de plus d'un an seraient effacés.");
 
             return self::SUCCESS;
         }
 
         $requete->delete();
+        $jalons->delete();
 
-        $this->info("  $nombre position(s) de route effacée(s).");
+        $this->info("  $nombre position(s) de route et $nombreJalons jalon(s) effacé(s).");
         $this->line('  Jalons conservés : '.ShipmentPosition::where('type', ShipmentPosition::JALON)->count());
 
         return self::SUCCESS;

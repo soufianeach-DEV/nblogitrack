@@ -5,6 +5,7 @@ use App\Http\Middleware\DefinirLangue;
 use App\Http\Middleware\EnTetesDeSecurite;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IgnorerFiltresEnTableau;
+use App\Http\Middleware\JournaliserLimiteApi;
 use App\Http\Middleware\MesurerAudience;
 use App\Http\Middleware\RetirerCaracteresDeControle;
 use App\Http\Middleware\VerifierCompteActif;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -73,7 +75,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // permission exigee se lise sur la route (cle.api:ecriture).
         $middleware->alias([
             'cle.api' => AuthentifierCleApi::class,
+            'journal.limite' => JournaliserLimiteApi::class,
         ]);
+
+        // Laravel range la limite de debit en tete des middlewares d'une
+        // route : le journal des refus doit passer avant elle pour voir son 429.
+        $middleware->prependToPriorityList(ThrottleRequests::class, JournaliserLimiteApi::class);
 
         /*
          * Derriere un proxy, l'adresse vue par l'application est celle du
@@ -173,6 +180,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return response()->json([
                 'message' => Traductions::t('api.trop_de_requetes', 'Trop de requêtes. Réessayez dans :secondes secondes.', ['secondes' => max(1, $secondes)]),
+                'motif' => JournaliserLimiteApi::MOTIF,
             ], 429, $e->getHeaders());
         });
 

@@ -3,15 +3,27 @@
 namespace App\Console\Commands;
 
 use App\Models\Driver;
+use App\Models\DriverAcknowledgement;
+use App\Models\Indisponibilite;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Un depart enregistre a l'avance prend effet a sa date : le chauffeur
  * sort du service et son compte se ferme ce jour-la.
+ *
+ * Un an plus tard, delai de prescription des actions nees du contrat de
+ * travail (loi du 3 juillet 1978, art. 15), ses donnees de gestion
+ * s'effacent : permis, examens, cartes, dates, coordonnees, indisponibilites
+ * et prises de connaissance de la note d'information. Son nom reste
+ * attache aux dossiers de transport conserves (voir pieces:purger).
  */
 class CloturerDeparts extends Command
 {
+    public const EFFACE = 'EFFACE-';
+
     protected $signature = 'chauffeurs:cloturer-departs';
 
     protected $description = 'Ferme les comptes des chauffeurs dont la date de depart est arrivee.';
@@ -32,7 +44,40 @@ class CloturerDeparts extends Command
             }
         }
 
-        $this->line(sprintf('  %d compte(s) ferme(s).', $fermes));
+        $effaces = 0;
+
+        Driver::whereNotNull('left_on')
+            ->where('left_on', '<=', today()->subYear())
+            ->where('license_number', 'not like', self::EFFACE.'%')
+            ->each(function (Driver $chauffeur) use (&$effaces) {
+                $chauffeur->forceFill([
+                    'license_number' => self::EFFACE.$chauffeur->id,
+                    'medical_exam_date' => null,
+                    'birth_date' => null,
+                    'hired_on' => null,
+                    'retirement_planned_on' => null,
+                    'cpc_expiry' => null,
+                    'tacho_card_expiry' => null,
+                    'adr_expiry' => null,
+                    'departure_reason' => null,
+                ])->save();
+
+                // Prises de connaissance de la note (avec l'adresse IP) et
+                // periodes d'indisponibilite (motif maladie compris).
+                DriverAcknowledgement::where('user_id', $chauffeur->user_id)->delete();
+                Indisponibilite::where('driver_id', $chauffeur->id)->delete();
+
+                $chauffeur->user?->forceFill([
+                    'email' => 'ancien-chauffeur-'.$chauffeur->user->id.'@anonyme.invalid',
+                    'phone' => null,
+                    'password' => Hash::make(Str::random(40)),
+                    'remember_token' => null,
+                ])->save();
+
+                $effaces++;
+            });
+
+        $this->line(sprintf('  %d compte(s) ferme(s), %d fiche(s) de chauffeur parti depuis un an effacée(s).', $fermes, $effaces));
 
         return self::SUCCESS;
     }

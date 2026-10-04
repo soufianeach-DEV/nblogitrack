@@ -77,11 +77,15 @@ final class Audience
         // Le temoin de consentement se pose a la main : un script pourrait
         // remplir la table. Au-dela de 120 vues par minute pour une meme
         // adresse, les suivantes ne sont pas comptees. L'adresse ne sert
-        // qu'au compteur en memoire, elle n'est pas enregistree.
-        if (RateLimiter::tooManyAttempts('audience:'.sha1((string) $request->ip()), 120)) {
+        // qu'a ce compteur d'une minute, sous une empreinte salee par la cle
+        // de l'application (une empreinte simple d'une adresse IPv4 se
+        // retrouve par essais) ; elle n'est pas enregistree avec la mesure.
+        $compteur = 'audience:'.hash_hmac('sha256', (string) $request->ip(), (string) config('app.key'));
+
+        if (RateLimiter::tooManyAttempts($compteur, 120)) {
             return;
         }
-        RateLimiter::hit('audience:'.sha1((string) $request->ip()), 60);
+        RateLimiter::hit($compteur, 60);
 
         PageView::create([
             'jour' => now()->toDateString(),

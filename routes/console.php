@@ -29,6 +29,14 @@ Schedule::command('journaux:purger --mois=12')
     ->onFailure($signaler('journaux:purger'))
     ->onOneServer();
 
+// Pieces echues (sept ans apres l'annee de la piece) : une fois par mois,
+// le lendemain de la facturation du 1er.
+Schedule::command('pieces:purger')
+    ->monthlyOn(2, '04:45')
+    ->withoutOverlapping()
+    ->onFailure($signaler('pieces:purger'))
+    ->onOneServer();
+
 Schedule::command('factures:generer')
     ->monthlyOn(1, '04:00')
     ->withoutOverlapping(120)

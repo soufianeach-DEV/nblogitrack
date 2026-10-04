@@ -36,7 +36,7 @@ export default function ChauffeurLayout({ header = null, children }) {
         <div className="flex min-h-screen flex-col bg-surface">
             <header className="sticky top-0 z-20 bg-marine">
                 <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4">
-                    <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="h-7 w-auto" />
+                    <img src="/images/logo-blanc.png" alt="NBLogiTrack" className="h-8 w-auto" />
 
                     <nav className="ml-6 hidden items-center gap-1 lg:flex">
                         <Onglet href={route('missions.index')} actif={route_actuelle === 'missions.index'} icone="camion">

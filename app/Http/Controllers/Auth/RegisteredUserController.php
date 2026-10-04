@@ -273,7 +273,9 @@ class RegisteredUserController extends Controller
                 // Ce qui a ete accepte, et quand : les conditions opposables
                 // sont celles de cette version.
                 'conditions_acceptees_le' => now(),
-                'conditions_version' => Page::where('slug', 'conditions-generales')->first()?->updated_at?->toIso8601String(),
+                // La version est celle du texte : republier ou ranger la page
+                // ne la change pas.
+                'conditions_version' => Page::where('slug', 'conditions-generales')->first()?->version()?->toIso8601String(),
             ]);
 
             $user = User::create([

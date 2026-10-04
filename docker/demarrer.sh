@@ -15,6 +15,16 @@ artisan optimize
 # purges RGPD, file d'attente des courriels (voir routes/console.php).
 ( while true; do artisan schedule:run --no-interaction > /dev/null 2>&1 || true; sleep 60; done ) &
 
+# Sur l'offre gratuite, le service s'endort apres quinze minutes sans visite,
+# et l'ordonnanceur ne rattrape pas une tache dont l'heure est passee pendant
+# le sommeil : purges RGPD et facturation du 1er ne tournaient alors jamais.
+# Ces taches ne font rien quand tout est a jour : elles tournent aussi a
+# chaque demarrage du conteneur, donc a chaque reveil.
+( for tache in 'chauffeurs:cloturer-departs' 'positions:purger --jours=7' 'journaux:purger --mois=12' \
+        'pieces:purger' 'factures:generer --tout' 'factures:envoyer-brouillons'; do
+    artisan $tache --no-interaction > /dev/null 2>&1 || true
+done ) &
+
 # Codes postaux : importes en arriere-plan au premier demarrage et apres
 # chaque rechargement de la base (quelques minutes ; le site repond deja,
 # les adresses se completent en ligne en attendant). Sa progression, pays

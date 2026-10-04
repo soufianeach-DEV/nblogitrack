@@ -21,7 +21,7 @@ jobs:
     # production.
     #
     # Le nom se termine par « _test » : Tests\TestCase refuse de demarrer
-    # autrement, parce que chaque classe vide la base avant de commencer.
+    # autrement, parce que la suite recree toutes les tables au demarrage.
     services:
       postgres:
         image: postgres:16
@@ -39,7 +39,8 @@ jobs:
 
     steps:
       # Actions epinglees par empreinte de commit : un tag se reecrit, une
-      # empreinte non. Dependabot propose les mises a jour.
+      # empreinte non. Dependabot les surveille (propositions suspendues
+      # jusqu'apres la presentation, voir .github/dependabot.yml).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup PHP 8.2

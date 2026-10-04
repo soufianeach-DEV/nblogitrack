@@ -2,9 +2,9 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "laravel/laravel",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "NBLogiTrack, gestion de transport routier de marchandises (épreuve intégrée, ICC Bruxelles).",
     "keywords": ["laravel", "framework"],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.2",
         "azuyalabs/yasumi": "^2.11",

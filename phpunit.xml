@@ -34,16 +34,16 @@
             SQLite ne prouverait rien de ce qui tourne en production.
 
             Le nom se termine par « _test » et le garde-fou de
-            tests/TestCase.php refuse de demarrer autrement : chaque
-            classe de test vide la base, et la base de travail contient
-            trois cents expeditions.
+            tests/TestCase.php refuse de demarrer autrement : la suite
+            recree toutes les tables au demarrage, et la base de travail
+            contient trois cents expeditions.
         -->
         <!--
             « force » n'est pas un detail. Sans lui, une variable
             d'environnement deja posee dans le terminal l'emporte sur ce
             fichier : quelqu'un qui aurait exporte DB_DATABASE pour une
             autre raison ferait tourner la suite sur sa base de travail,
-            et la premiere classe de test l'effacerait.
+            et la suite l'effacerait des son demarrage.
         -->
         <env name="DB_CONNECTION" value="pgsql" force="true"/>
         <env name="DB_DATABASE" value="nblogitrack_test" force="true"/>
