@@ -2706,6 +2706,7 @@ class TranslationSeeder extends Seeder
             'adresse_refusee' => ['Adresse IP non autorisée', 'IP-adres niet toegestaan', 'IP address not allowed'],
             'permission_absente' => ['Permission absente', 'Recht ontbreekt', 'Missing permission'],
             'entreprise_inactive' => ['Entreprise non validée ou désactivée', 'Onderneming niet gevalideerd of gedeactiveerd', 'Company not validated or deactivated'],
+            'limite_depassee' => ['Limite de débit dépassée', 'Limiet overschreden', 'Rate limit exceeded'],
         ],
 
         'pages' => [

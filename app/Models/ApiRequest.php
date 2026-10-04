@@ -29,6 +29,7 @@ class ApiRequest extends Model
         'adresse_refusee' => 'Adresse IP non autorisée',
         'permission_absente' => 'Permission absente',
         'entreprise_inactive' => 'Entreprise non validée ou désactivée',
+        'limite_depassee' => 'Limite de débit dépassée',
     ];
 
     public function cle(): BelongsTo

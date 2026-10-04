@@ -9,7 +9,7 @@ L'API permet à une entreprise cliente de déposer des expéditions et de suivre
 
 ## Authentification
 
-Un administrateur de la plateforme crée la clé depuis l'écran **Administration › API**. Le secret n'est montré qu'une fois, au moment de la création.
+Un administrateur de la plateforme crée la clé depuis l'écran **API REST** (menu **Système**). Le secret n'est montré qu'une fois, au moment de la création.
 
 Chaque appel présente la clé dans l'en-tête `Authorization` :
 
@@ -36,11 +36,15 @@ Toute réponse 401 porte l'en-tête `WWW-Authenticate: Bearer realm="api"`.
 
 ## Langue des messages
 
-Les messages d'erreur sont rédigés en français, en néerlandais ou en anglais. La langue suit l'en-tête `Accept-Language` (`fr`, `nl`, `en`). Sans cet en-tête, c'est la langue du compte de l'entreprise.
+Les messages d'erreur sont rédigés en français, en néerlandais ou en anglais. La langue suit l'en-tête `Accept-Language` (`fr`, `nl`, `en`). Sans cet en-tête, c'est la langue du compte de l'entreprise une fois la clé acceptée ; un refus de clé (401, 403) et la limite de débit (429) répondent alors en français.
 
 ## Limite de débit
 
-Chaque clé peut faire 120 appels par minute, et chaque adresse IP 300 au total. Au-delà, l'API répond `429 Too Many Requests` avec un en-tête `Retry-After` qui donne le nombre de secondes à attendre.
+Chaque clé peut faire 120 appels par minute, et chaque adresse IP 300 au total. Au-delà, l'API répond `429 Too Many Requests`, avec le motif `limite_depassee` et un en-tête `Retry-After` qui donne le nombre de secondes à attendre.
+
+## Journal des appels
+
+Chaque appel qui atteint le contrôle de la clé est inscrit au journal, accepté ou refusé : méthode, chemin, statut, durée, adresse IP et motif d'un refus. Les appels arrêtés par la limite de débit y figurent aussi, avec le motif `limite_depassee` : le premier de chaque minute pour une même clé et une même adresse IP, et cinq au plus par minute pour une adresse IP. Un flot d'appels ne remplit donc pas le journal. L'administrateur le consulte sur l'écran **API REST**.
 
 ## Lister les expéditions
 
@@ -118,7 +122,7 @@ Un appel peut échouer côté réseau alors que l'expédition a bien été cré�
 | 404  | Expédition ou adresse d'API inconnue |
 | 409  | Référence de chargement déjà déposée |
 | 422  | Données refusées. `message` explique la cause, et `errors` donne le détail par champ pour une erreur de validation |
-| 429  | Limite de débit dépassée |
+| 429  | Limite de débit dépassée (motif `limite_depassee`) |
 | 503  | Vérification des adresses momentanément indisponible. Réessayez après le délai de `Retry-After` |
 
 ## Exemple
