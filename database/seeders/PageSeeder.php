@@ -869,7 +869,7 @@ Les factures sont émises par voie électronique et payables à trente jours de 
 
 Le non-paiement d'une facture à son échéance rend immédiatement exigibles toutes les autres factures, même non échues, et autorise le transporteur à suspendre les prestations en cours après notification écrite.
 
-Le transporteur peut fixer à chaque donneur d'ordre un délai de paiement et un plafond de crédit, qui borne le total, toutes taxes comprises, des factures émises et non réglées. Une nouvelle expédition ne peut pas être commandée si ce total, augmenté de son prix toutes taxes comprises, dépasserait le plafond, ni tant que trois factures restent impayées après leur échéance ; les expéditions déjà confiées ne sont pas remises en cause par ce seul fait.
+Le transporteur peut fixer à chaque donneur d'ordre un délai de paiement et un plafond de crédit, auquel est comparé le total, toutes taxes comprises, des factures émises et non réglées. Une nouvelle expédition ne peut pas être commandée si ce total, augmenté de son prix toutes taxes comprises, dépasserait le plafond, ni tant que trois factures restent impayées après leur échéance ; les expéditions déjà confiées ne sont pas remises en cause par ce seul fait.
 
 ## Article 10 — Contestation d'une facture
 Toute contestation doit parvenir par écrit dans les dix jours calendrier de la date de facture, avec l'indication précise des motifs. Passé ce délai, la facture est présumée acceptée, sauf preuve contraire.
@@ -992,7 +992,7 @@ Bij niet-betaling op de vervaldag zijn van rechtswege en zonder ingebrekestellin
 
 De niet-betaling van één factuur op haar vervaldag maakt alle andere facturen onmiddellijk opeisbaar, ook de niet-vervallen, en machtigt de vervoerder om lopende prestaties op te schorten na schriftelijke kennisgeving.
 
-De vervoerder kan voor elke opdrachtgever een betalingstermijn en een kredietlimiet vastleggen; die limiet begrenst het totaal, btw inbegrepen, van de uitgereikte en onbetaalde facturen. Een nieuwe zending kan niet besteld worden als dat totaal, verhoogd met haar prijs inclusief btw, de limiet zou overschrijden, noch zolang drie facturen na hun vervaldag onbetaald blijven; de reeds toevertrouwde zendingen komen daardoor alleen niet in het gedrang.
+De vervoerder kan voor elke opdrachtgever een betalingstermijn en een kredietlimiet vastleggen, waaraan het totaal, btw inbegrepen, van de uitgereikte en onbetaalde facturen getoetst wordt. Een nieuwe zending kan niet besteld worden als dat totaal, verhoogd met haar prijs inclusief btw, de limiet zou overschrijden, noch zolang drie facturen na hun vervaldag onbetaald blijven; de reeds toevertrouwde zendingen komen daardoor alleen niet in het gedrang.
 
 ## Artikel 10 — Betwisting van een factuur
 Elke betwisting moet schriftelijk toekomen binnen tien kalenderdagen na factuurdatum, met nauwkeurige opgave van de redenen. Na die termijn wordt de factuur vermoed aanvaard te zijn, behoudens tegenbewijs.
@@ -1115,7 +1115,7 @@ Failing payment on the due date, and without prior notice, the following are due
 
 Non-payment of one invoice on its due date makes all other invoices immediately payable, including those not yet due, and entitles the carrier to suspend ongoing services after written notice.
 
-The carrier may set a payment term and a credit limit for each customer; the limit caps the total, VAT included, of invoices issued and not yet paid. A new shipment cannot be ordered if that total plus its price including VAT would exceed the limit, nor as long as three invoices remain unpaid after their due date; shipments already entrusted are not called into question by this alone.
+The carrier may set a payment term and a credit limit for each customer, against which the total, VAT included, of invoices issued and not yet paid is measured. A new shipment cannot be ordered if that total plus its price including VAT would exceed the limit, nor as long as three invoices remain unpaid after their due date; shipments already entrusted are not called into question by this alone.
 
 ## Article 10 — Disputing an invoice
 Any dispute must be received in writing within ten calendar days of the invoice date, stating precise grounds. After that period, the invoice is presumed accepted, unless proven otherwise.
