@@ -279,7 +279,9 @@ class ControleAffectationTest extends TestCase
         Indisponibilite::create(['driver_id' => $chauffeur->id, 'du' => now()->addDays(9)->toDateString(), 'au' => now()->addDays(12)->toDateString(), 'motif' => 'CONGE']);
         $this->affecter($ordre, $camion, $chauffeur)
             ->assertSessionHasErrors('driver_id');
-        $this->assertStringContainsString('congé du', session('errors')->first('driver_id'));
+        // La periode, pas le motif : il reste a qui gere la fiche.
+        $this->assertStringContainsString('absence du', session('errors')->first('driver_id'));
+        $this->assertStringNotContainsString('congé', session('errors')->first('driver_id'));
 
         Indisponibilite::create(['vehicle_registration' => $camion->registration, 'du' => now()->addDays(10)->toDateString(), 'au' => now()->addDays(10)->toDateString(), 'motif' => 'ENTRETIEN']);
         $this->affecter($ordre, $camion, $this->chauffeur())->assertSessionHasErrors('vehicle_registration');

@@ -33,6 +33,23 @@ class Driver extends Model
         'DECHEANCE' => 'Déchéance du permis',
     ];
 
+    /**
+     * Donnees de gestion du personnel dont la planification n'a pas
+     * besoin : seul qui peut modifier la fiche les lit, et le journal ne
+     * les recopie pas (le motif de sortie peut etre une inaptitude
+     * medicale, donnee de sante).
+     */
+    public const DONNEES_RH = [
+        'license_number', 'hired_on', 'birth_date', 'retirement_planned_on', 'departure_reason',
+    ];
+
+    /**
+     * Une fiche serialisee telle quelle (relation chargee sur un ordre
+     * envoye a l'ecran) ne les emporte pas : les ecrans qui en ont besoin
+     * les lisent un par un.
+     */
+    protected $hidden = self::DONNEES_RH;
+
     protected $fillable = [
         'user_id', 'employment_status', 'hired_on', 'birth_date', 'retirement_planned_on',
         'license_number', 'license_type', 'license_expiry', 'cpc_expiry', 'tacho_card_expiry',
