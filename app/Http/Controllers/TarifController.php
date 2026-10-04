@@ -101,8 +101,8 @@ class TarifController extends Controller
         Audience::noterEvenement($request, 'simulation');
 
         return response()->json([
-            'depart' => Traductions::vocabulaire('ville', $depart->ville),
-            'arrivee' => Traductions::vocabulaire('ville', $arrivee->ville),
+            'depart' => $this->nomAffiche($donnees['depart'], $depart->ville),
+            'arrivee' => $this->nomAffiche($donnees['destination'], $arrivee->ville),
             'pays' => Pays::libelle($donnees['pays']) ?? $donnees['pays'],
             'pays_depart' => Pays::libelle($paysDepart) ?? $paysDepart,
             'trajet' => $trajet->fleche(),
@@ -174,5 +174,19 @@ class TarifController extends Controller
         }
 
         return $point;
+    }
+
+    /**
+     * Le nom que le visiteur a choisi, quand le referentiel ne connait la
+     * ville que sous un autre : « Anvers » reste « Anvers » (et se lit
+     * « Antwerp » en anglais), « Cologne » reste « Cologne ». Le meme nom
+     * a la casse pres reprend celui du referentiel.
+     */
+    private function nomAffiche(string $choisi, string $trouve): string
+    {
+        $choisi = trim($choisi);
+        $memeNom = Traductions::cleDepuis($choisi) === Traductions::cleDepuis($trouve);
+
+        return Traductions::vocabulaire('ville', $memeNom ? $trouve : $choisi);
     }
 }
