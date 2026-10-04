@@ -61,7 +61,7 @@ class DepartsChauffeursTest extends TestCase
     public function test_annuler_un_depart_futur_ne_rouvre_pas_un_compte_ferme_a_part(): void
     {
         $chauffeur = $this->chauffeur(['left_on' => now()->addMonth()->toDateString(), 'departure_reason' => 'RETRAITE']);
-        $chauffeur->user->update(['is_active' => false]);
+        $chauffeur->user->forceFill(['is_active' => false])->save();
 
         $this->actingAs(User::factory()->administrateur()->create())
             ->patch(route('drivers.update', $chauffeur), $this->fiche(['left_on' => null, 'departure_reason' => null]))
@@ -71,10 +71,22 @@ class DepartsChauffeursTest extends TestCase
         $this->assertFalse($chauffeur->user()->first()->is_active);
     }
 
+    public function test_un_depart_date_d_aujourd_hui_ferme_le_compte(): void
+    {
+        $chauffeur = $this->chauffeur();
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->patch(route('drivers.update', $chauffeur), $this->fiche(['left_on' => today()->toDateString(), 'departure_reason' => 'RETRAITE']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($chauffeur->user()->first()->is_active);
+        $this->assertFalse($chauffeur->fresh()->is_available);
+    }
+
     public function test_annuler_un_depart_passe_rend_l_acces(): void
     {
         $chauffeur = $this->chauffeur(['left_on' => now()->subDay()->toDateString(), 'departure_reason' => 'RETRAITE', 'is_available' => false]);
-        $chauffeur->user->update(['is_active' => false]);
+        $chauffeur->user->forceFill(['is_active' => false])->save();
 
         $this->actingAs(User::factory()->administrateur()->create())
             ->patch(route('drivers.update', $chauffeur), $this->fiche(['left_on' => null, 'departure_reason' => null]))

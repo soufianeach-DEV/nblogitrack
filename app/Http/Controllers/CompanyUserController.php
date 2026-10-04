@@ -60,19 +60,21 @@ class CompanyUserController extends Controller
             'email.unique' => Traductions::t('msg.email_deja_utilise', 'Cette adresse e-mail est déjà utilisée.'),
         ]);
 
-        $collegue = User::create([
+        $collegue = new User([
             'first_name' => $donnees['first_name'],
             'last_name' => $donnees['last_name'],
             'email' => mb_strtolower($donnees['email']),
             // Un mot de passe aleatoire, jamais communique : le collegue
             // choisit le sien par le lien recu.
             'password' => Str::password(40),
-            'role' => 'CLIENT',
             'client_id' => $moi->client_id,
             'company_role' => $donnees['role'],
             'locale' => $moi->locale ?: app()->getLocale(),
-            'is_active' => true,
         ]);
+        // Hors assignation en masse : un collegue est toujours un client.
+        $collegue->role = 'CLIENT';
+        $collegue->is_active = true;
+        $collegue->save();
 
         ActivityLog::record(
             'company.user_invited',
@@ -123,7 +125,9 @@ class CompanyUserController extends Controller
                 return Traductions::t('msg.dernier_admin_societe', 'L\'entreprise doit garder au moins un gestionnaire actif.');
             }
 
-            $utilisateur->update($apres);
+            // is_active n'est pas assignable en masse ; les deux cles de
+            // $apres sont fixees plus haut, d'ou forceFill.
+            $utilisateur->forceFill($apres)->save();
 
             return null;
         });

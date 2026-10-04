@@ -23,7 +23,7 @@ class SecuriteTest extends TestCase
             ->get(route('planning.index'))
             ->assertOk();
 
-        $planificateur->update(['is_active' => false]);
+        $planificateur->forceFill(['is_active' => false])->save();
 
         $this->get(route('planning.index'))->assertRedirect(route('login'));
         $this->assertGuest();
