@@ -140,6 +140,40 @@ class PlafondEncoursTest extends TestCase
         $this->assertNotNull(Encours::refus($entreprise, 11.12));
     }
 
+    public function test_le_site_refuse_une_commande_qui_ferait_depasser_le_plafond(): void
+    {
+        $grille = TariffGrid::factory()->create();
+        $entreprise = Client::factory()->create(['credit_limit' => 700, 'payment_terms' => '30 jours', 'is_validated' => true]);
+        $this->facturer($entreprise);
+        $client = User::factory()->create(['role' => 'CLIENT', 'client_id' => $entreprise->id, 'company_role' => 'ADMIN']);
+        $commande = [
+            'pickup_address' => 'Rue Neuve 43, 3500 Hasselt, Belgique',
+            'delivery_address' => 'Avenue Louise 200, 1000 Bruxelles, Belgique',
+            'delivery_country' => 'BE',
+            'pickup_lat' => 50.9311,
+            'pickup_lng' => 5.3378,
+            'delivery_lat' => 50.8504,
+            'delivery_lng' => 4.3488,
+            'weight' => 1200,
+            'goods_type' => TransportOrder::MARCHANDISES[0],
+            'priority' => 'NORMAL',
+            'requested_delivery_date' => now()->addDays(7)->toDateString(),
+            'tariff_grid_id' => $grille->id,
+        ];
+
+        // 605 TTC dus : avec cette commande, le plafond de 700 serait depasse.
+        $this->actingAs($client)->post(route('transport-orders.store'), $commande)
+            ->assertSessionHasErrors('tariff_grid_id');
+        $this->assertStringContainsString('Plafond de crédit dépassé', session('errors')->first('tariff_grid_id'));
+        $this->assertSame(0, TransportOrder::where('client_id', $entreprise->id)->where('status', 'PENDING')->count());
+
+        // Plafond releve : la meme commande passe (compte recharge, sans
+        // l'entreprise gardee en memoire par la requete precedente).
+        $entreprise->update(['credit_limit' => 100000]);
+        $this->actingAs($client->fresh())->post(route('transport-orders.store'), $commande)->assertSessionHasNoErrors();
+        $this->assertSame(1, TransportOrder::where('client_id', $entreprise->id)->where('status', 'PENDING')->count());
+    }
+
     public function test_le_personnel_recoit_un_message_qui_lui_est_adresse(): void
     {
         $entreprise = Client::factory()->create(['company_name' => 'Transports Dubois', 'credit_limit' => 100]);
