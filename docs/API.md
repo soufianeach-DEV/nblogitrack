@@ -121,7 +121,7 @@ Un appel peut échouer côté réseau alors que l'expédition a bien été cré�
 |------|------|
 | 404  | Expédition ou adresse d'API inconnue |
 | 409  | Référence de chargement déjà déposée |
-| 422  | Données refusées. `message` explique la cause, et `errors` donne le détail par champ pour une erreur de validation |
+| 422  | Données refusées. `message` explique la cause, et `errors` donne le détail par champ pour une erreur de validation. Avec `motif: encours`, l'entreprise a une facture en retard ou a atteint son plafond de crédit |
 | 429  | Limite de débit dépassée (motif `limite_depassee`) |
 | 503  | Vérification des adresses momentanément indisponible. Réessayez après le délai de `Retry-After` |
 
