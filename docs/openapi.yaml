@@ -255,6 +255,8 @@ components:
       description: |
         Données refusées. `message` explique la cause ; `errors` donne le
         détail par champ pour une erreur de validation.
+        Avec `motif: encours`, l'entreprise a trois factures en retard ou a
+        atteint son plafond de crédit : aucune nouvelle expédition.
       content:
         application/json:
           schema:
@@ -526,6 +528,9 @@ components:
       properties:
         message:
           type: string
+        motif:
+          type: string
+          enum: [encours]
         errors:
           type: object
           additionalProperties:

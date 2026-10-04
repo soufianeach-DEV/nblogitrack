@@ -11,6 +11,7 @@ use App\Models\TransportOrder;
 use App\Models\Vehicle;
 use App\Support\Audience;
 use App\Support\Chronologie;
+use App\Support\Encours;
 use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\IdentifiantEntreprise;
@@ -742,6 +743,10 @@ class QuoteController extends Controller
 
             $offre = Tarificateur::offre($trajet, $demande, $km);
 
+            if ($refus = Encours::refus($client, (float) $offre['prix'][$grille->id])) {
+                return $refus;
+            }
+
             $ordre = TransportOrder::deposer([
                 ...$demande->only(['client_id', 'pickup_country', 'delivery_country', 'pickup_address', 'pickup_lat', 'pickup_lng',
                     'delivery_lat', 'delivery_lng', 'pickup_date', 'weight', 'volume', 'is_hazardous', 'needs_tail_lift', 'distance_km']),
@@ -773,6 +778,10 @@ class QuoteController extends Controller
 
             return $ordre;
         });
+
+        if (is_string($ordre)) {
+            return back()->with('error', $ordre);
+        }
 
         if ($ordre === null) {
             return back()->with('error', Traductions::t('msg.devis_deja_commande', 'Cette demande est déjà transformée ou close.'));

@@ -7,6 +7,7 @@ use App\Mail\InscriptionRefusee;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\Encours;
 use App\Support\Pays;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -73,8 +75,12 @@ class ClientValidationController extends Controller
                 ->orderByRaw(($etat === 'validees' ? 'validated_at' : 'inscrit_le').' desc nulls last')
                 ->orderByDesc('id')
                 ->paginate(10)
-                ->withQueryString(),
+                ->withQueryString()
+                // Ce que l'entreprise doit et devra, face a son plafond.
+                ->through(fn (Client $c) => $c->setAttribute('encours', $c->is_validated ? Encours::de($c) : null)),
             'etat' => $etat,
+            'delais' => self::DELAIS,
+            'retardsBloquants' => Encours::RETARDS_BLOQUANTS,
             'filtres' => $filtres,
             'suggestions' => [
                 'entreprises' => Client::orderBy('company_name')->distinct()->limit(300)->pluck('company_name'),
@@ -90,6 +96,37 @@ class ClientValidationController extends Controller
                 'refusees' => Client::where('is_validated', false)->whereNotNull('rejection_reason')->count(),
             ],
         ]);
+    }
+
+    /** Les delais de paiement que la facturation sait calculer. */
+    public const DELAIS = ['30 jours', '45 jours', '60 jours', 'Fin de mois'];
+
+    /**
+     * Le delai de paiement et le plafond de credit d'une entreprise. Sans
+     * plafond, seule une facture en retard bloque ses commandes.
+     */
+    public function conditions(Request $request, Client $client): RedirectResponse
+    {
+        $donnees = $request->validate([
+            'payment_terms' => ['required', Rule::in(self::DELAIS)],
+            'credit_limit' => 'nullable|numeric|min:0|max:10000000',
+        ]);
+
+        $avant = $client->only(['payment_terms', 'credit_limit']);
+
+        $client->update([
+            'payment_terms' => $donnees['payment_terms'],
+            'credit_limit' => $donnees['credit_limit'] ?? null,
+        ]);
+
+        ActivityLog::record(
+            'client.terms_updated',
+            'Conditions de paiement de '.$client->company_name.' modifiées',
+            $client,
+            ['avant' => $avant, 'apres' => $client->only(['payment_terms', 'credit_limit'])],
+        );
+
+        return back()->with('success', Traductions::t('msg.conditions_enregistrees', 'Conditions de paiement de :entreprise enregistrées.', ['entreprise' => $client->company_name]));
     }
 
     public function approve(Client $client): RedirectResponse

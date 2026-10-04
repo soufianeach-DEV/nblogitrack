@@ -13,7 +13,96 @@ const ONGLETS = {
     refusees: ['entreprises.refusees', 'Refusées'],
 };
 
-export default function Index({ clients, etat, filtres, suggestions, compteurs }) {
+/**
+ * Delai de paiement et plafond de credit d'une entreprise validee, avec son
+ * encours : ce qu'elle doit (factures TTC) et ce qu'elle devra (expeditions
+ * pas encore facturees, HT).
+ */
+function ConditionsPaiement({ client, delais, retardsBloquants }) {
+    const t = useTraduction();
+    const locale = useLocale();
+    const { data, setData, patch, processing, errors, isDirty } = useForm({
+        payment_terms: client.payment_terms ?? '30 jours',
+        credit_limit: client.credit_limit ?? '',
+    });
+    const euros = (m) => Number(m ?? 0).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
+    const encours = client.encours;
+    const plafond = client.credit_limit === null || client.credit_limit === '' ? null : Number(client.credit_limit);
+    const part = plafond ? Math.min(100, Math.round((encours.total / plafond) * 100)) : null;
+
+    const enregistrer = (e) => {
+        e.preventDefault();
+        patch(route('clients.terms', client.id), { preserveScroll: true });
+    };
+
+    return (
+        <form onSubmit={enregistrer} className="mt-4 grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-[1fr_auto]">
+            <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{t('entreprises.encours', 'Encours')}</p>
+                <p className="mt-1 text-sm text-marine">
+                    <span className="text-lg font-bold">{euros(encours.total)}</span>
+                    {plafond !== null && <span className="text-slate-600"> / {euros(plafond)}</span>}
+                </p>
+                {part !== null && (
+                    <div className="mt-1 h-1.5 w-full max-w-xs rounded-full bg-slate-100" role="img" aria-label={`${part} %`}>
+                        <div className={'h-1.5 rounded-full ' + (part >= 100 ? 'bg-status-incident' : part >= 80 ? 'bg-action' : 'bg-status-delivered')} style={{ width: `${part}%` }} />
+                    </div>
+                )}
+                <p className="mt-1 text-xs text-slate-600">
+                    {t('entreprises.encours_detail', 'Factures dues :factures TTC · à facturer :a_facturer HT', { factures: euros(encours.factures), a_facturer: euros(encours.a_facturer) })}
+                </p>
+                {encours.en_retard >= retardsBloquants && (
+                    <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
+                        {t('entreprises.factures_retard', ':n facture(s) en retard : commandes bloquées', { n: encours.en_retard })}
+                    </p>
+                )}
+                {encours.en_retard > 0 && encours.en_retard < retardsBloquants && (
+                    <p className="mt-1 inline-block rounded-full bg-action/15 px-3 py-0.5 text-xs font-semibold text-marine">
+                        {t('entreprises.factures_retard_avertissement', ':n facture(s) en retard (blocage à :seuil)', { n: encours.en_retard, seuil: retardsBloquants })}
+                    </p>
+                )}
+                {encours.en_retard < retardsBloquants && part !== null && part >= 100 && (
+                    <p className="mt-1 inline-block rounded-full bg-status-incident/10 px-3 py-0.5 text-xs font-semibold text-status-incident">
+                        {t('entreprises.plafond_atteint', 'Plafond atteint : commandes bloquées')}
+                    </p>
+                )}
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    {t('entreprises.delai_paiement', 'Délai de paiement')}
+                    <ListeRecherche
+                        value={data.payment_terms}
+                        onChange={(valeur) => setData('payment_terms', valeur)}
+                        trier={false}
+                        aria-label={t('entreprises.delai_paiement', 'Délai de paiement')}
+                        options={delais.map((d) => ({ valeur: d, libelle: t('delai.' + d.toLowerCase().replace(/\s+/g, '_'), d) }))}
+                        className="mt-1 w-40 rounded-md border-gray-300 text-sm font-normal normal-case tracking-normal shadow-sm focus:border-marine focus:ring-marine"
+                    />
+                </label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    {t('ent.plafond', 'Plafond de crédit')}
+                    <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={data.credit_limit}
+                        onChange={(e) => setData('credit_limit', e.target.value)}
+                        placeholder={t('entreprises.sans_plafond', 'Sans plafond')}
+                        className="mt-1 block w-40 rounded-md border-gray-300 text-sm font-normal shadow-sm focus:border-marine focus:ring-marine"
+                    />
+                </label>
+                <button type="submit" disabled={processing || ! isDirty} className="rounded-lg bg-marine px-4 py-2 text-sm font-semibold text-white transition hover:bg-marine-deep disabled:opacity-40">
+                    {t('action.enregistrer', 'Enregistrer')}
+                </button>
+                {(errors.payment_terms || errors.credit_limit) && (
+                    <p className="w-full text-xs text-status-incident">{errors.payment_terms ?? errors.credit_limit}</p>
+                )}
+            </div>
+        </form>
+    );
+}
+
+export default function Index({ clients, etat, filtres, suggestions, compteurs, delais = [], retardsBloquants = 3 }) {
     const t = useTraduction();
     const v = useVocabulaire();
     const p = usePays();
@@ -229,6 +318,8 @@ export default function Index({ clients, etat, filtres, suggestions, compteurs }
                                 {ligne(t('devis.email', 'Adresse e-mail'), client.user?.email)}
                                 {ligne(t('auth.telephone', 'Téléphone'), contact?.phone)}
                             </dl>
+
+                            {etatClient === 'validee' && client.encours && <ConditionsPaiement client={client} delais={delais} retardsBloquants={retardsBloquants} />}
 
                             {client.rejection_reason && (
                                 <p className="mt-3 rounded-lg bg-status-incident/5 px-3 py-2 text-xs text-status-incident">

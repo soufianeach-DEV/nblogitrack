@@ -32,6 +32,7 @@ class ActivityLogController extends Controller
         'client.registered' => 'Inscription entreprise',
         'client.validated' => 'Validation entreprise',
         'client.rejected' => 'Refus entreprise',
+        'client.terms_updated' => 'Conditions de paiement modifiées',
         'quote.handled' => 'Traitement de devis',
         'order.created_api' => 'Création d\'ordre par API',
         'order.unassigned' => 'Désaffectation',
