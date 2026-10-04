@@ -152,7 +152,9 @@ class DriverController extends Controller
             'adr_certified' => 'required|boolean',
             'adr_expiry' => 'nullable|date',
             'medical_exam_date' => 'nullable|date|before_or_equal:today',
-            'license_expiry' => 'nullable|date',
+            // La colonne est obligatoire : un champ vide faisait une erreur
+            // 500. Absent, il garde l'echeance enregistree.
+            'license_expiry' => 'sometimes|required|date',
             'cpc_expiry' => 'nullable|date',
             'tacho_card_expiry' => 'nullable|date',
             'employment_status' => 'required|in:'.implode(',', array_keys(Driver::STATUTS)),
@@ -164,6 +166,7 @@ class DriverController extends Controller
             'left_on' => 'nullable|date|after_or_equal:hired_on',
             'departure_reason' => 'nullable|in:'.implode(',', array_keys(Driver::MOTIFS_SORTIE)),
         ], [
+            'license_expiry.required' => Traductions::t('msg.echeance_permis_requise', 'Indiquez l\'échéance du permis.'),
             'medical_exam_date.before_or_equal' => Traductions::t('msg.visite_future', 'La visite médicale ne peut pas être postérieure à aujourd\'hui.'),
             'hired_on.before_or_equal' => Traductions::t('msg.entree_future', 'La date d\'entrée en service ne peut pas être dans le futur.'),
             'birth_date.before_or_equal' => Traductions::t('msg.naissance_majeur', 'Un chauffeur a au moins 18 ans : vérifiez la date de naissance.'),
@@ -172,6 +175,11 @@ class DriverController extends Controller
             'retirement_planned_on.after_or_equal' => Traductions::t('msg.retraite_avant_entree', 'La retraite prévue ne peut pas précéder l\'entrée en service.'),
             'left_on.after_or_equal' => Traductions::t('msg.depart_avant_entree', 'Le départ ne peut pas précéder l\'entrée en service.'),
         ]);
+
+        // Une case decochee peut arriver en « 0 » plutot qu'en false : les
+        // gardes ci-dessous comparent a un vrai booleen.
+        $donnees['is_available'] = $request->boolean('is_available');
+        $donnees['adr_certified'] = $request->boolean('adr_certified');
 
         // L'entree en service suit les 18 ans du chauffeur.
         if (! empty($donnees['hired_on']) && ! empty($donnees['birth_date'])
