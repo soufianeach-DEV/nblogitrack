@@ -1279,6 +1279,42 @@ class TranslationSeeder extends Seeder
             'verviers' => ['Verviers', 'Verviers', 'Verviers'],
             'seraing' => ['Seraing', 'Seraing', 'Seraing'],
             'paris' => ['Paris', 'Parijs', 'Paris'],
+            // Les grandes villes etrangeres du champ Ville. Ni Vienne ni
+            // Valence : des villes francaises importantes portent aussi ce
+            // nom. Cologne, Bologne et La Haye sont aussi de petites
+            // communes francaises : elles restent, la ville etrangere est
+            // de loin la plus probable.
+            'berlin' => ['Berlin', 'Berlijn', 'Berlin'],
+            'salzbourg' => ['Salzbourg', 'Salzburg', 'Salzburg'],
+            'zurich' => ['Zurich', 'Zürich', 'Zurich'],
+            'geneve' => ['Genève', 'Genève', 'Geneva'],
+            'bale' => ['Bâle', 'Bazel', 'Basel'],
+            'berne' => ['Berne', 'Bern', 'Bern'],
+            'prague' => ['Prague', 'Praag', 'Prague'],
+            'hambourg' => ['Hambourg', 'Hamburg', 'Hamburg'],
+            'munich' => ['Munich', 'München', 'Munich'],
+            'cologne' => ['Cologne', 'Keulen', 'Cologne'],
+            'francfort' => ['Francfort', 'Frankfurt', 'Frankfurt'],
+            'copenhague' => ['Copenhague', 'Kopenhagen', 'Copenhagen'],
+            'barcelone' => ['Barcelone', 'Barcelona', 'Barcelona'],
+            'seville' => ['Séville', 'Sevilla', 'Seville'],
+            'strasbourg' => ['Strasbourg', 'Straatsburg', 'Strasbourg'],
+            'lille' => ['Lille', 'Rijsel', 'Lille'],
+            'londres' => ['Londres', 'Londen', 'London'],
+            'athenes' => ['Athènes', 'Athene', 'Athens'],
+            'thessalonique' => ['Thessalonique', 'Thessaloniki', 'Thessaloniki'],
+            'milan' => ['Milan', 'Milaan', 'Milan'],
+            'naples' => ['Naples', 'Napels', 'Naples'],
+            'turin' => ['Turin', 'Turijn', 'Turin'],
+            'bologne' => ['Bologne', 'Bologna', 'Bologna'],
+            'luxembourg' => ['Luxembourg', 'Luxemburg', 'Luxembourg'],
+            'la_haye' => ['La Haye', 'Den Haag', 'The Hague'],
+            'groningue' => ['Groningue', 'Groningen', 'Groningen'],
+            'varsovie' => ['Varsovie', 'Warschau', 'Warsaw'],
+            'cracovie' => ['Cracovie', 'Krakau', 'Kraków'],
+            'lisbonne' => ['Lisbonne', 'Lissabon', 'Lisbon'],
+            'bucarest' => ['Bucarest', 'Boekarest', 'Bucharest'],
+            'goteborg' => ['Göteborg', 'Göteborg', 'Gothenburg'],
         ],
 
         'trad' => [
