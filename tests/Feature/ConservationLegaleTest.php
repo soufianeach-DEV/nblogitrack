@@ -7,6 +7,8 @@ use App\Models\ApiKeyRequest;
 use App\Models\ApiRequest;
 use App\Models\Client;
 use App\Models\Driver;
+use App\Models\DriverAcknowledgement;
+use App\Models\Indisponibilite;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
 use App\Models\OrderCharge;
@@ -231,8 +233,13 @@ class ConservationLegaleTest extends TestCase
         $ancien = $this->chauffeur(now()->subYear()->subDay()->toDateString());
         $recent = $this->chauffeur(now()->subMonths(6)->toDateString());
         TransportOrder::factory()->create(['driver_id' => $ancien->id, 'status' => 'DELIVERED', 'delivered_at' => now()->subYears(2)]);
+        DriverAcknowledgement::create(['user_id' => $ancien->user_id, 'version' => now()->subYears(2), 'acknowledged_at' => now()->subYears(2), 'ip_address' => '198.51.100.20']);
+        Indisponibilite::create(['driver_id' => $ancien->id, 'du' => now()->subYears(2)->toDateString(), 'au' => now()->subYears(2)->addDays(3)->toDateString(), 'motif' => 'MALADIE']);
 
         $this->artisan('chauffeurs:cloturer-departs')->assertSuccessful();
+
+        $this->assertSame(0, DriverAcknowledgement::where('user_id', $ancien->user_id)->count());
+        $this->assertSame(0, Indisponibilite::where('driver_id', $ancien->id)->count());
 
         $ancien->refresh();
         $this->assertSame('EFFACE-'.$ancien->id, $ancien->license_number);

@@ -24,7 +24,8 @@ class PagePubliqueController extends Controller
                 'titre' => $page->titre($langue),
                 'corps' => $page->corps($langue),
                 'repli' => ! $page->traduiteEn($langue),
-                'mise_a_jour' => $page->updated_at?->format('d/m/Y'),
+                // Date du texte, et non de la derniere publication.
+                'mise_a_jour' => $page->version()?->format('d/m/Y'),
             ],
         ]);
     }

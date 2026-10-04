@@ -93,23 +93,28 @@ Quand vous déclarez la prise en charge puis la livraison d'un envoi, votre posi
 
 Pour certaines missions seulement, un planificateur peut ouvrir un suivi de position pendant le trajet. Dans ce cas, et dans ce cas uniquement, votre position est relevée toutes les cinq minutes au plus. Un bandeau visible sur votre écran vous l'indique pendant toute la durée du partage.
 
+Si vous signalez un accident, une panne ou un dommage depuis l'application, la position de votre téléphone à ce moment est jointe au signalement. Elle est gardée au journal de la mission et envoyée par courriel à l'administration et à la planification, pour organiser l'aide.
+
 Ce qui n'est pas relevé
-Votre position n'est jamais relevée en dehors d'une mission en cours. Aucun boîtier n'est installé dans les véhicules. Votre vitesse n'est pas mesurée. Votre carte de conducteur n'est pas lue. Vos déplacements privés ne concernent pas l'entreprise et ne sont pas enregistrés.
+Votre position n'est relevée qu'aux moments décrits ci-dessus, jamais en dehors d'une mission qui vous est affectée. Aucun boîtier n'est installé dans les véhicules. Votre vitesse n'est pas mesurée. Votre carte de conducteur n'est pas lue. Vos déplacements privés ne concernent pas l'entreprise et ne sont pas enregistrés.
 
 À quoi cela sert
-À informer le client de l'avancement de son envoi, à retrouver un véhicule en cas de vol ou d'accident, et à replanifier une tournée quand un retard compromet la suite.
+À informer le client de l'avancement de son envoi, à retrouver un véhicule en cas de vol ou d'accident, et à réorganiser les missions quand un retard compromet la suite.
 
 Ce à quoi cela ne sert pas
-Ces données ne servent pas à vous évaluer, à vous sanctionner, à vous noter, ni à contrôler votre temps de travail. L'application ne comporte aucun écran permettant de consulter vos déplacements ou de reconstituer une journée.
+Ces données ne servent pas à vous évaluer, à vous sanctionner, à vous noter, ni à contrôler votre temps de travail. Aucun écran de l'application ne permet de consulter les positions relevées pendant vos trajets. Le journal d'activité, réservé à l'administrateur, garde l'heure de vos prises en charge, livraisons et signalements, pour la sécurité et le traitement des litiges.
 
 Combien de temps
-Les positions relevées pendant un trajet sont effacées automatiquement dans les sept jours suivant la livraison. Les deux points de prise en charge et de livraison suivent le dossier de transport.
+Les positions relevées pendant un trajet sont effacées automatiquement dans les sept jours suivant la livraison. Les deux points de prise en charge et de livraison s'effacent un an après la livraison. La position d'un signalement reste au journal douze mois.
+
+Ce que voit le client
+Le client dont vous transportez l'envoi voit votre nom, votre numéro de téléphone, votre catégorie de permis et votre qualification ADR. Il voit aussi les deux points de prise en charge et de livraison avec leur heure et, si le suivi est ouvert, votre dernière position connue.
 
 Vos droits
 Vous pouvez demander l'accès aux données qui vous concernent, leur rectification ou leur effacement, et vous opposer au traitement. Écrivez à info@nblogitrack.be. Vous pouvez également introduire une réclamation auprès de l'Autorité de protection des données, Rue de la Presse 35, 1000 Bruxelles.
 
 Ce que vous déclarez
-En validant, vous attestez avoir pris connaissance de cette note. Vous ne donnez pas votre accord : le traitement repose sur l'exécution de votre contrat de travail et sur l'intérêt légitime de l'entreprise, non sur votre consentement. Votre refus de valider n'aurait donc aucun effet sur vos droits, mais aucun relevé de position ne serait effectué tant que vous n'auriez pas été informé.
+En validant, vous attestez avoir pris connaissance de cette note ; la date, la version de la note et l'adresse IP de votre validation sont enregistrées. Vous ne donnez pas votre accord : le traitement repose sur l'exécution de votre contrat de travail, ou de votre contrat de prestation si vous êtes indépendant, et sur l'intérêt légitime de l'entreprise, non sur votre consentement. Votre refus de valider n'aurait donc aucun effet sur vos droits, mais aucun relevé de position ne serait effectué tant que vous n'auriez pas été informé.
 TXT;
     }
 
@@ -123,23 +128,28 @@ Wanneer u de ophaling en vervolgens de levering van een zending aangeeft, wordt 
 
 Enkel voor bepaalde opdrachten kan een planner een positieopvolging openen tijdens de rit. In dat geval, en enkel dan, wordt uw positie hoogstens om de vijf minuten opgenomen. Een zichtbare banner op uw scherm meldt dit zolang het delen duurt.
 
+Als u via de toepassing een ongeval, een panne of schade meldt, wordt de positie van uw telefoon op dat ogenblik bij de melding gevoegd. Zij wordt in het logboek van de opdracht bewaard en per e-mail naar de administratie en de planning gestuurd, om de hulp te organiseren.
+
 Wat niet wordt opgenomen
-Uw positie wordt nooit opgenomen buiten een lopende opdracht. Er wordt geen kastje in de voertuigen geplaatst. Uw snelheid wordt niet gemeten. Uw bestuurderskaart wordt niet uitgelezen. Uw privéverplaatsingen gaan de onderneming niet aan en worden niet geregistreerd.
+Uw positie wordt enkel opgenomen op de hierboven beschreven ogenblikken, nooit buiten een opdracht die u is toegewezen. Er wordt geen kastje in de voertuigen geplaatst. Uw snelheid wordt niet gemeten. Uw bestuurderskaart wordt niet uitgelezen. Uw privéverplaatsingen gaan de onderneming niet aan en worden niet geregistreerd.
 
 Waarvoor het dient
-Om de klant over de voortgang van zijn zending te informeren, om een voertuig terug te vinden bij diefstal of ongeval, en om een rit te herplannen wanneer vertraging het vervolg in het gedrang brengt.
+Om de klant over de voortgang van zijn zending te informeren, om een voertuig terug te vinden bij diefstal of ongeval, en om de opdrachten te herschikken wanneer vertraging het vervolg in het gedrang brengt.
 
 Waarvoor het niet dient
-Deze gegevens dienen niet om u te beoordelen, te sanctioneren, te quoteren, noch om uw arbeidstijd te controleren. De toepassing bevat geen enkel scherm waarmee uw verplaatsingen kunnen worden geraadpleegd of een werkdag kan worden gereconstrueerd.
+Deze gegevens dienen niet om u te beoordelen, te sanctioneren, te quoteren, noch om uw arbeidstijd te controleren. Geen enkel scherm van de toepassing laat toe de tijdens uw ritten opgenomen posities te raadplegen. Het activiteitenlogboek, voorbehouden aan de beheerder, bewaart het tijdstip van uw ophalingen, leveringen en meldingen, voor de beveiliging en de afhandeling van geschillen.
 
 Hoelang
-Posities die tijdens een rit zijn opgenomen, worden automatisch gewist binnen de zeven dagen na de levering. De twee punten van ophaling en levering volgen het vervoersdossier.
+Posities die tijdens een rit zijn opgenomen, worden automatisch gewist binnen de zeven dagen na de levering. De twee punten van ophaling en levering worden een jaar na de levering gewist. De positie van een melding blijft twaalf maanden in het logboek.
+
+Wat de klant ziet
+De klant van wie u de zending vervoert, ziet uw naam, uw telefoonnummer, uw rijbewijscategorie en uw ADR-bevoegdheid. Hij ziet ook de twee punten van ophaling en levering met hun tijdstip en, als de opvolging geopend is, uw laatst gekende positie.
 
 Uw rechten
 U kunt inzage vragen in de gegevens die u betreffen, hun verbetering of wissing, en bezwaar maken tegen de verwerking. Schrijf naar info@nblogitrack.be. U kunt ook klacht indienen bij de Gegevensbeschermingsautoriteit, Drukpersstraat 35, 1000 Brussel.
 
 Wat u verklaart
-Door te bevestigen verklaart u kennis te hebben genomen van deze nota. U geeft geen toestemming: de verwerking steunt op de uitvoering van uw arbeidsovereenkomst en op het gerechtvaardigd belang van de onderneming, niet op uw toestemming. Uw weigering te bevestigen zou dus geen gevolgen hebben voor uw rechten, maar er zou geen enkele positieopname gebeuren zolang u niet geïnformeerd bent.
+Door te bevestigen verklaart u kennis te hebben genomen van deze nota; de datum, de versie van de nota en het IP-adres van uw bevestiging worden geregistreerd. U geeft geen toestemming: de verwerking steunt op de uitvoering van uw arbeidsovereenkomst, of van uw dienstverleningsovereenkomst als u zelfstandige bent, en op het gerechtvaardigd belang van de onderneming, niet op uw toestemming. Uw weigering te bevestigen zou dus geen gevolgen hebben voor uw rechten, maar er zou geen enkele positieopname gebeuren zolang u niet geïnformeerd bent.
 TXT;
     }
 
@@ -153,23 +163,28 @@ When you declare the pickup and then the delivery of a consignment, your positio
 
 For certain missions only, a planner may open position tracking during the journey. In that case, and only then, your position is recorded every five minutes at most. A visible banner on your screen tells you so for as long as sharing lasts.
 
+If you report an accident, a breakdown or damage through the application, your phone's position at that moment is attached to the report. It is kept in the mission's log and sent by email to the administration and planning staff, to organise assistance.
+
 What is not recorded
-Your position is never recorded outside a mission in progress. No unit is fitted in the vehicles. Your speed is not measured. Your driver card is not read. Your private journeys are no concern of the company and are not recorded.
+Your position is recorded only at the moments described above, never outside a mission assigned to you. No unit is fitted in the vehicles. Your speed is not measured. Your driver card is not read. Your private journeys are no concern of the company and are not recorded.
 
 What it is for
-To inform the customer of the progress of their consignment, to locate a vehicle in the event of theft or accident, and to replan a round when a delay jeopardises what follows.
+To inform the customer of the progress of their consignment, to locate a vehicle in the event of theft or accident, and to reorganise missions when a delay jeopardises what follows.
 
 What it is not for
-This data is not used to assess you, sanction you, rate you, or monitor your working time. The application has no screen allowing your movements to be consulted or a working day to be reconstructed.
+This data is not used to assess you, sanction you, rate you, or monitor your working time. No screen in the application allows the positions recorded during your journeys to be consulted. The activity log, reserved for the administrator, keeps the time of your pickups, deliveries and reports, for security and dispute handling.
 
 For how long
-Positions recorded during a journey are erased automatically within seven days of delivery. The two pickup and delivery points follow the transport file.
+Positions recorded during a journey are erased automatically within seven days of delivery. The two pickup and delivery points are erased one year after delivery. The position of a report stays in the log for twelve months.
+
+What the customer sees
+The customer whose consignment you carry sees your name, your phone number, your licence category and your ADR qualification. They also see the two pickup and delivery points with their time and, if tracking is open, your latest known position.
 
 Your rights
 You may request access to the data concerning you, its rectification or erasure, and object to the processing. Write to info@nblogitrack.be. You may also lodge a complaint with the Belgian Data Protection Authority, Rue de la Presse 35, 1000 Brussels.
 
 What you are declaring
-By confirming, you certify that you have read this notice. You are not giving your consent: the processing rests on the performance of your employment contract and on the company's legitimate interest, not on your consent. Refusing to confirm would therefore have no effect on your rights, but no position would be recorded for as long as you had not been informed.
+By confirming, you certify that you have read this notice; the date, the version of the notice and the IP address of your confirmation are recorded. You are not giving your consent: the processing rests on the performance of your employment contract, or of your service contract if you are self-employed, and on the company's legitimate interest, not on your consent. Refusing to confirm would therefore have no effect on your rights, but no position would be recorded for as long as you had not been informed.
 TXT;
     }
 
@@ -195,7 +210,7 @@ NBLogiTrack SRL exerce l'activité de transport de marchandises par route pour c
 La direction de NBLogiTrack SRL, joignable à l'adresse du siège social.
 
 ## Hébergement
-Le site et les données applicatives sont hébergés au sein de l'Union européenne. Le nom et les coordonnées de l'hébergeur sont communiqués sur simple demande écrite.
+L'application est hébergée par Render (Render Services, Inc.), dans sa région de Francfort (Allemagne). La base de données est hébergée par Supabase (Supabase, Inc.), dans sa région de Francfort. Les données restent stockées dans l'Union européenne.
 
 ## Propriété intellectuelle
 La structure du site, ses textes, sa charte graphique, ses illustrations et son code sont protégés par le droit d'auteur. Toute reproduction, représentation, adaptation ou extraction, totale ou partielle, par quelque procédé que ce soit, est interdite sans autorisation écrite préalable.
@@ -246,7 +261,7 @@ NBLogiTrack BV verricht goederenvervoer over de weg voor rekening van derden ond
 De directie van NBLogiTrack BV, bereikbaar op het adres van de maatschappelijke zetel.
 
 ## Hosting
-De website en de toepassingsgegevens worden binnen de Europese Unie gehost. Naam en gegevens van de hostingpartij worden op eenvoudig schriftelijk verzoek meegedeeld.
+De toepassing wordt gehost door Render (Render Services, Inc.), in zijn regio Frankfurt (Duitsland). De databank wordt gehost door Supabase (Supabase, Inc.), in zijn regio Frankfurt. De gegevens blijven opgeslagen in de Europese Unie.
 
 ## Intellectuele eigendom
 De structuur van de website, de teksten, de huisstijl, de illustraties en de broncode zijn auteursrechtelijk beschermd. Elke reproductie, weergave, aanpassing of ontlening, geheel of gedeeltelijk en op welke wijze ook, is verboden zonder voorafgaande schriftelijke toestemming.
@@ -297,7 +312,7 @@ NBLogiTrack SRL carries goods by road for hire and reward under a Community lice
 The management of NBLogiTrack SRL, reachable at the registered office address.
 
 ## Hosting
-The website and application data are hosted within the European Union. The name and contact details of the hosting provider are supplied on written request.
+The application is hosted by Render (Render Services, Inc.) in its Frankfurt region (Germany). The database is hosted by Supabase (Supabase, Inc.) in its Frankfurt region. The data remains stored in the European Union.
 
 ## Intellectual property
 The structure of this website, its texts, visual identity, illustrations and source code are protected by copyright. Any reproduction, communication, adaptation or extraction, in whole or in part and by any means, is prohibited without prior written consent.
@@ -343,25 +358,25 @@ Elle décrit le traitement des données de quatre catégories de personnes :
 ## Données traitées
 Personnes de contact : nom, fonction, adresse professionnelle, téléphone, courriel, langue, numéro de TVA de l'entreprise, historique des expéditions, factures et paiements, journaux de connexion.
 
-Conducteurs et personnel : identité, coordonnées, numéro de permis et catégories, dates de validité, certificat ADR, date de l'examen médical, date d'expiration de la carte de conducteur, cumul d'heures de conduite de la journée, affectations aux missions.
+Conducteurs et personnel : identité, coordonnées, date de naissance, statut (salarié ou indépendant), date d'entrée et, le cas échéant, date et motif de sortie (retraite, démission, licenciement, inaptitude médicale, déchéance du permis) ; numéro de permis et catégories ; dates de validité du permis, du code 95, de la carte de conducteur et du certificat ADR ; date de l'examen médical ; cumul d'heures de conduite de la journée ; périodes d'indisponibilité et leur motif (congé, maladie, formation) ; affectations aux missions, heures de prise en charge et de livraison et positions décrites ci-dessous ; date, version et adresse IP de la prise de connaissance de la note d'information. Les motifs « maladie » et « inaptitude médicale » sont enregistrés comme une simple catégorie.
 
-Expéditeurs et destinataires : nom, adresse d'enlèvement ou de livraison, téléphone de contact, nom de la personne ayant réceptionné la marchandise.
+Expéditeurs et destinataires : nom, adresse d'enlèvement ou de livraison, téléphone de contact, nom de la personne ayant réceptionné la marchandise et réserves éventuelles.
 
-Visiteurs : données strictement nécessaires au fonctionnement du site et à sa sécurité.
+Visiteurs : l'adresse IP et l'identification du navigateur, enregistrées avec la session et effacées après son expiration (deux heures sans activité) ; le choix exprimé dans le bandeau des témoins ; avec leur accord, la mesure d'audience décrite dans la politique de cookies. Le brouillon du formulaire de demande de devis est gardé dans le navigateur du visiteur, jamais sur nos serveurs, jusqu'à l'envoi de la demande ou jusqu'à ce qu'il l'efface.
 
 ## Finalités et bases légales
-- Exécuter le contrat de transport, planifier les tournées, suivre les envois — exécution du contrat.
+- Exécuter le contrat de transport, affecter les véhicules et les conducteurs, suivre les envois — exécution du contrat.
 - Établir les factures, recouvrer les créances, tenir la comptabilité — obligation légale et intérêt légitime.
 - Respecter les obligations en matière de temps de conduite, de repos et de qualification des conducteurs — obligation légale.
-- Établir les documents de transport, dont la lettre de voiture CMR, et les déclarations en douane — obligation légale.
+- Établir, en dehors de l'application, les documents de transport, dont la lettre de voiture CMR, et les déclarations en douane — obligation légale.
 - Assurer la sécurité de l'application, détecter les accès anormaux — intérêt légitime.
 - Répondre aux demandes de devis — mesures précontractuelles.
 - Mesurer la fréquentation du site public, sans identifier les visiteurs — consentement, retirable à tout moment par le lien « Gérer les cookies ».
 
 ## Suivi géolocalisé des envois
-Le suivi repose sur trois éléments, et trois seulement.
+Le suivi repose sur les éléments suivants.
 
-Les coordonnées des adresses d'enlèvement et de livraison, géocodées une fois à la création de l'ordre. Les changements de statut saisis par le conducteur. Et deux repères de position, relevés au moment où il déclare la prise en charge puis la livraison : ce sont des faits de gestion, conservés comme une mention portée sur une lettre de voiture.
+Les coordonnées des adresses d'enlèvement et de livraison, géocodées une fois à la création de l'ordre. Les changements de statut saisis par le conducteur, avec leur heure. Deux repères de position, relevés au moment où il déclare la prise en charge puis la livraison : ce sont des faits de gestion, gardés un an comme une mention portée sur une lettre de voiture. Enfin, lorsque le conducteur signale lui-même un accident, une panne ou un dommage, la position de ce signalement : elle est gardée au journal d'activité et envoyée par courriel à l'administration et à la planification.
 
 ## Suivi de position pendant le trajet
 Pour certaines missions, et pour celles-là seulement, une position intermédiaire est relevée pendant que la marchandise roule. Cette possibilité s'ouvre mission par mission, jamais pour la flotte entière, et la décision est journalisée avec le nom de qui l'a prise.
@@ -371,59 +386,64 @@ Localiser un véhicule revient à localiser son conducteur : c'est une donnée r
 - la position ne part que depuis l'écran du conducteur, pendant une mission en cours ; il n'existe aucun boîtier qui émette en dehors du travail ;
 - un bandeau visible lui indique, à l'instant même, que sa position est partagée ;
 - un relevé toutes les cinq minutes au plus, cadence imposée par le serveur ;
-- le client ne voit qu'un point, le dernier connu, sur l'itinéraire de son propre envoi ; il n'accède jamais à la trace du trajet ;
-- aucun écran de l'application ne permet de consulter les déplacements d'un conducteur donné, ni de reconstituer une journée de travail ;
+- pendant le trajet, le client ne voit qu'un point, le dernier connu, sur l'itinéraire de son propre envoi ; il n'accède jamais à la trace du trajet. Il voit aussi, pour son envoi, les deux repères de prise en charge et de livraison avec leur heure, ainsi que le nom du conducteur, son téléphone, sa catégorie de permis et sa qualification ADR ;
+- aucun écran de l'application ne permet de consulter les positions relevées pendant le trajet d'un conducteur donné. Le journal d'activité, réservé à l'administrateur, garde en revanche l'heure de chaque prise en charge, livraison et incident, avec le nom du conducteur ; il sert à la sécurité et au traitement des litiges, non au contrôle du temps de travail ;
 - ces positions ne servent jamais à évaluer, sanctionner ou noter un conducteur ;
-- elles sont effacées automatiquement dans les sept jours suivant la livraison, par une tâche planifiée et non par une intervention manuelle.
+- elles sont effacées automatiquement sept jours après la livraison ou l'annulation, ou trente jours après la dernière mise à jour d'une mission restée en cours, par une tâche planifiée et non par une intervention manuelle.
 
-Les conducteurs sont informés de ce dispositif préalablement et individuellement, par une note qui leur est adressée et dont ils accusent réception dans l'application. Cette prise de connaissance conditionne le relevé : tant qu'elle n'est pas donnée, aucune position n'est enregistrée, quand bien même le suivi aurait été ouvert pour la mission. Une note réécrite doit être reprise.
+Les conducteurs sont informés de ce dispositif préalablement et individuellement, par une note qui leur est adressée et dont ils accusent réception dans l'application. La date, la version de la note et l'adresse IP de cette prise de connaissance sont enregistrées ; elle conditionne le relevé : tant qu'elle n'est pas donnée, aucune position n'est enregistrée, quand bien même le suivi aurait été ouvert pour la mission. Une note réécrite doit être reprise.
 
 Cet accusé n'est pas un consentement. Dans une relation de travail, le consentement n'est pas librement donné et ne peut fonder le traitement ; ce qui est prouvé ici est l'information préalable, non un accord.
 
 ## Ce que l'application ne fait pas
-Le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller. Aucun historique de déplacement n'est conservé au-delà du délai indiqué ci-dessus.
+Le tachygraphe n'est pas lu. Le cumul d'heures de conduite du jour sert à planifier dans les limites du règlement (CE) n° 561/2006 ; il ne sert pas à surveiller. Les positions relevées pendant le trajet ne sont pas conservées au-delà du délai indiqué ci-dessus ; les deux repères de prise en charge et de livraison s'effacent un an après la livraison, et la position d'un incident signalé reste au journal d'activité pendant douze mois.
 
 ## Destinataires et sous-traitants
 Les données ne sont ni vendues, ni louées, ni échangées. Elles sont communiquées, dans la limite du nécessaire :
-- à l'hébergeur de l'application, établi dans l'Union européenne ;
-- au prestataire de paiement en ligne Stripe (Stripe Payments Europe, Irlande), pour les seules données que la transaction exige ;
-- au service de calcul d'itinéraire fondé sur OpenStreetMap, qui reçoit les coordonnées des points d'enlèvement et de livraison, sans nom ni référence de dossier ;
+- aux hébergeurs de l'application : Render (Render Services, Inc.) pour le serveur et Supabase (Supabase, Inc.) pour la base de données, dans leur région de Francfort (Allemagne) ;
+- au service d'envoi de courriels Brevo, qui achemine les courriels de l'application (confirmation d'adresse, mot de passe, avis d'expédition, factures, note d'information aux conducteurs, alertes d'incident) et reçoit l'adresse du destinataire et le contenu du message ;
+- au prestataire de paiement en ligne Stripe (Stripe Payments Europe, Irlande), qui reçoit l'adresse électronique du payeur, le montant et la référence de la facture ;
+- aux serveurs publics de calcul d'itinéraire fondés sur OpenStreetMap (router.project-osrm.org et, en secours, routing.openstreetmap.de), qui reçoivent les coordonnées des points d'enlèvement et de livraison, sans nom ni référence de dossier ;
+- aux serveurs publics Overpass d'OpenStreetMap, qui reçoivent un nom de rue et une position arrondie à un kilomètre environ, pour proposer les numéros de la rue, ou l'emprise d'un itinéraire, pour situer les péages, sans nom ni référence de dossier ;
 - au service VIES de la Commission européenne et aux registres d'entreprises nationaux (Belgique, France, Suisse, Norvège, Royaume-Uni, Tchéquie, Finlande, Pologne, Roumanie), qui reçoivent le seul numéro de TVA saisi, pour vérifier l'identité d'une entreprise ;
-- aux services de recherche d'adresses et de fonds de carte (Photon de komoot, Base adresse nationale française, PDOK néerlandais, OpenFreeMap), qui reçoivent le texte d'adresse saisi et l'adresse IP du navigateur, pour proposer les adresses et afficher les cartes ;
+- aux services de recherche d'adresses et de fonds de carte (Photon de komoot, Base adresse nationale française, PDOK néerlandais, OpenFreeMap et, en secours, les serveurs de tuiles d'OpenStreetMap), appelés directement par le navigateur, qui reçoivent le texte d'adresse saisi ou la zone de carte affichée, et l'adresse IP du navigateur ;
+- au client, pour le conducteur affecté à son envoi : nom, téléphone, catégorie de permis et qualification ADR ;
 - aux sous-traitants de transport lorsqu'un envoi leur est confié ;
 - au cabinet comptable, à l'assureur et, le cas échéant, au conseil juridique ;
 - aux administrations lorsque la loi l'impose, notamment en matière fiscale, douanière et sociale.
 
-Chaque sous-traitant est lié par un contrat conforme à l'article 28 du RGPD.
+Render, Supabase, Brevo et Stripe interviennent comme sous-traitants, dans le cadre de leurs conditions de traitement des données (article 28 du RGPD). Les services publics d'itinéraire, d'adresses et de cartes sont utilisés sans compte, sous leurs propres conditions ; ils ne reçoivent ni nom ni référence de dossier.
 
 ## Transferts hors de l'Union européenne
 Les données sont traitées au sein de l'Union européenne. Font exception :
 - la vérification d'un numéro de TVA suisse ou britannique, transmis au registre de ce pays, qui bénéficie d'une décision d'adéquation de la Commission européenne ;
 - le paiement en ligne : Stripe appartient à un groupe établi aux États-Unis, adhérent au cadre de protection des données UE–États-Unis, et lié par les clauses contractuelles types de la Commission ;
-- une livraison hors de l'Union, qui exige de transmettre les données du destinataire, sur la base des garanties prévues au chapitre V du RGPD.
+- une livraison hors de l'Union, qui exige de transmettre les données du destinataire, sur la base des garanties prévues au chapitre V du RGPD ;
+- l'hébergement : Render et Supabase sont des sociétés établies aux États-Unis ; les données sont stockées à Francfort, mais un accès depuis les États-Unis reste possible pour le support et la maintenance ; il est encadré par les clauses contractuelles types de la Commission prévues dans leurs conditions de traitement des données.
 
 ## Durées de conservation
-- Factures et autres pièces comptables : sept ans (article 60 du Code de la TVA, modifié par la loi du 18 décembre 2025 ; article III.88 du Code de droit économique).
-- Documents de transport et lettres de voiture : cinq ans.
-- Dates de validité des permis, certificats ADR et cartes de conducteur : la durée de la relation de travail, puis les délais de prescription sociale.
-- Journaux d'activité de l'application, qui enregistrent la date, l'utilisateur, l'action et l'adresse IP : douze mois.
-- Demandes de devis restées sans suite, pièces jointes comprises : deux ans ; transformées en commande : cinq ans.
-- Mesure d'audience, sans donnée permettant d'identifier un visiteur : treize mois.
-- Compte client : la durée de la relation commerciale, puis les délais de prescription applicables ; inscription refusée : six mois après la décision.
+- Factures, avoirs, paiements et autres pièces comptables : sept ans à compter du 1er janvier qui suit leur année (article 60 du Code de la TVA, modifié par la loi du 18 décembre 2025 ; article III.88 du Code de droit économique), puis effacement automatique.
+- Ordres de transport, avec les noms et téléphones de contact, le nom du réceptionnaire et les réserves : la durée de conservation de la facture dont ils sont la pièce justificative, puis effacement automatique ; un ordre annulé sans frais : trois ans après l'annulation.
+- Positions relevées pendant le trajet : sept jours après la livraison ou l'annulation, ou trente jours après la dernière mise à jour d'une mission restée en cours ; repères de prise en charge et de livraison : un an après la livraison ou l'annulation.
+- Données des conducteurs : la durée de la relation de travail. Un an après le départ, délai de prescription des actions nées du contrat de travail, les données de gestion (permis, examens, cartes, dates, coordonnées, indisponibilités, prises de connaissance de la note) sont effacées ; le nom reste attaché aux dossiers de transport conservés, puis s'efface avec le dernier.
+- Journal d'activité de l'application et journal des appels de l'API, qui enregistrent notamment la date, l'utilisateur, l'action et l'adresse IP : douze mois, puis effacement automatique. Clés d'API révoquées ou expirées et demandes d'accès traitées : douze mois.
+- Demandes de devis restées sans suite, pièces jointes comprises : deux ans à compter de leur réception ; transformées en commande, elles suivent la commande.
+- Mesure d'audience, sans donnée permettant d'identifier un visiteur : treize mois, puis effacement automatique.
+- Compte client : tant qu'il est ouvert. À sa suppression, le nom, l'adresse électronique, le téléphone et le mot de passe sont effacés ; si l'entreprise a déjà été servie ou facturée, sa fiche est conservée jusqu'à ce que sa dernière pièce arrive au terme de sa conservation. L'adresse électronique reste au journal d'activité pendant sa durée de conservation. Inscription refusée : six mois après la décision, puis effacement automatique.
 
 ## Sécurité
 L'accès à l'application est nominatif et limité par le rôle de chacun. Les mots de passe ne sont jamais conservés en clair. Les échanges avec le serveur sont chiffrés. Les actions sensibles sont journalisées, et ces journaux sont effacés automatiquement passé leur durée de conservation.
 
-La sauvegarde et la restauration des données relèvent du contrat d'hébergement. Elles seront arrêtées avec l'hébergeur avant toute mise en production, et cette page sera mise à jour à ce moment-là. Nous préférons l'indiquer plutôt que d'annoncer une mesure qui n'est pas encore en place.
+La version en ligne actuelle, hébergée sur des offres gratuites, n'a pas encore de sauvegarde programmée par NBLogiTrack, et les fichiers déposés (pièces jointes des demandes de devis, documents publiés) sont stockés sur le serveur de l'application. La sauvegarde et la restauration seront mises en place avec l'hébergement de production, et cette page sera mise à jour à ce moment-là. Nous préférons l'indiquer plutôt que d'annoncer une mesure qui n'est pas encore en place.
 
 ## Décision automatisée
 Aucune décision produisant des effets juridiques n'est prise sur le seul fondement d'un traitement automatisé. Le calcul tarifaire et les propositions d'affectation d'un véhicule ou d'un conducteur sont des aides à la décision : un planificateur valide.
 
 ## Témoins de connexion
-Le site dépose les témoins nécessaires à son fonctionnement et à la sécurité de la session. Avec votre accord seulement, il mesure aussi sa fréquentation, par ses propres moyens : aucune adresse IP ni aucun identifiant n'est conservé, et aucun service tiers n'intervient. Ce choix se modifie à tout moment par le lien « Gérer les cookies » en bas de page ; la politique de cookies en donne le détail. Aucun témoin publicitaire n'est déposé.
+Le site dépose les témoins nécessaires à son fonctionnement et à la sécurité de la session. Avec votre accord seulement, il mesure aussi sa fréquentation, par ses propres moyens : aucune adresse IP ni aucun identifiant n'est enregistré avec la mesure, et aucun service tiers n'intervient. Ce choix se modifie à tout moment par le lien « Gérer les cookies » en bas de page ; la politique de cookies en donne le détail. Aucun témoin publicitaire n'est déposé.
 
 ## Vos droits
-Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité. Ces droits s'exercent par écrit à info@nblogitrack.be. Une réponse est apportée dans le mois, prorogeable de deux mois si la demande est complexe.
+Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité. Ces droits s'exercent par écrit à info@nblogitrack.be. Depuis son profil, chaque utilisateur peut aussi télécharger ses données dans un fichier lisible par une autre application ; un utilisateur client peut y supprimer son compte. Une réponse est apportée dans le mois, prorogeable de deux mois si la demande est complexe.
 
 Certains droits connaissent des limites : les données figurant sur une facture ou sur une lettre de voiture ne peuvent être effacées avant l'expiration du délai légal de conservation.
 
@@ -452,25 +472,25 @@ Het beschrijft de verwerking van gegevens van vier categorieën personen:
 ## Verwerkte gegevens
 Contactpersonen: naam, functie, professioneel adres, telefoon, e-mail, taal, btw-nummer van de onderneming, geschiedenis van zendingen, facturen en betalingen, aanmeldlogboeken.
 
-Chauffeurs en personeel: identiteit, contactgegevens, rijbewijsnummer en categorieën, geldigheidsdata, ADR-certificaat, datum van het medisch onderzoek, vervaldatum van de bestuurderskaart, totaal aantal rijuren van de dag, toewijzing aan opdrachten.
+Chauffeurs en personeel: identiteit, contactgegevens, geboortedatum, statuut (werknemer of zelfstandige), datum van indiensttreding en, in voorkomend geval, datum en reden van uitdiensttreding (pensioen, ontslag door de werknemer, ontslag door de werkgever, medische ongeschiktheid, verval van het recht tot sturen); rijbewijsnummer en categorieën; geldigheidsdata van het rijbewijs, de code 95, de bestuurderskaart en het ADR-certificaat; datum van het medisch onderzoek; totaal aantal rijuren van de dag; periodes van onbeschikbaarheid en hun reden (verlof, ziekte, opleiding); toewijzing aan opdrachten, tijdstippen van ophaling en levering en de hieronder beschreven posities; datum, versie en IP-adres van de kennisname van de informatienota. De redenen „ziekte” en „medische ongeschiktheid” worden enkel als categorie geregistreerd.
 
-Afzenders en geadresseerden: naam, ophaal- of leveradres, contacttelefoon, naam van wie de goederen in ontvangst nam.
+Afzenders en geadresseerden: naam, ophaal- of leveradres, contacttelefoon, naam van wie de goederen in ontvangst nam en eventueel voorbehoud.
 
-Bezoekers: uitsluitend de gegevens die nodig zijn voor de werking en de beveiliging van de website.
+Bezoekers: het IP-adres en de identificatie van de browser, geregistreerd met de sessie en gewist na het verstrijken ervan (twee uur zonder activiteit); de keuze gemaakt in de cookiebanner; met hun toestemming, de publieksmeting beschreven in het cookiebeleid. Het concept van het offerteformulier wordt in de browser van de bezoeker bewaard, nooit op onze servers, tot de aanvraag verzonden is of tot hij het wist.
 
 ## Doeleinden en rechtsgronden
-- De vervoersovereenkomst uitvoeren, ritten plannen, zendingen opvolgen — uitvoering van de overeenkomst.
+- De vervoersovereenkomst uitvoeren, voertuigen en chauffeurs toewijzen, zendingen opvolgen — uitvoering van de overeenkomst.
 - Facturen opmaken, schulden invorderen, boekhouding voeren — wettelijke verplichting en gerechtvaardigd belang.
 - De verplichtingen inzake rij- en rusttijden en vakbekwaamheid naleven — wettelijke verplichting.
-- Vervoersdocumenten opmaken, waaronder de CMR-vrachtbrief, en douaneaangiften — wettelijke verplichting.
+- Buiten de toepassing de vervoersdocumenten opmaken, waaronder de CMR-vrachtbrief, en de douaneaangiften — wettelijke verplichting.
 - De toepassing beveiligen en afwijkende toegang opsporen — gerechtvaardigd belang.
 - Offerteaanvragen beantwoorden — precontractuele maatregelen.
 - Het bezoek aan de openbare website meten, zonder bezoekers te identificeren — toestemming, op elk ogenblik in te trekken via de link „Cookies beheren”.
 
 ## Gelokaliseerde opvolging van zendingen
-De opvolging steunt op drie elementen, en niet meer.
+De opvolging steunt op de volgende elementen.
 
-De coördinaten van het ophaal- en het leveradres, eenmalig gegeocodeerd bij het aanmaken van de opdracht. De statuswijzigingen die de chauffeur invoert. En twee positie-ijkpunten, opgenomen op het ogenblik waarop hij de ophaling en vervolgens de levering aangeeft: dat zijn beheersfeiten, bewaard zoals een vermelding op een vrachtbrief.
+De coördinaten van het ophaal- en het leveradres, eenmalig gegeocodeerd bij het aanmaken van de opdracht. De statuswijzigingen die de chauffeur invoert, met hun tijdstip. Twee positie-ijkpunten, opgenomen op het ogenblik waarop hij de ophaling en vervolgens de levering aangeeft: dat zijn beheersfeiten, een jaar bewaard zoals een vermelding op een vrachtbrief. Tot slot, wanneer de chauffeur zelf een ongeval, een panne of schade meldt, de positie van die melding: zij wordt in het activiteitenlogboek bewaard en per e-mail naar de administratie en de planning gestuurd.
 
 ## Positieopvolging tijdens de rit
 Voor bepaalde opdrachten, en enkel voor die, wordt een tussentijdse positie opgenomen terwijl de goederen onderweg zijn. Die mogelijkheid wordt opdracht per opdracht geopend, nooit voor de hele vloot, en de beslissing wordt gelogd met de naam van wie ze nam.
@@ -480,59 +500,64 @@ Een voertuig lokaliseren komt neer op het lokaliseren van de chauffeur: dat is e
 - de positie vertrekt enkel vanaf het scherm van de chauffeur, tijdens een lopende opdracht; er bestaat geen kastje dat buiten het werk uitzendt;
 - een zichtbare banner meldt hem op datzelfde ogenblik dat zijn positie wordt gedeeld;
 - hoogstens één opname om de vijf minuten, een cadans die de server oplegt;
-- de klant ziet slechts één punt, het laatst gekende, op de route van zijn eigen zending; hij krijgt nooit toegang tot het spoor van de rit;
-- geen enkel scherm van de toepassing laat toe de verplaatsingen van een bepaalde chauffeur te raadplegen of een werkdag te reconstrueren;
+- tijdens de rit ziet de klant slechts één punt, het laatst gekende, op de route van zijn eigen zending; hij krijgt nooit toegang tot het spoor van de rit. Voor zijn zending ziet hij ook de twee ijkpunten van ophaling en levering met hun tijdstip, en de naam van de chauffeur, zijn telefoonnummer, zijn rijbewijscategorie en zijn ADR-bevoegdheid;
+- geen enkel scherm van de toepassing laat toe de tijdens de rit opgenomen posities van een bepaalde chauffeur te raadplegen. Het activiteitenlogboek, voorbehouden aan de beheerder, bewaart wel het tijdstip van elke ophaling, levering en elk incident, met de naam van de chauffeur; het dient voor de beveiliging en de afhandeling van geschillen, niet voor het toezicht op de arbeidstijd;
 - die posities dienen nooit om een chauffeur te beoordelen, te sanctioneren of te quoteren;
-- zij worden automatisch gewist binnen de zeven dagen na de levering, door een geplande taak en niet door een manuele ingreep.
+- zij worden automatisch gewist zeven dagen na de levering of de annulering, of dertig dagen na de laatste bijwerking van een opdracht die onderweg bleef, door een geplande taak en niet door een manuele ingreep.
 
-De chauffeurs worden vooraf en individueel over dit systeem geïnformeerd, via een nota die hun wordt toegestuurd en waarvan zij in de toepassing kennisname bevestigen. Die kennisname is een voorwaarde voor de opname: zolang zij niet gegeven is, wordt geen enkele positie geregistreerd, ook al zou de opvolging voor de opdracht geopend zijn. Een herschreven nota moet opnieuw worden gelezen.
+De chauffeurs worden vooraf en individueel over dit systeem geïnformeerd, via een nota die hun wordt toegestuurd en waarvan zij in de toepassing kennisname bevestigen. De datum, de versie van de nota en het IP-adres van die kennisname worden geregistreerd; zij is een voorwaarde voor de opname: zolang zij niet gegeven is, wordt geen enkele positie geregistreerd, ook al zou de opvolging voor de opdracht geopend zijn. Een herschreven nota moet opnieuw worden gelezen.
 
 Die bevestiging is geen toestemming. In een arbeidsrelatie is toestemming niet vrij gegeven en kan zij de verwerking niet gronden; wat hier bewezen wordt is de voorafgaande informatie, niet een akkoord.
 
 ## Wat de toepassing niet doet
-De tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden. Er wordt geen verplaatsingsgeschiedenis bewaard buiten de hierboven vermelde termijn.
+De tachograaf wordt niet uitgelezen. Het totaal aantal rijuren van de dag dient om te plannen binnen de grenzen van verordening (EG) nr. 561/2006; het dient niet om toezicht te houden. De tijdens de rit opgenomen posities worden niet bewaard buiten de hierboven vermelde termijn; de twee ijkpunten van ophaling en levering worden een jaar na de levering gewist, en de positie van een gemeld incident blijft twaalf maanden in het activiteitenlogboek.
 
 ## Ontvangers en verwerkers
 Gegevens worden niet verkocht, verhuurd of geruild. Zij worden meegedeeld, beperkt tot het noodzakelijke:
-- aan de hostingpartij van de toepassing, gevestigd in de Europese Unie;
-- aan de aanbieder van onlinebetalingen Stripe (Stripe Payments Europe, Ierland), enkel de gegevens die de transactie vereist;
-- aan de routeberekeningsdienst op basis van OpenStreetMap, die de coördinaten van het ophaal- en leverpunt ontvangt, zonder naam of dossierreferentie;
+- aan de hostingpartijen van de toepassing: Render (Render Services, Inc.) voor de server en Supabase (Supabase, Inc.) voor de databank, in hun regio Frankfurt (Duitsland);
+- aan de e-maildienst Brevo, die de e-mails van de toepassing verstuurt (bevestiging van het adres, wachtwoord, zendingsberichten, facturen, informatienota voor chauffeurs, incidentmeldingen) en het adres van de ontvanger en de inhoud van het bericht ontvangt;
+- aan de aanbieder van onlinebetalingen Stripe (Stripe Payments Europe, Ierland), die het e-mailadres van de betaler, het bedrag en de factuurreferentie ontvangt;
+- aan de openbare routeberekeningsservers op basis van OpenStreetMap (router.project-osrm.org en, als reserve, routing.openstreetmap.de), die de coördinaten van het ophaal- en leverpunt ontvangen, zonder naam of dossierreferentie;
+- aan de openbare Overpass-servers van OpenStreetMap, die een straatnaam en een tot ongeveer een kilometer afgeronde positie ontvangen om de huisnummers voor te stellen, of de omtrek van een route om de tolpunten te situeren, zonder naam of dossierreferentie;
 - aan de VIES-dienst van de Europese Commissie en aan de nationale ondernemingsregisters (België, Frankrijk, Zwitserland, Noorwegen, Verenigd Koninkrijk, Tsjechië, Finland, Polen, Roemenië), die enkel het ingevoerde btw-nummer ontvangen, om de identiteit van een onderneming te verifiëren;
-- aan de diensten voor adresopzoeking en kaartachtergronden (Photon van komoot, de Franse Base adresse nationale, het Nederlandse PDOK, OpenFreeMap), die de ingevoerde adrestekst en het IP-adres van de browser ontvangen, om adressen voor te stellen en kaarten te tonen;
+- aan de diensten voor adresopzoeking en kaartachtergronden (Photon van komoot, de Franse Base adresse nationale, het Nederlandse PDOK, OpenFreeMap en, als reserve, de tegelservers van OpenStreetMap), rechtstreeks aangesproken door de browser, die de ingevoerde adrestekst of het getoonde kaartgebied en het IP-adres van de browser ontvangen;
+- aan de klant, voor de chauffeur die aan zijn zending is toegewezen: naam, telefoonnummer, rijbewijscategorie en ADR-bevoegdheid;
 - aan onderaannemers in het vervoer wanneer een zending hen wordt toevertrouwd;
 - aan het boekhoudkantoor, de verzekeraar en, in voorkomend geval, de juridisch raadsman;
 - aan de overheid wanneer de wet dat oplegt, met name inzake fiscaliteit, douane en sociale zekerheid.
 
-Elke verwerker is gebonden door een overeenkomst conform artikel 28 AVG.
+Render, Supabase, Brevo en Stripe treden op als verwerkers, binnen hun voorwaarden voor gegevensverwerking (artikel 28 AVG). De openbare route-, adres- en kaartdiensten worden zonder account gebruikt, onder hun eigen voorwaarden; zij ontvangen geen naam of dossierreferentie.
 
 ## Doorgifte buiten de Europese Unie
 Gegevens worden binnen de Europese Unie verwerkt. Uitzonderingen:
 - de verificatie van een Zwitsers of Brits btw-nummer, doorgegeven aan het register van dat land, dat een adequaatheidsbesluit van de Europese Commissie geniet;
 - de onlinebetaling: Stripe behoort tot een groep gevestigd in de Verenigde Staten, aangesloten bij het EU-VS-kader voor gegevensbescherming en gebonden door de modelcontractbepalingen van de Commissie;
-- een levering buiten de Unie, die de doorgifte van de gegevens van de geadresseerde vereist, op basis van de waarborgen van hoofdstuk V AVG.
+- een levering buiten de Unie, die de doorgifte van de gegevens van de geadresseerde vereist, op basis van de waarborgen van hoofdstuk V AVG;
+- de hosting: Render en Supabase zijn ondernemingen gevestigd in de Verenigde Staten; de gegevens worden in Frankfurt opgeslagen, maar toegang vanuit de Verenigde Staten blijft mogelijk voor ondersteuning en onderhoud; die is omkaderd door de modelcontractbepalingen van de Commissie in hun voorwaarden voor gegevensverwerking.
 
 ## Bewaartermijnen
-- Facturen en andere boekhoudkundige stukken: zeven jaar (artikel 60 van het Btw-wetboek, gewijzigd bij de wet van 18 december 2025; artikel III.88 van het Wetboek van economisch recht).
-- Vervoersdocumenten en vrachtbrieven: vijf jaar.
-- Geldigheidsdata van rijbewijzen, ADR-certificaten en bestuurderskaarten: de duur van de arbeidsrelatie, vervolgens de sociale verjaringstermijnen.
-- Activiteitenlogboeken van de toepassing, met datum, gebruiker, actie en IP-adres: twaalf maanden.
-- Offerteaanvragen zonder gevolg, bijlagen inbegrepen: twee jaar; omgezet in een bestelling: vijf jaar.
-- Bezoekersmeting, zonder gegevens die een bezoeker identificeren: dertien maanden.
-- Klantaccount: de duur van de handelsrelatie, vervolgens de toepasselijke verjaringstermijnen; geweigerde inschrijving: zes maanden na de beslissing.
+- Facturen, creditnota's, betalingen en andere boekhoudkundige stukken: zeven jaar vanaf 1 januari van het jaar dat volgt op hun jaar (artikel 60 van het Btw-wetboek, gewijzigd bij de wet van 18 december 2025; artikel III.88 van het Wetboek van economisch recht), daarna automatische wissing.
+- Vervoersopdrachten, met de namen en telefoonnummers van contactpersonen, de naam van wie de goederen in ontvangst nam en het voorbehoud: de bewaartermijn van de factuur waarvan zij het verantwoordingsstuk zijn, daarna automatische wissing; een opdracht die zonder kosten werd geannuleerd: drie jaar na de annulering.
+- Tijdens de rit opgenomen posities: zeven dagen na de levering of de annulering, of dertig dagen na de laatste bijwerking van een opdracht die onderweg bleef; ijkpunten van ophaling en levering: een jaar na de levering of de annulering.
+- Gegevens van chauffeurs: de duur van de arbeidsrelatie. Een jaar na het vertrek, de verjaringstermijn van de vorderingen uit de arbeidsovereenkomst, worden de beheersgegevens (rijbewijs, onderzoeken, kaarten, data, contactgegevens, onbeschikbaarheden, kennisnames van de nota) gewist; de naam blijft verbonden aan de bewaarde vervoersdossiers en wordt met het laatste gewist.
+- Activiteitenlogboek van de toepassing en logboek van de API-oproepen, die onder meer datum, gebruiker, actie en IP-adres registreren: twaalf maanden, daarna automatische wissing. Ingetrokken of vervallen API-sleutels en behandelde toegangsaanvragen: twaalf maanden.
+- Offerteaanvragen zonder gevolg, bijlagen inbegrepen: twee jaar vanaf hun ontvangst; omgezet in een bestelling volgen zij de bestelling.
+- Bezoekersmeting, zonder gegevens die een bezoeker identificeren: dertien maanden, daarna automatische wissing.
+- Klantaccount: zolang de account open is. Bij het verwijderen van de account worden naam, e-mailadres, telefoonnummer en wachtwoord gewist; werd de onderneming al bediend of gefactureerd, dan blijft haar fiche bewaard tot haar laatste stuk het einde van zijn bewaartermijn bereikt. Het e-mailadres blijft in het activiteitenlogboek gedurende de bewaartermijn daarvan. Geweigerde inschrijving: zes maanden na de beslissing, daarna automatische wissing.
 
 ## Beveiliging
 De toegang tot de toepassing is persoonsgebonden en beperkt tot de rol van elkeen. Wachtwoorden worden nooit in leesbare vorm bewaard. Het verkeer met de server is versleuteld. Gevoelige handelingen worden gelogd, en die logboeken worden automatisch gewist na hun bewaartermijn.
 
-Back-up en herstel van de gegevens vallen onder de hostingovereenkomst. Zij worden met de hostingpartij vastgelegd vóór elke ingebruikname, en deze pagina wordt op dat ogenblik bijgewerkt. Wij vermelden dit liever dan een maatregel aan te kondigen die nog niet bestaat.
+De huidige onlineversie, gehost op gratis formules, heeft nog geen door NBLogiTrack geplande back-up, en de opgeladen bestanden (bijlagen van offerteaanvragen, gepubliceerde documenten) worden op de server van de toepassing opgeslagen. Back-up en herstel worden ingericht met de productiehosting, en deze pagina wordt op dat ogenblik bijgewerkt. Wij vermelden dit liever dan een maatregel aan te kondigen die nog niet bestaat.
 
 ## Geautomatiseerde besluitvorming
 Er wordt geen besluit met rechtsgevolgen genomen op de enkele grondslag van een geautomatiseerde verwerking. De tariefberekening en de voorstellen tot toewijzing van een voertuig of chauffeur zijn hulpmiddelen: een planner beslist.
 
 ## Cookies
-De website plaatst de cookies die nodig zijn voor de werking en de beveiliging van de sessie. Enkel met uw toestemming meet hij ook het bezoek, met eigen middelen: er wordt geen IP-adres of identificatiemiddel bewaard en er komt geen externe dienst aan te pas. Die keuze wijzigt u op elk ogenblik via de link „Cookies beheren” onderaan de pagina; het cookiebeleid geeft de details. Er worden geen reclamecookies geplaatst.
+De website plaatst de cookies die nodig zijn voor de werking en de beveiliging van de sessie. Enkel met uw toestemming meet hij ook het bezoek, met eigen middelen: er wordt geen IP-adres of identificatiemiddel bij de meting geregistreerd en er komt geen externe dienst aan te pas. Die keuze wijzigt u op elk ogenblik via de link „Cookies beheren” onderaan de pagina; het cookiebeleid geeft de details. Er worden geen reclamecookies geplaatst.
 
 ## Uw rechten
-U beschikt over een recht op inzage, verbetering, wissing, beperking, bezwaar en overdraagbaarheid. Deze rechten worden schriftelijk uitgeoefend op info@nblogitrack.be. Een antwoord volgt binnen de maand, verlengbaar met twee maanden bij een complexe aanvraag.
+U beschikt over een recht op inzage, verbetering, wissing, beperking, bezwaar en overdraagbaarheid. Deze rechten worden schriftelijk uitgeoefend op info@nblogitrack.be. Via zijn profiel kan elke gebruiker zijn gegevens ook downloaden in een bestand dat door een andere toepassing kan worden gelezen; een klantgebruiker kan er zijn account verwijderen. Een antwoord volgt binnen de maand, verlengbaar met twee maanden bij een complexe aanvraag.
 
 Sommige rechten kennen grenzen: gegevens op een factuur of een vrachtbrief kunnen niet worden gewist vóór het verstrijken van de wettelijke bewaartermijn.
 
@@ -561,25 +586,25 @@ It describes the processing of data relating to four categories of people:
 ## Data processed
 Contact persons: name, job title, business address, phone, email, language, company VAT number, shipment history, invoices and payments, sign-in logs.
 
-Drivers and staff: identity, contact details, licence number and categories, validity dates, ADR certificate, date of the medical examination, driver card expiry date, total driving hours for the day, assignment to missions.
+Drivers and staff: identity, contact details, date of birth, status (employee or self-employed), start date and, where applicable, date and reason for leaving (retirement, resignation, dismissal, medical unfitness, driving disqualification); licence number and categories; validity dates of the licence, the CPC (code 95), the driver card and the ADR certificate; date of the medical examination; total driving hours for the day; periods of unavailability and their reason (leave, sickness, training); assignment to missions, pickup and delivery times and the positions described below; date, version and IP address of the acknowledgement of the information notice. The reasons "sickness" and "medical unfitness" are recorded as a mere category.
 
-Senders and consignees: name, pickup or delivery address, contact phone, name of the person who received the goods.
+Senders and consignees: name, pickup or delivery address, contact phone, name of the person who received the goods and any reservations.
 
-Visitors: strictly the data required for the website to work and remain secure.
+Visitors: the IP address and browser identification, recorded with the session and erased once it expires (two hours without activity); the choice made in the cookie banner; with their consent, the audience measurement described in the cookie policy. The draft of the quotation request form is kept in the visitor's browser, never on our servers, until the request is sent or until the visitor deletes it.
 
 ## Purposes and legal bases
-- Performing the transport contract, planning rounds, tracking shipments — performance of the contract.
+- Performing the transport contract, assigning vehicles and drivers, tracking shipments — performance of the contract.
 - Issuing invoices, recovering debts, keeping accounts — legal obligation and legitimate interest.
 - Complying with driving time, rest period and driver qualification rules — legal obligation.
-- Producing transport documents, including the CMR consignment note, and customs declarations — legal obligation.
+- Producing, outside the application, transport documents, including the CMR consignment note, and customs declarations — legal obligation.
 - Securing the application and detecting abnormal access — legitimate interest.
 - Answering quotation requests — pre-contractual measures.
 - Measuring visits to the public website without identifying visitors — consent, which can be withdrawn at any time through the “Manage cookies” link.
 
 ## Geolocated shipment tracking
-Tracking rests on three elements, and three only.
+Tracking rests on the following elements.
 
-The coordinates of the pickup and delivery addresses, geocoded once when the order is created. The status changes entered by the driver. And two position waypoints, recorded at the moment the driver declares pickup and then delivery: these are business facts, kept like an entry on a consignment note.
+The coordinates of the pickup and delivery addresses, geocoded once when the order is created. The status changes entered by the driver, with their time. Two position waypoints, recorded at the moment the driver declares pickup and then delivery: these are business facts, kept for one year like an entry on a consignment note. Finally, when the driver personally reports an accident, a breakdown or damage, the position of that report: it is kept in the activity log and sent by email to the administration and planning staff.
 
 ## Position tracking during the journey
 For certain missions, and only for those, an intermediate position is recorded while the goods are on the road. This is opened mission by mission, never for the whole fleet, and the decision is logged with the name of whoever took it.
@@ -589,59 +614,64 @@ Locating a vehicle amounts to locating its driver: that is data about a worker. 
 - the position leaves only from the driver's screen, during a mission in progress; no unit transmits outside working time;
 - a visible banner tells the driver, at that very moment, that their position is being shared;
 - one reading every five minutes at most, a cadence enforced by the server;
-- the customer sees one point only, the latest known, on the route of their own shipment; they never reach the trace of the journey;
-- no screen in the application allows the movements of a given driver to be consulted, or a working day to be reconstructed;
+- during the journey, the customer sees one point only, the latest known, on the route of their own shipment; they never reach the trace of the journey. For their shipment they also see the two pickup and delivery waypoints with their time, and the driver's name, phone number, licence category and ADR qualification;
+- no screen in the application allows the positions recorded during a given driver's journeys to be consulted. The activity log, reserved for the administrator, does however keep the time of each pickup, delivery and incident, with the driver's name; it serves security and dispute handling, not the monitoring of working time;
 - these positions are never used to assess, sanction or rate a driver;
-- they are erased automatically within seven days of delivery, by a scheduled task and not by a manual step.
+- they are erased automatically seven days after delivery or cancellation, or thirty days after the last update of a mission left in progress, by a scheduled task and not by a manual step.
 
-Drivers are informed of this arrangement beforehand and individually, through a notice sent to them and acknowledged in the application. That acknowledgement is a condition of recording: until it is given, no position is stored, even where tracking has been opened for the mission. A rewritten notice must be read again.
+Drivers are informed of this arrangement beforehand and individually, through a notice sent to them and acknowledged in the application. The date, the version of the notice and the IP address of that acknowledgement are recorded; it is a condition of recording: until it is given, no position is stored, even where tracking has been opened for the mission. A rewritten notice must be read again.
 
 This acknowledgement is not consent. In an employment relationship consent is not freely given and cannot found the processing; what is proven here is prior information, not agreement.
 
 ## What the application does not do
-The tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor. No movement history is kept beyond the period stated above.
+The tachograph is not read. The daily driving hours total serves to plan within the limits of Regulation (EC) No 561/2006; it does not serve to monitor. Positions recorded during the journey are not kept beyond the period stated above; the two pickup and delivery waypoints are erased one year after delivery, and the position of a reported incident stays in the activity log for twelve months.
 
 ## Recipients and processors
 Data is never sold, rented or exchanged. It is disclosed, limited to what is necessary:
-- to the application's hosting provider, established in the European Union;
-- to the online payment provider Stripe (Stripe Payments Europe, Ireland), for the data the transaction requires only;
-- to the OpenStreetMap-based routing service, which receives the coordinates of the pickup and delivery points, without any name or file reference;
+- to the application's hosting providers: Render (Render Services, Inc.) for the server and Supabase (Supabase, Inc.) for the database, in their Frankfurt region (Germany);
+- to the email service Brevo, which delivers the application's emails (address confirmation, password, shipment notices, invoices, information notice for drivers, incident alerts) and receives the recipient's address and the content of the message;
+- to the online payment provider Stripe (Stripe Payments Europe, Ireland), which receives the payer's email address, the amount and the invoice reference;
+- to the public OpenStreetMap-based routing servers (router.project-osrm.org and, as a fallback, routing.openstreetmap.de), which receive the coordinates of the pickup and delivery points, without any name or file reference;
+- to the public OpenStreetMap Overpass servers, which receive a street name and a position rounded to about one kilometre, to suggest house numbers, or the outline of a route, to locate tolls, without any name or file reference;
 - to the European Commission's VIES service and to national company registers (Belgium, France, Switzerland, Norway, United Kingdom, Czechia, Finland, Poland, Romania), which receive only the VAT number entered, to verify a company's identity;
-- to address lookup and map background services (komoot's Photon, the French Base adresse nationale, the Dutch PDOK, OpenFreeMap), which receive the address text entered and the browser's IP address, to suggest addresses and display maps;
+- to address lookup and map background services (komoot's Photon, the French Base adresse nationale, the Dutch PDOK, OpenFreeMap and, as a fallback, the OpenStreetMap tile servers), called directly by the browser, which receive the address text entered or the map area displayed, and the browser's IP address;
+- to the customer, for the driver assigned to their shipment: name, phone number, licence category and ADR qualification;
 - to transport subcontractors when a consignment is entrusted to them;
 - to the accounting firm, the insurer and, where applicable, legal counsel;
 - to public authorities where the law so requires, in particular in tax, customs and social security matters.
 
-Every processor is bound by a contract compliant with Article 28 GDPR.
+Render, Supabase, Brevo and Stripe act as processors, under their data processing terms (Article 28 GDPR). The public routing, address and map services are used without an account, under their own terms; they receive no name or file reference.
 
 ## Transfers outside the European Union
 Data is processed within the European Union, with these exceptions:
 - checking a Swiss or British VAT number, sent to that country's register, which benefits from an adequacy decision of the European Commission;
 - online payment: Stripe belongs to a group established in the United States, certified under the EU–US Data Privacy Framework and bound by the Commission's standard contractual clauses;
-- a delivery outside the Union, which requires sending the consignee's data, on the basis of the safeguards provided for in Chapter V GDPR.
+- a delivery outside the Union, which requires sending the consignee's data, on the basis of the safeguards provided for in Chapter V GDPR;
+- hosting: Render and Supabase are companies established in the United States; data is stored in Frankfurt, but access from the United States remains possible for support and maintenance; it is covered by the Commission's standard contractual clauses included in their data processing terms.
 
 ## Retention periods
-- Invoices and other accounting records: seven years (Article 60 of the Belgian VAT Code, as amended by the Law of 18 December 2025; Article III.88 of the Code of Economic Law).
-- Transport documents and consignment notes: five years.
-- Licence, ADR certificate and driver card validity dates: the duration of the employment relationship, then the applicable social limitation periods.
-- Application activity logs, recording date, user, action and IP address: twelve months.
-- Quotation requests left without follow-up, attachments included: two years; converted into an order: five years.
-- Audience measurement, without data identifying a visitor: thirteen months.
-- Customer account: the duration of the commercial relationship, then the applicable limitation periods; rejected registration: six months after the decision.
+- Invoices, credit notes, payments and other accounting records: seven years from 1 January following their year (Article 60 of the Belgian VAT Code, as amended by the Law of 18 December 2025; Article III.88 of the Code of Economic Law), then automatic erasure.
+- Transport orders, including contact names and phone numbers, the name of the person who received the goods and reservations: the retention period of the invoice they support, then automatic erasure; an order cancelled free of charge: three years after cancellation.
+- Positions recorded during the journey: seven days after delivery or cancellation, or thirty days after the last update of a mission left in progress; pickup and delivery waypoints: one year after delivery or cancellation.
+- Driver data: the duration of the employment relationship. One year after departure, the limitation period for claims arising from the employment contract, management data (licence, examinations, cards, dates, contact details, unavailability periods, acknowledgements of the notice) are erased; the name stays attached to the transport files still kept and is erased with the last one.
+- Application activity log and API call log, which record in particular the date, user, action and IP address: twelve months, then automatic erasure. Revoked or expired API keys and processed access requests: twelve months.
+- Quotation requests left without follow-up, attachments included: two years from receipt; once converted into an order, they follow the order.
+- Audience measurement, without data identifying a visitor: thirteen months, then automatic erasure.
+- Customer account: for as long as it is open. When the account is deleted, the name, email address, phone number and password are erased; if the company has already been served or invoiced, its record is kept until its last record reaches the end of its retention period. The email address remains in the activity log for that log's retention period. Rejected registration: six months after the decision, then automatic erasure.
 
 ## Security
 Access to the application is personal and limited by each person's role. Passwords are never stored in readable form. Traffic with the server is encrypted. Sensitive actions are logged, and those logs are erased automatically once their retention period expires.
 
-Backup and restoration of data fall under the hosting contract. They will be settled with the hosting provider before any production use, and this page will be updated at that point. We prefer to say so rather than announce a measure that is not yet in place.
+The current online version, hosted on free plans, has no backup scheduled by NBLogiTrack yet, and uploaded files (quotation request attachments, published documents) are stored on the application server. Backup and restoration will be set up with the production hosting, and this page will be updated at that point. We prefer to say so rather than announce a measure that is not yet in place.
 
 ## Automated decision-making
 No decision producing legal effects is taken on the sole basis of automated processing. Rate calculation and vehicle or driver assignment suggestions are decision aids: a planner validates them.
 
 ## Cookies
-The website places the cookies required for its operation and session security. Only with your consent does it also measure visits, by its own means: no IP address or identifier is kept and no third-party service is involved. You can change this choice at any time through the “Manage cookies” link at the bottom of the page; the cookie policy gives the details. No advertising cookies are placed.
+The website places the cookies required for its operation and session security. Only with your consent does it also measure visits, by its own means: no IP address or identifier is recorded with the measurement and no third-party service is involved. You can change this choice at any time through the “Manage cookies” link at the bottom of the page; the cookie policy gives the details. No advertising cookies are placed.
 
 ## Your rights
-You have the right of access, rectification, erasure, restriction, objection and portability. These rights are exercised in writing at info@nblogitrack.be. A reply is given within one month, extendable by two months where the request is complex.
+You have the right of access, rectification, erasure, restriction, objection and portability. These rights are exercised in writing at info@nblogitrack.be. From their profile, every user can also download their data in a file readable by another application; a customer user can delete their account there. A reply is given within one month, extendable by two months where the request is complex.
 
 Some rights have limits: data appearing on an invoice or a consignment note cannot be erased before the statutory retention period expires.
 
@@ -663,13 +693,16 @@ Un témoin de connexion, ou cookie, est un petit fichier que le navigateur conse
 La loi n'exige un consentement que pour ce qui n'est pas indispensable au service demandé, comme la publicité ou la mesure d'audience. Les témoins énumérés ci-dessous sont strictement nécessaires au fonctionnement et à la sécurité ; ils sont dispensés de consentement. La mesure d'audience, elle, n'a lieu qu'avec votre accord : le bandeau affiché lors de la première visite permet de l'accepter, de la refuser (« Continuer sans accepter ») ou de choisir dans « Personnaliser ». Elle est désactivée tant que vous ne l'avez pas acceptée.
 
 ## Les témoins déposés
-- nblogitrack_session — maintient la session d'une page à l'autre ; expire après cent vingt minutes d'inactivité.
+- nblogitrack-session — maintient la session d'une page à l'autre ; expire après cent vingt minutes d'inactivité.
 - XSRF-TOKEN — protège les formulaires contre les requêtes forgées depuis un autre site ; même durée que la session.
-- remember_web — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de trente jours.
+- remember_web_ suivi d'une empreinte technique — conserve la connexion lorsque la case « Se souvenir de moi » est cochée ; supprimé à la déconnexion et, à défaut, au terme de trente jours.
 - temoins_choix — enregistre le choix exprimé dans le bandeau (« essentiels » ou « audience ») ; conservé cent quatre-vingts jours.
 
+## Le stockage local du navigateur
+Le formulaire de demande de devis garde un brouillon de la saisie dans le stockage local du navigateur (nblogitrack.devis.brouillon), pour qu'une page rechargée ne fasse pas tout perdre. Ce brouillon, qui peut contenir vos coordonnées, ne quitte pas votre appareil. Il est effacé à l'envoi de la demande ou par le bouton « Tout effacer » du formulaire ; sinon, il reste dans le navigateur jusqu'à ce que vous effaciez les données du site.
+
 ## La mesure d'audience, avec votre accord
-Si vous l'acceptez, NBLogiTrack compte lui-même les pages vues de son site public, sans outil ni service tiers. Pour chaque page, il garde la date, la page, la langue, le type d'appareil (ordinateur ou mobile) et, à l'arrivée sur le site, la provenance (moteur de recherche, réseau social, site d'origine ou campagne). Il compte aussi les demandes de devis, les inscriptions et les simulations de tarif. Aucun témoin de suivi n'est déposé, aucune adresse IP n'est conservée et rien ne relie deux pages au même visiteur. Les comptes connectés ne sont pas mesurés. Ces chiffres servent à améliorer le site ; ils sont conservés treize mois puis effacés.
+Si vous l'acceptez, NBLogiTrack compte lui-même les pages vues de son site public, sans outil ni service tiers. Pour chaque page, il garde la date et l'heure, la page, la langue, le type d'appareil (ordinateur ou mobile) et, à l'arrivée sur le site, la provenance (moteur de recherche, réseau social, site d'origine ou campagne). Il compte aussi les demandes de devis, les inscriptions et les simulations de tarif. Aucun témoin de suivi n'est déposé, aucune adresse IP n'est enregistrée avec ces mesures et rien ne relie deux pages au même visiteur ; pour écarter les envois automatisés, une empreinte salée de l'adresse IP sert pendant une minute de compteur temporaire, puis expire. Les comptes connectés ne sont pas mesurés. Ces chiffres servent à améliorer le site ; ils sont conservés treize mois puis effacés.
 
 ## Ce que ce site ne dépose pas
 Aucun témoin publicitaire. Aucun traceur de mesure d'audience d'un tiers. Aucun témoin de réseau social. Aucune donnée n'est transmise à un tiers par ce moyen.
@@ -698,13 +731,16 @@ Een cookie is een klein bestand dat de browser bewaart tijdens het bezoek aan ee
 De wet vereist enkel toestemming voor wat niet onmisbaar is voor de gevraagde dienst, zoals reclame of publieksmeting. De hieronder opgesomde cookies zijn strikt noodzakelijk voor de werking en de beveiliging; zij zijn vrijgesteld van toestemming. De publieksmeting gebeurt enkel met uw toestemming: de banner bij het eerste bezoek laat toe ze te aanvaarden, te weigeren (« Doorgaan zonder te aanvaarden ») of te kiezen via « Aanpassen ». Zolang u ze niet aanvaardt, staat ze uit.
 
 ## De geplaatste cookies
-- nblogitrack_session — houdt de sessie in stand van pagina tot pagina; vervalt na honderdtwintig minuten inactiviteit.
+- nblogitrack-session — houdt de sessie in stand van pagina tot pagina; vervalt na honderdtwintig minuten inactiviteit.
 - XSRF-TOKEN — beschermt de formulieren tegen vervalste verzoeken vanaf een andere website; zelfde duur als de sessie.
-- remember_web — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na dertig dagen.
+- remember_web_ gevolgd door een technische vingerafdruk — houdt de aanmelding aan wanneer het vakje « Onthoud mij » is aangevinkt; gewist bij het afmelden en anders na dertig dagen.
 - temoins_choix — registreert de keuze die in de banner werd gemaakt (« essentiels » of « audience »); honderdtachtig dagen bewaard.
 
+## De lokale opslag van de browser
+Het offerteformulier bewaart een concept van de invoer in de lokale opslag van de browser (nblogitrack.devis.brouillon), zodat een herladen pagina niet alles doet verliezen. Dat concept, dat uw contactgegevens kan bevatten, verlaat uw toestel niet. Het wordt gewist bij het verzenden van de aanvraag of met de knop « Alles wissen » van het formulier; anders blijft het in de browser tot u de gegevens van de website wist.
+
 ## Publieksmeting, met uw toestemming
-Als u ermee instemt, telt NBLogiTrack zelf de bekeken pagina's van zijn publieke website, zonder tool of dienst van derden. Per pagina bewaart het de datum, de pagina, de taal, het type toestel (computer of mobiel) en, bij aankomst op de website, de herkomst (zoekmachine, sociaal netwerk, verwijzende website of campagne). Het telt ook de offerteaanvragen, de inschrijvingen en de tariefsimulaties. Er wordt geen trackingcookie geplaatst, geen IP-adres bewaard en niets verbindt twee pagina's met dezelfde bezoeker. Aangemelde accounts worden niet gemeten. Deze cijfers dienen om de website te verbeteren; ze worden dertien maanden bewaard en daarna gewist.
+Als u ermee instemt, telt NBLogiTrack zelf de bekeken pagina's van zijn publieke website, zonder tool of dienst van derden. Per pagina bewaart het de datum en het uur, de pagina, de taal, het type toestel (computer of mobiel) en, bij aankomst op de website, de herkomst (zoekmachine, sociaal netwerk, verwijzende website of campagne). Het telt ook de offerteaanvragen, de inschrijvingen en de tariefsimulaties. Er wordt geen trackingcookie geplaatst, geen IP-adres bij deze metingen geregistreerd en niets verbindt twee pagina's met dezelfde bezoeker; om geautomatiseerde verzoeken te weren dient een gezouten vingerafdruk van het IP-adres gedurende één minuut als tijdelijke teller, waarna hij vervalt. Aangemelde accounts worden niet gemeten. Deze cijfers dienen om de website te verbeteren; ze worden dertien maanden bewaard en daarna gewist.
 
 ## Wat deze website niet plaatst
 Geen reclamecookies. Geen trackers voor publieksmeting van derden. Geen cookies van sociale netwerken. Langs deze weg wordt geen enkel gegeven aan een derde doorgegeven.
@@ -733,13 +769,16 @@ A cookie is a small file the browser keeps while visiting a website. It lets the
 The law requires consent only for what is not essential to the requested service, such as advertising or audience measurement. The cookies listed below are strictly necessary for operation and security; they are exempt from consent. Audience measurement only takes place with your consent: the banner shown on the first visit lets you accept it, refuse it (« Continue without accepting ») or choose under « Customise ». It stays off until you accept it.
 
 ## Cookies placed
-- nblogitrack_session — keeps the session alive from page to page; expires after one hundred and twenty minutes of inactivity.
+- nblogitrack-session — keeps the session alive from page to page; expires after one hundred and twenty minutes of inactivity.
 - XSRF-TOKEN — protects forms against requests forged from another website; same lifetime as the session.
-- remember_web — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after thirty days.
+- remember_web_ followed by a technical fingerprint — keeps you signed in when the « Remember me » box is ticked; deleted on sign-out and otherwise after thirty days.
 - temoins_choix — records the choice made in the banner (« essentiels » or « audience »); kept for one hundred and eighty days.
 
+## The browser's local storage
+The quotation request form keeps a draft of what you type in the browser's local storage (nblogitrack.devis.brouillon), so that a reloaded page does not lose everything. This draft, which may contain your contact details, does not leave your device. It is deleted when the request is sent or with the form's « Clear everything » button; otherwise it stays in the browser until you clear the website's data.
+
 ## Audience measurement, with your consent
-If you accept it, NBLogiTrack itself counts the pages viewed on its public website, without any third-party tool or service. For each page it keeps the date, the page, the language, the device type (computer or mobile) and, on arrival on the website, where the visit came from (search engine, social network, referring website or campaign). It also counts quote requests, sign-ups and rate simulations. No tracking cookie is placed, no IP address is kept and nothing links two pages to the same visitor. Signed-in accounts are not measured. These figures are used to improve the website; they are kept for thirteen months and then deleted.
+If you accept it, NBLogiTrack itself counts the pages viewed on its public website, without any third-party tool or service. For each page it keeps the date and time, the page, the language, the device type (computer or mobile) and, on arrival on the website, where the visit came from (search engine, social network, referring website or campaign). It also counts quote requests, sign-ups and rate simulations. No tracking cookie is placed, no IP address is recorded with these measurements and nothing links two pages to the same visitor; to keep out automated requests, a salted fingerprint of the IP address serves for one minute as a temporary counter, then expires. Signed-in accounts are not measured. These figures are used to improve the website; they are kept for thirteen months and then deleted.
 
 ## What this website does not place
 No advertising cookies. No third-party audience measurement trackers. No social network cookies. No data is passed to any third party by this means.

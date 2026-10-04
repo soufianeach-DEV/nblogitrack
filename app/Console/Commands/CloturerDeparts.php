@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Driver;
+use App\Models\DriverAcknowledgement;
+use App\Models\Indisponibilite;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +16,8 @@ use Illuminate\Support\Str;
  *
  * Un an plus tard, delai de prescription des actions nees du contrat de
  * travail (loi du 3 juillet 1978, art. 15), ses donnees de gestion
- * s'effacent : permis, examens, cartes, dates, coordonnees. Son nom reste
+ * s'effacent : permis, examens, cartes, dates, coordonnees, indisponibilites
+ * et prises de connaissance de la note d'information. Son nom reste
  * attache aux dossiers de transport conserves (voir pieces:purger).
  */
 class CloturerDeparts extends Command
@@ -58,6 +61,11 @@ class CloturerDeparts extends Command
                     'adr_expiry' => null,
                     'departure_reason' => null,
                 ])->save();
+
+                // Prises de connaissance de la note (avec l'adresse IP) et
+                // periodes d'indisponibilite (motif maladie compris).
+                DriverAcknowledgement::where('user_id', $chauffeur->user_id)->delete();
+                Indisponibilite::where('driver_id', $chauffeur->id)->delete();
 
                 $chauffeur->user?->forceFill([
                     'email' => 'ancien-chauffeur-'.$chauffeur->user->id.'@anonyme.invalid',
