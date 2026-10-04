@@ -95,6 +95,26 @@ class Localite
     }
 
     /**
+     * La localite d'un code postal, la plus proche du point transmis : une
+     * adresse ecrite avec le nom francais de la ville (« 50667 Cologne »)
+     * ou sans ses accents (« 8001 Zurich ») se retrouve par son code, que
+     * le referentiel connait sous le nom local (« Köln », « Zürich »).
+     */
+    public static function parCodePostal(string $pays, ?string $codePostal, float $lat, float $lng): ?object
+    {
+        if ($codePostal === null || trim($codePostal) === '') {
+            return null;
+        }
+
+        return DB::table('postal_codes')
+            ->selectRaw('city AS ville, lat, lng, region')
+            ->where('country_code', strtoupper(trim($pays)))
+            ->where('code', trim($codePostal))
+            ->orderByRaw('power(lat - ?, 2) + power((lng - ?) * cos(radians(?)), 2)', [$lat, $lng, $lat])
+            ->first();
+    }
+
+    /**
      * Pays dont GeoNames ne publie pas les codes postaux : liste dans
      * Geocodeur::EMPRISES et sans aucune ligne dans postal_codes. Si les
      * donnees arrivent un jour, la verification stricte reprend la main.

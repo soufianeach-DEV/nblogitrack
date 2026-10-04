@@ -152,6 +152,46 @@ class EnlevementEtrangerTest extends TestCase
         ]))->assertSessionHasNoErrors();
     }
 
+    /** @return array<string, mixed> */
+    private function versCologne(array $plus = []): array
+    {
+        return $this->lilleBruxelles([
+            'pickup_address' => 'Rue Haute 100, 1000 Bruxelles, Belgique', 'pickup_country' => 'BE',
+            'pickup_lat' => 50.8504, 'pickup_lng' => 4.3488,
+            'delivery_address' => 'Domkloster 4, 50667 Cologne, Allemagne', 'delivery_country' => 'DE',
+            'delivery_lat' => 50.9413, 'delivery_lng' => 6.9583,
+            'tariff_grid_id' => $this->grille('DE')->id,
+            ...$plus,
+        ]);
+    }
+
+    public function test_une_ville_ecrite_sous_son_nom_francais_est_retrouvee_par_son_code_postal(): void
+    {
+        $this->commander($this->versCologne())->assertSessionHasNoErrors();
+
+        $this->assertSame('Domkloster 4, 50667 Cologne, Allemagne', TransportOrder::firstOrFail()->delivery_address);
+    }
+
+    public function test_un_enlevement_dans_une_ville_ecrite_sous_son_nom_francais_est_accepte(): void
+    {
+        $this->commander($this->lilleBruxelles([
+            'pickup_address' => 'Domkloster 4, 50667 Cologne, Allemagne', 'pickup_country' => 'DE',
+            'pickup_lat' => 50.9413, 'pickup_lng' => 6.9583,
+            'tariff_grid_id' => $this->grille('DE')->id,
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame('DE', TransportOrder::firstOrFail()->pickup_country);
+    }
+
+    public function test_le_code_postal_ne_couvre_pas_un_point_eloigne(): void
+    {
+        // Le texte dit Cologne, le point est a Aix-la-Chapelle, a 60 km.
+        $this->commander($this->versCologne(['delivery_lat' => 50.7753, 'delivery_lng' => 6.0839]))
+            ->assertSessionHasErrors('delivery_address');
+
+        $this->assertSame(0, TransportOrder::count());
+    }
+
     public function test_un_joker_ne_passe_pas_pour_une_localite(): void
     {
         $this->commander($this->lilleBruxelles(['pickup_address' => 'Rue X 1, 59000 %, France']))->assertSessionHasErrors('pickup_address');
