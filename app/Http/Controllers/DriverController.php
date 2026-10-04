@@ -210,7 +210,7 @@ class DriverController extends Controller
             // (tache chauffeurs:cloturer-departs), pas des aujourd'hui.
             if (Carbon::parse($donnees['left_on'])->lte(today())) {
                 $donnees['is_available'] = false;
-                $driver->user?->update(['is_active' => false]);
+                $driver->user?->forceFill(['is_active' => false])->save();
             }
         } elseif ($driver->left_on !== null) {
             // Depart annule : le motif part avec la date. Le compte ne
@@ -219,7 +219,7 @@ class DriverController extends Controller
             $donnees['departure_reason'] = null;
 
             if ($driver->left_on->lte(today())) {
-                $driver->user?->update(['is_active' => true]);
+                $driver->user?->forceFill(['is_active' => true])->save();
             }
         }
 

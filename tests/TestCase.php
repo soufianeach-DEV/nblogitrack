@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -54,5 +55,18 @@ abstract class TestCase extends BaseTestCase
         config(['services.osrm.serveurs' => ['https://router.project-osrm.org']]);
 
         return parent::setUpTraits();
+    }
+
+    /**
+     * Laravel jette en silence un attribut absent de $fillable. Un role
+     * ou un etat de compte oublie dans un create() retombait alors sur la
+     * valeur par defaut de la colonne, et le test passait quand meme.
+     * Apres cet appel, l'oubli leve une exception ; le reglage tombe a la
+     * fin du test.
+     */
+    protected function refuserLesAttributsJetes(): void
+    {
+        Model::preventSilentlyDiscardingAttributes();
+        $this->beforeApplicationDestroyed(fn () => Model::preventSilentlyDiscardingAttributes(false));
     }
 }

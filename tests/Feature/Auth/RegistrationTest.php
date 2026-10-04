@@ -79,6 +79,21 @@ class RegistrationTest extends TestCase
         $this->assertSame('CLIENT', User::where('email', 'contact@transports-essai.be')->value('role'));
     }
 
+    public function test_l_inscription_ecrit_elle_meme_le_role_et_l_etat_du_compte(): void
+    {
+        $this->registreRepond();
+        $this->refuserLesAttributsJetes();
+
+        $this->post(route('register'), $this->formulaire(['role' => 'ADMIN', 'is_active' => false]))
+            ->assertSessionHasNoErrors();
+
+        $compte = User::where('email', 'contact@transports-essai.be')->firstOrFail();
+        $this->assertSame('CLIENT', $compte->role);
+        // Le compte nait actif : c'est la validation de l'entreprise qui
+        // ouvre l'acces, pas ce champ.
+        $this->assertTrue($compte->is_active);
+    }
+
     public function test_pas_d_inscription_quand_le_registre_est_injoignable(): void
     {
         $this->registreRepond(['isValid' => false, 'userError' => 'MS_UNAVAILABLE']);

@@ -260,7 +260,7 @@ class ParcoursNavigateurTest extends TestCase
     public function test_un_chauffeur_sorti_ne_se_reactive_pas_par_le_personnel(): void
     {
         $chauffeur = $this->chauffeur(['left_on' => now()->subDays(3)->toDateString()]);
-        $chauffeur->user->update(['is_active' => false]);
+        $chauffeur->user->forceFill(['is_active' => false])->save();
 
         $this->actingAs(User::factory()->administrateur()->create())
             ->withSession(['auth.password_confirmed_at' => time()])
@@ -306,7 +306,7 @@ class ParcoursNavigateurTest extends TestCase
     public function test_une_entreprise_refusee_apprend_que_sa_demande_n_est_pas_retenue(): void
     {
         $client = Client::factory()->create(['is_validated' => false, 'rejection_reason' => 'Numéro de TVA inactif']);
-        $client->compte()->update(['is_active' => false]);
+        $client->compte()->forceFill(['is_active' => false])->save();
 
         $this->post(route('login'), ['email' => $client->compte()->email, 'password' => 'password'])
             ->assertSessionHasErrors(['email' => 'Votre demande d\'inscription n\'a pas été retenue. Le motif vous a été envoyé par e-mail.']);
@@ -427,7 +427,7 @@ class ParcoursNavigateurTest extends TestCase
             'created_by' => User::factory()->administrateur()->create()->id,
         ]);
 
-        $client->compte()->update(['is_active' => false]);
+        $client->compte()->forceFill(['is_active' => false])->save();
 
         $this->getJson('/api/v1/expeditions', ['Authorization' => 'Bearer '.$jeton])->assertForbidden();
     }
