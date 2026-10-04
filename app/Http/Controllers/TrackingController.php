@@ -93,7 +93,12 @@ class TrackingController extends Controller
                 'numero_permis' => $utilisateur->can('view-all-orders')
                     ? $ordre->driver->license_number
                     : null,
-                'trajets' => TransportOrder::where('driver_id', $ordre->driver_id)->count(),
+                // L'activite du conducteur aupres des autres clients ne
+                // regarde pas ce client (RGPD, minimisation) : seul le
+                // personnel la voit, comme le numero de permis.
+                'trajets' => $utilisateur->can('view-all-orders')
+                    ? TransportOrder::where('driver_id', $ordre->driver_id)->count()
+                    : null,
             ] : null,
             'etapes' => $ordre ? $this->etapes($ordre) : null,
             'jalons' => $ordre ? $this->jalons($ordre) : null,
