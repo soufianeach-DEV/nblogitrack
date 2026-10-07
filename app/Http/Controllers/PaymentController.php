@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Support\JournalSecurite;
 use App\Support\PaiementStripe;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,9 @@ class PaymentController extends Controller
     {
         // Seule l'entreprise facturee paie sa facture : le personnel ne
         // cree pas de session de paiement a sa place.
-        abort_unless($request->user()->can('pay', $invoice), 404);
+        if ($request->user()->cannot('pay', $invoice)) {
+            JournalSecurite::introuvable($request);
+        }
 
         if (! $invoice->estAPayer() || $invoice->solde() <= 0) {
             return back()->with('error', Traductions::t('msg.facture_non_payable', 'Cette facture ne peut pas être réglée en ligne.'));
@@ -141,6 +144,8 @@ class PaymentController extends Controller
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void
     {
-        abort_unless($request->user()->can('view-all-orders') || $request->user()->can('pay', $invoice), 404);
+        if (! $request->user()->can('view-all-orders') && $request->user()->cannot('pay', $invoice)) {
+            JournalSecurite::introuvable($request);
+        }
     }
 }

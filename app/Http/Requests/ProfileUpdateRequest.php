@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Rules\MotDePasseActuel;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,7 +39,7 @@ class ProfileUpdateRequest extends FormRequest
             'current_password' => [
                 Rule::requiredIf(fn () => mb_strtolower((string) $this->input('email')) !== $this->user()->email),
                 'nullable',
-                'current_password',
+                new MotDePasseActuel('changement d\'adresse e-mail'),
             ],
         ];
     }

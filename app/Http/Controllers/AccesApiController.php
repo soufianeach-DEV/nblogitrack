@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\ApiKey;
 use App\Models\ApiKeyRequest;
 use App\Models\User;
+use App\Support\JournalSecurite;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -131,7 +132,9 @@ class AccesApiController extends Controller
      */
     public function reveler(Request $request, ApiKeyRequest $demande): RedirectResponse
     {
-        abort_unless($demande->client_id === $request->user()->client_id, 404);
+        if ($demande->client_id !== $request->user()->client_id) {
+            JournalSecurite::introuvable($request);
+        }
 
         $enClair = DB::transaction(function () use ($demande) {
             $verrouillee = ApiKeyRequest::whereKey($demande->id)->lockForUpdate()->first();
