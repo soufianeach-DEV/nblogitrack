@@ -11,6 +11,7 @@ use App\Http\Middleware\RetirerCaracteresDeControle;
 use App\Http\Middleware\VerifierCompteActif;
 use App\Models\Translation;
 use App\Support\Audience;
+use App\Support\JournalSecurite;
 use App\Support\Traductions;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -131,6 +132,18 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if (Traductions::estServie($langue)) {
                 app()->setLocale($langue);
+            }
+
+            return null;
+        });
+
+        // Un acces refuse (403) est inscrit au journal, comme les refus qui
+        // repondent « introuvable » (JournalSecurite::introuvable) : qui
+        // essaie les ecrans ou les pieces d'autres comptes ne passe plus
+        // inapercu. L'API tient son propre journal des refus.
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($e->getStatusCode() === 403 && ! $request->is('api', 'api/*')) {
+                rescue(fn () => JournalSecurite::accesRefuse($request));
             }
 
             return null;

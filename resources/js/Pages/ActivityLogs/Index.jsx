@@ -16,6 +16,9 @@ const COULEUR_ACTION = {
     'auth.logout': 'bg-slate-100 text-slate-600',
     'auth.failed': 'bg-status-incident/10 text-status-incident',
     'auth.lockout': 'bg-status-incident/20 text-status-incident',
+    'auth.blocked': 'bg-status-incident/10 text-status-incident',
+    'auth.access_denied': 'bg-status-incident/10 text-status-incident',
+    'auth.password_rejected': 'bg-status-incident/10 text-status-incident',
 };
 
 export default function Index({ logs, actions, filtres, stats }) {
