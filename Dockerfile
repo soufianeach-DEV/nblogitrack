@@ -15,8 +15,15 @@ RUN npm run build
 
 FROM php:8.4-apache
 
-ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-RUN install-php-extensions pdo_pgsql intl gd zip bcmath opcache pcntl @composer
+# L'installeur d'extensions et Composer viennent d'images epinglees par
+# empreinte : un tag ou un lien « latest » se reecrit, une empreinte non.
+# Un installeur pirate ne passe donc pas dans l'image, qui detient les
+# secrets de production. Les images officielles de base (node, php)
+# gardent leur tag pour recevoir les correctifs de PHP et de Debian a
+# chaque construction.
+COPY --from=mlocati/php-extension-installer:2.12.0@sha256:1afade3e29cfc97362cf5885e5ac333bf2faab1146cb28ebbb59b17e68f87e88 /usr/bin/install-php-extensions /usr/local/bin/
+COPY --from=composer:2.10.3@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/local/bin/composer
+RUN install-php-extensions pdo_pgsql intl gd zip bcmath opcache pcntl
 
 # Apache sert le dossier public et ecoute le port impose par l'hebergeur.
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
