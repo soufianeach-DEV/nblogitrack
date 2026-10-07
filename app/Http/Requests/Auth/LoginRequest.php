@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Timebox;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
@@ -46,25 +47,41 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         $identifiants = ['email' => $email, 'password' => $this->input('password')];
+        $fournisseur = Auth::getProvider();
+        $user = $fournisseur->retrieveByCredentials($identifiants);
 
         // Les identifiants sont verifies avant d'ouvrir la session : un
         // compte desactive ou en attente ne figure plus au journal comme
         // une connexion suivie d'une deconnexion.
-        if (! Auth::validate($identifiants)) {
-            event(new Failed(Auth::getDefaultDriver(), Auth::getLastAttempted(), $identifiants));
+        //
+        // Une adresse inconnue coute le meme calcul qu'un mot de passe faux,
+        // un hachage contre un leurre, dans la meme temporisation que celle
+        // de Laravel : le temps de reponse ne dit pas si le compte existe.
+        // Le leurre passait apres la temporisation et ajoutait un hachage
+        // entier aux seules adresses inconnues.
+        $valides = (new Timebox)->call(function (Timebox $temporisation) use ($fournisseur, $user, $identifiants) {
+            if ($user === null) {
+                Hash::check((string) $identifiants['password'], Cache::rememberForever('connexion.leurre', fn () => Hash::make(Str::random(40))));
 
-            // Une adresse inconnue coute le meme calcul qu'un mot de passe
-            // faux : le temps de reponse ne dit plus si le compte existe.
-            if (! User::where('email', $email)->exists()) {
-                Hash::check((string) $this->input('password'), Cache::rememberForever('connexion.leurre', fn () => Hash::make(Str::random(40))));
+                return false;
             }
+
+            if (! $fournisseur->validateCredentials($user, $identifiants)) {
+                return false;
+            }
+
+            $temporisation->returnEarly();
+
+            return true;
+        }, (int) config('auth.timebox_duration', 200000));
+
+        if (! $valides) {
+            event(new Failed(Auth::getDefaultDriver(), $user, $identifiants));
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
-
-        $user = Auth::getLastAttempted();
 
         $this->ensureAccountIsUsable($user);
 
