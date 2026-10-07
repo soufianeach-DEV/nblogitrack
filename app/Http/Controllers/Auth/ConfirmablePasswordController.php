@@ -24,7 +24,7 @@ class ConfirmablePasswordController extends Controller
             'email' => $request->user()->email,
             'password' => $request->password,
         ])) {
-            JournalSecurite::motDePasseRefuse($request->user(), 'confirmation du mot de passe');
+            JournalSecurite::motDePasseRefuse($request->user(), 'ECRAN_CONFIRMATION');
 
             throw ValidationException::withMessages([
                 'password' => __('auth.password'),

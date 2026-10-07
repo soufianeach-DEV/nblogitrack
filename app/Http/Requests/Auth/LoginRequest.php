@@ -5,6 +5,7 @@ namespace App\Http\Requests\Auth;
 use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\JournalLisible;
 use App\Support\Traductions;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
@@ -89,7 +90,7 @@ class LoginRequest extends FormRequest
             $refusee = $user->isClient()
                 && Client::where('id', $user->client_id)->whereNotNull('rejection_reason')->exists();
 
-            $this->journaliserLeRefus($user, $refusee ? 'inscription refusée' : 'compte désactivé');
+            $this->journaliserLeRefus($user, $refusee ? 'INSCRIPTION_REFUSEE' : 'COMPTE_DESACTIVE');
 
             throw ValidationException::withMessages([
                 'email' => $refusee
@@ -99,7 +100,7 @@ class LoginRequest extends FormRequest
         }
 
         if ($user->isClient() && Client::where('id', $user->client_id)->where('is_validated', false)->exists()) {
-            $this->journaliserLeRefus($user, 'entreprise en attente de validation');
+            $this->journaliserLeRefus($user, 'ENTREPRISE_EN_ATTENTE');
 
             throw ValidationException::withMessages([
                 'email' => Traductions::t('msg.entreprise_en_attente', 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.'),
@@ -107,14 +108,17 @@ class LoginRequest extends FormRequest
         }
     }
 
-    /** Le bon mot de passe, mais un compte qui ne peut pas entrer. */
+    /**
+     * Le bon mot de passe, mais un compte qui ne peut pas entrer. Le motif
+     * est un code, que l'ecran Journal traduit (JournalLisible::CODES).
+     */
     private function journaliserLeRefus(User $user, string $motif): void
     {
         ActivityLog::record(
             'auth.blocked',
-            'Connexion refusée pour '.$user->email.' : '.$motif,
+            'Connexion refusée pour '.$user->email.' : '.mb_strtolower(JournalLisible::CODES[$motif][1]),
             $user,
-            [],
+            ['motif' => $motif],
             $user->id,
         );
     }

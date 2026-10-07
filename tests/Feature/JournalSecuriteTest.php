@@ -33,6 +33,9 @@ class JournalSecuriteTest extends TestCase
 
     public function test_un_flot_de_refus_n_ecrit_pas_une_ligne_par_refus(): void
     {
+        // La limite se compte a la minute : l'horloge ne doit pas en
+        // changer au milieu du test.
+        $this->freezeTime();
         $client = User::factory()->create();
 
         // La meme adresse refusee trois fois : une ligne.
@@ -72,6 +75,19 @@ class JournalSecuriteTest extends TestCase
         $this->assertStringEndsWith('/'.$autre->getRouteKey(), $ligne->properties['requete']);
     }
 
+    public function test_le_collegue_d_une_autre_entreprise_reste_introuvable_mais_journalise(): void
+    {
+        $gestionnaire = Client::factory()->create()->users()->sole();
+        $etranger = Client::factory()->create()->users()->sole();
+
+        $this->actingAs($gestionnaire)
+            ->patch(route('company.users.update', $etranger), ['role' => 'BILLING'])
+            ->assertNotFound();
+
+        $this->assertSame('ADMIN', $etranger->fresh()->company_role);
+        $this->assertSame($gestionnaire->id, ActivityLog::where('action', 'auth.access_denied')->sole()->user_id);
+    }
+
     public function test_un_mauvais_mot_de_passe_a_la_confirmation_est_journalise(): void
     {
         $admin = User::factory()->administrateur()->create();
@@ -82,6 +98,7 @@ class JournalSecuriteTest extends TestCase
         $ligne = ActivityLog::where('action', 'auth.password_rejected')->sole();
         $this->assertSame($admin->id, $ligne->user_id);
         $this->assertStringContainsString('confirmation du mot de passe', $ligne->description);
+        $this->assertSame(['ecran' => 'ECRAN_CONFIRMATION'], $ligne->properties);
     }
 
     public function test_un_mauvais_mot_de_passe_actuel_est_journalise_avec_le_meme_message(): void
@@ -119,6 +136,7 @@ class JournalSecuriteTest extends TestCase
         $this->assertGuest();
         $this->assertSame(['auth.blocked'], ActivityLog::pluck('action')->all());
         $this->assertStringContainsString('compte désactivé', ActivityLog::sole()->description);
+        $this->assertSame(['motif' => 'COMPTE_DESACTIVE'], ActivityLog::sole()->properties);
     }
 
     public function test_une_entreprise_en_attente_n_apparait_pas_comme_connectee(): void
@@ -132,6 +150,7 @@ class JournalSecuriteTest extends TestCase
         $this->assertGuest();
         $this->assertSame(['auth.blocked'], ActivityLog::pluck('action')->all());
         $this->assertStringContainsString('en attente de validation', ActivityLog::sole()->description);
+        $this->assertSame(['motif' => 'ENTREPRISE_EN_ATTENTE'], ActivityLog::sole()->properties);
     }
 
     public function test_connexion_et_echec_restent_journalises(): void
