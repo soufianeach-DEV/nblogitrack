@@ -16,7 +16,7 @@ use Illuminate\Support\Carbon;
 class JournalLisible
 {
     /** Codes techniques rencontres dans le detail, avec leur libelle. */
-    private const CODES = [
+    public const CODES = [
         'PENDING' => ['statut.en_attente', 'En attente'],
         'ASSIGNED' => ['statut.affecte', 'Affecté'],
         'IN_PROGRESS' => ['statut.en_cours', 'En cours'],
@@ -34,6 +34,13 @@ class JournalLisible
         'TRANSFER' => ['journal.methode_virement', 'Virement'],
         'OTHER' => ['journal.methode_autre', 'Autre'],
         'STRIPE' => ['journal.methode_carte', 'Carte (Stripe)'],
+        'COMPTE_DESACTIVE' => ['journal.motif_compte_desactive', 'Compte désactivé'],
+        'INSCRIPTION_REFUSEE' => ['journal.motif_inscription_refusee', 'Inscription refusée'],
+        'ENTREPRISE_EN_ATTENTE' => ['journal.motif_entreprise_en_attente', 'Entreprise en attente de validation'],
+        'ECRAN_CONFIRMATION' => ['journal.ecran_confirmation', 'Confirmation du mot de passe'],
+        'ECRAN_MOT_DE_PASSE' => ['journal.ecran_mot_de_passe', 'Changement du mot de passe'],
+        'ECRAN_ADRESSE' => ['journal.ecran_adresse', 'Changement d\'adresse e-mail'],
+        'ECRAN_SUPPRESSION' => ['journal.ecran_suppression', 'Suppression du compte'],
     ];
 
     /** Libelles des cles de detail les plus frequentes. */
@@ -62,6 +69,7 @@ class JournalLisible
         'version' => 'Version',
         'ip' => 'Adresse IP',
         'requete' => 'Requête',
+        'ecran' => 'Écran',
     ];
 
     public static function resume(ActivityLog $ligne): string

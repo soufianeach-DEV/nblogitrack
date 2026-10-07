@@ -53,7 +53,10 @@ class JournalSecurite
         abort(404);
     }
 
-    /** L'ecran est nomme en clair : « confirmation du mot de passe »... */
+    /**
+     * L'ecran est un code de JournalLisible::CODES (ECRAN_...), que l'ecran
+     * Journal traduit.
+     */
     public static function motDePasseRefuse(User $user, string $ecran): void
     {
         if (! self::aInscrire($user, request()->ip())) {
@@ -62,16 +65,17 @@ class JournalSecurite
 
         ActivityLog::record(
             'auth.password_rejected',
-            'Mot de passe actuel erroné pour '.$user->email.' ('.$ecran.')',
+            'Mot de passe actuel erroné pour '.$user->email.' ('.mb_strtolower(JournalLisible::CODES[$ecran][1]).')',
             $user,
-            [],
+            ['ecran' => $ecran],
             $user->id,
         );
     }
 
     private static function aInscrire(?User $user, ?string $ip, ?string $requete = null): bool
     {
-        $auteur = $user !== null ? 'compte:'.$user->id : 'ip:'.$ip;
+        // Sous empreinte : la cle du compteur ne garde pas l'adresse IP.
+        $auteur = sha1($user !== null ? 'compte:'.$user->id : 'ip:'.$ip);
         $minute = intdiv(now()->getTimestamp(), 60);
 
         if ($requete !== null && ! Cache::add('journal-securite:'.sha1($auteur.'|'.$requete).':'.$minute, true, 120)) {

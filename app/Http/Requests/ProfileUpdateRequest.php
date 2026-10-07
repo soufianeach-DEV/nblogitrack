@@ -39,7 +39,7 @@ class ProfileUpdateRequest extends FormRequest
             'current_password' => [
                 Rule::requiredIf(fn () => mb_strtolower((string) $this->input('email')) !== $this->user()->email),
                 'nullable',
-                new MotDePasseActuel('changement d\'adresse e-mail'),
+                new MotDePasseActuel('ECRAN_ADRESSE'),
             ],
         ];
     }

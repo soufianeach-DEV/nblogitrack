@@ -156,7 +156,7 @@ class ProfileController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([
-            'password' => ['required', new MotDePasseActuel('suppression du compte')],
+            'password' => ['required', new MotDePasseActuel('ECRAN_SUPPRESSION')],
         ]);
 
         $user = $request->user();
