@@ -13,6 +13,7 @@ use App\Support\FacturePdf;
 use App\Support\FactureUbl;
 use App\Support\Facturier;
 use App\Support\Formats;
+use App\Support\JournalSecurite;
 use App\Support\LigneFacture;
 use App\Support\PaiementStripe;
 use App\Support\Pays;
@@ -324,6 +325,8 @@ class InvoiceController extends Controller
     private function autoriserLecture(User $utilisateur, Invoice $invoice): void
     {
         abort_if($utilisateur->isDriver() || $utilisateur->cannot('viewAny', Invoice::class), 403);
-        abort_unless($utilisateur->can('view', $invoice), 404);
+        if ($utilisateur->cannot('view', $invoice)) {
+            JournalSecurite::introuvable(request());
+        }
     }
 }

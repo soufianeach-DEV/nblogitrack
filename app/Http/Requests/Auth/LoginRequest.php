@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
+use App\Support\JournalLisible;
 use App\Support\Traductions;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Timebox;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
@@ -42,22 +46,50 @@ class LoginRequest extends FormRequest
 
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt([
-            'email' => $email,
-            'password' => $this->input('password'),
-        ], $this->boolean('remember'))) {
-            // Une adresse inconnue coute le meme calcul qu'un mot de passe
-            // faux : le temps de reponse ne dit plus si le compte existe.
-            if (! User::where('email', $email)->exists()) {
-                Hash::check((string) $this->input('password'), Cache::rememberForever('connexion.leurre', fn () => Hash::make(Str::random(40))));
+        $identifiants = ['email' => $email, 'password' => $this->input('password')];
+        $fournisseur = Auth::getProvider();
+        $user = $fournisseur->retrieveByCredentials($identifiants);
+
+        // Les identifiants sont verifies avant d'ouvrir la session : un
+        // compte desactive ou en attente ne figure plus au journal comme
+        // une connexion suivie d'une deconnexion.
+        //
+        // Une adresse inconnue coute le meme calcul qu'un mot de passe faux,
+        // un hachage contre un leurre, dans la meme temporisation que celle
+        // de Laravel : le temps de reponse ne dit pas si le compte existe.
+        // Le leurre passait apres la temporisation et ajoutait un hachage
+        // entier aux seules adresses inconnues.
+        $valides = (new Timebox)->call(function (Timebox $temporisation) use ($fournisseur, $user, $identifiants) {
+            if ($user === null) {
+                Hash::check((string) $identifiants['password'], Cache::rememberForever('connexion.leurre', fn () => Hash::make(Str::random(40))));
+
+                return false;
             }
+
+            if (! $fournisseur->validateCredentials($user, $identifiants)) {
+                return false;
+            }
+
+            $temporisation->returnEarly();
+
+            return true;
+        }, (int) config('auth.timebox_duration', 200000));
+
+        if (! $valides) {
+            event(new Failed(Auth::getDefaultDriver(), $user, $identifiants));
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
-        $this->ensureAccountIsUsable();
+        $this->ensureAccountIsUsable($user);
+
+        if (config('hashing.rehash_on_login', true)) {
+            Auth::getProvider()->rehashPasswordIfRequired($user, $identifiants);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
         Cache::put($this->cleAdresseConnue(), true, now()->addDays(180));
@@ -66,19 +98,16 @@ class LoginRequest extends FormRequest
     /**
      * @throws ValidationException
      */
-    protected function ensureAccountIsUsable(): void
+    protected function ensureAccountIsUsable(User $user): void
     {
-        $user = Auth::user();
-
         if (! $user->is_active) {
-            Auth::logout();
-            $this->session()->invalidate();
-
             // Une entreprise refusee n'a pas d'administrateur a contacter :
             // on lui dit que sa demande n'a pas ete retenue, comme dans le
             // courriel qu'elle a recu.
             $refusee = $user->isClient()
                 && Client::where('id', $user->client_id)->whereNotNull('rejection_reason')->exists();
+
+            $this->journaliserLeRefus($user, $refusee ? 'INSCRIPTION_REFUSEE' : 'COMPTE_DESACTIVE');
 
             throw ValidationException::withMessages([
                 'email' => $refusee
@@ -88,13 +117,27 @@ class LoginRequest extends FormRequest
         }
 
         if ($user->isClient() && Client::where('id', $user->client_id)->where('is_validated', false)->exists()) {
-            Auth::logout();
-            $this->session()->invalidate();
+            $this->journaliserLeRefus($user, 'ENTREPRISE_EN_ATTENTE');
 
             throw ValidationException::withMessages([
                 'email' => Traductions::t('msg.entreprise_en_attente', 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.'),
             ]);
         }
+    }
+
+    /**
+     * Le bon mot de passe, mais un compte qui ne peut pas entrer. Le motif
+     * est un code, que l'ecran Journal traduit (JournalLisible::CODES).
+     */
+    private function journaliserLeRefus(User $user, string $motif): void
+    {
+        ActivityLog::record(
+            'auth.blocked',
+            'Connexion refusée pour '.$user->email.' : '.mb_strtolower(JournalLisible::CODES[$motif][1]),
+            $user,
+            ['motif' => $motif],
+            $user->id,
+        );
     }
 
     /**

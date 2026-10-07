@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\Adresse;
 use App\Support\Formats;
 use App\Support\Incidents;
+use App\Support\JournalSecurite;
 use App\Support\Osrm;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
@@ -194,7 +195,9 @@ class TrackingController extends Controller
 
     private function autoriserSuivi(Request $request, TransportOrder $ordre): void
     {
-        abort_unless($request->user()->can('view', $ordre), 404);
+        if ($request->user()->cannot('view', $ordre)) {
+            JournalSecurite::introuvable($request);
+        }
 
         abort_if($ordre->pickup_lat === null || $ordre->delivery_lat === null, 404);
     }

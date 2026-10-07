@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\JournalSecurite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,8 @@ class ConfirmablePasswordController extends Controller
             'email' => $request->user()->email,
             'password' => $request->password,
         ])) {
+            JournalSecurite::motDePasseRefuse($request->user(), 'ECRAN_CONFIRMATION');
+
             throw ValidationException::withMessages([
                 'password' => __('auth.password'),
             ]);

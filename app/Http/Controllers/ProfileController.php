@@ -11,6 +11,7 @@ use App\Models\Invoice;
 use App\Models\ShipmentPosition;
 use App\Models\TransportOrder;
 use App\Models\User;
+use App\Rules\MotDePasseActuel;
 use App\Support\Traductions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
@@ -155,7 +156,7 @@ class ProfileController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([
-            'password' => ['required', 'current_password'],
+            'password' => ['required', new MotDePasseActuel('ECRAN_SUPPRESSION')],
         ]);
 
         $user = $request->user();

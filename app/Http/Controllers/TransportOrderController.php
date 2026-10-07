@@ -16,6 +16,7 @@ use App\Support\Encours;
 use App\Support\Formats;
 use App\Support\FretRetour;
 use App\Support\GeocodageIndisponible;
+use App\Support\JournalSecurite;
 use App\Support\JoursFeries;
 use App\Support\Localite;
 use App\Support\OrderWorkflow;
@@ -103,7 +104,9 @@ class TransportOrderController extends Controller
 
     public function show(Request $request, TransportOrder $transportOrder): Response
     {
-        abort_unless($request->user()->can('view', $transportOrder), 404);
+        if ($request->user()->cannot('view', $transportOrder)) {
+            JournalSecurite::introuvable($request);
+        }
 
         $transportOrder->load([
             'client:id,company_name,city,country',
@@ -191,7 +194,9 @@ class TransportOrderController extends Controller
 
     public function annuler(Request $request, TransportOrder $transportOrder): RedirectResponse
     {
-        abort_unless($request->user()->can('cancel', $transportOrder), 404);
+        if ($request->user()->cannot('cancel', $transportOrder)) {
+            JournalSecurite::introuvable($request);
+        }
 
         $donnees = $request->validate([
             'frais' => 'required|numeric|min:0',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\JournalSecurite;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -153,9 +154,8 @@ class CompanyUserController extends Controller
 
     private function autoriser(Request $request, User $utilisateur): void
     {
-        abort_unless(
-            $utilisateur->isClient() && $utilisateur->client_id === $request->user()->client_id,
-            404,
-        );
+        if (! $utilisateur->isClient() || $utilisateur->client_id !== $request->user()->client_id) {
+            JournalSecurite::introuvable($request);
+        }
     }
 }
