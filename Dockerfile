@@ -23,7 +23,11 @@ FROM php:8.4-apache
 # chaque construction.
 COPY --from=mlocati/php-extension-installer:2.12.0@sha256:1afade3e29cfc97362cf5885e5ac333bf2faab1146cb28ebbb59b17e68f87e88 /usr/bin/install-php-extensions /usr/local/bin/
 COPY --from=composer:2.10.3@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/local/bin/composer
-RUN install-php-extensions pdo_pgsql intl gd zip bcmath opcache pcntl
+# unzip venait avec « @composer » : sans lui, Composer decompresse les
+# paquets avec l'extension zip de PHP, qui perd les droits des fichiers.
+RUN install-php-extensions pdo_pgsql intl gd zip bcmath opcache pcntl \
+ && apt-get update && apt-get install -y --no-install-recommends unzip \
+ && rm -rf /var/lib/apt/lists/*
 
 # Apache sert le dossier public et ecoute le port impose par l'hebergeur.
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
