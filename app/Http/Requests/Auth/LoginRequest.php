@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\User;
 use App\Support\Traductions;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,10 +44,14 @@ class LoginRequest extends FormRequest
 
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt([
-            'email' => $email,
-            'password' => $this->input('password'),
-        ], $this->boolean('remember'))) {
+        $identifiants = ['email' => $email, 'password' => $this->input('password')];
+
+        // Les identifiants sont verifies avant d'ouvrir la session : un
+        // compte desactive ou en attente ne figure plus au journal comme
+        // une connexion suivie d'une deconnexion.
+        if (! Auth::validate($identifiants)) {
+            event(new Failed(Auth::getDefaultDriver(), Auth::getLastAttempted(), $identifiants));
+
             // Une adresse inconnue coute le meme calcul qu'un mot de passe
             // faux : le temps de reponse ne dit plus si le compte existe.
             if (! User::where('email', $email)->exists()) {
@@ -57,7 +63,15 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        $this->ensureAccountIsUsable();
+        $user = Auth::getLastAttempted();
+
+        $this->ensureAccountIsUsable($user);
+
+        if (config('hashing.rehash_on_login', true)) {
+            Auth::getProvider()->rehashPasswordIfRequired($user, $identifiants);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
         Cache::put($this->cleAdresseConnue(), true, now()->addDays(180));
@@ -66,19 +80,16 @@ class LoginRequest extends FormRequest
     /**
      * @throws ValidationException
      */
-    protected function ensureAccountIsUsable(): void
+    protected function ensureAccountIsUsable(User $user): void
     {
-        $user = Auth::user();
-
         if (! $user->is_active) {
-            Auth::logout();
-            $this->session()->invalidate();
-
             // Une entreprise refusee n'a pas d'administrateur a contacter :
             // on lui dit que sa demande n'a pas ete retenue, comme dans le
             // courriel qu'elle a recu.
             $refusee = $user->isClient()
                 && Client::where('id', $user->client_id)->whereNotNull('rejection_reason')->exists();
+
+            $this->journaliserLeRefus($user, $refusee ? 'inscription refusée' : 'compte désactivé');
 
             throw ValidationException::withMessages([
                 'email' => $refusee
@@ -88,13 +99,24 @@ class LoginRequest extends FormRequest
         }
 
         if ($user->isClient() && Client::where('id', $user->client_id)->where('is_validated', false)->exists()) {
-            Auth::logout();
-            $this->session()->invalidate();
+            $this->journaliserLeRefus($user, 'entreprise en attente de validation');
 
             throw ValidationException::withMessages([
                 'email' => Traductions::t('msg.entreprise_en_attente', 'Votre entreprise est en attente de validation. Vous recevrez un e-mail dès son activation.'),
             ]);
         }
+    }
+
+    /** Le bon mot de passe, mais un compte qui ne peut pas entrer. */
+    private function journaliserLeRefus(User $user, string $motif): void
+    {
+        ActivityLog::record(
+            'auth.blocked',
+            'Connexion refusée pour '.$user->email.' : '.$motif,
+            $user,
+            [],
+            $user->id,
+        );
     }
 
     /**

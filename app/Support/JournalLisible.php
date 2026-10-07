@@ -61,6 +61,7 @@ class JournalLisible
         'reference' => 'Référence',
         'version' => 'Version',
         'ip' => 'Adresse IP',
+        'requete' => 'Requête',
     ];
 
     public static function resume(ActivityLog $ligne): string
