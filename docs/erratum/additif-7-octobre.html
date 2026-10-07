@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Additif à l’erratum — 7 octobre 2026</title>
+<style>
+  /* Mise en page reprise de l'erratum du 5 octobre : A4, marges 25/20/20/30 mm, Liberation Sans,
+     titres bleus, tableau à en-tête marine et filets bleu-gris. */
+  :root {
+    --marine: #14324f;
+    --titre: #2f5496;
+    --filet: #b7c3d0;
+    --legende: #44546a;
+    --encadre: #e8f1fb;
+    --texte: #000000;
+    --police: "Liberation Sans", Arial, Helvetica, sans-serif;
+  }
+  @page { size: A4; margin: 25mm 20mm 20mm 30mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #ffffff; color: var(--texte); }
+  body { font-family: var(--police); font-size: 11pt; line-height: 1.45; }
+
+  .titre {
+    border: 1.2pt solid var(--marine);
+    padding: 7pt 12pt 8pt;
+    text-align: center;
+    color: var(--marine);
+  }
+  .titre h1 { margin: 0; font-size: 19pt; font-weight: 700; line-height: 1.2; }
+  .titre p { margin: 4pt 0 0; font-size: 11.5pt; }
+
+  .intro { margin: 10pt 0 0; font-size: 10.5pt; text-align: justify; }
+  .note { margin: 5pt 0 7pt; font-size: 8.1pt; font-style: italic; color: var(--legende); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.1pt; line-height: 1.26; }
+  thead { display: table-header-group; }
+  th {
+    background: var(--marine); color: #ffffff; font-weight: 700; text-align: left;
+    padding: 2.5pt 4pt; border: 0.6pt solid var(--marine);
+  }
+  td { border: 0.6pt solid var(--filet); padding: 2.4pt 4pt; vertical-align: top; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  col.c-page { width: 7%; }
+  col.c-endroit { width: 22%; }
+  col.c-avant { width: 30%; }
+  col.c-lire { width: 41%; }
+  td.page { white-space: nowrap; }
+  td.avant { font-style: italic; }
+  .fig { font-style: normal; }
+  sup { line-height: 0; font-size: 0.72em; }
+  tr.generale td { background: var(--encadre); }
+  tr.generale b { color: var(--marine); }
+
+  .encadre {
+    margin-top: 10pt;
+    border: 0.8pt solid var(--filet);
+    background: var(--encadre);
+    padding: 6pt 9pt 7pt;
+    break-inside: avoid; page-break-inside: avoid;
+    font-size: 8.6pt; line-height: 1.3;
+  }
+  .encadre h2 { margin: 0 0 2pt; font-size: 11.5pt; color: var(--titre); font-weight: 700; }
+  .encadre .numerotation { margin: 0 0 4pt; color: var(--legende); }
+  .encadre ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 3pt; }
+  .encadre li { display: grid; grid-template-columns: 30pt 1fr; }
+  .encadre b { color: var(--marine); }
+  .encadre i { color: var(--marine); }
+  .encadre .reste { margin: 5pt 0 0; color: var(--legende); }
+</style>
+</head>
+<body>
+
+<div class="titre">
+  <h1>Additif à l’erratum — 7 octobre 2026</h1>
+  <p>NBLogiTrack — corrections postérieures au 5 octobre (demande de fusion n° 120)</p>
+</div>
+
+<p class="intro">Après le 5 octobre 2026, l’application a reçu des corrections de sécurité issues d’un audit OWASP Top 10, fusionnées le 7 octobre ; les passages ci-dessous de l’erratum sont à lire ainsi.</p>
+
+<p class="note">La colonne « Page » renvoie aux pages imprimées de l’erratum du 5 octobre 2026 ; « N° » renvoie aux lignes de son tableau.</p>
+
+<table>
+  <colgroup><col class="c-page"><col class="c-endroit"><col class="c-avant"><col class="c-lire"></colgroup>
+  <thead>
+    <tr><th>Page</th><th>Endroit</th><th>Au lieu de</th><th>Lire</th></tr>
+  </thead>
+  <tbody>
+    <tr class="generale">
+      <td class="page">Toutes</td>
+      <td colspan="3"><b>Les chiffres de l’erratum sont arrêtés au 5 octobre 2026.</b> Au 7 octobre 2026 : 516 commits sur 27 jours de travail, 114 demandes de fusion, dont 110 fusionnées, 748 tests et 4 263 assertions. Ailleurs, un chiffre que l’erratum date explicitement du 5 octobre reste juste à cette date (ainsi p. 69, N° 100).</td>
+    </tr>
+    <tr>
+      <td class="page">1</td>
+      <td>Objet de l’erratum, 2<sup>e</sup> paragraphe</td>
+      <td class="avant">« Le développement s’est poursuivi jusqu’au 5 octobre 2026. »</td>
+      <td>Le développement s’est poursuivi jusqu’au 7 octobre 2026.</td>
+    </tr>
+    <tr>
+      <td class="page">2</td>
+      <td>Repères, en-tête de la 3<sup>e</sup> colonne</td>
+      <td class="avant">« Erratum (5 octobre 2026) »</td>
+      <td>Erratum (5 octobre 2026, chiffres au 7 octobre selon l’additif)</td>
+    </tr>
+    <tr>
+      <td class="page">2</td>
+      <td>Repères, ligne « Version de l’application », colonne « Erratum »</td>
+      <td class="avant">« v0.3.0-beta (publiée le 30 septembre 2026, étiquette reposée le 3 octobre), complétée jusqu’au 5 octobre »</td>
+      <td>v0.3.0-beta (publiée le 30 septembre 2026, étiquette reposée le 3 octobre), complétée jusqu’au 7 octobre</td>
+    </tr>
+    <tr>
+      <td class="page">2</td>
+      <td>Repères, ligne « Historique du dépôt », colonne « Erratum »</td>
+      <td class="avant">« 508 commits, 26 jours de travail (au 5 octobre) »</td>
+      <td>516 commits, 27 jours de travail (au 7 octobre)</td>
+    </tr>
+    <tr>
+      <td class="page">2</td>
+      <td>Repères, ligne « Tests automatisés », colonne « Erratum »</td>
+      <td class="avant">« 738 tests et 4 186 assertions, sur PostgreSQL »</td>
+      <td>748 tests et 4 263 assertions, sur PostgreSQL</td>
+    </tr>
+    <tr>
+      <td class="page">4</td>
+      <td>Les principales corrections, point 10 « La réalisation », 1<sup>re</sup> phrase</td>
+      <td class="avant">« 508 commits sur 26 jours de travail, 113 demandes de fusion, la version v0.3.0-beta (publiée le 30 septembre 2026), complétée jusqu’au 5 octobre, et 738 tests automatisés. »</td>
+      <td>516 commits sur 27 jours de travail, 114 demandes de fusion, la version v0.3.0-beta (publiée le 30 septembre 2026), complétée jusqu’au 7 octobre, et 748 tests automatisés.</td>
+    </tr>
+    <tr>
+      <td class="page">13</td>
+      <td>Chapitre 5, N° 28, § 5, 3<sup>e</sup> paragraphe, texte « Lire »</td>
+      <td class="avant">« … et complétée jusqu’au 5 octobre 2026. La version décrite dans ce rapport correspond à l’état du dépôt au 5 octobre 2026, soit cinq cent huit commits sur la branche principale. »</td>
+      <td>… et complétée jusqu’au 7 octobre 2026. La version décrite dans ce rapport correspond à l’état du dépôt au 7 octobre 2026, soit cinq cent seize commits sur la branche principale.</td>
+    </tr>
+    <tr>
+      <td class="page">25</td>
+      <td>Figure E9, branche « non » de « Compte actif et entreprise validée ? »</td>
+      <td class="avant">« Déconnecter et afficher le motif (désactivé, en attente, refusé) »</td>
+      <td>La case devient deux cases successives, « Enregistrer la connexion refusée au journal (compte désactivé, entreprise en attente, inscription refusée) » puis « Afficher le motif (désactivé, en attente, refusé) », car aucune session n’est ouverte à ce stade.</td>
+    </tr>
+    <tr>
+      <td class="page">26</td>
+      <td>Figure E10, appel au Service Auth et fragment [Compte désactivé ou entreprise non validée]</td>
+      <td class="avant">« attempt(e-mail, mot de passe) » … « logout() »</td>
+      <td>Le contrôleur vérifie l’e-mail et le mot de passe sous une temporisation commune (hachage leurre compris) sans ouvrir de session, « logout() » devient « enregistrer(auth.blocked) » vers le Service Journal, et la session n’est ouverte (login) qu’en cas d’authentification réussie, avant « effacer les essais ».</td>
+    </tr>
+    <tr>
+      <td class="page">31</td>
+      <td>Figure E16, branches « Identité et e-mail », « Mot de passe » et « Supprimer mon compte »</td>
+      <td class="avant">« Mot de passe actuel correct ? (6 essais par minute) — non → Afficher l’erreur »</td>
+      <td>Le test « Mot de passe actuel correct ? » s’ajoute aussi aux branches « Mot de passe » et « Supprimer mon compte », et sur les trois branches sa sortie « non » passe par la case « Enregistrer le mot de passe erroné au journal (10 lignes par minute au plus) » avant « Afficher l’erreur ».</td>
+    </tr>
+    <tr>
+      <td class="page">32</td>
+      <td>Figure E17, fragment [Données invalides]</td>
+      <td class="avant">« erreurs par champ / 302 retour avec les erreurs »</td>
+      <td>Avant « erreurs par champ », le Service Validation inscrit « INSERT activity_logs (auth.password_rejected) » dans la base de données quand le mot de passe actuel est faux, et reçoit « ok ».</td>
+    </tr>
+    <tr>
+      <td class="page">61-62</td>
+      <td>Chapitre 13, N° 77, point « Le tableau OWASP… »</td>
+      <td class="avant">« quatre campagnes d’audit, 738 tests rejoués »</td>
+      <td>quatre campagnes d’audit, 748 tests rejoués</td>
+    </tr>
+    <tr>
+      <td class="page">69</td>
+      <td>Chapitre 16, N° 100, point sur les tests</td>
+      <td class="avant">« 738 tests et 4 186 assertions, dont 38 unitaires »</td>
+      <td>748 tests et 4 263 assertions, dont 38 unitaires</td>
+    </tr>
+    <tr>
+      <td class="page">69</td>
+      <td>Chapitre 16, N° 101, § 16.1, texte « Lire »</td>
+      <td class="avant">« lance les 738 tests sur une base PostgreSQL 16 »</td>
+      <td>lance les 748 tests sur une base PostgreSQL 16</td>
+    </tr>
+    <tr>
+      <td class="page">69</td>
+      <td>Chapitre 16, N° 102, § 16.3, texte « Lire »</td>
+      <td class="avant">« Au 5 octobre, la suite compte 738 tests et 4 186 assertions. »</td>
+      <td>Au 7 octobre, la suite compte 748 tests et 4 263 assertions.</td>
+    </tr>
+    <tr>
+      <td class="page">71</td>
+      <td>Améliorations postérieures au dépôt, N° 104, point « Chaîne d’approvisionnement »</td>
+      <td class="avant">« … actions épinglées par leur empreinte. »</td>
+      <td>Ajouter ensuite : « Dans le Dockerfile, l’installeur d’extensions PHP et Composer sont copiés depuis des images épinglées par leur empreinte SHA-256, et non plus téléchargés en version “latest” depuis GitHub. »</td>
+    </tr>
+    <tr>
+      <td class="page">71</td>
+      <td>Améliorations postérieures au dépôt, N° 104, point « Cas réel du 3 octobre 2026 »</td>
+      <td class="avant">« … qui laisse bloquante toute autre faille élevée ou critique. »</td>
+      <td>Ajouter ensuite : « Second cas réel, le 7 octobre 2026 : npm audit a fait échouer l’intégration continue sur shell-quote, source-map-js et postcss-selector-parser ; leurs versions corrigées sont imposées (overrides de package.json, <span style="white-space:nowrap">package-lock.json</span>) et la CI repasse. L’avis sur braces reste le seul écarté. »</td>
+    </tr>
+    <tr>
+      <td class="page">72</td>
+      <td>Conclusion, N° 106, point « Chiffres à jour »</td>
+      <td class="avant">« 738 tests et 4 186 assertions au lieu de 88 tests »</td>
+      <td>748 tests et 4 263 assertions au lieu de 88 tests</td>
+    </tr>
+    <tr>
+      <td class="page">72</td>
+      <td>Conclusion, N° 107, 2<sup>e</sup> paragraphe, texte « Lire »</td>
+      <td class="avant">« une suite de 738 tests automatisés et 4 186 assertions »</td>
+      <td>une suite de 748 tests automatisés et 4 263 assertions</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="encadre">
+  <h2>Corrections de sécurité du 7 octobre</h2>
+  <p class="numerotation">Catégories selon la numérotation OWASP 2025 (Top 10:2025), celle que cite l’erratum.</p>
+  <ul>
+    <li><b>A03</b><span><i>Chaîne d’approvisionnement logicielle.</i> Dépendances npm : l’audit de l’intégration continue échouait sur shell-quote, source-map-js et postcss-selector-parser ; leurs versions corrigées sont imposées, le build est identique octet pour octet, et seul l’avis sur braces reste écarté et documenté. Image Docker : l’installeur d’extensions PHP (2.12.0) et Composer (2.10.3) sont copiés depuis des images épinglées par empreinte SHA-256, au lieu d’un téléchargement « latest » depuis GitHub.</span></li>
+    <li><b>A07</b><span><i>Authentification.</i> Connexion : l’e-mail et le mot de passe sont vérifiés sous une temporisation commune, sans ouvrir de session, puis le compte est contrôlé avant l’ouverture de la session ; la réponse prend le même temps, que l’adresse ait un compte ou non (environ 270 ms, contre 440 ms et 240 ms auparavant).</span></li>
+    <li><b>A08</b><span><i>Intégrité des logiciels et des données.</i> Ces mêmes images sont épinglées par leur empreinte : un contenu modifié arrête la construction de l’image Docker.</span></li>
+    <li><b>A09</b><span><i>Journalisation et alertes.</i> Le journal d’activité inscrit en plus (1) les accès refusés (403, et refus « introuvable » sur l’expédition, la facture, le paiement, la demande d’accès API ou le collègue d’une autre entreprise) et (2) les mots de passe actuels erronés (confirmation, changement de mot de passe ou d’adresse, suppression du compte) : pour ces deux-là, au plus 10 lignes par minute par compte ou par adresse IP (JournalSecurite). (3) Les connexions refusées d’un compte désactivé, d’une inscription refusée ou d’une entreprise en attente (auth.blocked, avec le motif ; avant : connexion puis déconnexion) sont écrites par LoginRequest et bornées par la limite de connexion (5 essais par minute pour un couple adresse e-mail et IP), et non par la limite de 10 lignes.</span></li>
+  </ul>
+  <p class="reste">Sans changement : A01, A02, A04, A05, A06, A10. La double authentification reste à faire.</p>
+</div>
+
+</body>
+</html>
