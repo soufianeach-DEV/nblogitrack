@@ -182,6 +182,21 @@ class AppServiceProvider extends ServiceProvider
         QueryBuilder::macro('whereContient', $contient);
         QueryBuilder::macro('orWhereContient', fn (string $colonne, string $terme) => $this->whereContient($colonne, $terme, 'or'));
 
+        // Meme recherche sur le nom complet, comme les suggestions
+        // l'affichent : « Wim Peeters » retrouve la personne, comme
+        // « Wim » ou « Peeters » seuls. L'ordre nom puis prenom aussi.
+        $nomContient = function (string $terme, string $booleen = 'and') {
+            $motif = '%'.addcslashes((string) preg_replace('/\s+/u', ' ', trim($terme)), '\\%_').'%';
+            $prenom = $this->getGrammar()->wrap('first_name');
+            $nom = $this->getGrammar()->wrap('last_name');
+
+            return $this->where(fn ($q) => $q
+                ->whereRaw("f_unaccent(concat_ws(' ', {$prenom}, {$nom})) ILIKE f_unaccent(?)", [$motif])
+                ->orWhereRaw("f_unaccent(concat_ws(' ', {$nom}, {$prenom})) ILIKE f_unaccent(?)", [$motif]), null, null, $booleen);
+        };
+        QueryBuilder::macro('whereNomContient', $nomContient);
+        QueryBuilder::macro('orWhereNomContient', fn (string $terme) => $this->whereNomContient($terme, 'or'));
+
         // Apres chaque migration, le dictionnaire suit le code : les textes
         // ajoutes depuis le dernier deploiement sont traduits tout de suite.
         Event::listen(MigrationsEnded::class, function (MigrationsEnded $evenement) {

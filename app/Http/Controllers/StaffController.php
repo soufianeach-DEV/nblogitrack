@@ -50,8 +50,7 @@ class StaffController extends Controller
         if (! empty($filtres['q'])) {
             $terme = (string) $filtres['q'];
             $requete->where(fn ($q) => $q
-                ->whereContient('first_name', $terme)
-                ->orWhereContient('last_name', $terme)
+                ->whereNomContient($terme)
                 ->orWhereContient('email', $terme));
         }
 
