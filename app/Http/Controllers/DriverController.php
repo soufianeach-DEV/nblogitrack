@@ -23,7 +23,9 @@ class DriverController extends Controller
     public function index(Request $request): Response
     {
         $filtres = $request->validate([
-            'q' => 'nullable|string|max:60',
+            // Une suggestion choisie (nom complet ou adresse electronique)
+            // doit passer : jusqu'a 255 caracteres, la taille de l'e-mail.
+            'q' => 'nullable|string|max:255',
             'permis' => 'nullable|string|max:8',
             'etat' => 'nullable|in:disponibles,indisponibles,adr,visite,permis,inaptes,sortis,conformite',
         ]);

@@ -40,7 +40,9 @@ class StaffController extends Controller
     public function index(Request $request): Response
     {
         $filtres = $request->validate([
-            'q' => 'nullable|string|max:60',
+            // Une suggestion choisie (nom complet ou adresse electronique)
+            // doit passer : jusqu'a 255 caracteres, la taille de l'e-mail.
+            'q' => 'nullable|string|max:255',
             'role' => 'nullable|in:'.implode(',', array_keys(self::ROLES)),
             'etat' => 'nullable|in:actifs,inactifs',
         ]);

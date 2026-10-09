@@ -102,4 +102,36 @@ class SuggestionsDeRechercheTest extends TestCase
             ->get(route('activity-logs.index', ['utilisateur' => 'Wim Peeters']))
             ->assertInertia(fn (Assert $page) => $page->has('logs.data', 1));
     }
+
+    public function test_double_espace_et_suggestion_longue_retrouvent_la_personne(): void
+    {
+        User::factory()->planificateur()->create(['first_name' => 'Jean', 'last_name' => 'Van  Damme']);
+        $long = 'jean-christophe.vandenberghe@transports-delacroix-logistique.be';
+        User::factory()->planificateur()->create(['first_name' => 'Jean-Christophe', 'last_name' => 'Vandenberghe', 'email' => $long]);
+        $admin = User::factory()->administrateur()->create(['first_name' => 'Admin', 'last_name' => 'Test']);
+
+        // Le nom enregistre avec deux espaces se retrouve, tape avec un ou
+        // deux espaces.
+        foreach (['Jean Van Damme', 'Van  Damme'] as $terme) {
+            $this->actingAs($admin)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->get(route('staff.index', ['q' => $terme]))
+                ->assertInertia(fn (Assert $page) => $page->has('comptes', 1));
+        }
+
+        // L'adresse electronique de plus de 60 caracteres, proposee puis
+        // choisie, filtre la liste au lieu d'etre refusee en silence.
+        $this->actingAs($admin)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('staff.index', ['q' => 'logistique']))
+            ->assertInertia(fn (Assert $page) => $page->where('suggestions', [$long]));
+
+        $this->actingAs($admin)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('staff.index', ['q' => $long]))
+            ->assertSessionHasNoErrors()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('comptes', 1)
+                ->where('comptes.0.email', $long));
+    }
 }
