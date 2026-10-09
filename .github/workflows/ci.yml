@@ -24,7 +24,9 @@ jobs:
     # autrement, parce que la suite recree toutes les tables au demarrage.
     services:
       postgres:
-        image: postgres:16
+        # La meme image officielle, servie par le miroir de Google : Docker
+        # Hub limite les telechargements anonymes des serveurs de GitHub.
+        image: mirror.gcr.io/library/postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
