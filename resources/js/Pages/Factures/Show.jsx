@@ -135,6 +135,49 @@ function BoutonEnvoi({ facture }) {
     );
 }
 
+function BoutonRembourser({ facture, session }) {
+    const t = useTraduction();
+    const { post, processing } = useForm({ session });
+    const [confirmer, setConfirmer] = useState(false);
+
+    // Rendre de l'argent ne se fait pas sur un clic malheureux : le
+    // premier appui demande une confirmation.
+    if (!confirmer) {
+        return (
+            <button
+                type="button"
+                onClick={() => setConfirmer(true)}
+                className="rounded-lg border border-status-incident/40 bg-white px-3 py-1.5 text-xs font-semibold text-status-incident transition hover:bg-status-incident/5"
+            >
+                {t('facture.rembourser', 'Rembourser')}
+            </button>
+        );
+    }
+
+    return (
+        <span className="flex items-center gap-2">
+            <button
+                type="button"
+                onClick={() => post(route('payments.rembourser', facture.id), { preserveScroll: true })}
+                disabled={processing}
+                className="rounded-lg bg-status-incident px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+                {processing
+                    ? t('facture.remboursement_en_cours', 'Remboursement…')
+                    : t('facture.confirmer_remboursement', 'Confirmer le remboursement')}
+            </button>
+            <button
+                type="button"
+                onClick={() => setConfirmer(false)}
+                disabled={processing}
+                className="text-xs font-semibold text-slate-600 transition hover:text-marine disabled:opacity-60"
+            >
+                {t('action.annuler', 'Annuler')}
+            </button>
+        </span>
+    );
+}
+
 function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     const t = useTraduction();
     const { post, processing } = useForm({});
@@ -157,7 +200,7 @@ function BoutonPayerEnLigne({ facture, pleineLargeur = false }) {
     );
 }
 
-export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvoir = false, peutPayerEnLigne = false, peutEnvoyer = false, paiementEnCours = null, aRembourser = [] }) {
+export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvoir = false, peutPayerEnLigne = false, peutEnvoyer = false, paiementEnCours = null, aRembourser = [], rembourses = [], peutRembourser = false }) {
     const t = useTraduction();
     const locale = useLocale();
     const euros = (montant) => Number(montant).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
@@ -346,12 +389,33 @@ export default function Show({ facture, peutMarquerPayee = false, peutEmettreAvo
             {aRembourser.length > 0 && (
                 <section className="mt-4 rounded-2xl border border-status-incident/30 bg-white p-5 shadow-sm">
                     <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-status-incident">{t('facture.a_rembourser', 'Paiements en ligne reçus en trop, à rembourser')}</h2>
-                    <p className="mb-2 text-xs text-slate-600">{t('facture.a_rembourser_aide', 'Remboursez-les depuis le tableau de bord Stripe (Paiements), en cherchant la session indiquée.')}</p>
+                    <p className="mb-2 text-xs text-slate-600">
+                        {peutRembourser
+                            ? t('facture.a_rembourser_bouton', 'Le bouton rend le paiement au client par Stripe, en entier et sur son moyen de paiement d\'origine.')
+                            : t('facture.a_rembourser_aide', 'Remboursez-les depuis le tableau de bord Stripe (Paiements), en cherchant la session indiquée.')}
+                    </p>
                     <ul className="divide-y divide-slate-100 text-sm">
                         {aRembourser.map((r) => (
-                            <li key={r.session} className="flex items-center justify-between gap-3 py-2">
+                            <li key={r.session} className="flex flex-wrap items-center justify-between gap-3 py-2">
                                 <span className="text-slate-600">{r.date} · <span className="font-mono text-xs">{r.session}</span></span>
-                                <span className="font-semibold text-status-incident">{euros(r.montant)}</span>
+                                <span className="flex items-center gap-3">
+                                    <span className="font-semibold text-status-incident">{euros(r.montant)}</span>
+                                    {peutRembourser && <BoutonRembourser facture={facture} session={r.session} />}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+
+            {rembourses.length > 0 && (
+                <section className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
+                    <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">{t('facture.rembourses', 'Paiements en trop remboursés')}</h2>
+                    <ul className="divide-y divide-slate-100 text-sm">
+                        {rembourses.map((r) => (
+                            <li key={r.session} className="flex items-center justify-between gap-3 py-2">
+                                <span className="text-slate-600">{r.date} · <span className="font-mono text-xs">{r.remboursement}</span></span>
+                                <span className="font-semibold text-slate-700">{euros(r.montant)}</span>
                             </li>
                         ))}
                     </ul>

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Support\Formats;
 use App\Support\JournalSecurite;
 use App\Support\PaiementStripe;
 use App\Support\Traductions;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -140,6 +142,34 @@ class PaymentController extends Controller
             'en_attente' => 'En attente du paiement.',
             'refuse' => 'Notification incohérente, sans effet.',
         }]);
+    }
+
+    /**
+     * Rembourse un paiement en ligne recu en trop : la facture etait deja
+     * reglee (virement, seconde session). Stripe le rend au client sur son
+     * moyen de paiement d'origine.
+     */
+    public function rembourser(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $donnees = $request->validate(['session' => 'required|string|max:255']);
+
+        if (! PaiementStripe::actif()) {
+            return back()->with('error', Traductions::t('msg.remboursement_indisponible', 'Le remboursement en ligne est momentanément indisponible. Remboursez depuis le tableau de bord Stripe.'));
+        }
+
+        try {
+            $montant = PaiementStripe::rembourser($invoice, $donnees['session']);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (ErreurStripe $e) {
+            report($e);
+
+            return back()->with('error', Traductions::t('msg.remboursement_indisponible', 'Le remboursement en ligne est momentanément indisponible. Remboursez depuis le tableau de bord Stripe.'));
+        }
+
+        return back()->with('success', Traductions::t('msg.remboursement_effectue', 'Remboursement de :montant envoyé à Stripe : le client le reçoit sur son moyen de paiement d\'origine, en général sous quelques jours ouvrables.', [
+            'montant' => Formats::montant($montant),
+        ]));
     }
 
     private function autoriserPaiement(Request $request, Invoice $invoice): void

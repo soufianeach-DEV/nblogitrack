@@ -58,6 +58,7 @@ class ActivityLogController extends Controller
         'invoice.paid' => 'Facture payée',
         'invoice.paid_online' => 'Paiement en ligne',
         'invoice.payment_duplicate' => 'Paiement en double',
+        'invoice.payment_refunded' => 'Paiement en trop remboursé',
         'invoice.payment_rejected' => 'Paiement refusé',
         'purchase.created' => 'Facture d\'achat encodée',
         'purchase.paid' => 'Facture d\'achat payée',

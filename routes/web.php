@@ -172,6 +172,9 @@ Route::prefix('{langue}')->whereIn('langue', ['fr', 'nl', 'en'])->group(function
             ->name('payments.payer');
         Route::get('/factures/{invoice}/paiement/retour', [PaymentController::class, 'retour'])
             ->name('payments.retour');
+        Route::post('/factures/{invoice}/remboursement', [PaymentController::class, 'rembourser'])
+            ->middleware(['can:control-payments', 'throttle:10,1,remboursement'])
+            ->name('payments.rembourser');
 
         Route::middleware('can:control-payments')->group(function () {
             Route::get('/achats', [PurchaseInvoiceController::class, 'index'])->name('purchases.index');

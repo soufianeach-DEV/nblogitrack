@@ -182,6 +182,13 @@ class InvoiceController extends Controller
                 'montant' => (float) $e['montant'],
                 'date' => $e['date']->format('d/m/Y'),
             ])->all() : [],
+            'rembourses' => $gestion ? PaiementStripe::remboursements($invoice)->map(fn ($e) => [
+                'session' => $e['session'],
+                'remboursement' => $e['remboursement'],
+                'montant' => (float) $e['montant'],
+                'date' => $e['date']->format('d/m/Y'),
+            ])->all() : [],
+            'peutRembourser' => $gestion && PaiementStripe::actif(),
             'peutPayerEnLigne' => $invoice->estAPayer()
                 && $invoice->online_payment_pending_at === null
                 && PaiementStripe::actif()

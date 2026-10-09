@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Stripe\Exception\ExceptionInterface;
 use Stripe\StripeClient;
 
@@ -124,13 +125,15 @@ class PaiementStripe
     }
 
     /**
-     * Les paiements en ligne recus en trop pour une facture, a rembourser
-     * depuis le tableau de bord Stripe.
+     * Les paiements en ligne recus en trop pour une facture, pas encore
+     * rembourses.
      *
      * @return Collection<int, array{session: string, montant: string, date: CarbonInterface}>
      */
     public static function excedentsARembourser(Invoice $facture)
     {
+        $rembourses = self::remboursements($facture)->pluck('session');
+
         return ActivityLog::where('action', 'invoice.payment_duplicate')
             ->where('subject_type', 'Invoice')
             ->where('subject_id', (string) $facture->id)
@@ -142,7 +145,86 @@ class PaiementStripe
                 'date' => $l->created_at,
             ])
             ->unique('session')
+            ->reject(fn (array $e) => $rembourses->contains($e['session']))
             ->values();
+    }
+
+    /**
+     * Les paiements en ligne recus en trop que Stripe a rembourses.
+     *
+     * @return Collection<int, array{session: string, montant: string, remboursement: string, date: CarbonInterface}>
+     */
+    public static function remboursements(Invoice $facture)
+    {
+        return ActivityLog::where('action', 'invoice.payment_refunded')
+            ->where('subject_type', 'Invoice')
+            ->where('subject_id', (string) $facture->id)
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (ActivityLog $l) => [
+                'session' => (string) ($l->properties['session_stripe'] ?? ''),
+                'montant' => (string) ($l->properties['montant'] ?? ''),
+                'remboursement' => (string) ($l->properties['remboursement_stripe'] ?? ''),
+                'date' => $l->created_at,
+            ])
+            ->values();
+    }
+
+    /**
+     * Rembourse par Stripe un paiement en ligne recu en trop, en entier et
+     * sur le moyen de paiement d'origine. Rend le montant rembourse.
+     *
+     * @throws \DomainException ce paiement n'est pas a rembourser, ou Stripe refuse
+     * @throws ExceptionInterface Stripe ne repond pas
+     */
+    public static function rembourser(Invoice $facture, string $session): float
+    {
+        // Le verrou sur la facture : deux clics simultanes, ou deux
+        // onglets, ne remboursent qu'une fois.
+        return DB::transaction(function () use ($facture, $session) {
+            Invoice::whereKey($facture->id)->lockForUpdate()->first();
+
+            $excedent = self::excedentsARembourser($facture)->firstWhere('session', $session);
+
+            if ($excedent === null) {
+                throw new \DomainException(Traductions::t('msg.remboursement_inconnu', 'Ce paiement n\'est pas à rembourser : il est déjà remboursé ou n\'appartient pas à cette facture.'));
+            }
+
+            $paiement = self::lireSession($session);
+
+            if ((string) $paiement->client_reference_id !== (string) $facture->id || empty($paiement->payment_intent)) {
+                throw new \DomainException(Traductions::t('msg.remboursement_inconnu', 'Ce paiement n\'est pas à rembourser : il est déjà remboursé ou n\'appartient pas à cette facture.'));
+            }
+
+            $montant = (float) $excedent['montant'];
+
+            // La cle d'idempotence : une requete rejouee (coupure reseau)
+            // rend le meme remboursement chez Stripe, sans en creer un
+            // second.
+            $remboursement = self::client()->refunds->create([
+                'payment_intent' => is_string($paiement->payment_intent) ? $paiement->payment_intent : $paiement->payment_intent->id,
+                'amount' => (int) round($montant * 100),
+                'metadata' => ['facture' => $facture->reference, 'facture_id' => (string) $facture->id, 'session' => $session],
+            ], ['idempotency_key' => 'remboursement-'.$session]);
+
+            if (in_array($remboursement->status ?? null, ['failed', 'canceled'], true)) {
+                throw new \DomainException(Traductions::t('msg.remboursement_refuse', 'Stripe a refusé ce remboursement. Consultez le paiement dans le tableau de bord Stripe.'));
+            }
+
+            ActivityLog::record(
+                'invoice.payment_refunded',
+                'Paiement en trop remboursé pour '.$facture->reference,
+                $facture,
+                [
+                    'montant' => $excedent['montant'],
+                    'session_stripe' => $session,
+                    'remboursement_stripe' => (string) $remboursement->id,
+                    'statut' => $remboursement->status ?? null,
+                ],
+            );
+
+            return $montant;
+        });
     }
 
     /**

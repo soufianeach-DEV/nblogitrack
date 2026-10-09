@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\TransportOrder;
+use App\Models\User;
 use App\Support\Encaissement;
 use App\Support\Facturier;
 use App\Support\PaiementStripe;
@@ -198,5 +199,131 @@ class PaiementStripeTest extends TestCase
         $this->notifier('checkout.session.completed', ['id' => 'cs_test_9'])->assertOk();
 
         $this->assertCount(1, PaiementStripe::excedentsARembourser($this->facture));
+    }
+
+    /** Un double de l'API Stripe pour les remboursements : sessions relues, remboursements crees. */
+    private function fauxRemboursements(): object
+    {
+        $remboursements = new class
+        {
+            public array $crees = [];
+
+            public string $statut = 'succeeded';
+
+            public function create(array $p, array $options = []): object
+            {
+                $this->crees[] = ['params' => $p, 'options' => $options];
+
+                return (object) ['id' => 're_test_'.count($this->crees), 'status' => $this->statut];
+            }
+        };
+
+        $sessions = new class((string) $this->facture->id)
+        {
+            public function __construct(private string $facture) {}
+
+            public function retrieve(string $id): object
+            {
+                return (object) ['id' => $id, 'client_reference_id' => $this->facture, 'payment_intent' => 'pi_'.$id];
+            }
+        };
+
+        $this->app->instance('stripe.client', (object) [
+            'checkout' => (object) ['sessions' => $sessions],
+            'refunds' => $remboursements,
+        ]);
+
+        return $remboursements;
+    }
+
+    /** La facture reglee par virement, puis payee une seconde fois en ligne. */
+    private function paiementEnTrop(): void
+    {
+        Encaissement::enregistrer($this->facture, (float) $this->facture->amount_incl_tax, now(), 'TRANSFER');
+        $this->notifier('checkout.session.completed', ['id' => 'cs_test_9'])->assertOk();
+    }
+
+    public function test_l_administrateur_rembourse_un_paiement_en_trop(): void
+    {
+        $this->paiementEnTrop();
+        $stripe = $this->fauxRemboursements();
+        $admin = User::factory()->administrateur()->create();
+
+        $this->actingAs($admin)
+            ->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_9'])
+            ->assertSessionHas('success');
+
+        $this->assertCount(1, $stripe->crees);
+        $this->assertSame('pi_cs_test_9', $stripe->crees[0]['params']['payment_intent']);
+        $this->assertSame((int) round((float) $this->facture->amount_incl_tax * 100), $stripe->crees[0]['params']['amount']);
+        $this->assertSame('remboursement-cs_test_9', $stripe->crees[0]['options']['idempotency_key']);
+
+        $this->assertCount(0, PaiementStripe::excedentsARembourser($this->facture));
+        $this->assertCount(1, PaiementStripe::remboursements($this->facture));
+        // Seul l'excedent est rendu : la facture reste payee par le virement.
+        $this->assertSame('PAID', $this->facture->fresh()->status);
+
+        $this->actingAs($admin)
+            ->get(route('invoices.show', $this->facture))
+            ->assertInertia(fn ($page) => $page
+                ->where('peutRembourser', true)
+                ->has('aRembourser', 0)
+                ->has('rembourses', 1)
+                ->where('rembourses.0.remboursement', 're_test_1'));
+    }
+
+    public function test_un_second_clic_ne_rembourse_pas_deux_fois(): void
+    {
+        $this->paiementEnTrop();
+        $stripe = $this->fauxRemboursements();
+        $admin = User::factory()->administrateur()->create();
+
+        $this->actingAs($admin)->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_9']);
+        $this->actingAs($admin)
+            ->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_9'])
+            ->assertSessionHas('error');
+
+        $this->assertCount(1, $stripe->crees);
+    }
+
+    public function test_une_session_qui_n_est_pas_en_trop_n_est_pas_remboursee(): void
+    {
+        $this->paiementEnTrop();
+        $stripe = $this->fauxRemboursements();
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_autre'])
+            ->assertSessionHas('error');
+
+        $this->assertCount(0, $stripe->crees);
+        $this->assertCount(1, PaiementStripe::excedentsARembourser($this->facture));
+    }
+
+    public function test_seul_l_administrateur_rembourse(): void
+    {
+        $this->paiementEnTrop();
+        $stripe = $this->fauxRemboursements();
+
+        foreach ([$this->facture->client->compte(), User::factory()->planificateur()->create()] as $compte) {
+            $this->actingAs($compte)
+                ->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_9'])
+                ->assertForbidden();
+        }
+
+        $this->assertCount(0, $stripe->crees);
+    }
+
+    public function test_un_remboursement_refuse_par_stripe_reste_a_rembourser(): void
+    {
+        $this->paiementEnTrop();
+        $stripe = $this->fauxRemboursements();
+        $stripe->statut = 'failed';
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->post(route('payments.rembourser', $this->facture), ['session' => 'cs_test_9'])
+            ->assertSessionHas('error');
+
+        $this->assertCount(1, PaiementStripe::excedentsARembourser($this->facture));
+        $this->assertCount(0, PaiementStripe::remboursements($this->facture));
     }
 }
