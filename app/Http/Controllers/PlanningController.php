@@ -131,6 +131,13 @@ class PlanningController extends Controller
             ->whereHas('user', fn ($q) => $q->where('is_active', true))
             ->get();
 
+        // Les missions engagees, une fois pour la page : chaque carte a
+        // affecter y trouve les camions et chauffeurs deja pris pendant sa
+        // periode. Les onglets Livre et Annule n'affectent rien.
+        $engagees = in_array($statut, ['PENDING', 'ASSIGNED', 'IN_PROGRESS'], true)
+            ? ControleAffectation::engagees()
+            : collect();
+
         $orders = TransportOrder::with([
             'client:id,company_name',
             'vehicle',
@@ -149,7 +156,7 @@ class PlanningController extends Controller
             ->orderBy('pickup_date')
             ->paginate(15)
             ->withQueryString()
-            ->through(function (TransportOrder $o) use ($parcDisponible, $chauffeursDisponibles) {
+            ->through(function (TransportOrder $o) use ($parcDisponible, $chauffeursDisponibles, $engagees) {
                 // Comme sur la fiche de l'ordre et au suivi : l'ecran n'a
                 // besoin que du nom du chauffeur. Sa fiche complete (date de
                 // naissance, numero de permis, motif de sortie) ne voyage
@@ -218,6 +225,7 @@ class PlanningController extends Controller
                     $o->setAttribute('refus_chauffeurs_pro', (object) $chauffeursDisponibles
                         ->mapWithKeys(fn (Driver $d) => [$d->id => ControleAffectation::refusChauffeurProfessionnel($d, $fin)])
                         ->filter()->all());
+                    $o->setAttribute('occupations', ControleAffectation::occupations($o, $engagees));
                 }
 
                 // Une mission deja affectee se recontrole : un document

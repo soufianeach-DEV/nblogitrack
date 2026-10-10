@@ -11,6 +11,7 @@ use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\ControleAffectation;
 use App\Support\TempsDeConduite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -501,5 +502,89 @@ class ControleAffectationTest extends TestCase
         $this->assertSame(1, TempsDeConduite::nombreDePauses(TempsDeConduite::heuresDeConduite(737)));
         $this->assertSame(0, TempsDeConduite::nombreDePauses(4.4));
         $this->assertSame(2, TempsDeConduite::nombreDePauses(18.0));
+    }
+
+    public function test_l_ecran_grise_le_camion_et_le_chauffeur_deja_pris_comme_l_affectation(): void
+    {
+        $wim = $this->chauffeur();
+        $ann = $this->chauffeur();
+        $bob = $this->chauffeur();
+        $un = $this->camion('1-AAA-111');
+        $deux = $this->camion('1-BBB-222');
+        $trois = $this->camion('1-CCC-333');
+
+        // Le meme jour, camion un avec Wim ; la veille, un long trajet du
+        // camion deux avec Ann, encore en route ce jour-la.
+        $memeJour = TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $un->registration, 'driver_id' => $wim->id,
+            'pickup_date' => now()->addDays(3)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 120,
+        ]);
+        $enRoute = TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $deux->registration, 'driver_id' => $ann->id,
+            'pickup_date' => now()->addDays(2)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 1400,
+        ]);
+        // Hors de la periode : ni grisee, ni envoyee.
+        TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $trois->registration, 'driver_id' => $bob->id,
+            'pickup_date' => now()->addDays(10)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 120,
+        ]);
+        $ordre = $this->ordre();
+
+        $props = AssertableInertia::fromTestResponse($this->actingAs(User::factory()->planificateur()->create())
+            ->get(route('planning.index')))->toArray()['props'];
+        $occupations = collect(collect($props['orders']['data'])->firstWhere('id', $ordre->id)['occupations'])->keyBy('numero');
+
+        $this->assertCount(2, $occupations);
+        $this->assertSame([$un->registration, $wim->id, false], [
+            $occupations[$memeJour->tracking_number]['camion'],
+            $occupations[$memeJour->tracking_number]['chauffeur_id'],
+            $occupations[$memeJour->tracking_number]['autre_jour'],
+        ]);
+        $this->assertSame($wim->user->first_name.' '.$wim->user->last_name, $occupations[$memeJour->tracking_number]['chauffeur']);
+        $this->assertTrue($occupations[$enRoute->tracking_number]['autre_jour']);
+
+        // Ce que l'ecran grise, l'affectation le refuse : le camion d'un
+        // autre chauffeur, le chauffeur d'un autre camion, le binome encore
+        // en route.
+        $this->affecter($ordre, $un, $bob)->assertSessionHasErrors(['vehicle_registration' => 'Ce camion est déjà affecté à un autre chauffeur ce jour-là ('.$memeJour->tracking_number.').']);
+        $this->affecter($ordre, $trois, $wim)->assertSessionHasErrors(['driver_id' => 'Ce chauffeur a déjà une mission ce jour-là avec un autre camion ('.$memeJour->tracking_number.').']);
+        $this->affecter($ordre, $deux, $ann)->assertSessionHasErrors(['driver_id' => 'Ce camion et ce chauffeur sont encore en route ce jour-là pour une autre mission ('.$enRoute->tracking_number.').']);
+        $this->assertSame('PENDING', $ordre->refresh()->status);
+
+        // Le groupage du meme jour, avec le meme binome, reste permis.
+        $this->affecter($ordre, $un, $wim)->assertSessionHasNoErrors();
+        $this->assertSame('ASSIGNED', $ordre->refresh()->status);
+    }
+
+    public function test_l_ecran_ne_grise_pas_le_binome_du_fret_retour_pour_ses_jours_d_approche(): void
+    {
+        $wim = $this->chauffeur();
+        $un = $this->camion('1-AAA-111');
+
+        // Le camion livre a Lyon la veille de l'enlevement. L'approche
+        // enregistree a la commande part du depot (un jour de route), mais
+        // l'affectation la recalcule depuis cette livraison : quelques
+        // kilometres, aucun jour d'approche.
+        $livraison = TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $un->registration, 'driver_id' => $wim->id,
+            'pickup_date' => now()->addDays(2)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 740,
+            'delivery_country' => 'FR', 'delivery_address' => 'Rue de la République 1, 69002 Lyon, France',
+            'delivery_lat' => 45.7640, 'delivery_lng' => 4.8357,
+        ]);
+        $retour = $this->ordre([
+            'pickup_country' => 'FR', 'pickup_address' => 'Rue de la République 3, 69002 Lyon, France',
+            'pickup_lat' => 45.7650, 'pickup_lng' => 4.8360,
+            'delivery_country' => 'BE', 'pickup_date' => now()->addDays(4)->setTime(8, 0),
+            'distance_km' => 740, 'approche_km' => 740,
+        ]);
+
+        // Avec l'approche enregistree, la periode toucherait la livraison.
+        $this->assertTrue(ControleAffectation::periode($retour)[1]->lte(ControleAffectation::occupation($livraison)[1]));
+
+        $props = AssertableInertia::fromTestResponse($this->actingAs(User::factory()->planificateur()->create())
+            ->get(route('planning.index')))->toArray()['props'];
+        $carte = collect($props['orders']['data'])->firstWhere('id', $retour->id);
+
+        $this->assertSame([], $carte['occupations']);
     }
 }
