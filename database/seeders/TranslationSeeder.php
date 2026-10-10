@@ -696,6 +696,8 @@ class TranslationSeeder extends Seeder
             'camion_occupe' => ['occupé : :numero, :chauffeur', 'bezet: :numero, :chauffeur', 'busy: :numero, :chauffeur'],
             'chauffeur_occupe' => ['occupé : :numero, :camion', 'bezet: :numero, :camion', 'busy: :numero, :camion'],
             'binome_en_route' => ['en route : :numero', 'onderweg: :numero', 'on the road: :numero'],
+            'chauffeur_pris' => ['chauffeur pris : :numero, :camion', 'chauffeur bezet: :numero, :camion', 'driver busy: :numero, :camion'],
+            'camion_pris' => ['camion pris : :numero, :chauffeur', 'vrachtwagen bezet: :numero, :chauffeur', 'truck busy: :numero, :chauffeur'],
             'adr_requis' => ['ADR requis', 'ADR vereist', 'ADR required'],
             'hayon_court' => ['hayon', 'laadklep', 'tail lift'],
             'cette_semaine' => ['cette semaine', 'deze week', 'this week'],

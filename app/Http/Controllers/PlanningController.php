@@ -131,9 +131,12 @@ class PlanningController extends Controller
             ->whereHas('user', fn ($q) => $q->where('is_active', true))
             ->get();
 
-        // Les missions engagees, une fois pour la page : chaque carte y
-        // trouve les camions et chauffeurs deja pris pendant sa periode.
-        $engagees = ControleAffectation::engagees();
+        // Les missions engagees, une fois pour la page : chaque carte a
+        // affecter y trouve les camions et chauffeurs deja pris pendant sa
+        // periode. Les onglets Livre et Annule n'affectent rien.
+        $engagees = in_array($statut, ['PENDING', 'ASSIGNED', 'IN_PROGRESS'], true)
+            ? ControleAffectation::engagees()
+            : collect();
 
         $orders = TransportOrder::with([
             'client:id,company_name',

@@ -124,38 +124,55 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
     const lourd = (v) => ! v || v.permis_requis !== 'B';
     const refusPro = (d, v) => (lourd(v) ? ordre.refus_chauffeurs_pro?.[d.id] ?? null : null);
     // Camions et chauffeurs deja pris pendant cette mission : l'ecran
-    // grise ce que le serveur refusera au clic sur « Affecter ». Un autre
-    // chauffeur sur le camion, un autre camion pour le chauffeur, ou le
-    // meme binome encore en route un autre jour. Le groupage du meme jour
-    // reste possible : sans choix en face, seul ce qui est pris dans tous
-    // les cas est grise.
+    // grise ce que le serveur refusera au clic sur « Affecter ». Le couple
+    // est refuse si le chauffeur a une mission avec un autre camion, si
+    // le camion en a une avec un autre chauffeur, ou si le meme binome est
+    // encore en route un autre jour ; le groupage du meme jour reste
+    // possible. Sans choix en face, seul ce qui est refuse avec tout
+    // partenaire est grise (un partenaire libre compris).
     const occupations = ordre.occupations ?? [];
-    const premiereBloquante = (siennes, autre, enFace) => (enFace
-        ? siennes.find((m) => autre(m) !== enFace || m.autre_jour)
-        : siennes.find((m) => m.autre_jour) ?? (new Set(siennes.map(autre)).size > 1 ? siennes[0] : undefined));
+    const LIBRE = '';
+    const bloquante = (camion, chauffeur) => occupations.find((m) => (String(m.chauffeur_id) === chauffeur && (m.camion !== camion || m.autre_jour))
+        || (m.camion === camion && String(m.chauffeur_id) !== chauffeur));
     const occupationVehicule = (v) => {
-        const m = premiereBloquante(
-            occupations.filter((o) => o.camion === v.registration),
-            (o) => String(o.chauffeur_id),
-            chauffeurChoisi ? String(chauffeurChoisi.id) : null,
-        );
-        if (! m) return null;
+        const camion = v.registration;
 
-        return chauffeurChoisi && String(m.chauffeur_id) === String(chauffeurChoisi.id)
-            ? t('planif.binome_en_route', 'en route : :numero', { numero: m.numero })
-            : t('planif.camion_occupe', 'occupé : :numero, :chauffeur', { numero: m.numero, chauffeur: m.chauffeur });
+        if (chauffeurChoisi) {
+            const chauffeur = String(chauffeurChoisi.id);
+            const m = bloquante(camion, chauffeur);
+            if (! m) return null;
+            if (m.camion === camion && String(m.chauffeur_id) === chauffeur) return t('planif.binome_en_route', 'en route : :numero', { numero: m.numero });
+            if (m.camion === camion) return t('planif.camion_occupe', 'occupé : :numero, :chauffeur', { numero: m.numero, chauffeur: m.chauffeur });
+
+            return t('planif.chauffeur_pris', 'chauffeur pris : :numero, :camion', { numero: m.numero, camion: m.camion });
+        }
+
+        const partenaires = [LIBRE, ...new Set(occupations.map((m) => String(m.chauffeur_id)))];
+        const sienne = occupations.find((m) => m.camion === camion);
+
+        return sienne && partenaires.every((d) => bloquante(camion, d))
+            ? t('planif.camion_occupe', 'occupé : :numero, :chauffeur', { numero: sienne.numero, chauffeur: sienne.chauffeur })
+            : null;
     };
     const occupationChauffeur = (d) => {
-        const m = premiereBloquante(
-            occupations.filter((o) => String(o.chauffeur_id) === String(d.id)),
-            (o) => o.camion,
-            vehiculeChoisi?.registration ?? null,
-        );
-        if (! m) return null;
+        const chauffeur = String(d.id);
 
-        return vehiculeChoisi && m.camion === vehiculeChoisi.registration
-            ? t('planif.binome_en_route', 'en route : :numero', { numero: m.numero })
-            : t('planif.chauffeur_occupe', 'occupé : :numero, :camion', { numero: m.numero, camion: m.camion });
+        if (vehiculeChoisi) {
+            const camion = vehiculeChoisi.registration;
+            const m = bloquante(camion, chauffeur);
+            if (! m) return null;
+            if (m.camion === camion && String(m.chauffeur_id) === chauffeur) return t('planif.binome_en_route', 'en route : :numero', { numero: m.numero });
+            if (String(m.chauffeur_id) === chauffeur) return t('planif.chauffeur_occupe', 'occupé : :numero, :camion', { numero: m.numero, camion: m.camion });
+
+            return t('planif.camion_pris', 'camion pris : :numero, :chauffeur', { numero: m.numero, chauffeur: m.chauffeur });
+        }
+
+        const partenaires = [LIBRE, ...new Set(occupations.map((m) => m.camion))];
+        const sienne = occupations.find((m) => String(m.chauffeur_id) === chauffeur);
+
+        return sienne && partenaires.every((v) => bloquante(v, chauffeur))
+            ? t('planif.chauffeur_occupe', 'occupé : :numero, :camion', { numero: sienne.numero, camion: sienne.camion })
+            : null;
     };
     const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration]
         ?? (chauffeurChoisi && v.permis_requis !== 'B' ? ordre.refus_chauffeurs_pro?.[chauffeurChoisi.id] ?? null : null)
@@ -263,6 +280,9 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                 {errors.motif && <p className="mt-1 text-xs text-status-incident">{errors.motif}</p>}
             </div>
         )}
+        {/* L'option vide remet un champ a zero : un choix d'un cote grise
+            l'autre, et la reaffectation vers un autre binome passait sinon
+            par un couple refuse. */}
         <form onSubmit={affecter} className="flex flex-col gap-2 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <ListeRecherche
@@ -270,6 +290,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                     onChange={(v) => setData('vehicle_registration', v)}
                     required
                     placeholder={'— ' + t('ordres.vehicule', 'Véhicule') + ' —'}
+                    vide={'— ' + t('ordres.vehicule', 'Véhicule') + ' —'}
                     aria-label={t('ordres.vehicule', 'Véhicule')}
                     className={selectCls}
                     options={vehicles.map((v) => ({
@@ -291,6 +312,7 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
                     onChange={(v) => setData('driver_id', v)}
                     required
                     placeholder={'— ' + t('suivi.chauffeur', 'Chauffeur') + ' —'}
+                    vide={'— ' + t('suivi.chauffeur', 'Chauffeur') + ' —'}
                     aria-label={t('suivi.chauffeur', 'Chauffeur')}
                     className={selectCls}
                     options={drivers.map((d) => ({

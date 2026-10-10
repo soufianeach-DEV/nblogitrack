@@ -11,6 +11,7 @@ use App\Models\TariffGrid;
 use App\Models\TransportOrder;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\ControleAffectation;
 use App\Support\TempsDeConduite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -522,6 +523,11 @@ class ControleAffectationTest extends TestCase
             'vehicle_registration' => $deux->registration, 'driver_id' => $ann->id,
             'pickup_date' => now()->addDays(2)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 1400,
         ]);
+        // Hors de la periode : ni grisee, ni envoyee.
+        TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $trois->registration, 'driver_id' => $bob->id,
+            'pickup_date' => now()->addDays(10)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 120,
+        ]);
         $ordre = $this->ordre();
 
         $props = AssertableInertia::fromTestResponse($this->actingAs(User::factory()->planificateur()->create())
@@ -548,5 +554,37 @@ class ControleAffectationTest extends TestCase
         // Le groupage du meme jour, avec le meme binome, reste permis.
         $this->affecter($ordre, $un, $wim)->assertSessionHasNoErrors();
         $this->assertSame('ASSIGNED', $ordre->refresh()->status);
+    }
+
+    public function test_l_ecran_ne_grise_pas_le_binome_du_fret_retour_pour_ses_jours_d_approche(): void
+    {
+        $wim = $this->chauffeur();
+        $un = $this->camion('1-AAA-111');
+
+        // Le camion livre a Lyon la veille de l'enlevement. L'approche
+        // enregistree a la commande part du depot (un jour de route), mais
+        // l'affectation la recalcule depuis cette livraison : quelques
+        // kilometres, aucun jour d'approche.
+        $livraison = TransportOrder::factory()->affectee()->create([
+            'vehicle_registration' => $un->registration, 'driver_id' => $wim->id,
+            'pickup_date' => now()->addDays(2)->setTime(7, 0), 'weight' => 1000, 'distance_km' => 740,
+            'delivery_country' => 'FR', 'delivery_address' => 'Rue de la République 1, 69002 Lyon, France',
+            'delivery_lat' => 45.7640, 'delivery_lng' => 4.8357,
+        ]);
+        $retour = $this->ordre([
+            'pickup_country' => 'FR', 'pickup_address' => 'Rue de la République 3, 69002 Lyon, France',
+            'pickup_lat' => 45.7650, 'pickup_lng' => 4.8360,
+            'delivery_country' => 'BE', 'pickup_date' => now()->addDays(4)->setTime(8, 0),
+            'distance_km' => 740, 'approche_km' => 740,
+        ]);
+
+        // Avec l'approche enregistree, la periode toucherait la livraison.
+        $this->assertTrue(ControleAffectation::periode($retour)[1]->lte(ControleAffectation::occupation($livraison)[1]));
+
+        $props = AssertableInertia::fromTestResponse($this->actingAs(User::factory()->planificateur()->create())
+            ->get(route('planning.index')))->toArray()['props'];
+        $carte = collect($props['orders']['data'])->firstWhere('id', $retour->id);
+
+        $this->assertSame([], $carte['occupations']);
     }
 }

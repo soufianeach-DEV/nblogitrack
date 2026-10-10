@@ -421,26 +421,28 @@ final class ControleAffectation
     /**
      * La mission engagee occupe-t-elle un des jours [debut, fin] ? Le meme
      * critere que la requete de missionsSurLaPeriode(), puis la periode
-     * d'occupation (voir occupation()).
+     * d'occupation (voir occupation()), deja calculee ou non.
+     *
+     * @param  array{0: CarbonInterface, 1: CarbonInterface}|null  $jours
      */
-    private static function chevauche(TransportOrder $mission, CarbonInterface $debut, CarbonInterface $fin): bool
+    private static function chevauche(TransportOrder $mission, CarbonInterface $debut, CarbonInterface $fin, ?array $jours = null): bool
     {
         if ($mission->status !== 'IN_PROGRESS' && $mission->pickup_date !== null
             && $mission->pickup_date->gt($fin->copy()->endOfDay())) {
             return false;
         }
 
-        [$premier, $dernier] = self::occupation($mission);
+        [$premier, $dernier] = $jours ?? self::occupation($mission);
 
         return $premier->lte($fin) && $dernier->gte($debut);
     }
 
     /**
-     * Les missions engagees, avec leur camion et leur chauffeur : une
-     * requete pour toute la page de la planification, puis occupations()
-     * pour chaque mission affichee.
+     * Les missions engagees, avec leur camion, leur chauffeur et leurs
+     * jours d'occupation calcules une fois : une requete pour toute la
+     * page de la planification, puis occupations() pour chaque carte.
      *
-     * @return Collection<int, TransportOrder>
+     * @return Collection<int, array{mission: TransportOrder, jours: array{0: CarbonInterface, 1: CarbonInterface}}>
      */
     public static function engagees(): Collection
     {
@@ -448,7 +450,8 @@ final class ControleAffectation
             ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS'])
             ->whereNotNull('vehicle_registration')
             ->whereNotNull('driver_id')
-            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'distance_km', 'approche_km', 'vehicle_registration', 'driver_id']);
+            ->get(['id', 'tracking_number', 'status', 'pickup_date', 'picked_up_at', 'distance_km', 'approche_km', 'vehicle_registration', 'driver_id'])
+            ->map(fn (TransportOrder $m) => ['mission' => $m, 'jours' => self::occupation($m)]);
     }
 
     /**
@@ -458,25 +461,33 @@ final class ControleAffectation
      * camion pour le chauffeur, ou le meme binome encore en route un
      * autre jour (autre_jour) ; le groupage du meme jour reste permis.
      *
-     * @param  Collection<int, TransportOrder>  $engagees  voir engagees()
+     * Les jours d'approche dependent du camion : l'affectation les
+     * recalcule pour celui qu'on choisit (fret retour). L'ecran prend la
+     * periode sans approche, commune a tous les camions : il ne grise
+     * jamais un binome que le serveur accepterait, et le clic controle
+     * encore les jours d'approche.
+     *
+     * @param  Collection<int, array{mission: TransportOrder, jours: array{0: CarbonInterface, 1: CarbonInterface}}>  $engagees  voir engagees()
      * @return list<array{numero: string, camion: string, chauffeur_id: int, chauffeur: string, autre_jour: bool}>
      */
     public static function occupations(TransportOrder $ordre, Collection $engagees): array
     {
-        [$depart, $debut, $fin] = self::periode($ordre);
+        $sansApproche = clone $ordre;
+        $sansApproche->approche_km = null;
+        [$depart, $debut, $fin] = self::periode($sansApproche);
 
         // Le jour du groupage, comme a l'affectation : l'enlevement prevu,
         // ou aujourd'hui s'il est passe ou absent.
         $jour = ($ordre->status === 'IN_PROGRESS' ? ($ordre->pickup_date ?? $debut) : $depart)->toDateString();
 
         return $engagees
-            ->filter(fn (TransportOrder $m) => $m->id !== $ordre->id && self::chevauche($m, $debut, $fin))
-            ->map(fn (TransportOrder $m) => [
-                'numero' => $m->tracking_number,
-                'camion' => $m->vehicle_registration,
-                'chauffeur_id' => $m->driver_id,
-                'chauffeur' => trim(($m->driver?->user?->first_name ?? '').' '.($m->driver?->user?->last_name ?? '')),
-                'autre_jour' => $m->pickup_date === null || $m->pickup_date->toDateString() !== $jour,
+            ->filter(fn (array $e) => $e['mission']->id !== $ordre->id && self::chevauche($e['mission'], $debut, $fin, $e['jours']))
+            ->map(fn (array $e) => [
+                'numero' => $e['mission']->tracking_number,
+                'camion' => $e['mission']->vehicle_registration,
+                'chauffeur_id' => $e['mission']->driver_id,
+                'chauffeur' => trim(($e['mission']->driver?->user?->first_name ?? '').' '.($e['mission']->driver?->user?->last_name ?? '')),
+                'autre_jour' => $e['mission']->pickup_date === null || $e['mission']->pickup_date->toDateString() !== $jour,
             ])
             ->values()
             ->all();
