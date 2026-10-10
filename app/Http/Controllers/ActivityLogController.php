@@ -114,8 +114,7 @@ class ActivityLogController extends Controller
             $recherche = $request->string('utilisateur')->toString();
             $query->whereHas('user', function ($q) use ($recherche) {
                 $q->whereContient('email', (string) $recherche)
-                    ->orWhereContient('first_name', (string) $recherche)
-                    ->orWhereContient('last_name', (string) $recherche);
+                    ->orWhereNomContient((string) $recherche);
             });
         }
 

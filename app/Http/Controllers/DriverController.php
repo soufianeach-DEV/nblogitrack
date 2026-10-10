@@ -23,7 +23,9 @@ class DriverController extends Controller
     public function index(Request $request): Response
     {
         $filtres = $request->validate([
-            'q' => 'nullable|string|max:60',
+            // Une suggestion choisie (nom complet ou adresse electronique)
+            // doit passer : jusqu'a 255 caracteres, la taille de l'e-mail.
+            'q' => 'nullable|string|max:255',
             'permis' => 'nullable|string|max:8',
             'etat' => 'nullable|in:disponibles,indisponibles,adr,visite,permis,inaptes,sortis,conformite',
         ]);
@@ -41,8 +43,7 @@ class DriverController extends Controller
             // sinon la recherche le laissait deviner chiffre par chiffre.
             $requete->where(fn ($q) => $q
                 ->whereHas('user', fn ($u) => $u
-                    ->whereContient('first_name', $terme)
-                    ->orWhereContient('last_name', $terme)
+                    ->whereNomContient($terme)
                     ->orWhereContient('email', $terme))
                 ->when($peutModifier, fn ($q) => $q->orWhereContient('license_number', $terme)));
         }
@@ -327,7 +328,7 @@ class DriverController extends Controller
         }
 
         $trouves = $comptes()
-            ->where(fn ($q) => $q->whereContient('first_name', $terme)->orWhereContient('last_name', $terme)->orWhereContient('email', $terme))
+            ->where(fn ($q) => $q->whereNomContient($terme)->orWhereContient('email', $terme))
             ->limit(20)
             ->get(['first_name', 'last_name', 'email']);
 
