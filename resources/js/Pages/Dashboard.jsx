@@ -1,10 +1,11 @@
 import CarteTrajets from '@/Components/CarteTrajets';
 import Icone from '@/Components/Icone';
 import Modal from '@/Components/Modal';
+import { useItineraires } from '@/itineraires';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, usePays, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const STATUS = {
     PENDING: { cle: 'statut.en_attente', label: 'En attente', cls: 'bg-status-pending/10 text-status-pending' },
@@ -444,37 +445,7 @@ function Alertes({ alertes }) {
 
 function CarteEnCirculation({ carte, total }) {
     const t = useTraduction();
-    const [traces, setTraces] = useState({});
-
-    useEffect(() => {
-        let vivant = true;
-
-        (async () => {
-            for (const trajet of carte) {
-                try {
-                    const reponse = await fetch(route('tracking.itineraire', trajet.id), {
-                        headers: { Accept: 'application/json' },
-                    });
-
-                    if (! vivant) {
-                        return;
-                    }
-
-                    const donnees = reponse.ok ? await reponse.json() : null;
-
-                    if (vivant && donnees?.geometrie && ! donnees.direct) {
-                        setTraces((precedentes) => ({ ...precedentes, [trajet.id]: donnees.geometrie }));
-                    }
-                } catch (erreur) {
-
-                }
-            }
-        })();
-
-        return () => {
-            vivant = false;
-        };
-    }, [carte]);
+    const traces = useItineraires(carte);
 
     const trajets = carte.map((trajet) => ({ ...trajet, trace: traces[trajet.id] }));
 

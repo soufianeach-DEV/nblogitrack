@@ -4,10 +4,16 @@ import CarteTrajets from '@/Components/CarteTrajets';
 import ChoixLangue from '@/Components/ChoixLangue';
 import Icone from '@/Components/Icone';
 import MessagesFlash from '@/Components/MessagesFlash';
+import { useItineraires } from '@/itineraires';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction, useVocabulaire, useAdresse } from '@/traduire';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
+
+// Au-dela, les trajets de la vue d'ensemble restent en liaison directe :
+// chaque itineraire coute un appel au service exterieur et alourdit la
+// carte. Les premiers de la liste sont ceux en route.
+const ITINERAIRES_APERCU = 10;
 
 const STATUTS = {
     PENDING: { cle: 'statut.en_attente', libelle: 'En attente', classe: 'bg-slate-100 text-slate-700' },
@@ -300,6 +306,9 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
     const [agrandie, setAgrandie] = useState(false);
     const [itineraire, setItineraire] = useState(null);
     const [peages, setPeages] = useState([]);
+    // Vue d'ensemble : les expeditions recoivent leur itineraire routier,
+    // comme sur le tableau de bord. Une expedition ouverte a le sien.
+    const traces = useItineraires(order ? [] : expeditions.slice(0, ITINERAIRES_APERCU));
 
     const suit = position !== null && order?.status === 'IN_PROGRESS';
 
@@ -592,7 +601,7 @@ function SuiviConnecte({ order, searched, chauffeur, etapes, jalons, position, h
                     <CarteTrajets
                         trajets={expeditions.map((expedition) => expedition.id === order?.id
                             ? { ...expedition, trace: itineraire?.geometrie }
-                            : expedition)}
+                            : { ...expedition, trace: traces[expedition.id] })}
                         selection={order?.id ?? null}
                         jalons={jalons ?? []}
                         position={position}
