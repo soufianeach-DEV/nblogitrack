@@ -123,9 +123,44 @@ function LigneAffectation({ ordre, vehicles, drivers, couverture = {}, reaffecta
     // camionnette de permis B.
     const lourd = (v) => ! v || v.permis_requis !== 'B';
     const refusPro = (d, v) => (lourd(v) ? ordre.refus_chauffeurs_pro?.[d.id] ?? null : null);
+    // Camions et chauffeurs deja pris pendant cette mission : l'ecran
+    // grise ce que le serveur refusera au clic sur « Affecter ». Un autre
+    // chauffeur sur le camion, un autre camion pour le chauffeur, ou le
+    // meme binome encore en route un autre jour. Le groupage du meme jour
+    // reste possible : sans choix en face, seul ce qui est pris dans tous
+    // les cas est grise.
+    const occupations = ordre.occupations ?? [];
+    const premiereBloquante = (siennes, autre, enFace) => (enFace
+        ? siennes.find((m) => autre(m) !== enFace || m.autre_jour)
+        : siennes.find((m) => m.autre_jour) ?? (new Set(siennes.map(autre)).size > 1 ? siennes[0] : undefined));
+    const occupationVehicule = (v) => {
+        const m = premiereBloquante(
+            occupations.filter((o) => o.camion === v.registration),
+            (o) => String(o.chauffeur_id),
+            chauffeurChoisi ? String(chauffeurChoisi.id) : null,
+        );
+        if (! m) return null;
+
+        return chauffeurChoisi && String(m.chauffeur_id) === String(chauffeurChoisi.id)
+            ? t('planif.binome_en_route', 'en route : :numero', { numero: m.numero })
+            : t('planif.camion_occupe', 'occupé : :numero, :chauffeur', { numero: m.numero, chauffeur: m.chauffeur });
+    };
+    const occupationChauffeur = (d) => {
+        const m = premiereBloquante(
+            occupations.filter((o) => String(o.chauffeur_id) === String(d.id)),
+            (o) => o.camion,
+            vehiculeChoisi?.registration ?? null,
+        );
+        if (! m) return null;
+
+        return vehiculeChoisi && m.camion === vehiculeChoisi.registration
+            ? t('planif.binome_en_route', 'en route : :numero', { numero: m.numero })
+            : t('planif.chauffeur_occupe', 'occupé : :numero, :camion', { numero: m.numero, camion: m.camion });
+    };
     const refusVehicule = (v) => ordre.refus_vehicules?.[v.registration]
-        ?? (chauffeurChoisi && v.permis_requis !== 'B' ? ordre.refus_chauffeurs_pro?.[chauffeurChoisi.id] ?? null : null);
-    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? refusPro(d, vehiculeChoisi);
+        ?? (chauffeurChoisi && v.permis_requis !== 'B' ? ordre.refus_chauffeurs_pro?.[chauffeurChoisi.id] ?? null : null)
+        ?? occupationVehicule(v);
+    const refusChauffeur = (d) => ordre.refus_chauffeurs?.[d.id] ?? refusPro(d, vehiculeChoisi) ?? occupationChauffeur(d);
     // Le permis depend du couple : celui du chauffeur doit couvrir celui
     // qu'exige le camion (un tracteur de 44 t exige le CE).
     const permisManquant = (permis, vehicule) => (
