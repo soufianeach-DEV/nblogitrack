@@ -101,6 +101,30 @@ class RechercheFacturesTest extends TestCase
         $this->assertSame([$facture->reference], $props['suggestions']);
     }
 
+    public function test_une_suggestion_longue_choisie_retrouve_l_entreprise(): void
+    {
+        $nom = 'Societe Cooperative Intercommunale de Transports et de Logistique SCRL';
+        $this->facturee($nom);
+        $this->facturee('Transports Dubois SA');
+        $admin = User::factory()->administrateur()->create();
+
+        $this->assertSame([$nom], $this->page($admin, ['q' => 'intercommunale'])['suggestions']);
+
+        $props = $this->page($admin, ['q' => $nom]);
+
+        $this->assertCount(1, $props['factures']['data']);
+        $this->assertSame($nom, $props['factures']['data'][0]['client']);
+    }
+
+    public function test_une_adresse_aux_octets_invalides_ne_fait_pas_tomber_l_ecran(): void
+    {
+        $this->facturee('Transports Dubois SA');
+
+        $this->actingAs(User::factory()->administrateur()->create())
+            ->get(route('invoices.index').'?q=%C3%28ab')
+            ->assertOk();
+    }
+
     public function test_la_recherche_ignore_les_accents_et_la_casse(): void
     {
         $this->facturee('Société Générale de Transport');

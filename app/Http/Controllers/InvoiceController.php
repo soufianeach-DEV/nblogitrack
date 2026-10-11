@@ -35,9 +35,15 @@ class InvoiceController extends Controller
 
         $estClient = $utilisateur->cannot('view-all-orders');
 
+        // 255 : une suggestion choisie reprend le nom entier de l'acheteur,
+        // qui peut depasser 60 caracteres (150 a l'inscription).
         $filtres = $request->validate([
-            'q' => 'nullable|string|max:60',
+            'q' => 'nullable|string|max:255',
         ]);
+        // Des octets qui ne sont pas de l'UTF-8 feraient echouer PostgreSQL.
+        if (isset($filtres['q']) && ! mb_check_encoding($filtres['q'], 'UTF-8')) {
+            $filtres['q'] = mb_scrub($filtres['q'], 'UTF-8');
+        }
         $terme = trim((string) ($filtres['q'] ?? ''));
 
         $perimetre = fn () => Invoice::query()
