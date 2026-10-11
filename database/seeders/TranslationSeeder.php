@@ -2504,6 +2504,13 @@ class TranslationSeeder extends Seeder
             'periode' => ['Période', 'Periode', 'Period'],
             'emise_le' => ['Émise le', 'Uitgereikt op', 'Issued on'],
             'aucune' => ['Aucune facture pour l\'instant.', 'Voorlopig geen facturen.', 'No invoices yet.'],
+            'aucune_recherche' => [
+                'Aucune facture ne correspond à cette recherche.',
+                'Geen enkele factuur komt overeen met deze zoekopdracht.',
+                'No invoice matches this search.',
+            ],
+            'filtre' => ['Entreprise ou numéro de facture…', 'Bedrijf of factuurnummer…', 'Company or invoice number…'],
+            'filtre_client' => ['Numéro de facture…', 'Factuurnummer…', 'Invoice number…'],
             'tva_due_client' => ['TVA due par le client', 'Btw verschuldigd door de klant', 'VAT due by the customer'],
             'autoliq_aide' => [
                 'Le client est établi dans un autre pays de l\'UE : la TVA n\'est pas facturée ici, il la déclare et la paie dans son pays.',

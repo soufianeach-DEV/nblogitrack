@@ -17,6 +17,7 @@ use App\Support\JournalSecurite;
 use App\Support\LigneFacture;
 use App\Support\PaiementStripe;
 use App\Support\Pays;
+use App\Support\Suggestions;
 use App\Support\Traductions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,12 +35,29 @@ class InvoiceController extends Controller
 
         $estClient = $utilisateur->cannot('view-all-orders');
 
+        // 255 : une suggestion choisie reprend le nom entier de l'acheteur,
+        // qui peut depasser 60 caracteres (150 a l'inscription).
+        $filtres = $request->validate([
+            'q' => 'nullable|string|max:255',
+        ]);
+        // Des octets qui ne sont pas de l'UTF-8 feraient echouer PostgreSQL.
+        if (isset($filtres['q']) && ! mb_check_encoding($filtres['q'], 'UTF-8')) {
+            $filtres['q'] = mb_scrub($filtres['q'], 'UTF-8');
+        }
+        $terme = trim((string) ($filtres['q'] ?? ''));
+
         $perimetre = fn () => Invoice::query()
             ->when($estClient, fn ($q) => $q->where('client_id', $utilisateur->client_id));
         $aPayer = fn () => $perimetre()->where('type', Invoice::FACTURE)->where('status', 'SENT');
 
         return Inertia::render('Factures/Index', [
+            // Recherche sur le nom de l'acheteur fige sur la facture et sur
+            // son numero : les factures d'une entreprise desinscrite restent
+            // trouvables, et un client ne cherche que dans les siennes.
             'factures' => $perimetre()
+                ->when($terme !== '', fn ($q) => $q->where(fn ($q) => $q
+                    ->whereContient('buyer_name', $terme)
+                    ->orWhereContient('reference', $terme)))
                 ->with('client:id,company_name')
                 ->orderByDesc('issued_on')
                 ->orderByDesc('id')
@@ -72,6 +90,8 @@ class InvoiceController extends Controller
             'aFacturer' => $utilisateur->can('control-payments')
                 ? app(Facturier::class)->aFacturer(null, null, true)->sum(fn ($lot) => $lot->count())
                 : 0,
+            'suggestions' => Suggestions::depuis($perimetre, ['buyer_name', 'reference'], $terme),
+            'filtres' => $filtres,
         ]);
     }
 

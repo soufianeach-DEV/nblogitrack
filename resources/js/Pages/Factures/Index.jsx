@@ -1,3 +1,4 @@
+import BarreFiltres from '@/Components/BarreFiltres';
 import OngletsFacturation from '@/Components/OngletsFacturation';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useLocale, useTraduction } from '@/traduire';
@@ -14,7 +15,7 @@ const ETATS = {
 
 const AVOIR = { cle: 'facture.avoir', libelle: 'Avoir', classe: 'bg-action/20 text-marine' };
 
-export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false, aFacturer = 0 }) {
+export default function Index({ factures = { data: [] }, cartes = { du: 0, paye: 0, en_retard: 0 }, colonnePaiement = false, peutGererAchats = false, aFacturer = 0, suggestions = [], filtres = {} }) {
     const { canPlan } = usePage().props.auth;
     const t = useTraduction();
     const locale = useLocale();
@@ -89,7 +90,18 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                 </div>
             </div>
 
-            <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="mt-4">
+                <BarreFiltres
+                    suggestions={suggestions}
+                    adresse={route('invoices.index')}
+                    filtres={filtres}
+                    placeholder={canPlan
+                        ? t('facture.filtre', 'Entreprise ou numéro de facture…')
+                        : t('facture.filtre_client', 'Numéro de facture…')}
+                />
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead>
@@ -178,7 +190,9 @@ export default function Index({ factures = { data: [] }, cartes = { du: 0, paye:
                             {factures.data.length === 0 && (
                                 <tr>
                                     <td className="px-4 py-8 text-center text-slate-600" colSpan={(canPlan ? 7 : 6) + (colonnePaiement ? 1 : 0)}>
-                                        {t('facture.aucune', 'Aucune facture pour l\'instant.')}
+                                        {filtres.q
+                                            ? t('facture.aucune_recherche', 'Aucune facture ne correspond à cette recherche.')
+                                            : t('facture.aucune', 'Aucune facture pour l\'instant.')}
                                     </td>
                                 </tr>
                             )}
